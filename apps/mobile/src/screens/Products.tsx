@@ -1,32 +1,33 @@
-import { View, Text, ScrollView, Image } from 'react-native'
 import React from 'react'
-import { globalStyles } from '../public/styles'
+import { FlatList, View } from 'react-native'
+import ItemProduct from '../components/products/ItemProduct'
+import SearchInput from '../components/SearchInput'
 import { productData } from '../data/productsData'
+import { globalStyles } from '../public/styles'
+import { IProduct } from '../types/product.types'
+import { SafeAreaView } from 'react-native-safe-area-context'
+
+const renderFlatlistItem = ({ item }: { item: IProduct }) => {
+    console.log("item is ", item)
+    return (
+        <ItemProduct item={item} />
+    )
+}
 
 const Products = () => {
     return (
-        <ScrollView style={[globalStyles.container]}>
-            {
-                productData.map((item, index) => (
-                    <View key={index}>
-                        {/* <Image source={require('../public/assets/images/viva_logo.png')} style={{ width: '100%', height: 200, marginBottom: 10, flex: 1 }} /> */}
-                        <Image
-                            source={require('../public/assets/images/viva_logo.png')}
-                            style={{
-
-                            }}
-                        />
-                        <Image
-                            source={require('../public/assets/images/products/Product_8.png')}
-                            style={{
-
-                            }}
-                        />
-                        <Text>{item.productName}</Text>
-                    </View>
-                ))
-            }
-        </ScrollView>
+        <SafeAreaView style={[globalStyles.container]}>
+            <View>
+                <SearchInput />
+            </View>
+            <FlatList
+                data={productData}
+                renderItem={renderFlatlistItem}
+                keyExtractor={(item, index) => index.toString()}
+                numColumns={2}
+                columnWrapperStyle={{ gap: 12, marginBottom: 20 }}
+            />
+        </SafeAreaView>
     )
 }
 

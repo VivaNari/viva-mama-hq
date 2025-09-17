@@ -7,6 +7,7 @@ import { DashboardTabNavigator } from './TabNavigator';
 import Landing from '../screens/Landing';
 import LoginwithPhone from '../screens/LoginwithPhone';
 import Products from '../screens/Products';
+import ArticleContent from '../screens/ArticleContent';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,10 +44,19 @@ const RootStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: false,
+                    headerShown: true,
+                    title: 'Suggested Products',
                 }}
                 name="Products"
                 component={Products}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Content',
+                }}
+                name="Content"
+                component={ArticleContent}
             />
         </Stack.Navigator>
     );

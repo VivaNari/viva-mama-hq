@@ -12,4 +12,5 @@ export const colors = {
   warning: '#FF9800',
   error: '#F44336',
   offWhite: '#D9D9D9',
+  purple: '#8B80FE',
 };
