@@ -1,11 +1,10 @@
-import { View, Text, ScrollView, Image, FlatList, TextInput } from 'react-native'
 import React from 'react'
-import { globalStyles } from '../public/styles'
-import { productData } from '../data/productsData'
+import { FlatList, View } from 'react-native'
 import ItemProduct from '../components/products/ItemProduct'
-import { IProduct } from '../types/product.types'
-import { colors } from '../public/assets/colors'
 import SearchInput from '../components/SearchInput'
+import { productData } from '../data/productsData'
+import { globalStyles } from '../public/styles'
+import { IProduct } from '../types/product.types'
 
 const renderFlatlistItem = ({ item }: { item: IProduct }) => {
     console.log("item is ", item)

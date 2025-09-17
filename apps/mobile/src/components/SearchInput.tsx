@@ -1,7 +1,7 @@
-import { View, Text, TextInput } from 'react-native'
-import React from 'react'
-import { colors } from '../public/assets/colors'
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
+import React from 'react';
+import { TextInput, View } from 'react-native';
+import { colors } from '../public/assets/colors';
 
 
 const SearchInput = () => {
