@@ -92,7 +92,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                 {currentStep !== 1 ? (
                     <TouchableOpacity
                         onPress={() => setCurrentStep(currentStep - 1)}
-                        style={{ margin: 20, height: 45, width: 45 }}
+                        style={{ marginVertical: 20, height: 45, width: 45 }}
                     >
                         <LinearGradient
                             colors={[colors.primary, colors.secondary]}

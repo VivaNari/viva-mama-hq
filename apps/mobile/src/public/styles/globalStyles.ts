@@ -4,7 +4,7 @@ import { colors } from '../assets/colors';
 export const globalStyles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 28,
+    padding: 20,
     backgroundColor: '#f5f5f5',
   },
   headingxl: {

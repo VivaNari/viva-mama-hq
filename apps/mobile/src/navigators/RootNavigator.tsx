@@ -43,7 +43,8 @@ const RootStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: false,
+                    headerShown: true,
+                    title: 'Suggested Products',
                 }}
                 name="Products"
                 component={Products}
