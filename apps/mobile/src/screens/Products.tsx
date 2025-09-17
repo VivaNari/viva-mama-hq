@@ -5,6 +5,7 @@ import SearchInput from '../components/SearchInput'
 import { productData } from '../data/productsData'
 import { globalStyles } from '../public/styles'
 import { IProduct } from '../types/product.types'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 const renderFlatlistItem = ({ item }: { item: IProduct }) => {
     console.log("item is ", item)
@@ -15,7 +16,7 @@ const renderFlatlistItem = ({ item }: { item: IProduct }) => {
 
 const Products = () => {
     return (
-        <View style={[globalStyles.container]}>
+        <SafeAreaView style={[globalStyles.container]}>
             <View>
                 <SearchInput />
             </View>
@@ -26,7 +27,7 @@ const Products = () => {
                 numColumns={2}
                 columnWrapperStyle={{ gap: 12, marginBottom: 20 }}
             />
-        </View>
+        </SafeAreaView>
     )
 }
 

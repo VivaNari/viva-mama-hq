@@ -24,7 +24,7 @@ const SearchInput = () => {
                 cursorColor={colors.black}
                 placeholder={"Search"}
                 selectTextOnFocus={true}
-                style={{ paddingVertical: 50, paddingHorizontal: 20, color: colors.black, flex: 1 }}
+                style={{ paddingVertical: 15, paddingHorizontal: 20, color: colors.black, flex: 1 }}
             />
             <MaterialDesignIcons name="magnify" color={colors.black} size={24} />
         </View>

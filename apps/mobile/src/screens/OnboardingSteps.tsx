@@ -7,6 +7,7 @@ import { colors } from "../public/assets/colors";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
 import { AnswerValue, AnswersMap, IOnboardingStep } from "../types";
 import { globalStyles, onboardingStyles } from "../public/styles";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
     const [currentStep, setCurrentStep] = useState<number>(1);
@@ -32,7 +33,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
     }, [answers])
 
     return (
-        <View style={[globalStyles.container]}>
+        <SafeAreaView style={[globalStyles.container]}>
             {/* Progress bar */}
             <View
                 style={{
@@ -150,7 +151,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                     </TouchableOpacity>
                 )}
             </View>
-        </View>
+        </SafeAreaView>
     );
 };
 
