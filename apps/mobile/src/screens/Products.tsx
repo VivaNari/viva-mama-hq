@@ -7,8 +7,7 @@ import { globalStyles } from '../public/styles'
 import { IProduct } from '../types/product.types'
 import { SafeAreaView } from 'react-native-safe-area-context'
 
-const renderFlatlistItem = ({ item }: { item: IProduct }) => {
-    console.log("item is ", item)
+export const renderFlatlistItem = ({ item }: { item: IProduct }) => {
     return (
         <ItemProduct item={item} />
     )
@@ -25,7 +24,7 @@ const Products = () => {
                 renderItem={renderFlatlistItem}
                 keyExtractor={(item, index) => index.toString()}
                 numColumns={2}
-                columnWrapperStyle={{ gap: 12, marginBottom: 20 }}
+                columnWrapperStyle={{ gap: 12, marginBottom: 20, justifyContent: 'space-between' }}
             />
         </SafeAreaView>
     )

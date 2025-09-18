@@ -12,7 +12,7 @@ const { width } = Dimensions.get("window");
 const categoryItem = ({ item, navigation }: { item: ICategory, navigation: { navigate: any } }) => {
     return (
         <TouchableOpacity
-            activeOpacity={0.6}
+            activeOpacity={0.8}
             onPress={() => navigation.navigate('CategoryArticles', { categoryId: item.id })}
         >
             <View
@@ -81,7 +81,7 @@ const categoryArticle = ({ item, navigation }: { item: IContent, navigation: { n
             }}
         >
             <TouchableOpacity
-                activeOpacity={0.4}
+                activeOpacity={0.8}
                 style={{
                     borderRadius: 20,
                     overflow: 'hidden',

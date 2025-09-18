@@ -1,13 +1,18 @@
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import Dashboard from '../screens/Dashboard';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { useNavigation } from '@react-navigation/native';
+import { Image, TouchableOpacity, View } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../public/assets/colors';
 import ArticleContent from '../screens/ArticleContent';
-import LinearGradient from 'react-native-linear-gradient';
+import Dashboard from '../screens/Dashboard';
+import Experts from '../screens/Experts';
+import Services from '../screens/Services';
 
 const Tab = createBottomTabNavigator();
 
 export const DashboardTabNavigator = () => {
+    const navigation = useNavigation<any>();
     return (
         <Tab.Navigator
             screenOptions={{
@@ -36,6 +41,28 @@ export const DashboardTabNavigator = () => {
                 tabBarActiveTintColor: colors.secondary,
                 tabBarInactiveTintColor: colors.white,
                 tabBarActiveBackgroundColor: colors.white,
+                headerRight: () => (
+                    <View
+                        style={{ paddingRight: 15, flexDirection: 'row', gap: 20, alignItems: 'center' }}
+                    >
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => navigation.navigate("Notifications")}
+
+                        >
+                            <MaterialDesignIcons name='bell-outline' size={30} />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => navigation.navigate("MyProfile")}
+                        >
+                            <Image
+                                source={require('../public/assets/images/avatar.jpg')}
+                                style={{ height: 40, width: 40, borderRadius: 8 }}
+                            />
+                        </TouchableOpacity>
+                    </View>
+                )
             }}
         >
             <Tab.Screen
@@ -65,8 +92,8 @@ export const DashboardTabNavigator = () => {
                 }}
             />
             <Tab.Screen
-                name="Expert"
-                component={ArticleContent}
+                name="Experts"
+                component={Experts}
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <MaterialDesignIcons
@@ -92,7 +119,7 @@ export const DashboardTabNavigator = () => {
             />
             <Tab.Screen
                 name="Services"
-                component={ArticleContent}
+                component={Services}
                 options={{
                     tabBarIcon: ({ color, focused }) => (
                         <MaterialDesignIcons

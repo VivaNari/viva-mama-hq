@@ -13,4 +13,8 @@ export const colors = {
   error: '#F44336',
   offWhite: '#D9D9D9',
   purple: '#8B80FE',
+  subscriptionTabActiveBG: 'rgba(139, 97, 194, 1)',
+  subscriptionTabInactiveBG: 'rgba(190, 163, 248, 1)',
+  SubscriptionOptionsBG: 'rgba(232, 215, 255, 1)',
+  profileOptionsBG: 'rgba(224, 200, 255, 1)',
 };

@@ -11,6 +11,11 @@ import ArticleContent from '../screens/ArticleContent';
 import CategoryArticles from '../screens/CategoryArticles';
 import SubCategoryArticles from '../screens/SubCategoryArticles';
 import ArticleDetails from '../screens/ArticleDetails';
+import Experts from '../screens/Experts';
+import ExpertDetails from '../screens/ExpertDetails';
+import SubscriptionDetails from '../components/SubscriptionDetails';
+import MyProfile from '../screens/MyProfile';
+import Notifications from '../screens/Notifications';
 
 const Stack = createNativeStackNavigator();
 
@@ -84,6 +89,38 @@ const RootStack = () => {
                 }}
                 name="ArticleDetails"
                 component={ArticleDetails}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Expert Details',
+                }}
+                name="ExpertDetails"
+                component={ExpertDetails}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Subscription Details',
+                }}
+                name="SubscriptionDetails"
+                component={SubscriptionDetails}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'My Profile',
+                }}
+                name="MyProfile"
+                component={MyProfile}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Notifications',
+                }}
+                name="Notifications"
+                component={Notifications}
             />
         </Stack.Navigator>
     );

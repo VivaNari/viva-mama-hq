@@ -7,7 +7,7 @@ export const ArticleCard = ({ item }: { item: IContent }) => {
     return (
         <TouchableOpacity
             onPress={() => navigation.navigate("ArticleDetails", { articleId: item.id })}
-            activeOpacity={0.4}
+            activeOpacity={0.8}
             style={styles.articleCard}
         >
             <Image source={item.thumbnailImage} style={styles.articleImage} />
