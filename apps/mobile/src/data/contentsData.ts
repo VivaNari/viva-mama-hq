@@ -16,7 +16,7 @@ export const contentsData: ICategory[] = [
             title: '5 simple breastfeeding positions for mothers',
             author: 'Mittali Khurana',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: true,
+            isBookmarked: true,
             likes: 120,
             comments: 45,
             content:
@@ -27,7 +27,7 @@ export const contentsData: ICategory[] = [
             title: 'Diet for a healthy pregnancy',
             author: 'Dr. Radhika Menon',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: false,
+            isBookmarked: false,
             likes: 85,
             comments: 32,
             content:
@@ -44,7 +44,7 @@ export const contentsData: ICategory[] = [
             title: 'Postpartum recovery tips',
             author: 'Dr. Priya Sharma',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: false,
+            isBookmarked: false,
             likes: 60,
             comments: 22,
             content:
@@ -55,7 +55,7 @@ export const contentsData: ICategory[] = [
             title: 'Postpartum mental health',
             author: 'Anjali Gupta',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: true,
+            isBookmarked: true,
             likes: 140,
             comments: 51,
             content:
@@ -72,7 +72,7 @@ export const contentsData: ICategory[] = [
             title: 'Common breastfeeding challenges',
             author: 'Nisha Patel',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: false,
+            isBookmarked: false,
             likes: 98,
             comments: 28,
             content:
@@ -97,7 +97,7 @@ export const contentsData: ICategory[] = [
             title: 'Caring for your newborn',
             author: 'Dr. Ramesh Iyer',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: true,
+            isBookmarked: true,
             likes: 180,
             comments: 64,
             content:
@@ -114,7 +114,7 @@ export const contentsData: ICategory[] = [
             title: 'Introducing solid foods',
             author: 'Dr. Kavita Rao',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: false,
+            isBookmarked: false,
             likes: 95,
             comments: 30,
             content:
@@ -131,7 +131,7 @@ export const contentsData: ICategory[] = [
             title: 'Baby’s first-year milestones',
             author: 'Dr. Sanjay Verma',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: true,
+            isBookmarked: true,
             likes: 220,
             comments: 75,
             content:
@@ -156,7 +156,7 @@ export const contentsData: ICategory[] = [
             title: 'Supporting your partner during pregnancy',
             author: 'Rahul Singh',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: true,
+            isBookmarked: true,
             likes: 105,
             comments: 40,
             content:
@@ -173,7 +173,7 @@ export const contentsData: ICategory[] = [
             title: 'Partner’s role in baby care',
             author: 'Dr. Sneha Kapoor',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: false,
+            isBookmarked: false,
             likes: 70,
             comments: 21,
             content:
@@ -190,7 +190,7 @@ export const contentsData: ICategory[] = [
             title: 'Managing stress as a new parent',
             author: 'Arjun Mehta',
             thumbnailImage: require('../public/assets/images/single_article_breadcrumb.png'),
-            isLiked: false,
+            isBookmarked: false,
             likes: 65,
             comments: 18,
             content:

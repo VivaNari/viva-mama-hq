@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dimensions, FlatList, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import { Dimensions, FlatList, Image, ImageBackground, ScrollView, StyleSheet, Text, Touchable, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import SearchInput from '../components/SearchInput'
 import { contentsData } from '../data/contentsData'
@@ -9,10 +9,11 @@ import { colors } from '../public/assets/colors'
 
 const { width } = Dimensions.get("window");
 
-const categoryItem = ({ item }: { item: ICategory }) => {
+const categoryItem = ({ item, navigation }: { item: ICategory, navigation: { navigate: any } }) => {
     return (
         <TouchableOpacity
             activeOpacity={0.6}
+            onPress={() => navigation.navigate('CategoryArticles', { categoryId: item.id })}
         >
             <View
                 style={{
@@ -31,19 +32,7 @@ const categoryItem = ({ item }: { item: ICategory }) => {
     )
 }
 
-const subCategories = ({ item }: { item: ICategory }) => {
-    return (
-        <View>
-            <FlatList
-                keyExtractor={(item) => item.id.toString()}
-                data={item.subCategories}
-                renderItem={subCategoryItem}
-            />
-        </View>
-    )
-}
-
-const subCategoryItem = ({ item }: { item: ISubCategory }) => {
+const subCategoryItem = ({ item, navigation }: { item: ISubCategory, navigation: { navigate: any } }) => {
     return (
         <View>
             <View
@@ -58,7 +47,9 @@ const subCategoryItem = ({ item }: { item: ISubCategory }) => {
                         fontWeight: 'bold'
                     }}
                 >{item.subCategoryName}</Text>
-                <TouchableOpacity>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('SubCategoryArticles', { subCategoryId: item.id })}
+                >
                     <Text>See All</Text>
                 </TouchableOpacity>
 
@@ -67,7 +58,7 @@ const subCategoryItem = ({ item }: { item: ISubCategory }) => {
             <FlatList
                 keyExtractor={(item) => item.id.toString()}
                 data={item.contents}
-                renderItem={categoryArticle}
+                renderItem={({ item }) => categoryArticle({ item, navigation })}
                 numColumns={2}
                 columnWrapperStyle={{
                     justifyContent: 'space-between',
@@ -81,7 +72,7 @@ const subCategoryItem = ({ item }: { item: ISubCategory }) => {
     )
 }
 
-const categoryArticle = ({ item }: { item: IContent }) => {
+const categoryArticle = ({ item, navigation }: { item: IContent, navigation: { navigate: any } }) => {
     return (
         <View
             style={{
@@ -89,11 +80,13 @@ const categoryArticle = ({ item }: { item: IContent }) => {
                 marginBottom: 15,
             }}
         >
-            <View
+            <TouchableOpacity
+                activeOpacity={0.4}
                 style={{
                     borderRadius: 20,
                     overflow: 'hidden',
                 }}
+                onPress={() => navigation.navigate('ArticleDetails', { articleId: item.id })}
             >
                 <ImageBackground
                     source={item.thumbnailImage}
@@ -116,12 +109,12 @@ const categoryArticle = ({ item }: { item: IContent }) => {
                         paddingVertical: 4,
                     }}>{item.title}</Text>
                 </ImageBackground>
-            </View>
+            </TouchableOpacity>
         </View>
     )
 }
 
-const ArticleContent = () => {
+const ArticleContent = ({ navigation }: { navigation: { navigate: any } }) => {
     return (
         <SafeAreaView style={[globalStyles.container]}>
             <FlatList
@@ -131,7 +124,7 @@ const ArticleContent = () => {
                     <FlatList
                         keyExtractor={(sub) => sub.id.toString()}
                         data={item.subCategories}
-                        renderItem={subCategoryItem}
+                        renderItem={({ item }) => subCategoryItem({ item, navigation })}
                         scrollEnabled={false} // disable nested scroll
                     />
                 )}
@@ -146,7 +139,7 @@ const ArticleContent = () => {
                         <FlatList
                             keyExtractor={(item: ICategory) => item.id.toString()}
                             data={contentsData}
-                            renderItem={categoryItem}
+                            renderItem={({ item }) => categoryItem({ item, navigation })}
                             numColumns={3}
                             columnWrapperStyle={{
                                 justifyContent: 'space-between',

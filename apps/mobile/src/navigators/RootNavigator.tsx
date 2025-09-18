@@ -8,6 +8,9 @@ import Landing from '../screens/Landing';
 import LoginwithPhone from '../screens/LoginwithPhone';
 import Products from '../screens/Products';
 import ArticleContent from '../screens/ArticleContent';
+import CategoryArticles from '../screens/CategoryArticles';
+import SubCategoryArticles from '../screens/SubCategoryArticles';
+import ArticleDetails from '../screens/ArticleDetails';
 
 const Stack = createNativeStackNavigator();
 
@@ -57,6 +60,30 @@ const RootStack = () => {
                 }}
                 name="Content"
                 component={ArticleContent}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Articles',
+                }}
+                name="CategoryArticles"
+                component={CategoryArticles}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Articles',
+                }}
+                name="SubCategoryArticles"
+                component={SubCategoryArticles}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Article Details',
+                }}
+                name="ArticleDetails"
+                component={ArticleDetails}
             />
         </Stack.Navigator>
     );
