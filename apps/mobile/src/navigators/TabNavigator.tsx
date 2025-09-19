@@ -50,14 +50,20 @@ export const DashboardTabNavigator = () => {
                             onPress={() => navigation.navigate("Notifications")}
 
                         >
-                            <MaterialDesignIcons name='bell-outline' size={30} />
+                            <MaterialDesignIcons name='bell-outline' size={30} color={colors.primary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => navigation.navigate("MyProfile")}
+                            style={{
+                                borderWidth: 2,
+                                padding: 2,
+                                borderRadius: 8,
+                                borderColor: colors.primary
+                            }}
                         >
                             <Image
-                                source={require('../public/assets/images/avatar.jpg')}
+                                source={require('../public/assets/images/doctors/Dr_Harsha_Tomar.png')}
                                 style={{ height: 40, width: 40, borderRadius: 8 }}
                             />
                         </TouchableOpacity>

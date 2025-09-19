@@ -16,6 +16,10 @@ import ExpertDetails from '../screens/ExpertDetails';
 import SubscriptionDetails from '../components/SubscriptionDetails';
 import MyProfile from '../screens/MyProfile';
 import Notifications from '../screens/Notifications';
+import TermsOfUse from '../screens/TermsOfUse';
+import PrivacyPolicy from '../screens/PrivacyPolicy';
+import EditProfile from '../screens/EditProfile';
+import AddPartner from '../screens/AddPartner';
 
 const Stack = createNativeStackNavigator();
 
@@ -117,10 +121,42 @@ const RootStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
+                    title: 'Edit Profile',
+                }}
+                name="EditProfile"
+                component={EditProfile}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Add Partner',
+                }}
+                name="AddPartner"
+                component={AddPartner}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
                     title: 'Notifications',
                 }}
                 name="Notifications"
                 component={Notifications}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Terms of Use',
+                }}
+                name="TermsOfUse"
+                component={TermsOfUse}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Privacy Policy',
+                }}
+                name="PrivacyPolicy"
+                component={PrivacyPolicy}
             />
         </Stack.Navigator>
     );
