@@ -1,34 +1,41 @@
 import React from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, ScrollView, StyleSheet, Image } from "react-native";
+import { ContentDetailsStyles } from "../public/styles/contentStyles";
+import { globalStyles } from "../public/styles";
 
 const PrivacyPolicy = () => {
     return (
-        <ScrollView style={styles.container}>
-            <Text style={styles.heading}>Privacy Policy</Text>
+        <ScrollView>
+            <Image source={require("../public/assets/images/single_article_breadcrumb.png")} style={ContentDetailsStyles.image} />
 
-            <Text style={styles.sectionTitle}>1. Information We Collect</Text>
-            <Text style={styles.paragraph}>
-                We may collect personal information such as your name, email, and app
-                usage data to improve your experience.
-            </Text>
+            <View
+                style={globalStyles.container}
+            >
 
-            <Text style={styles.sectionTitle}>2. How We Use Information</Text>
-            <Text style={styles.paragraph}>
-                The information collected is used to provide services, improve features,
-                and communicate with you about updates.
-            </Text>
+                <Text style={[styles.sectionTitle, globalStyles.fontMedium]}>1. Information We Collect</Text>
+                <Text style={[styles.paragraph, globalStyles.fontRegular]}>
+                    We may collect personal information such as your name, email, and app
+                    usage data to improve your experience.
+                </Text>
 
-            <Text style={styles.sectionTitle}>3. Data Security</Text>
-            <Text style={styles.paragraph}>
-                We implement industry-standard security measures to protect your
-                information. However, no system is 100% secure.
-            </Text>
+                <Text style={[styles.sectionTitle, globalStyles.fontMedium]}>2. How We Use Information</Text>
+                <Text style={[styles.paragraph, globalStyles.fontRegular]}>
+                    The information collected is used to provide services, improve features,
+                    and communicate with you about updates.
+                </Text>
 
-            <Text style={styles.sectionTitle}>4. Contact Us</Text>
-            <Text style={styles.paragraph}>
-                If you have any questions about this Privacy Policy, please contact us
-                at support@example.com.
-            </Text>
+                <Text style={[styles.sectionTitle, globalStyles.fontMedium]}>3. Data Security</Text>
+                <Text style={[styles.paragraph, globalStyles.fontRegular]}>
+                    We implement industry-standard security measures to protect your
+                    information. However, no system is 100% secure.
+                </Text>
+
+                <Text style={[styles.sectionTitle, globalStyles.fontMedium]}>4. Contact Us</Text>
+                <Text style={[styles.paragraph, globalStyles.fontRegular]}>
+                    If you have any questions about this Privacy Policy, please contact us
+                    at support@example.com.
+                </Text>
+            </View>
         </ScrollView>
     );
 };

@@ -1,4 +1,6 @@
 export const colors = {
+  pageBG: '#f5f5f5',
+  // pageBG: '#fffafa',
   primary: '#0A2463',
   secondary: '#8B61C2',
   logout: 'rgba(255, 25, 74, 1)',

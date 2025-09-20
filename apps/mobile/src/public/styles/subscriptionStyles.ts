@@ -15,8 +15,7 @@ export const styles = StyleSheet.create({
     elevation: 4,
   },
   cardTitle: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontSize: 20,
     alignSelf: 'center',
     marginBottom: 12,
   },
@@ -34,7 +33,6 @@ export const styles = StyleSheet.create({
   segmentBtnActive: {
     backgroundColor: colors.subscriptionTabActiveBG,
   },
-  segmentText: { fontWeight: '700' },
   segmentTextActive: { color: '#fff' },
   planRow: {
     flexDirection: 'row',
@@ -50,9 +48,9 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.SubscriptionOptionsBG,
     borderColor: colors.subscriptionTabActiveBG,
   },
-  planTitle: { fontSize: 20, fontWeight: '800' },
-  planSub: { fontSize: 12, color: '#4b2a6a', marginTop: 6 },
-  planPrice: { fontSize: 16, fontWeight: '700', marginLeft: 12 },
+  planTitle: { fontSize: 16 },
+  planSub: { fontSize: 10, color: '#4b2a6a', marginTop: 6 },
+  planPrice: { fontSize: 16, marginLeft: 12 },
 
   productItem: {
     width: (width - 18 * 2 - 16) / 2,
@@ -106,7 +104,6 @@ export const subscriptionsDetailsStyles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 20,
-    fontWeight: '800',
     alignSelf: 'center',
     marginBottom: 12,
   },
@@ -125,7 +122,7 @@ export const subscriptionsDetailsStyles = StyleSheet.create({
   segmentBtnActive: {
     backgroundColor: '#8b5cf6',
   },
-  segmentText: { fontWeight: '700' },
+
   segmentTextActive: { color: '#fff' },
 
   planRow: {

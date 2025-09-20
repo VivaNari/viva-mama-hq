@@ -1,50 +1,12 @@
-import { View, Text, ImageBackground, StyleSheet, Image, TouchableOpacity, FlatList } from 'react-native'
-import React from 'react'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { globalStyles } from '../public/styles'
-import { colors } from '../public/assets/colors'
-import LinearGradient from 'react-native-linear-gradient'
-import { myProfileData, settingsMenu } from '../data/myProfileData'
-import { ISettingsMenu } from '../types/myProfile.types'
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import { useNavigation } from '@react-navigation/native'
-
-const ProfileSettingsMenu = ({ item, navigation, isFirst, isLast }: { item: ISettingsMenu, navigation: any, isFirst: boolean, isLast: boolean }) => {
-    return (
-        <TouchableOpacity
-            activeOpacity={0.4}
-            onPress={() => navigation.navigate(`${item.componentName}`)}
-            style={{
-                flexDirection: "row",
-                gap: 5,
-                alignItems: 'center',
-                justifyContent: 'flex-start',
-                paddingVertical: 10,
-                backgroundColor: colors.profileOptionsBG,
-                paddingHorizontal: 10,
-                borderTopLeftRadius: isFirst ? 8 : 0,
-                borderTopRightRadius: isFirst ? 8 : 0,
-                borderBottomLeftRadius: isLast ? 8 : 0,
-                borderBottomRightRadius: isLast ? 8 : 0,
-            }}
-        >
-            <MaterialDesignIcons name={item.icon as any} size={20} color={colors.primary} />
-            <Text
-                style={{
-                    fontSize: 16,
-                    fontWeight: '500',
-                    paddingBottom: 7,
-                    borderBottomWidth: 1,
-                    borderBottomColor: 'rgba(0, 0, 0, 0.2)',
-                    flex: 1,
-                    marginLeft: 10
-                }}
-            >
-                {item.title}
-            </Text>
-        </TouchableOpacity>
-    )
-}
+import React from 'react'
+import { FlatList, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import LinearGradient from 'react-native-linear-gradient'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { myProfileData, settingsMenu } from '../data/myProfileData'
+import { colors } from '../public/assets/colors'
+import { globalStyles } from '../public/styles'
+import ProfileSettingsMenu from '../components/profile/ProfileSettingsMenu'
 
 const MyProfile = () => {
     const navigation = useNavigation<any>();
@@ -68,7 +30,6 @@ const MyProfile = () => {
                 }}
                 keyExtractor={(_, index) => index.toString()}
                 showsVerticalScrollIndicator={false}
-                // Header
                 ListHeaderComponent={() => (
                     <>
                         {/* Profile Card */}
@@ -124,15 +85,16 @@ const MyProfile = () => {
                                                 <TouchableOpacity
                                                     style={{
                                                         backgroundColor: colors.primary,
-                                                        paddingVertical: 5,
+                                                        paddingVertical: 6,
                                                         borderRadius: 15
                                                     }}
                                                 >
                                                     <Text
-                                                        style={{
+                                                        style={[{
                                                             color: colors.white,
-                                                            textAlign: 'center'
-                                                        }}
+                                                            textAlign: 'center',
+                                                            fontSize: 10
+                                                        }, globalStyles.fontRegular]}
                                                     >
                                                         Viva Premium
                                                     </Text>
@@ -142,46 +104,45 @@ const MyProfile = () => {
 
                                         <View>
                                             <Text
-                                                style={{
-                                                    fontSize: 20,
-                                                    fontWeight: 'bold',
+                                                style={[{
+                                                    fontSize: 16,
                                                     marginBottom: 5
-                                                }}
+                                                }, globalStyles.fontSemiBold]}
                                             >
                                                 {myProfileData.name}
                                             </Text>
                                             <Text
-                                                style={{
+                                                style={[{
                                                     color: 'rgba(0, 0, 0, 0.6)',
-                                                    fontSize: 14,
-                                                    fontWeight: '500'
-                                                }}
+                                                    fontSize: 12,
+                                                }, globalStyles.fontRegular]}
                                             >
                                                 {myProfileData.email}
                                             </Text>
                                             <Text
-                                                style={{
+                                                style={[{
                                                     color: 'rgba(0, 0, 0, 0.6)',
-                                                    fontSize: 14,
-                                                    fontWeight: '500'
-                                                }}
+                                                    fontSize: 12,
+                                                }, globalStyles.fontRegular]}
                                             >
                                                 Age - {myProfileData.age}
                                             </Text>
 
                                             <TouchableOpacity
                                                 onPress={() => navigation.navigate("EditProfile")}
+                                                activeOpacity={0.7}
                                                 style={{
                                                     backgroundColor: colors.secondary,
-                                                    paddingVertical: 5,
+                                                    paddingVertical: 6,
                                                     borderRadius: 15,
                                                     marginTop: 10,
                                                 }}
                                             >
-                                                <Text style={{
+                                                <Text style={[{
                                                     textAlign: "center",
-                                                    color: colors.white
-                                                }}>
+                                                    color: colors.white,
+                                                    fontSize: 10
+                                                }, globalStyles.fontRegular]}>
                                                     Edit Profile
                                                 </Text>
                                             </TouchableOpacity>
@@ -204,9 +165,12 @@ const MyProfile = () => {
                                 alignItems: 'center',
                             }}
                         >
-                            <Text>Add Your partner</Text>
+                            <Text
+                                style={[globalStyles.fontRegular]}
+                            >Add Your partner</Text>
                             <TouchableOpacity
                                 onPress={() => navigation.navigate("AddPartner")}
+                                activeOpacity={0.7}
                                 style={{
                                     backgroundColor: colors.primary,
                                     paddingVertical: 10,
@@ -215,10 +179,11 @@ const MyProfile = () => {
                                 }}
                             >
                                 <Text
-                                    style={{
+                                    style={[{
                                         color: colors.white,
-                                        textAlign: 'center'
-                                    }}
+                                        textAlign: 'center',
+                                        fontSize: 12
+                                    }, globalStyles.fontRegular]}
                                 >
                                     Link Your Partner
                                 </Text>
@@ -241,12 +206,11 @@ const MyProfile = () => {
                             }}
                         >
                             <Text
-                                style={{
+                                style={[{
                                     fontSize: 16,
-                                    fontWeight: '700',
                                     color: colors.white,
                                     textAlign: 'center'
-                                }}
+                                }, globalStyles.fontBold]}
                             >
                                 Sign Out
                             </Text>
@@ -263,21 +227,21 @@ const MyProfile = () => {
                         >
                             <Text
                                 onPress={() => navigation.navigate('TermsOfUse' as any)}
-                                style={{
+                                style={[{
                                     fontSize: 12,
                                     color: colors.primary,
                                     fontWeight: 600
-                                }}
+                                }, globalStyles.fontRegular]}
                             >
                                 Terms of use
                             </Text>
                             <Text
                                 onPress={() => navigation.navigate('PrivacyPolicy' as any)}
-                                style={{
+                                style={[{
                                     fontSize: 12,
                                     color: colors.primary,
                                     fontWeight: 600
-                                }}
+                                }, globalStyles.fontRegular]}
                             >
                                 Privacy Policy
                             </Text>

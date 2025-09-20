@@ -2,7 +2,6 @@ import { useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
 import {
     FlatList,
-    ScrollView,
     Text,
     TouchableOpacity,
     View
@@ -12,11 +11,10 @@ import { servicesdata } from "../data/servicesData";
 import { globalStyles } from "../public/styles";
 import { styles } from "../public/styles/subscriptionStyles";
 
+import GradientButtonWithSlightRadius from "../components/GradientButtonWithSlightRadius";
 import { productData } from "../data/productsData";
-import { renderFlatlistItem } from "./Products";
 import { IProduct } from "../types/product.types";
-import LinearGradient from "react-native-linear-gradient";
-import { colors } from "../public/assets/colors";
+import { FLProductItem } from "./Products";
 
 const Services: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -35,7 +33,7 @@ const Services: React.FC = () => {
 
             <FlatList
                 data={productData.slice(0, 6)}
-                renderItem={renderFlatlistItem}
+                renderItem={FLProductItem}
                 keyExtractor={(item: IProduct, index: number) => index.toString()}
                 numColumns={2}
                 columnWrapperStyle={{ gap: 2, marginBottom: 20, justifyContent: 'space-between' }}
@@ -43,7 +41,7 @@ const Services: React.FC = () => {
                     <View>
                         <View style={{ marginBottom: 40 }}>
                             <View style={styles.card}>
-                                <Text style={styles.cardTitle}>Choose a plan</Text>
+                                <Text style={[styles.cardTitle, globalStyles.fontBold]}>Choose a plan</Text>
 
 
                                 <View style={styles.segmentRow}>
@@ -57,8 +55,8 @@ const Services: React.FC = () => {
                                     >
                                         <Text
                                             style={[
-                                                styles.segmentText,
                                                 billingCycle === "monthly" && styles.segmentTextActive,
+                                                globalStyles.fontBold
                                             ]}
                                         >
                                             Monthly
@@ -75,8 +73,8 @@ const Services: React.FC = () => {
                                     >
                                         <Text
                                             style={[
-                                                styles.segmentText,
                                                 billingCycle === "yearly" && styles.segmentTextActive,
+                                                globalStyles.fontBold
                                             ]}
                                         >
                                             Yearly
@@ -99,12 +97,27 @@ const Services: React.FC = () => {
                                                 ]}
                                             >
                                                 <View style={{ flex: 1 }}>
-                                                    <Text style={styles.planTitle}>{p.title}</Text>
-                                                    <Text style={styles.planSub}>
+                                                    <Text
+                                                        style={[
+                                                            styles.planTitle,
+                                                            globalStyles.fontSemiBold
+                                                        ]}
+                                                    >
+                                                        {p.title}
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.planSub,
+                                                            globalStyles.fontRegular
+                                                        ]}>
                                                         {billingCycle === "yearly" ? p.yearlyLabel : ""}
                                                     </Text>
                                                 </View>
-                                                <Text style={styles.planPrice}>
+                                                <Text
+                                                    style={[
+                                                        styles.planSub,
+                                                        globalStyles.fontRegular
+                                                    ]}>
                                                     {billingCycle === "monthly" ? p.monthlyPrice : p.yearlyPrice}
                                                 </Text>
                                             </TouchableOpacity>
@@ -115,38 +128,19 @@ const Services: React.FC = () => {
                         </View>
 
                         <View>
-                            <Text style={{
-                                fontSize: 25,
+                            <Text style={[{
+                                fontSize: 20,
                                 fontWeight: 600,
                                 marginBottom: 10
-                            }}>Suggested Products</Text>
+                            }, globalStyles.fontBold]}>Suggested Products</Text>
                         </View>
                     </View>
                 )}
                 ListFooterComponent={() => (
-                    <TouchableOpacity
-                        style={{ marginVertical: 20 }}
+                    <GradientButtonWithSlightRadius
+                        title="See More"
                         onPress={() => navigation.navigate("Products")}
-                    >
-                        <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={{
-                                borderRadius: 10,
-                                justifyContent: "center",
-                                alignItems: "center",
-                                paddingVertical: 14
-                            }}
-                        >
-                            <Text
-                                style={{
-                                    color: colors.white,
-                                    fontSize: 16
-                                }}
-                            >See More</Text>
-                        </LinearGradient>
-                    </TouchableOpacity>
+                    />
                 )}
             />
         </SafeAreaView>

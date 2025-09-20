@@ -8,6 +8,7 @@ import ArticleContent from '../screens/ArticleContent';
 import Dashboard from '../screens/Dashboard';
 import Experts from '../screens/Experts';
 import Services from '../screens/Services';
+import { globalStyles } from '../public/styles';
 
 const Tab = createBottomTabNavigator();
 
@@ -16,6 +17,7 @@ export const DashboardTabNavigator = () => {
     return (
         <Tab.Navigator
             screenOptions={{
+                animation: "shift",
                 tabBarBackground: () => (
                     <LinearGradient
                         colors={[colors.primary, colors.secondary]}
@@ -25,7 +27,9 @@ export const DashboardTabNavigator = () => {
                     />
                 ),
                 tabBarLabelStyle: {
-                    fontSize: 12,
+                    fontSize: 8,
+                    marginTop: 2,
+                    ...globalStyles.fontRegular
                 },
                 tabBarStyle: {
                     height: 65,
@@ -36,11 +40,18 @@ export const DashboardTabNavigator = () => {
 
                 },
                 tabBarItemStyle: {
-                    borderRadius: 100,
+                    borderRadius: 10,
+                    overflow: 'hidden'
                 },
                 tabBarActiveTintColor: colors.secondary,
                 tabBarInactiveTintColor: colors.white,
                 tabBarActiveBackgroundColor: colors.white,
+                headerShadowVisible: false,
+                headerTitleStyle: { ...globalStyles.fontBold },
+                headerStyle: {
+                    backgroundColor: colors.pageBG
+                },
+
                 headerRight: () => (
                     <View
                         style={{ paddingRight: 15, flexDirection: 'row', gap: 20, alignItems: 'center' }}

@@ -28,7 +28,9 @@ const SubscriptionDetails: React.FC = () => {
 
             <ScrollView>
                 <View style={subscriptionsDetailsStyles.card}>
-                    <Text style={subscriptionsDetailsStyles.cardTitle}>Choose a plan {passedPlan.id}</Text>
+                    <Text style={[subscriptionsDetailsStyles.cardTitle, globalStyles.fontBold]}>
+                        Choose a plan
+                    </Text>
 
                     <View style={subscriptionsDetailsStyles.segmentRow}>
                         <TouchableOpacity
@@ -40,7 +42,7 @@ const SubscriptionDetails: React.FC = () => {
                         >
                             <Text
                                 style={[
-                                    subscriptionsDetailsStyles.segmentText,
+                                    globalStyles.fontBold,
                                     billingCycle === "monthly" && subscriptionsDetailsStyles.segmentTextActive,
                                 ]}
                             >
@@ -57,7 +59,7 @@ const SubscriptionDetails: React.FC = () => {
                         >
                             <Text
                                 style={[
-                                    subscriptionsDetailsStyles.segmentText,
+                                    globalStyles.fontBold,
                                     billingCycle === "yearly" && subscriptionsDetailsStyles.segmentTextActive,
                                 ]}
                             >
@@ -75,13 +77,28 @@ const SubscriptionDetails: React.FC = () => {
                                 onPress={() => { }}
                             >
                                 <View style={{ flex: 1 }}>
-                                    <Text style={subscriptionsDetailsStyles.planTitle}>{p.title}</Text>
-                                    <Text style={subscriptionsDetailsStyles.planSub}>
-                                        {billingCycle === "yearly" ? "₹ 60000 / yearly" : ""}
+                                    <Text
+                                        style={[
+                                            styles.planTitle,
+                                            globalStyles.fontSemiBold
+                                        ]}
+                                    >
+                                        {p.title}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.planSub,
+                                            globalStyles.fontRegular
+                                        ]}>
+                                        {billingCycle === "yearly" ? p.yearlyLabel : ""}
                                     </Text>
                                 </View>
-                                <Text style={subscriptionsDetailsStyles.planPrice}>
-                                    {billingCycle === "monthly" ? "₹ 4999 / mo" : "₹ 60000 / yearly"}
+                                <Text
+                                    style={[
+                                        styles.planSub,
+                                        globalStyles.fontRegular
+                                    ]}>
+                                    {billingCycle === "monthly" ? p.monthlyPrice : p.yearlyPrice}
                                 </Text>
                             </TouchableOpacity>
                         ))}
@@ -95,14 +112,14 @@ const SubscriptionDetails: React.FC = () => {
                         {/* header row */}
                         <View style={[subscriptionsDetailsStyles.tableRow, subscriptionsDetailsStyles.tableHeader]}>
                             <View style={[subscriptionsDetailsStyles.cell, { flex: 1 }]}>
-                                <Text style={{ fontWeight: "700" }}>Features</Text>
+                                <Text style={[globalStyles.fontRegular, { fontSize: 10 }]}>Features</Text>
                             </View>
                             {[...servicesdata]
                                 .sort((a, b) => Number(a.id) - Number(b.id)) // Sort the array
                                 .reverse() // reverse the array
                                 .map((p) => (
                                     <View key={p.id} style={[subscriptionsDetailsStyles.cell, { width: 92 }]}>
-                                        <Text style={{ fontWeight: "700", textAlign: "center" }}>{p.title}</Text>
+                                        <Text style={[globalStyles.fontRegular, { fontSize: 10, textAlign: 'center' }]}>{p.title}</Text>
                                     </View>
                                 ))}
                         </View>
@@ -111,7 +128,7 @@ const SubscriptionDetails: React.FC = () => {
                         {FEATURE_ROWS.map((f, i) => (
                             <View key={f} style={subscriptionsDetailsStyles.tableRow}>
                                 <View style={[subscriptionsDetailsStyles.cell2, { flex: 1 }]}>
-                                    <Text style={{ fontSize: 12 }}>{f}</Text>
+                                    <Text style={[globalStyles.fontRegular, { fontSize: 10 }]}>{f}</Text>
                                 </View>
                                 {[...servicesdata]
                                     .sort((a, b) => Number(a.id) - Number(b.id)) // sort the array
@@ -149,7 +166,15 @@ const SubscriptionDetails: React.FC = () => {
                     style={{ flex: 1 }}
                     activeOpacity={0.8}
                 >
-                    <Text style={{ color: colors.white, fontSize: 20, textAlign: 'center' }}>Continue</Text>
+                    <Text
+                        style={[{
+                            color: colors.white,
+                            fontSize: 16,
+                            textAlign: 'center'
+                        }, globalStyles.fontRegular]}
+                    >
+                        Continue
+                    </Text>
                 </TouchableOpacity>
             </LinearGradient>
         </SafeAreaView>

@@ -55,8 +55,8 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                 {
                     currentStep == 1 && (
                         <View>
-                            <Text style={onboardingStyles.welcomeText}>Welcome</Text>
-                            <Text style={onboardingStyles.welcomeTextCaption}>to Viva nari</Text>
+                            <Text style={[onboardingStyles.welcomeText, globalStyles.fontRegular]}>Welcome</Text>
+                            <Text style={[onboardingStyles.welcomeTextCaption, globalStyles.fontRegular]}>to Viva Nari</Text>
                         </View>
                     )
                 }

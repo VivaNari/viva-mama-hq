@@ -38,7 +38,14 @@ const CategoryScreen = ({ category }: { category: ICategory }) => {
             />
             <View style={[globalStyles.container]}>
                 {/* Category Name */}
-                <Text style={styles.headerTitle}>{category.categoryName}</Text>
+                <Text
+                    style={[
+                        styles.headerTitle,
+                        globalStyles.fontBold
+                    ]}
+                >
+                    {category.categoryName}
+                </Text>
 
                 {/* Subcategories with articles */}
                 <FlatList

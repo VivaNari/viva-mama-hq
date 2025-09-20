@@ -2,6 +2,7 @@ import React from 'react'
 import { Text, TouchableOpacity, View } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
 import { colors } from '../public/assets/colors'
+import { globalStyles } from '../public/styles'
 
 const VivaBuddyRequestCall = () => {
     return (
@@ -21,18 +22,19 @@ const VivaBuddyRequestCall = () => {
                 style={{ width: '60%' }}
             >
                 <Text
-                    style={{
-                        fontSize: 18,
+                    style={[{
+                        fontSize: 16,
                         textAlign: 'center'
-                    }}
+                    }, globalStyles.fontRegular]}
                 >
                     Request a call with Viva buddy
                 </Text>
                 <Text
-                    style={{
+                    style={[{
                         textAlign: 'center',
-                        marginTop: 4
-                    }}
+                        marginTop: 4,
+                        fontSize: 12
+                    }, globalStyles.fontLight]}
                 >
                     Mon - Fri - 10AM - 5PM
                 </Text>
@@ -55,9 +57,9 @@ const VivaBuddyRequestCall = () => {
                         }}
                     >
                         <Text
-                            style={{
+                            style={[{
                                 color: colors.white
-                            }}
+                            }, globalStyles.fontRegular]}
                         >Request</Text>
                     </LinearGradient>
                 </TouchableOpacity>

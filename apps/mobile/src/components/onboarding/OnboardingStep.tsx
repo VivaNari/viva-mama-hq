@@ -32,12 +32,12 @@ const OnboardingStep: React.FC<Props> = ({
                     return (
                         <View key={index} style={{ backgroundColor: '#fff', marginVertical: 10, padding: 10, borderRadius: 6 }}>
                             <Text
-                                style={[globalStyles.headingxl, { marginBottom: 10 }]}
+                                style={[globalStyles.headingxl, globalStyles.fontSemiBold, { marginBottom: 10 }]}
                             >
                                 {singlePhq.question}
                             </Text>
                             {singlePhq.isMultichoice && (
-                                <Text style={{ textAlign: 'center' }}>(multiple choice)</Text>
+                                <Text style={[{ textAlign: 'center' }, globalStyles.fontRegular]}>(multiple choice)</Text>
                             )}
                             <PHQInputRenderer
                                 question={{ ...singlePhq, answer: currentAnswer }}

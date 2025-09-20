@@ -8,16 +8,14 @@ export const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: '700',
     marginBottom: 20,
   },
   inputWrapper: {
     marginBottom: 15,
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#333',
-    fontWeight: 600,
   },
   input: {
     backgroundColor: 'rgba(244, 244, 244, 1)',
@@ -35,6 +33,5 @@ export const styles = StyleSheet.create({
   saveText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600',
   },
 });

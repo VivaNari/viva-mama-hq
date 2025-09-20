@@ -23,7 +23,7 @@ const PHQInputRenderer: React.FC<Props> = ({ question, onChange }) => {
                     placeholderTextColor={colors.white}
                     cursorColor={colors.white}
                     placeholder={question.placeholder}
-                    style={globalStyles.input}
+                    style={[globalStyles.input, globalStyles.fontRegular]}
                     value={typeof question.answer === "string" ? question.answer : ""}
                     onChangeText={onChange}
 
@@ -38,7 +38,7 @@ const PHQInputRenderer: React.FC<Props> = ({ question, onChange }) => {
                     selectionColor={colors.primary}
                     placeholderTextColor={colors.white}
                     placeholder={question.placeholder}
-                    style={globalStyles.input}
+                    style={[globalStyles.input, globalStyles.fontRegular]}
                     keyboardType="numeric"
                     value={
                         typeof question.answer === "number"
@@ -78,7 +78,11 @@ const PHQInputRenderer: React.FC<Props> = ({ question, onChange }) => {
                                 }}
                                 style={[isSelected ? globalStyles.inputSelected : globalStyles.input]}
                             >
-                                <Text style={{ color: colors.white }}>
+                                <Text
+                                    style={[{
+                                        color: colors.white,
+                                    }, globalStyles.fontRegular]}
+                                >
                                     {opt.label}
                                 </Text>
                             </TouchableOpacity>
@@ -94,7 +98,7 @@ const PHQInputRenderer: React.FC<Props> = ({ question, onChange }) => {
                         style={[globalStyles.input, { alignItems: 'center', flexDirection: 'row', justifyContent: 'space-between' }]}
                         onPress={() => setShowDatePicker(true)}
                     >
-                        <Text style={{ color: colors.white }}>
+                        <Text style={[{ color: colors.white }, globalStyles.fontRegular]}>
                             {question.answer
                                 ? new Date(question.answer as string).toLocaleDateString()
                                 : "Select Date"}

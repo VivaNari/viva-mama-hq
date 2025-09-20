@@ -9,18 +9,16 @@ export const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: '700',
     marginBottom: 10,
     color: '#000',
   },
   headerSubtitle: {
     fontSize: 14,
-    fontWeight: '500',
     marginBottom: 10,
     color: '#000',
   },
   benefitText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#444',
     marginBottom: 5,
     marginLeft: 15,
@@ -41,7 +39,6 @@ export const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
     color: '#000',
   },
   codeBox: {
@@ -54,17 +51,15 @@ export const styles = StyleSheet.create({
   },
   code: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    fontSize: 20,
   },
   sensitiveText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#444',
     marginTop: 10,
   },
   stepsTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
     marginBottom: 12,
     color: '#000',
   },
@@ -72,13 +67,12 @@ export const styles = StyleSheet.create({
     marginBottom: 15,
   },
   stepTitle: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
     marginBottom: 4,
     color: '#000',
   },
   stepDescription: {
-    fontSize: 13,
+    fontSize: 10,
     color: '#444',
   },
 });

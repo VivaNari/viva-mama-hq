@@ -21,12 +21,11 @@ export const ContentDetailsStyles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
     marginBottom: 6,
     color: '#000',
   },
   author: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#666',
     marginBottom: 10,
   },
@@ -43,7 +42,7 @@ export const ContentDetailsStyles = StyleSheet.create({
     paddingVertical: 2,
   },
   content: {
-    fontSize: 15,
+    fontSize: 14.5,
     lineHeight: 22,
     color: '#333',
   },
@@ -56,8 +55,7 @@ export const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 16,
     paddingVertical: 12,
   },
   subCategoryBlock: {

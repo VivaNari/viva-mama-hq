@@ -5,6 +5,8 @@ import { profileFormFields } from "../data/profileForm";
 import { styles } from "../public/styles/profileStyles";
 import { colors } from "../public/assets/colors";
 import LinearGradient from "react-native-linear-gradient";
+import { globalStyles } from "../public/styles";
+import GradientButtonWithSlightRadius from "../components/GradientButtonWithSlightRadius";
 
 const EditProfile = () => {
     const [profile, setProfile] = useState<IUserProfile>({
@@ -32,14 +34,13 @@ const EditProfile = () => {
                     flex: 1
                 }}
             >
-                <Text style={styles.title}>Edit Profile</Text>
 
                 {profileFormFields.map((field) => (
                     <View key={field.key} style={styles.input}>
-                        <Text style={styles.label}>{field.label}</Text>
+                        <Text style={[[styles.label, globalStyles.fontRegular]]}>{field.label}</Text>
                         <TextInput
                             placeholderTextColor={colors.black}
-                            style={{ fontSize: 17 }}
+                            style={[{ fontSize: 16 }, globalStyles.fontRegular]}
                             placeholder={field.placeholder}
                             value={String(profile[field.key] ?? "")}
                             keyboardType={
@@ -65,7 +66,7 @@ const EditProfile = () => {
                     style={styles.saveButton}
                 >
                     <Text
-                        style={styles.saveText}
+                        style={[styles.saveText, globalStyles.fontRegular]}
                     >Save</Text>
                 </LinearGradient>
             </TouchableOpacity>

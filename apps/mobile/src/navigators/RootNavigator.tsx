@@ -1,31 +1,43 @@
 
-import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Onboarding from '../screens/OnboardingSteps';
-import { DashboardTabNavigator } from './TabNavigator';
+import * as React from 'react';
+import SubscriptionDetails from '../components/SubscriptionDetails';
+import { colors } from '../public/assets/colors';
+import { globalStyles } from '../public/styles';
+import AddPartner from '../screens/AddPartner';
+import ArticleContent from '../screens/ArticleContent';
+import ArticleDetails from '../screens/ArticleDetails';
+import CategoryArticles from '../screens/CategoryArticles';
+import EditProfile from '../screens/EditProfile';
+import ExpertDetails from '../screens/ExpertDetails';
 import Landing from '../screens/Landing';
 import LoginwithPhone from '../screens/LoginwithPhone';
-import Products from '../screens/Products';
-import ArticleContent from '../screens/ArticleContent';
-import CategoryArticles from '../screens/CategoryArticles';
-import SubCategoryArticles from '../screens/SubCategoryArticles';
-import ArticleDetails from '../screens/ArticleDetails';
-import Experts from '../screens/Experts';
-import ExpertDetails from '../screens/ExpertDetails';
-import SubscriptionDetails from '../components/SubscriptionDetails';
 import MyProfile from '../screens/MyProfile';
 import Notifications from '../screens/Notifications';
-import TermsOfUse from '../screens/TermsOfUse';
+import Onboarding from '../screens/OnboardingSteps';
 import PrivacyPolicy from '../screens/PrivacyPolicy';
-import EditProfile from '../screens/EditProfile';
-import AddPartner from '../screens/AddPartner';
+import Products from '../screens/Products';
+import SubCategoryArticles from '../screens/SubCategoryArticles';
+import TermsOfUse from '../screens/TermsOfUse';
+import { DashboardTabNavigator } from './TabNavigator';
 
 const Stack = createNativeStackNavigator();
 
 const RootStack = () => {
     return (
-        <Stack.Navigator>
+        <Stack.Navigator
+            screenOptions={{
+                animation: "fade_from_bottom",
+                statusBarAnimation: "slide",
+                headerShadowVisible: false,
+                headerTitleStyle: { ...globalStyles.fontBold, fontSize: 18 },
+                headerStyle: {
+                    backgroundColor: colors.pageBG
+                }
+
+            }}
+        >
             <Stack.Screen
                 name="Landing"
                 component={Landing}

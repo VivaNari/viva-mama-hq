@@ -1,16 +1,15 @@
+import { useNavigation } from "@react-navigation/native";
 import React from "react";
 import {
-    View,
+    FlatList,
     Text,
     TouchableOpacity,
-    FlatList,
-    StyleSheet,
+    View
 } from "react-native";
 import { notifications } from "../data/notificationData";
-import { useNavigation } from "@react-navigation/native";
-import { INotification } from "../types/notification.types";
-import { colors } from "../public/assets/colors";
+import { globalStyles } from "../public/styles";
 import { styles } from "../public/styles/notificationStyles";
+import { INotification } from "../types/notification.types";
 
 const NotificationScreen = () => {
     const navigation = useNavigation<any>();
@@ -24,8 +23,8 @@ const NotificationScreen = () => {
                 }
             }}
         >
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.message} numberOfLines={2}>
+            <Text style={[styles.title, globalStyles.fontMedium]}>{item.title}</Text>
+            <Text style={[styles.message, globalStyles.fontRegular]} numberOfLines={2}>
                 {item.message}
             </Text>
         </TouchableOpacity>

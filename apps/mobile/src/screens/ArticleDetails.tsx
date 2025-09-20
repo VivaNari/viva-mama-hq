@@ -35,7 +35,11 @@ const ArticleDetails = () => {
     if (!article) {
         return (
             <SafeAreaView style={ContentDetailsStyles.center}>
-                <Text>Article not found.</Text>
+                <Text
+                    style={[globalStyles.fontRegular]}
+                >
+                    Article not found.
+                </Text>
             </SafeAreaView>
         );
     }
@@ -48,8 +52,8 @@ const ArticleDetails = () => {
 
                 {/* Title + Author */}
                 <View style={globalStyles.container}>
-                    <Text style={ContentDetailsStyles.title}>{article.title}</Text>
-                    <Text style={ContentDetailsStyles.author}>Written by {article.author}</Text>
+                    <Text style={[ContentDetailsStyles.title, globalStyles.fontSemiBold]}>{article.title}</Text>
+                    <Text style={[ContentDetailsStyles.author, globalStyles.fontRegular]}>Written by {article.author}</Text>
 
                     {/* Action Buttons */}
                     <View style={ContentDetailsStyles.actions}>
@@ -79,7 +83,11 @@ const ArticleDetails = () => {
                         </TouchableOpacity>
                     </View>
                     <View>
-                        <Text style={ContentDetailsStyles.content}>{article.content}</Text>
+                        <Text
+                            style={[ContentDetailsStyles.content, globalStyles.fontRegular]}
+                        >
+                            {article.content}
+                        </Text>
                     </View>
                 </View>
             </ScrollView>

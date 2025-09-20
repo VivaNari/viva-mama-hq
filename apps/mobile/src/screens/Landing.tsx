@@ -38,8 +38,8 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
 
                     {/* Welcome Text */}
                     <View>
-                        <Text style={landingStyles.welcomeText}>Welcome, Mama</Text>
-                        <Text style={landingStyles.welcomeCaption}>Your complete companion for postpartum care and recovery.</Text>
+                        <Text style={[landingStyles.welcomeText, globalStyles.fontBold]}>Welcome, Mama</Text>
+                        <Text style={[landingStyles.welcomeCaption, globalStyles.fontRegular]}>Your complete companion for postpartum care and recovery.</Text>
                     </View>
 
                     {/* Login Options */}
@@ -60,12 +60,19 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                     alignItems: "center",
                                     flexDirection: "row",
                                     padding: 14,
-                                    gap: 10
+                                    gap: 20
 
                                 }}
                             >
                                 <MaterialDesignIcons name="google" color={colors.white} size={20} />
-                                <Text style={{ color: colors.white, fontSize: 20 }}>Continue with Google</Text>
+                                <Text
+                                    style={[{
+                                        color: colors.white,
+                                        fontSize: 18
+                                    }, globalStyles.fontRegular]}
+                                >
+                                    Continue with Google
+                                </Text>
                             </LinearGradient>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -85,12 +92,19 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                     alignItems: "center",
                                     flexDirection: "row",
                                     padding: 14,
-                                    gap: 10
+                                    gap: 20
 
                                 }}
                             >
                                 <MaterialDesignIcons name="phone" color={colors.white} size={20} />
-                                <Text style={{ color: colors.white, fontSize: 20 }}>Continue with Phone</Text>
+                                <Text
+                                    style={[{
+                                        color: colors.white,
+                                        fontSize: 18
+                                    }, globalStyles.fontRegular]}
+                                >
+                                    Continue with Phone
+                                </Text>
                             </LinearGradient>
                         </TouchableOpacity>
                     </View>

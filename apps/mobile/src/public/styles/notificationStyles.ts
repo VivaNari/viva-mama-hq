@@ -7,21 +7,20 @@ export const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   card: {
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: colors.notoficatioBorder,
     padding: 14,
     borderRadius: 10,
     marginBottom: 12,
   },
   title: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14,
     marginBottom: 6,
     color: '#000',
     textTransform: 'capitalize',
   },
   message: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#444',
   },
 });

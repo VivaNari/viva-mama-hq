@@ -19,7 +19,6 @@ const AddPartner = () => {
     const handleCopy = (data: string) => {
         console.log("Copied:", partnerData.code);
         Clipboard.setString(data)
-
     };
 
     return (
@@ -40,11 +39,11 @@ const AddPartner = () => {
                             paddingTop: 70
                         }}
                     >
-                        <Text style={styles.headerTitle}>{partnerData.title}</Text>
-                        <Text style={styles.headerSubtitle}>Benefits of adding your partner</Text>
+                        <Text style={[styles.headerTitle, globalStyles.fontBold]}>{partnerData.title}</Text>
+                        <Text style={[styles.headerSubtitle, globalStyles.fontRegular]}>Benefits of adding your partner</Text>
 
                         {partnerData.benefits.map((benefit) => (
-                            <Text key={benefit.id} style={styles.benefitText}>
+                            <Text key={benefit.id} style={[styles.benefitText, globalStyles.fontRegular]}>
                                 • {benefit.text}
                             </Text>
                         ))}
@@ -56,28 +55,28 @@ const AddPartner = () => {
                 >
                     <View style={styles.card}>
                         <View style={styles.codeRow}>
-                            <Text style={styles.label}>Your code</Text>
+                            <Text style={[styles.label, globalStyles.fontMedium]}>Your code</Text>
                             <TouchableOpacity style={styles.codeBox} onPress={() => handleCopy(partnerData.code)}>
-                                <Text style={styles.code}>{partnerData.code}</Text>
+                                <Text style={[styles.code, globalStyles.fontSemiBold]}>{partnerData.code}</Text>
                                 <MaterialDesignIcons name="content-copy" size={18} color="#fff" style={{ marginLeft: 20 }} />
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <Text style={styles.sensitiveText}>
+                    <Text style={[styles.sensitiveText, globalStyles.fontRegular]}>
                         Please be careful this is your sensitive data
                     </Text>
 
                     {/* Steps Section */}
                     <View style={[styles.card, { marginTop: 20 }]}>
-                        <Text style={styles.stepsTitle}>Steps to connect your partner</Text>
+                        <Text style={[styles.stepsTitle, globalStyles.fontMedium]}>Steps to connect your partner</Text>
                         <FlatList
                             data={partnerData.steps}
                             keyExtractor={(item) => item.id.toString()}
                             scrollEnabled={false}
                             renderItem={({ item }) => (
                                 <View style={styles.stepItem}>
-                                    <Text style={styles.stepTitle}>{item.title}</Text>
-                                    <Text style={styles.stepDescription}>{item.description}</Text>
+                                    <Text style={[styles.stepTitle, globalStyles.fontRegular]}>{item.title}</Text>
+                                    <Text style={[styles.stepDescription, globalStyles.fontLight]}>{item.description}</Text>
                                 </View>
                             )}
                         />

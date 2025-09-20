@@ -2,6 +2,7 @@ import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-
 import React from 'react';
 import { TextInput, View } from 'react-native';
 import { colors } from '../public/assets/colors';
+import { globalStyles } from "../public/styles";
 
 
 const SearchInput = () => {
@@ -24,7 +25,12 @@ const SearchInput = () => {
                 cursorColor={colors.black}
                 placeholder={"Search"}
                 selectTextOnFocus={true}
-                style={{ paddingVertical: 15, paddingHorizontal: 20, color: colors.black, flex: 1 }}
+                style={[{
+                    paddingVertical: 15,
+                    paddingHorizontal: 20,
+                    color: colors.black,
+                    flex: 1
+                }, globalStyles.fontRegular]}
             />
             <MaterialDesignIcons name="magnify" color={colors.black} size={24} />
         </View>

@@ -1,6 +1,7 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { IContent } from "../types/content.types";
 import { useNavigation } from "@react-navigation/native";
+import { globalStyles } from "../public/styles";
 
 export const ArticleCard = ({ item }: { item: IContent }) => {
     const navigation = useNavigation() as any;
@@ -12,10 +13,10 @@ export const ArticleCard = ({ item }: { item: IContent }) => {
         >
             <Image source={item.thumbnailImage} style={styles.articleImage} />
             <View style={{ flex: 1 }}>
-                <Text style={styles.articleTitle} numberOfLines={1}>
+                <Text style={[styles.articleTitle, globalStyles.fontSemiBold]} numberOfLines={1}>
                     {item.title}
                 </Text>
-                <Text style={styles.articleDesc} numberOfLines={2}>
+                <Text style={[styles.articleDesc, globalStyles.fontRegular]} numberOfLines={2}>
                     {item.content}
                 </Text>
             </View>
@@ -36,11 +37,10 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     articleTitle: {
-        fontSize: 14,
-        fontWeight: "600",
+        fontSize: 13,
     },
     articleDesc: {
-        fontSize: 12,
+        fontSize: 10,
         color: "#555",
         marginTop: 2,
     },
