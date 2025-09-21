@@ -1,5 +1,5 @@
 import React from 'react'
-import { Text, TouchableOpacity, View } from 'react-native'
+import { Alert, Text, TouchableOpacity, View } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
@@ -44,6 +44,7 @@ const VivaBuddyRequestCall = () => {
             >
                 <TouchableOpacity
                     style={{ marginVertical: 20 }}
+                    onPress={() => Alert.alert("Request Sent", "Your request for a call with Viva Buddy has been sent. Our team will contact you shortly.")}
                 >
                     <LinearGradient
                         colors={[colors.primary, colors.secondary]}

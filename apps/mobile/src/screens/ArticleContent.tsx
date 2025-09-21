@@ -1,18 +1,31 @@
-import React from 'react'
+import React, { useMemo, useState } from 'react'
 import { FlatList, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FLCategoryItem from '../components/community/FLCategoryItem'
+import FLSubCategoryItem from '../components/community/FLSubCategoryItem'
 import SearchInput from '../components/SearchInput'
 import { contentsData } from '../data/contentsData'
 import { globalStyles } from '../public/styles'
 import { ICategory } from '../types/content.types'
-import FLSubCategoryItem from '../components/community/FLSubCategoryItem'
 
 const ArticleContent = ({ navigation }: { navigation: { navigate: any } }) => {
+    const [searchData, setSearchData] = useState<string>("");
+
+    const filteredData = useMemo(() => {
+        if (!searchData.trim()) return contentsData;
+
+        return contentsData.map(category => ({
+            ...category,
+            subCategories: category.subCategories.filter(sub =>
+                sub.subCategoryName.toLowerCase().includes(searchData.toLowerCase())
+            )
+        })).filter(category => category.subCategories.length > 0); // remove empty categories
+    }, [searchData]);
+
     return (
         <SafeAreaView style={[globalStyles.container]}>
             <FlatList
-                data={contentsData}
+                data={filteredData}
                 keyExtractor={(item: ICategory) => item.id.toString()}
                 renderItem={({ item }) => (
                     <FlatList
@@ -20,16 +33,15 @@ const ArticleContent = ({ navigation }: { navigation: { navigate: any } }) => {
                         data={item.subCategories}
                         renderItem={({ item }) => FLSubCategoryItem({ item, navigation })}
                         scrollEnabled={false}
-                        style={{
-                            marginTop: 25
-                        }}
+                        style={{ marginTop: 25 }}
+                        keyboardShouldPersistTaps="handled"
                     />
                 )}
                 ListHeaderComponent={
                     <>
                         {/* Search */}
                         <View style={{ marginBottom: 15 }}>
-                            <SearchInput />
+                            <SearchInput setSearchData={setSearchData} />
                         </View>
 
                         {/* Categories */}
@@ -43,14 +55,13 @@ const ArticleContent = ({ navigation }: { navigation: { navigate: any } }) => {
                                 alignItems: 'flex-end',
                                 flexWrap: 'wrap',
                             }}
-                            style={{ paddingHorizontal: 20, marginBottom: 20 }}
+                            style={{ paddingHorizontal: 30, marginBottom: 20 }}
                             scrollEnabled={false}
+                            keyboardShouldPersistTaps="handled"
                         />
                     </>
                 }
-                contentContainerStyle={{}} // so last item is visible above tab bar
             />
-
         </SafeAreaView>
     )
 }

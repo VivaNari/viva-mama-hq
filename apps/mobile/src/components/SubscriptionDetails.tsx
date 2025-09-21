@@ -1,6 +1,7 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useState } from "react";
 import {
+    Alert,
     Dimensions,
     ScrollView,
     Text,
@@ -149,6 +150,7 @@ const SubscriptionDetails: React.FC = () => {
             {/* Floating Continue button */}
 
             <LinearGradient
+                onTouchEnd={() => { Alert.alert("Success!", "You are subscribed now!") }}
                 colors={[colors.primary, colors.secondary]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}

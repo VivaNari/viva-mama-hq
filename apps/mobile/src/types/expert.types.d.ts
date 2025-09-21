@@ -4,6 +4,7 @@ export interface IExpert {
   remuneration: string;
   avatar: number;
   description: string;
+  whatsappNumber: string;
 }
 
 export interface IExpertCategory {

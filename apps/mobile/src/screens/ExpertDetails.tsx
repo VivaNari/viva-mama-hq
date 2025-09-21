@@ -1,7 +1,9 @@
 import { useRoute } from "@react-navigation/native";
 import React from "react";
 import {
+    Alert,
     Image,
+    Linking,
     ScrollView,
     Text,
     View
@@ -91,8 +93,16 @@ const ExpertDetails = () => {
                     gap: 10,
                 }}
             >
-                <GradientButtonWithSlightRadius onPress={() => { }} title="Schedule Call" />
-                <GradientButtonWithSlightRadius onPress={() => { }} title="Book on Whatsapp" />
+                <GradientButtonWithSlightRadius
+                    onPress={() => { Alert.alert("Schedule Call", `Successfully scheduled a call with ${expert.name} !`,) }}
+                    title="Schedule Call"
+                />
+                <GradientButtonWithSlightRadius
+                    onPress={() => {
+                        Linking.openURL(`https://wa.me/${expert.whatsappNumber}?text=Hi ${expert.name}, I want to schedule a call with you`);
+                    }}
+                    title="Book on Whatsapp"
+                />
 
             </View>
         </SafeAreaView>

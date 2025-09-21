@@ -11,19 +11,23 @@ const FLCategoryItem = ({ item, navigation }: { item: ICategory, navigation: { n
             <View
                 style={{
                     alignItems: 'center',
-                    paddingBottom: 5
+                    paddingBottom: 5,
                 }}
             >
                 <Image
                     source={item.categoryIcon}
-                    width={200}
-                    height={100}
+                    style={{
+                        height: 40,
+                        width: 40,
+                        objectFit: 'contain'
+                    }}
                 />
             </View>
             <Text
                 style={[{
                     fontSize: 12,
-                    marginTop: 2
+                    marginTop: 2,
+                    textAlign: 'center'
 
                 }, globalStyles.fontRegular]}
             >
