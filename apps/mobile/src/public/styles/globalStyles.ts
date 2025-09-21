@@ -8,6 +8,11 @@ export const globalStyles = StyleSheet.create({
     padding: 20,
     backgroundColor: colors.pageBG,
   },
+  chatContainer: {
+    flex: 1,
+    paddingHorizontal: 12,
+    backgroundColor: colors.pageBG,
+  },
   headingxl: {
     fontStyle: 'normal',
     fontSize: 20,
@@ -45,6 +50,13 @@ export const globalStyles = StyleSheet.create({
     backgroundColor: colors.primary,
     height: 52,
     justifyContent: 'center',
+  },
+  card: {
+    borderWidth: 2,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    padding: 20,
+    marginVertical: 10,
+    borderRadius: 10,
   },
   fontLight: {
     fontFamily: getFontFamily(EFontWeight.LIGHT),

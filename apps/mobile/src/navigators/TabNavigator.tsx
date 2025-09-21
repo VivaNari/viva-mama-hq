@@ -4,11 +4,12 @@ import { useNavigation } from '@react-navigation/native';
 import { Image, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../public/assets/colors';
+import { globalStyles } from '../public/styles';
 import ArticleContent from '../screens/ArticleContent';
+import ChatWithVivaAI from '../screens/ChatWithVivaAI';
 import Dashboard from '../screens/Dashboard';
 import Experts from '../screens/Experts';
 import Services from '../screens/Services';
-import { globalStyles } from '../public/styles';
 
 const Tab = createBottomTabNavigator();
 
@@ -86,7 +87,7 @@ export const DashboardTabNavigator = () => {
                 name="Dashboard"
                 component={Dashboard}
                 options={{
-                    tabBarIcon: ({ color, focused }) => (
+                    tabBarIcon: ({ color }) => (
                         <MaterialDesignIcons
                             name="view-dashboard-outline"
                             size={25}
@@ -95,11 +96,12 @@ export const DashboardTabNavigator = () => {
                     ),
                 }}
             />
-            <Tab.Screen
-                name="Viva AI"
-                component={ArticleContent}
+            {/* <Tab.Screen
+                name="VivaAI"
+                component={ChatWithVivaAI}
                 options={{
-                    tabBarIcon: ({ color, focused }) => (
+                    title: "Viva AI",
+                    tabBarIcon: ({ color }) => (
                         <MaterialDesignIcons
                             name="message-badge-outline"
                             size={25}
@@ -107,12 +109,32 @@ export const DashboardTabNavigator = () => {
                         />
                     ),
                 }}
+            /> */}
+            <Tab.Screen
+                name="VivaAI"
+                component={ChatWithVivaAI}
+                options={{
+                    title: "Viva AI",
+                    tabBarIcon: ({ color }) => (
+                        <MaterialDesignIcons
+                            name="message-badge-outline"
+                            size={25}
+                            color={color}
+                        />
+                    ),
+                }}
+                listeners={({ navigation }) => ({
+                    tabPress: e => {
+                        e.preventDefault();
+                        navigation.navigate('ChatWithVivaAI');
+                    },
+                })}
             />
             <Tab.Screen
                 name="Experts"
                 component={Experts}
                 options={{
-                    tabBarIcon: ({ color, focused }) => (
+                    tabBarIcon: ({ color }) => (
                         <MaterialDesignIcons
                             name="account-box-outline"
                             size={25}
@@ -125,7 +147,7 @@ export const DashboardTabNavigator = () => {
                 name="Community"
                 component={ArticleContent}
                 options={{
-                    tabBarIcon: ({ color, focused }) => (
+                    tabBarIcon: ({ color }) => (
                         <MaterialDesignIcons
                             name="book-open-blank-variant-outline"
                             size={25}
@@ -138,7 +160,7 @@ export const DashboardTabNavigator = () => {
                 name="Services"
                 component={Services}
                 options={{
-                    tabBarIcon: ({ color, focused }) => (
+                    tabBarIcon: ({ color }) => (
                         <MaterialDesignIcons
                             name="scatter-plot"
                             size={25}

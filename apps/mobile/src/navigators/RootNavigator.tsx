@@ -21,6 +21,8 @@ import Products from '../screens/Products';
 import SubCategoryArticles from '../screens/SubCategoryArticles';
 import TermsOfUse from '../screens/TermsOfUse';
 import { DashboardTabNavigator } from './TabNavigator';
+import FullReport from '../screens/FullReport';
+import ChatWithVivaAI from '../screens/ChatWithVivaAI';
 
 const Stack = createNativeStackNavigator();
 
@@ -65,6 +67,22 @@ const RootStack = () => {
                 }}
                 name="DashboardTabNavigator"
                 component={DashboardTabNavigator}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: "Full Report"
+                }}
+                name="FullReport"
+                component={FullReport}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: "Viva AI"
+                }}
+                name="ChatWithVivaAI"
+                component={ChatWithVivaAI}
             />
             <Stack.Screen
                 options={{

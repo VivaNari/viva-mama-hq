@@ -4,7 +4,7 @@ import LinearGradient from 'react-native-linear-gradient'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
 
-const GradientButtonWithSlightRadius = ({ title, onPress }: { title: string, onPress: any }) => {
+const GradientButtonWithSlightRadius = ({ title, onPress, fullRounded = false }: { title: string, onPress: any, fullRounded?: boolean }) => {
     return (
         <LinearGradient
             onTouchEnd={() => onPress()}
@@ -13,7 +13,7 @@ const GradientButtonWithSlightRadius = ({ title, onPress }: { title: string, onP
             end={{ x: 1, y: 0 }}
             onMagicTap={() => onPress()}
             style={{
-                borderRadius: 10,
+                borderRadius: !fullRounded ? 10 : 30,
                 justifyContent: "center",
                 alignItems: "center",
                 paddingVertical: 15,
