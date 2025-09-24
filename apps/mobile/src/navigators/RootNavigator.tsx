@@ -25,6 +25,11 @@ import FullReport from '../screens/FullReport';
 import ChatWithVivaAI from '../screens/ChatWithVivaAI';
 import FeedingLog from '../screens/FeedingLog';
 import VaccinationLog from '../screens/VaccinationLog';
+import Recommendations from '../screens/Recommendations';
+import RecommendationDetails from '../screens/RecommendationDetails';
+import VivaClubPost from '../screens/VivaClubPost';
+import VivaClubPostDetails from '../screens/VivaClubPostDetails';
+import CreatePost from '../screens/CreatePost';
 
 const Stack = createNativeStackNavigator();
 
@@ -73,6 +78,22 @@ const RootStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
+                    title: "Recommendations"
+                }}
+                name="Recommendations"
+                component={Recommendations}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: "Recommendation Detials"
+                }}
+                name="RecommendationDetails"
+                component={RecommendationDetails}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
                     title: "Full Report"
                 }}
                 name="FullReport"
@@ -101,6 +122,30 @@ const RootStack = () => {
                 }}
                 name="Content"
                 component={ArticleContent}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Viva Club',
+                }}
+                name="VivaClub"
+                component={VivaClubPost}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Viva Club Post',
+                }}
+                name="VivaClubPostDetails"
+                component={VivaClubPostDetails}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Create Post',
+                }}
+                name="CreatePost"
+                component={CreatePost}
             />
             <Stack.Screen
                 options={{

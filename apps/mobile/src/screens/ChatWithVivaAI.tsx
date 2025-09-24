@@ -18,7 +18,7 @@ const RenderTypingIndicator = () => {
 
 const RenderMessage = ({ item }: { item: IMessage }) => (
     <View style={[styles.messageContainer, item.sender === 'user' ? styles.userMessage : styles.aiMessage]}>
-        <Text style={[styles.messageText, globalStyles.fontRegular]}>{item.text}</Text>
+        <Text selectable style={[styles.messageText, globalStyles.fontRegular]}>{item.text}</Text>
     </View>
 );
 

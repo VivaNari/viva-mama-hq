@@ -7,7 +7,8 @@ import { colors } from '../../public/assets/colors'
 import { globalStyles } from '../../public/styles'
 import GradientButtonWithSlightRadius from '../GradientButtonWithSlightRadius'
 import VivaScoreGauge from '../VivaScoreGauge'
-import FLRecommendationItem from './FLRecommendationItem'
+import FLItemRecommendation from '../recommendations/FLItemRecommendation'
+import { recommendationsData } from '../../data/recommendationsData'
 
 const DashboardMotherTab = () => {
     const navigation = useNavigation<any>();
@@ -196,6 +197,7 @@ const DashboardMotherTab = () => {
                             Recommendations
                         </Text>
                         <Text
+                            onPress={() => navigation.navigate("Recommendations")}
                             style={[{
                                 fontSize: 16,
                                 color: colors.black
@@ -206,8 +208,8 @@ const DashboardMotherTab = () => {
                     </View>
                     <FlatList
                         keyExtractor={(item, index) => index.toString()}
-                        data={["Normal Bleeding (2-3 pads/day)", "Restful sleep with short breaks > 6 hours"]}
-                        renderItem={FLRecommendationItem}
+                        data={recommendationsData.slice(0, 2)}
+                        renderItem={({ item }) => FLItemRecommendation({ item, navigation, onlyTitle: true })}
                         style={{
                             marginVertical: 10
                         }}

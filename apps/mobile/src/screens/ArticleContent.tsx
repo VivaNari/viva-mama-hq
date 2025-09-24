@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { FlatList, View } from 'react-native'
+import { FlatList, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FLCategoryItem from '../components/community/FLCategoryItem'
 import FLSubCategoryItem from '../components/community/FLSubCategoryItem'
@@ -7,6 +7,12 @@ import SearchInput from '../components/SearchInput'
 import { contentsData } from '../data/contentsData'
 import { globalStyles } from '../public/styles'
 import { ICategory } from '../types/content.types'
+import { colors } from '../public/assets/colors'
+import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
+import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
+import { vivaClubData } from '../data/vivaClubData'
+import { ArticleCard } from '../components/ArticleCard'
+import DashboardCard from '../components/dashboard/DashboardCard'
 
 const ArticleContent = ({ navigation }: { navigation: { navigate: any } }) => {
     const [searchData, setSearchData] = useState<string>("");
@@ -39,6 +45,32 @@ const ArticleContent = ({ navigation }: { navigation: { navigate: any } }) => {
                 )}
                 ListHeaderComponent={
                     <>
+                        {/* Viva club redirect button */}
+                        <View
+                            style={{
+                                paddingHorizontal: 5
+                            }}
+                        >
+                            <DashboardCard>
+                                <FLVivaClubPostItem
+                                    isFromCommunityScreen={true}
+                                    item={vivaClubData[0]}
+                                />
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        paddingBottom: 20,
+
+                                    }}
+                                >
+
+                                    <GradientButtonWithSlightRadius
+                                        title='Go to Viva Club'
+                                        onPress={() => navigation.navigate("VivaClub")}
+                                    />
+                                </View>
+                            </DashboardCard>
+                        </View>
                         {/* Search */}
                         <View style={{ marginBottom: 15 }}>
                             <SearchInput setSearchData={setSearchData} />

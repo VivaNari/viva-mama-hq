@@ -10,6 +10,7 @@ import { notifications } from "../data/notificationData";
 import { globalStyles } from "../public/styles";
 import { styles } from "../public/styles/notificationStyles";
 import { INotification } from "../types/notification.types";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const NotificationScreen = () => {
     const navigation = useNavigation<any>();
@@ -31,14 +32,13 @@ const NotificationScreen = () => {
     );
 
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={globalStyles.container}>
             <FlatList
                 data={notifications}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderItem}
-                contentContainerStyle={{ padding: 16 }}
             />
-        </View>
+        </SafeAreaView>
     );
 };
 
