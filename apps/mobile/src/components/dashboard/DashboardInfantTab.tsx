@@ -4,8 +4,10 @@ import { colors } from '../../public/assets/colors'
 import { globalStyles } from '../../public/styles'
 import { infantData } from '../../data/infantData'
 import FLInfantCheckInOptions from './FLInfantCheckInOptions'
+import { useNavigation } from '@react-navigation/native'
 
 const DashboardInfantTab = () => {
+    const navigation = useNavigation<any>();
     return (
         <View>
             <View style={{ flexDirection: 'row' }}>
@@ -138,7 +140,7 @@ const DashboardInfantTab = () => {
                     <FlatList
                         keyExtractor={(item, index) => index.toString()}
                         data={infantData.checkinOptions}
-                        renderItem={FLInfantCheckInOptions}
+                        renderItem={({ item }) => FLInfantCheckInOptions({ item, navigation })}
                         showsVerticalScrollIndicator={false}
                         scrollEnabled={false}
                         numColumns={2}

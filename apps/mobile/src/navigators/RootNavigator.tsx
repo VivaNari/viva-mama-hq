@@ -23,6 +23,8 @@ import TermsOfUse from '../screens/TermsOfUse';
 import { DashboardTabNavigator } from './TabNavigator';
 import FullReport from '../screens/FullReport';
 import ChatWithVivaAI from '../screens/ChatWithVivaAI';
+import FeedingLog from '../screens/FeedingLog';
+import VaccinationLog from '../screens/VaccinationLog';
 
 const Stack = createNativeStackNavigator();
 
@@ -187,6 +189,23 @@ const RootStack = () => {
                 }}
                 name="PrivacyPolicy"
                 component={PrivacyPolicy}
+            />
+            {/* Infant screens */}
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Feeding Log',
+                }}
+                name="FeedingLog"
+                component={FeedingLog}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Vaccination Log',
+                }}
+                name="VaccinationLog"
+                component={VaccinationLog}
             />
         </Stack.Navigator>
     );

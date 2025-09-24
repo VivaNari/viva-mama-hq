@@ -10,11 +10,13 @@ import ChatWithVivaAI from '../screens/ChatWithVivaAI';
 import Dashboard from '../screens/Dashboard';
 import Experts from '../screens/Experts';
 import Services from '../screens/Services';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const Tab = createBottomTabNavigator();
 
 export const DashboardTabNavigator = () => {
     const navigation = useNavigation<any>();
+    const insets = useSafeAreaInsets();
     return (
         <Tab.Navigator
             screenOptions={{
@@ -33,8 +35,8 @@ export const DashboardTabNavigator = () => {
                     ...globalStyles.fontRegular
                 },
                 tabBarStyle: {
-                    height: 65,
-                    paddingBottom: 8,
+                    height: 65 + insets.bottom,
+                    paddingBottom: insets.bottom,
                     paddingTop: 8,
                     paddingLeft: 8,
                     paddingRight: 8,
