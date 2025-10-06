@@ -16,7 +16,12 @@ import { SubCategoryStyles } from "../public/styles/contentStyles";
 const SubCategoryBlock = ({ item }: { item: ISubCategory }) => {
     return (
         <View style={SubCategoryStyles.subCategoryBlock}>
-            <Text style={SubCategoryStyles.headerTitle}>{item.subCategoryName}</Text>
+            <Text style={[
+                SubCategoryStyles.headerTitle,
+                globalStyles.fontBold
+            ]}>
+                {item.subCategoryName}
+            </Text>
             <FlatList
                 data={item.contents}
                 keyExtractor={(c) => c.id.toString()}

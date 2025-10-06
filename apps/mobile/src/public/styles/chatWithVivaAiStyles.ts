@@ -1,7 +1,12 @@
 import { StyleSheet } from 'react-native';
 import { colors } from '../assets/colors';
+import { globalStyles } from './globalStyles';
 
 export const styles = StyleSheet.create({
+  hyperlink: {
+    color: colors.primary,
+    textDecorationLine: 'underline',
+  },
   messageContainer: {
     maxWidth: '80%',
     paddingVertical: 10,
@@ -49,5 +54,46 @@ export const styles = StyleSheet.create({
   sendButtonText: {
     color: '#fff',
     fontWeight: 'bold',
+  },
+  initialViewContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initialHelpText: { fontSize: 24, ...globalStyles.fontRegular },
+  initialPromptsContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 30,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  promptButton: {
+    borderWidth: 1,
+    borderColor: colors.purple,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 20,
+  },
+  promptText: { fontSize: 14, ...globalStyles.fontRegular },
+  optionsInMessageContainer: {
+    marginTop: 10,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    justifyContent: 'flex-start',
+  },
+  optionButton: {
+    backgroundColor: colors.white,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  optionButtonText: {
+    color: colors.primary,
+    ...globalStyles.fontRegular,
+    fontSize: 14,
   },
 });
