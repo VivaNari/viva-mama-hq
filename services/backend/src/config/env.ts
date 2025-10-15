@@ -6,6 +6,7 @@ const env = {
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
     JWT_SECRET: process.env.JWT_SECRET,
     CRYPTO_PASSWORD: process.env.CRYPTO_PASSWORD,
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
 };
 
 export default env;

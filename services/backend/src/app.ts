@@ -1,6 +1,9 @@
 import express from "express";
 import cors from "cors";
 import userRouter from "./api/v1/routes/users/user.route";
+import questionRouter from "./api/v1/routes/questions/question.route";
+import childRouter from "./api/v1/routes/childs/child.route";
+import answerRouter from "./api/v1/routes/answers/answer.route";
 
 const app = express();
 
@@ -12,5 +15,8 @@ app.get("/", (_, res) => {
 });
 
 app.use("/api/v1", userRouter);
+app.use("/api/v1", childRouter);
+app.use("/api/v1", questionRouter);
+app.use("/api/v1", answerRouter);
 
 export default app;

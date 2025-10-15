@@ -3,6 +3,8 @@ import requestValidator from "../../../../middlewares/requestValidator.middlewar
 import UserController from "../../controllers/users/user.controller";
 import { sentOTPValidator, verifyOTPValidator } from "../../validators/users/otp.validator";
 import googleAuthValidator from "../../validators/users/googleAuth.validator";
+import authMiddleware from "../../../../middlewares/authorization.middleware";
+import childValidator from "../../validators/users/child.validator";
 
 const userRouter = Router();
 const getUserController = new UserController();

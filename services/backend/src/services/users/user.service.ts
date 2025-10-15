@@ -7,18 +7,19 @@ import UserModel from "../../models/user.model";
 import { generateJWT } from "../../utils/functions/generateJWT";
 import { OAuth2Client } from "google-auth-library";
 import { IGoogleLoginPayload } from "../../types";
+import env from "../../config/env";
 
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 export default class UserService {
-    login = async (res: Response) => {
-        res.status(200).json({ message: "User logged in successfully" });
-    };
-
     sendOTPToPhone = async (req: Request, res: Response) => {
         try {
-            const { phone } = req.body as any;
-            if (!phone) return res.status(400).json({ message: "Phone number is required" });
+            const { mobile_number, country_code } = req.body;
+            if (!mobile_number || !country_code) {
+                return res
+                    .status(400)
+                    .json({ message: "Country code and mobile number are required" });
+            }
 
             const OTP = Math.floor(100000 + Math.random() * 900000).toString();
             const now = Date.now();
@@ -31,17 +32,20 @@ export default class UserService {
 
             const payload = {
                 otp_id: otpDoc._id,
-                check: phone,
+                check: mobile_number,
                 timestamp: Date.now(),
                 message: "OTP sent successfully",
             };
 
             const verification_key = await encode(JSON.stringify(payload));
 
+            const fullPhoneNumber = `${country_code}${mobile_number}`;
+
             const ok = await sendSMS(
-                phone,
+                fullPhoneNumber,
                 `Your VivaMama OTP is ${OTP}. It expires in 10 minutes.`,
             );
+
             if (ok) {
                 return res.status(200).json({
                     message: "OTP sent successfully",
@@ -66,15 +70,15 @@ export default class UserService {
 
     verifyOTP = async (req: Request, res: Response) => {
         try {
-            const { verification_key, otp, phone } = req.body as any;
-            if (!verification_key || !otp || !phone)
-                return res.status(400).json({ message: "Missing fields" });
+            const { verification_key, otp, mobile_number, country_code } = req.body;
+            if (!verification_key || !otp || !mobile_number || !country_code)
+                return res.status(400).json({ message: "Missing required fields" });
 
             const decoded = await decode(verification_key);
             const data = JSON.parse(decoded);
 
-            if (data.check !== phone)
-                return res.status(400).json({ message: "OTP not sent to this phone" });
+            if (data.check !== mobile_number)
+                return res.status(400).json({ message: "OTP not sent to this number" });
 
             const otpDoc = await OTPModel.findById(data.otp_id);
             if (!otpDoc) return res.status(400).json({ message: "Invalid verification key" });
@@ -89,20 +93,22 @@ export default class UserService {
             otpDoc.verified = true;
             await otpDoc.save();
 
-            // find user
-            let user = await UserModel.findOne({ mobile_number: phone });
+            let user = await UserModel.findOne({ mobile_number });
 
-            // If first-time, create new user
             if (!user) {
-                user = await UserModel.create({ mobile_number: phone });
+                user = await UserModel.create({
+                    mobile_number,
+                    country_code,
+                });
                 console.log("First-time user created:", user._id);
             }
 
-            const jwt = generateJWT(user._id, user.mobile_number, user.email);
+            const jwt = generateJWT(user);
 
             return res.status(200).json({
                 message: "OTP verified successfully",
                 token: jwt,
+                is_onboarded: user.is_onboarded,
             });
         } catch (error: any) {
             console.error("verifyOTP error:", error);
@@ -116,34 +122,33 @@ export default class UserService {
         try {
             const { idToken } = req.body;
 
-            // VERIFY THE GOOGLE ID TOKEN
-            const ticket = await client.verifyIdToken({
-                idToken,
-            });
-
+            const ticket = await client.verifyIdToken({ idToken });
             const payload = ticket.getPayload() as IGoogleLoginPayload;
-            console.log("Payload", payload);
+
             const { name, email, picture } = payload;
 
-            // FIND OR CREATE USER IN DATABASE
             const user = await UserModel.findOneAndUpdate(
                 { email: email },
                 {
-                    name: name,
-                    profile_pic: picture,
+                    $set: {
+                        user_name: name,
+                        profile_picture: picture,
+                        email: email,
+                    },
                 },
                 {
-                    upsert: true, // Create a new doc if no match is found
-                    new: true, // Return the new or updated doc
-                    setDefaultsOnInsert: true, // Apply default values (like is_onboarded: false)
+                    upsert: true,
+                    new: true,
+                    setDefaultsOnInsert: true,
                 },
             );
 
-            const jwt = generateJWT(user._id, user.mobile_number, user.email);
+            const jwt = generateJWT(user);
 
             return res.status(200).json({
                 message: "Logged in successfully",
                 token: jwt,
+                is_onboarded: user.is_onboarded,
             });
         } catch (error) {
             console.error("Google Sign-In Error:", error);
