@@ -13,6 +13,7 @@ const verifyOTPValidator = Joi.object({
         .pattern(/^\+?[1-9][0-9]{7,14}$/)
         .required(),
     country_code: Joi.string().required(),
+    FCM_token: Joi.string().optional(),
 });
 
 export { sentOTPValidator, verifyOTPValidator };

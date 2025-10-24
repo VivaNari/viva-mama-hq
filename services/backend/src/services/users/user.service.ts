@@ -14,7 +14,7 @@ const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 export default class UserService {
     sendOTPToPhone = async (req: Request, res: Response) => {
         try {
-            const { mobile_number, country_code } = req.body;
+            const { mobile_number, country_code, FCM_token } = req.body;
             if (!mobile_number || !country_code) {
                 return res
                     .status(400)
@@ -70,7 +70,7 @@ export default class UserService {
 
     verifyOTP = async (req: Request, res: Response) => {
         try {
-            const { verification_key, otp, mobile_number, country_code } = req.body;
+            const { verification_key, otp, mobile_number, country_code, FCM_token } = req.body;
             if (!verification_key || !otp || !mobile_number || !country_code)
                 return res.status(400).json({ message: "Missing required fields" });
 
@@ -99,6 +99,7 @@ export default class UserService {
                 user = await UserModel.create({
                     mobile_number,
                     country_code,
+                    FCM_token,
                 });
                 console.log("First-time user created:", user._id);
             }
@@ -120,7 +121,7 @@ export default class UserService {
 
     googleAuth = async (req: Request, res: Response) => {
         try {
-            const { idToken } = req.body;
+            const { idToken, FCM_token } = req.body;
 
             const ticket = await client.verifyIdToken({ idToken });
             const payload = ticket.getPayload() as IGoogleLoginPayload;
@@ -134,6 +135,7 @@ export default class UserService {
                         user_name: name,
                         profile_picture: picture,
                         email: email,
+                        FCM_token: FCM_token,
                     },
                 },
                 {

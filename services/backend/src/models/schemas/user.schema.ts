@@ -74,6 +74,9 @@ const userSchema = new Schema<IUser>(
             type: Schema.Types.ObjectId,
             ref: "users",
         },
+        FCM_token: {
+            type: String,
+        },
     },
     {
         timestamps: true,

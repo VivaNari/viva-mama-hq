@@ -29,11 +29,12 @@ export interface IUser {
     referral_code?: string;
     referred_user_id?: number;
     referred_user_object_id?: Schema.Types.ObjectId;
-    souvik1: any;
+    FCM_token?: string;
 }
 
 export interface IGoogleLoginPayload {
     name: string;
     email: string;
     picture: string;
+    FCM_token?: string | null;
 }
