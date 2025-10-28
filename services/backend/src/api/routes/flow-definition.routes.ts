@@ -4,6 +4,6 @@ import FlowDefinitionController from "../controllers/chat-system/flow-definition
 const router = Router();
 const flowDefinitionController = new FlowDefinitionController();
 
-router.route("/").post(flowDefinitionController.create);
+router.route("/flow-definition").post(flowDefinitionController.create);
 
-module.exports = router;
+export default router;

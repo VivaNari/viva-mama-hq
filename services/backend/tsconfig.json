@@ -4,7 +4,8 @@
         // File Layout
         "rootDir": "src",
         "outDir": "build",
-
+        "resolveJsonModule": true,
+        "esModuleInterop": true,
         // Environment Settings
         // See also https://aka.ms/tsconfig/module
         "module": "nodenext",

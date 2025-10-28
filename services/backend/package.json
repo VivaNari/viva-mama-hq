@@ -30,8 +30,15 @@
         "cors": "^2.8.5",
         "dotenv": "^17.2.3",
         "express": "^5.1.0",
+        "firebase-admin": "^13.5.0",
+        "http": "^0.0.1-security",
         "http-status-codes": "^2.3.0",
-        "mongoose": "^8.19.0"
+        "i": "^0.3.7",
+        "mongoose": "^8.19.0",
+        "mongoose-sequence": "^6.0.1",
+        "node-cron": "^4.2.1",
+        "npm": "^11.6.2",
+        "socket.io": "^4.8.1"
     },
     "devDependencies": {
         "@commitlint/cli": "^20.1.0",

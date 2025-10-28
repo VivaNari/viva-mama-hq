@@ -6,7 +6,7 @@ import { StatusCodes } from "http-status-codes";
 
 class FlowDefinitionController {
     private flowDefinitionService: FlowDefinitionService;
-    
+
     constructor() {
         this.flowDefinitionService = new FlowDefinitionService();
     }
@@ -14,20 +14,34 @@ class FlowDefinitionController {
     create = async (request: Request, response: Response, next: NextFunction) => {
         try {
             const instance: IFlowDefinition = await this.flowDefinitionService.create(request.body);
-            sendResponse({ data: instance, statusCode: StatusCodes.CREATED, success: true, message: "", response });
+            sendResponse({
+                data: instance,
+                statusCode: StatusCodes.CREATED,
+                success: true,
+                message: "",
+                response,
+            });
         } catch (err) {
             next(err);
         }
-    }
+    };
 
     find = async (request: Request, response: Response, next: NextFunction) => {
         try {
-            const instances: IFlowDefinition[] = await this.flowDefinitionService.find(request.body);
-            sendResponse({ data: instances, statusCode: StatusCodes.OK, success: true, message: "", response });
+            const instances: IFlowDefinition[] = await this.flowDefinitionService.find(
+                request.body,
+            );
+            sendResponse({
+                data: instances,
+                statusCode: StatusCodes.OK,
+                success: true,
+                message: "",
+                response,
+            });
         } catch (err) {
             next(err);
         }
-    }
-};
+    };
+}
 
 export default FlowDefinitionController;
