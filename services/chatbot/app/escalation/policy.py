@@ -1,24 +1,5 @@
-# app/escalation/policy.py
-# ---------------------------------------------------------------------
-# PURPOSE (plain English):
-# Detect *red-flag* symptoms in the user's text (or in the drafted reply)
-# and, if found, add a clear "please see a doctor" warning.
-#
-# HOW IT WORKS:
-# - We keep a small list of red-flag phrases with a severity level.
-# - We scan text; if any phrase is present, we mark the highest severity.
-# - We return a banner message (or empty if nothing risky was found).
-#
-# You can expand the list anytime (ideally reviewed by clinicians).
-# ---------------------------------------------------------------------
-
 from __future__ import annotations
 from typing import Tuple, List
-
-# Red-flag catalog:
-# Each tuple is: (phrase_to_match, severity, human_message)
-# - Keep phrases simple and specific to avoid false alarms.
-# - Severity can be "HIGH" or "MEDIUM". (You can add "LOW" later if needed.)
 RED_FLAGS: List[tuple[str, str, str]] = [
     ("soaking a pad an hour", "HIGH",   "Heavy bleeding can be dangerous after delivery."),
     ("passing large clots",    "HIGH",   "Heavy bleeding and clots need urgent assessment."),
@@ -32,7 +13,6 @@ RED_FLAGS: List[tuple[str, str, str]] = [
     ("calf pain",              "MEDIUM", "Calf pain/swelling can indicate a blood clot."),
 ]
 
-# Helper to pick the worse of two severities.
 def _max_severity(a: str, b: str) -> str:
     order = {"NONE": 0, "MEDIUM": 1, "HIGH": 2}
     return a if order[a] >= order[b] else b
@@ -81,17 +61,16 @@ def format_escalation_banner(level: str, matches: List[str]) -> str:
     if level == "NONE":
         return ""
 
-    # Make a human-readable list of what we detected.
     matched_text = ", ".join(matches) if matches else "red-flag symptoms"
 
     if level == "HIGH":
-        title = "⚠️ **Urgent Care Advised**"
+        title = "**Urgent Care Advised**"
         next_steps = (
             "If you are in immediate danger, contact local emergency services right now. "
             "Please seek urgent medical attention."
         )
-    else:  # MEDIUM
-        title = "⚠️ **Medical Attention May Be Needed**"
+    else:
+        title = " **Medical Attention May Be Needed**"
         next_steps = "Please book an appointment with a qualified clinician as soon as possible."
 
     return (

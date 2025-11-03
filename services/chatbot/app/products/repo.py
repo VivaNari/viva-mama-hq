@@ -1,22 +1,7 @@
-# app/product/repo.py
-# ---------------------------------------------------------------------
-# PURPOSE (plain English):
-# A simple, in-memory product catalog so you can develop and test
-# immediately in Jupyter — no real DB or MCP server required yet.
-#
-# LATER:
-# - Replace these functions with calls to your DB or MCP product server.
-# - Keep the function names the same so nothing else in your app changes.
-# ---------------------------------------------------------------------
-
 from __future__ import annotations
 from typing import List
 from app.products.models import Product
 
-# ---------------------------------------------------------------------
-# Seed catalog (safe postpartum wellness examples).
-# Replace or extend these with your real products as you go.
-# ---------------------------------------------------------------------
 DEMO_PRODUCTS: List[Product] = [
     Product(
         id="p1",

@@ -1,15 +1,3 @@
-# app/rag/retriever.py
-# ---------------------------------------------------------------------
-# PURPOSE (plain English):
-# - Create a local vector search index (FAISS) over your curated documents.
-# - On each question, retrieve the most similar chunks.
-# - If the best match isn't strong enough, DON'T use docs (fallback to model KB).
-#
-# WHY THIS MATTERS:
-# - Keeps answers grounded in your content when relevant.
-# - Avoids forcing irrelevant context that can confuse the model.
-# ---------------------------------------------------------------------
-
 from __future__ import annotations
 import os
 from typing import List, Tuple, Optional
@@ -21,7 +9,6 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from app.settings import settings
 
-# We'll keep singletons so the notebook/process reuses the same objects.
 _FAISS_INDEX: Optional[FAISS] = None
 _EMB: Optional[HuggingFaceEmbeddings] = None
 
@@ -78,7 +65,6 @@ def build_or_load_index(docs: Optional[List[Document]] = None) -> FAISS:
         _FAISS_INDEX = FAISS.load_local(index_path, _emb(), allow_dangerous_deserialization=True)
         return _FAISS_INDEX
 
-    # Last resort: empty index with a harmless placeholder entry so .similarity_search works.
     _FAISS_INDEX = FAISS.from_texts(["placeholder"], _emb(), metadatas=[{"placeholder": True}])
     return _FAISS_INDEX
 
@@ -134,10 +120,8 @@ def query_with_fallback(question: str, k: Optional[int] = None) -> Tuple[List[Do
             best_score = sim
         docs.append(doc)
 
-    # Decide: use docs or fall back
     used_rag = best_score >= settings.rag_score_threshold
     if not used_rag:
-        # Weak match → don't force irrelevant context.
         docs = []
 
     return docs, used_rag, best_score

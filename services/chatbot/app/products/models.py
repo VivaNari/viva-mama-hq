@@ -1,15 +1,3 @@
-# app/product/models.py
-# ---------------------------------------------------------------------
-# PURPOSE (plain English):
-# Define a clean Product data model so everything else (tools, ranking,
-# responses) knows exactly what fields exist and how to handle them.
-#
-# We use Pydantic for:
-# - Type safety and validation
-# - Easy .model_dump() → JSON for LLM/tool outputs
-# - Future-proofing (you can add constraints later)
-# ---------------------------------------------------------------------
-
 from __future__ import annotations
 from typing import Optional, List
 from pydantic import BaseModel, HttpUrl, field_validator
@@ -48,7 +36,4 @@ class Product(BaseModel):
     @field_validator("tags")
     @classmethod
     def _tags_lowercase(cls, v: List[str]) -> List[str]:
-        """
-        Normalize tags to lowercase to make filtering/ranking consistent.
-        """
         return [t.lower() for t in v]

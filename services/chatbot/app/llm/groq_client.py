@@ -1,6 +1,3 @@
-# app/llm/groq_client.py
-# ----------------------
-# Factory for Groq Chat model via LangChain.
 from langchain_groq import ChatGroq
 from app.settings import settings
 
@@ -13,6 +10,6 @@ def get_llm():
         groq_api_key=settings.groq_api_key,
         model=settings.llm_model,
         temperature=0.2,
-        timeout=45,  # seconds
+        timeout=45, 
         max_retries=2,
     )

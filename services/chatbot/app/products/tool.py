@@ -1,17 +1,3 @@
-# app/product/tool.py
-# ---------------------------------------------------------------------
-# PURPOSE (plain English):
-# This is the function the chatbot will call to get product suggestions.
-#
-# Right now:
-#   - It uses the local in-memory product list (fast + simple).
-#
-# Later:
-#   - When your MCP product server is ready, you will just flip one
-#     setting (PRODUCTS_SOURCE=mcp) in the .env file.
-#   - No changes anywhere else.
-# ---------------------------------------------------------------------
-
 from __future__ import annotations
 from typing import List, Dict, Any
 from app.settings import settings
@@ -40,13 +26,10 @@ def search_products_tool(query: str, limit: int = 3) -> List[Dict[str, Any]]:
       - No code changes — only a config switch.
     """
 
-    # If later you set PRODUCTS_SOURCE=mcp in .env,
-    # this automatically routes to MCP instead of local.
     if settings.products_source == "mcp":
-        from app.mcp.adapter import mcp_search_products  # lazy import to avoid dependency issues
+        from app.mcp.adapter import mcp_search_products
         products = mcp_search_products(query, limit=limit)
     else:
         products = search_local_products(query, limit=limit)
 
-    # Convert Product objects → dictionaries so LLM/UI can read them
     return [p.model_dump() for p in products]

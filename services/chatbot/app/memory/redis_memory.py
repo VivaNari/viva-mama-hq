@@ -1,32 +1,3 @@
-# app/memory/redis_memory.py
-# ---------------------------------------------------------------------
-# Production-ready, Redis-backed conversation memory for your chatbot.
-#
-# Key capabilities:
-#  - Hybrid session handling:
-#       * If a session_id is provided, we use it.
-#       * If missing, we generate a UUIDv4 and return it to the caller.
-#  - Rolling window memory (keep only the last N turns to limit prompt size).
-#  - TTL per session, refreshed on each write (auto-expire idle sessions).
-#  - Safe JSON serialization; resilient to corruption (resets a bad key).
-#  - Graceful degradation: if Redis is not reachable, we transparently
-#    fall back to in-process memory (useful for notebooks / local dev).
-#
-# Security posture:
-#  - Store ONLY redacted content. Redaction should happen BEFORE calling this.
-#  - Avoid storing user identifiers, tokens, or PHI.
-#  - Keep TTL short (e.g., 2 hours) and the window small (e.g., 6 turns).
-#
-# Typical usage:
-#   mem = RedisSessionMemory(window_size=6)
-#   sess_id = mem.ensure_session_id(user_supplied_id)  # may generate UUID
-#   mem.append(sess_id, "user", redacted_input)
-#   mem.append(sess_id, "assistant", safe_output)
-#   history = mem.load(sess_id)  # -> [{"role":"user","content":"..."}, ...]
-#
-# You can pass `sess_id` through your API / notebook calls to maintain continuity.
-# ---------------------------------------------------------------------
-
 from __future__ import annotations
 
 import json
@@ -104,7 +75,6 @@ class RedisSessionMemory:
     # -------------------------------
 
     def _key(self, session_id: str) -> str:
-        """Builds the Redis key for a given session."""
         return f"chat:session:{session_id}"
 
     def _parse_turns(self, raw: Optional[str]) -> List[Dict[str, Any]]:
@@ -116,12 +86,10 @@ class RedisSessionMemory:
             return []
         try:
             val = json.loads(raw)
-            # Defensive: ensure it's a list of dicts with the expected keys.
             if isinstance(val, list):
                 cleaned = []
                 for t in val:
                     if isinstance(t, dict) and "role" in t and "content" in t:
-                        # Hard cap message sizes to avoid unbounded growth if someone dumps a book.
                         content = str(t["content"])[:4000]
                         role = str(t["role"])
                         cleaned.append({"role": role, "content": content})
@@ -131,7 +99,6 @@ class RedisSessionMemory:
             return []
 
     def _dump_turns(self, turns: List[Dict[str, Any]]) -> str:
-        """Serializes turns to JSON safely, enforcing rolling window."""
         if len(turns) > self.window_size:
             turns = turns[-self.window_size:]
         # Ensure minimal schema and truncate content length to guard size.
@@ -142,32 +109,16 @@ class RedisSessionMemory:
             safe_turns.append({"role": role, "content": content})
         return json.dumps(safe_turns, ensure_ascii=False)
 
-    # -------------------------------
-    # Public API
-    # -------------------------------
-
     @staticmethod
     def generate_session_id() -> str:
-        """Generate a cryptographically strong random session ID (UUIDv4)."""
         return str(uuid.uuid4())
 
     def ensure_session_id(self, session_id: Optional[str]) -> str:
-        """
-        Hybrid behavior:
-          - If caller provides a session_id → return it as-is (after basic validation).
-          - Else → create and return a new UUIDv4 session ID.
-        """
         if session_id:
-            # Very light validation: ensure plausible UUID format; if not, still accept as opaque.
-            # (You may enforce strict UUID by trying uuid.UUID(session_id) if desired.)
             return session_id
         return self.generate_session_id()
 
     def load(self, session_id: str) -> List[Dict[str, Any]]:
-        """
-        Retrieves the stored list of turns for this session.
-        If the stored JSON is corrupt, the key is wiped to avoid poisoning future reads.
-        """
         key = self._key(session_id)
         raw = self._r.get(key)
         turns = self._parse_turns(raw)
@@ -178,48 +129,32 @@ class RedisSessionMemory:
         return turns
 
     def save(self, session_id: str, turns: List[Dict[str, Any]]) -> None:
-        """
-        Saves the full turns array (rolling window enforced) and sets/refreshes TTL.
-        """
         key = self._key(session_id)
         payload = self._dump_turns(turns)
-        # Redis path:
         if not self._is_fallback:
-            # ex=self.ttl sets TTL in seconds.
             self._r.set(key, payload, ex=self.ttl)
         else:
-            # In-process fallback ignores TTL (best-effort).
             self._r.set(key, payload)
 
     def append(self, session_id: str, role: str, content: str) -> List[Dict[str, Any]]:
-        """
-        Appends a single turn and returns the updated list.
-        NOTE: pass only redacted content here.
-        """
         turns = self.load(session_id)
         turns.append({"role": role, "content": content})
         self.save(session_id, turns)
         return turns
 
     def reset(self, session_id: str) -> None:
-        """Clears all memory for the given session."""
         key = self._key(session_id)
         self._r.delete(key)
 
     # Convenience helpers (optional but handy in notebooks / APIs)
 
     def get_last_n(self, session_id: str, n: int = 4) -> List[Dict[str, Any]]:
-        """Return the last N turns for quick prompt assembly."""
         turns = self.load(session_id)
         if n <= 0:
             return []
         return turns[-n:]
 
     def append_many(self, session_id: str, new_turns: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """
-        Append multiple turns at once (e.g., importing a prior conversation).
-        Each turn must have role/content keys. Returns full updated list.
-        """
         turns = self.load(session_id)
         for t in new_turns:
             role = str(t.get("role", ""))[:20]
@@ -228,14 +163,10 @@ class RedisSessionMemory:
         self.save(session_id, turns)
         return turns
 
-    # Metadata helpers
-
     @property
     def using_fallback(self) -> bool:
-        """Returns True if Redis is unavailable and in-process store is being used."""
         return self._is_fallback
 
     @property
     def ttl_seconds(self) -> int:
-        """Return configured TTL (seconds)."""
         return self.ttl

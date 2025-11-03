@@ -1,19 +1,3 @@
-# app/rag/loaders.py
-# ---------------------------------------------------------------------
-# PURPOSE (plain English):
-# Load your local text files (e.g., postpartum guidance you curated)
-# and convert them into LangChain "Document" objects so we can build
-# a vector index for RAG.
-#
-# HOW TO USE (in a notebook):
-#   from app.rag.loaders import load_text_folder
-#   docs = load_text_folder("../data/raw")
-#   len(docs), docs[0].page_content[:200]
-#
-# NEXT STEP:
-#   We'll feed these 'docs' into the retriever/index builder.
-# ---------------------------------------------------------------------
-
 from __future__ import annotations
 import os
 from typing import List
@@ -38,7 +22,6 @@ def load_text_folder(folder: str) -> List[Document]:
     docs: List[Document] = []
 
     if not os.path.isdir(folder):
-        # Graceful: if folder doesn't exist, just return empty.
         return docs
 
     for name in os.listdir(folder):
@@ -47,17 +30,14 @@ def load_text_folder(folder: str) -> List[Document]:
 
         path = os.path.join(folder, name)
 
-        # TextLoader creates 1 or more Document objects from a text file.
-        # We pass encoding to avoid surprises with special characters.
         loader = TextLoader(path, encoding="utf-8")
         file_docs = loader.load()
 
-        # Add simple metadata we might use later for debugging or citations.
         for d in file_docs:
             d.metadata = {
-                **d.metadata,          # keep anything the loader added
-                "source_file": name,   # short name
-                "source_path": path,   # full path
+                **d.metadata,         
+                "source_file": name,  
+                "source_path": path,  
             }
 
         docs.extend(file_docs)
