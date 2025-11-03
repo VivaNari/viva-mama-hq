@@ -1,0 +1,24 @@
+python-dotenv
+pydantic
+pydantic-settings
+structlog
+
+redis
+
+# LangChain core + community integrations + Groq
+langchain==1.0.3
+langchain-core
+langchain-community
+langchain-groq
+jinja2
+
+# Embeddings + local vector store
+sentence-transformers
+faiss-cpu
+
+# (Optional) If you later use FastAPI service:
+# fastapi
+# uvicorn[standard]
+
+# MCP SDK (adapter is optional; included for future)
+mcp
