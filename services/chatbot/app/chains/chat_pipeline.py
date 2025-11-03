@@ -1,50 +1,16 @@
-# app/chains/chat_pipeline.py
-# ---------------------------------------------------------------------
-# PURPOSE (plain English):
-# One function, `chat_once(...)`, runs a single turn of your chatbot.
-# It does ALL the steps:
-#   1) Ensure we have a session_id (or make one)
-#   2) Load recent memory (last few messages)
-#   3) Guardrails on user input (redact PII, keep wellness-only scope)
-#   4) Decide intent (product vs wellness)
-#   5) If product: fetch catalog suggestions (tool)
-#   6) RAG: try to fetch relevant document chunks; if weak match, skip context
-#   7) Build a careful prompt and call Groq LLM
-#   8) Scan for red-flags; add escalation banner if needed
-#   9) Append a “wellness only” disclaimer
-#  10) Save both user input and assistant reply to short-term memory
-#  11) Return a structured result (easy for a UI/notebook to display)
-# ---------------------------------------------------------------------
 
 from __future__ import annotations
 from typing import Dict, Any, List, Optional
 
-# Settings (env-driven) for models, thresholds, etc.
 from app.settings import settings
-
-# The Groq chat model (via LangChain)
 from app.llm.groq_client import get_llm
-
-# Short-term conversation memory stored in Redis (auto-expires)
 from app.memory.redis_memory import RedisSessionMemory
-
-# Input safety: remove emails/phones/simple name hints; steer away from diagnosis/prescriptions
 from app.guardrails.input_guard import redact, enforce_scope
-
-# Post-output safety: detect dangerous symptoms and add doctor/ER banner
 from app.escalation.policy import scan_for_red_flags, format_escalation_banner
-
-# Product suggestion tool (local now, MCP later)
 from app.products.tool import search_products_tool
-
-# Intent router: "PRODUCT_QUERY" vs "WELLNESS_INFO"
 from app.chains.router import route_intent
-
-# RAG retriever with fallback (uses FAISS and a similarity threshold)
 from app.rag.retriever import query_with_fallback
 
-
-# A compact, strict system instruction to keep the bot compliant and empathetic.
 SYSTEM_PROMPT = (
     "You are a compassionate postpartum **wellness** assistant for educational purposes only.\n"
     "- You do NOT diagnose, prescribe, or provide medication dosages.\n"
@@ -54,7 +20,6 @@ SYSTEM_PROMPT = (
     "- If unsure or outside wellness scope, say so and suggest consulting a clinician.\n"
     "- Always end with: 'Wellness information only; not medical advice.'"
 )
-
 
 def _format_product_section(products: List[Dict[str, Any]]) -> str:
     """
@@ -97,7 +62,6 @@ def _format_history(last_turns: List[Dict[str, Any]], cap_chars: int = 800) -> s
 def chat_once(
     user_text: str,
     session_id: Optional[str] = None,
-    # You can tune how many prior turns to include (kept short by design).
     history_window: int = 4,
 ) -> Dict[str, Any]:
     """
@@ -122,49 +86,29 @@ def chat_once(
         "memory_turns": [ ... ],          # last N turns now stored
       }
     """
-    # 1) Ensure session ID and get a handle to memory
-    memory = RedisSessionMemory(window_size=6)  # rolling window capped at 6 stored turns
+    memory = RedisSessionMemory(window_size=6)  
     session_id = memory.ensure_session_id(session_id)
 
-    # 2) Load recent history (for a natural, continuous conversation tone)
     prior_turns = memory.get_last_n(session_id, history_window)
 
-    # 3) Guardrails on INPUT (privacy + wellness scope)
-    #    - Redact emails/phones/name-hints → “clean” text
-    #    - Enforce scope: if user asks for diagnosis/prescription, we gently reframe intent
     redacted_text, redaction_report = redact(user_text)
     safe_text, scope_notes = enforce_scope(redacted_text)
 
-    # 4) Decide intent (simple keyword router for MVP)
-    intent = route_intent(safe_text)  # "PRODUCT_QUERY" or "WELLNESS_INFO"
+    intent = route_intent(safe_text)
 
-    # 5) If product path → fetch product candidates via the tool (local now, MCP later)
     products: List[Dict[str, Any]] = []
     if intent == "PRODUCT_QUERY":
         products = search_products_tool(safe_text, limit=3)
 
-    # 6) RAG: try to retrieve context from your local docs; else fallback to model's own knowledge
-    #    - docs: list of chunks (may be empty if below threshold)
-    #    - used_rag: True only if best match is strong enough
-    #    - best_score: similarity score to log/display
     docs, used_rag, best_score = query_with_fallback(safe_text)
 
-    # Prepare a compact CONTEXT block for the prompt (only if we decided to use RAG)
     if used_rag and docs:
-        # Join a few chunks with lightweight labels; keep each chunk reasonably small
         context_block = "\n\n".join(
             f"[{i+1}] {d.page_content[:1200]}" for i, d in enumerate(docs)
         )
     else:
         context_block = "None"
 
-    # 7) Build the final prompt for the LLM
-    #    We include:
-    #      - System prompt (compliance & style)
-    #      - Recent history (short)
-    #      - The (safe) user text
-    #      - RAG context (or "None")
-    #      - Product candidates (or "None")
     history_block = _format_history(prior_turns)
     product_block = _format_product_section(products)
 
@@ -182,30 +126,23 @@ def chat_once(
         "- End with: 'Wellness information only; not medical advice.'"
     )
 
-    # 8) Call Groq LLM (low temperature for stable, safe outputs)
     llm = get_llm()
     llm_response = llm.invoke(prompt)
     draft_answer = llm_response.content if hasattr(llm_response, "content") else str(llm_response)
 
-    # 9) Escalation check (scan both the user's text and the drafted reply)
-    #    - If dangerous phrases appear (e.g., "soaking a pad an hour"), add a banner.
     in_level, in_matches = scan_for_red_flags(safe_text)
     out_level, out_matches = scan_for_red_flags(draft_answer)
 
-    # Pick the higher severity of the two scans
     severity = "HIGH" if ("HIGH" in (in_level, out_level)) else ("MEDIUM" if ("MEDIUM" in (in_level, out_level)) else "NONE")
     phrases = list({*in_matches, *out_matches})  # unique union
     banner = format_escalation_banner(severity, phrases)
 
-    # 10) Always append the wellness disclaimer at the end (extra safety)
     disclaimer = "\n\n— *Wellness information only; not medical advice.*"
     final_answer = (banner + "\n\n" if banner else "") + draft_answer + disclaimer
 
-    # 11) Persist to memory (NOTE: we store only the redacted/safe text)
     memory.append(session_id, "user", safe_text)
     memory.append(session_id, "assistant", final_answer)
 
-    # Return a structured payload your notebook or UI can render directly
     return {
         "session_id": session_id,
         "answer": final_answer,
