@@ -6,10 +6,10 @@ import { sendPushNotification } from "../utils/sendPushNotification";
 import flowInstanceModel from "../models/flowInstance.model";
 import { FlowInstanceStateEnum, IConversation, IFlowDefinition } from "../types/chat.types";
 import { IUser } from "../types/index";
+import { ONBOARDING_SLUG } from "../constants/conversationSlugs";
+import { getMSFromMins } from "../utils/getMSFromMins";
 
-const DEFAULT_ONBOARDING_SLUG = "onboarding-check-in-v1";
-
-const REMINDER_TIME_MS = 30 * 60 * 1000;
+const DEFAULT_REMINDER_TIME_MS = 30 * 60 * 1000;
 
 const createNewFlowForUser = async (
     user: IUser,
@@ -57,7 +57,7 @@ const processUser = async (user: IUser) => {
     }
 
     const lastInstance = await flowInstanceModel
-        .findOne({ userId: user._id })
+        .findOne({ userId: user._id, flowSlug: ONBOARDING_SLUG })
         .sort({ createdAt: -1 });
 
     if (!lastInstance) {
@@ -66,23 +66,27 @@ const processUser = async (user: IUser) => {
         );
 
         const flowDeninition = await flowDefinitionModel.findOne({
-            slug: DEFAULT_ONBOARDING_SLUG,
+            slug: ONBOARDING_SLUG,
             status: "PUBLISHED",
         });
 
         if (!flowDeninition) {
-            console.error(`Default flow "${DEFAULT_ONBOARDING_SLUG}" not found or not published.`);
+            console.error(`Default flow "${ONBOARDING_SLUG}" not found or not published.`);
             return;
         }
 
         const newConversation = await createNewFlowForUser(user, flowDeninition);
 
+        const notification_template = flowDeninition.notificationTemplates.find(
+            (item) => item.notificationType === "NEW_FLOW_INSTANCE",
+        );
+
         // Send notification
         if (newConversation) {
             await sendPushNotification({
                 token: user.FCM_token,
-                title: "Time for your check-in!",
-                body: "Let's get started with your first check-in.",
+                title: notification_template?.title!,
+                body: notification_template?.body!,
                 data: {
                     conversationId: newConversation._id.toString(),
                     flowSlug: flowDeninition.slug,
@@ -115,9 +119,82 @@ const processUser = async (user: IUser) => {
             return;
         }
 
+        const flowDeninition = (await flowDefinitionModel.findOne({
+            slug: ONBOARDING_SLUG,
+            status: "PUBLISHED",
+        })) as IFlowDefinition;
+
+        console.log("flowDeninition.reminderIntervalMins is ", flowDeninition.reminderIntervalMins);
+
         const lastMessageTime = conversation.lastMessageAt.getTime();
         console.log("lastMessageTime is, ", lastMessageTime);
-        const isOverdue = lastMessageTime < Date.now() - REMINDER_TIME_MS;
+        const isOverdue =
+            lastMessageTime < Date.now() - flowDeninition.reminderIntervalMins
+                ? getMSFromMins(flowDeninition.reminderIntervalMins)
+                : DEFAULT_REMINDER_TIME_MS;
+
+        if (isOverdue) {
+            console.log(
+                `User ${user.email ? user.email : user.mobile_number} is overdue. Sending reminder and creating new flow.`,
+            );
+
+            lastInstance.state = FlowInstanceStateEnum.ACTIVE;
+            await lastInstance.save();
+
+            const notification_template = flowDeninition.notificationTemplates.find(
+                (item) => item.notificationType === FlowInstanceStateEnum.REMIND_ME_LATER,
+            );
+
+            // Send notification
+            await sendPushNotification({
+                token: user.FCM_token,
+                title: notification_template?.title!,
+                body: notification_template?.body!,
+                data: {
+                    conversationId: lastInstance.conversationId.toString(),
+                    flowSlug: lastInstance.flowSlug,
+                    uiElements: JSON.stringify([
+                        {
+                            type: "BUTTON",
+                            text: "Continue Check-in",
+                            action: "CONTINUE_FLOW",
+                        },
+                    ]),
+                },
+            });
+        } else {
+            console.log(
+                `User ${user.email ? user.email : user.mobile_number} is not overdue yet. No action.`,
+            );
+        }
+    } else {
+        console.log(
+            `User ${user.email ? user.email : user.mobile_number} state is ABORTED. Checking time...`,
+        );
+
+        const conversation = await conversationModel.findById(lastInstance.conversationId);
+
+        if (!conversation) {
+            console.error(`Orphan flow instance ${lastInstance._id} found. No conversation.`);
+            return;
+        }
+
+        const flowDeninition = (await flowDefinitionModel.findOne({
+            slug: ONBOARDING_SLUG,
+            status: "PUBLISHED",
+        })) as IFlowDefinition;
+        console.log("flowDeninition.reminderIntervalMins is ", flowDeninition.reminderIntervalMins);
+
+        const lastMessageTime = conversation.lastMessageAt.getTime();
+        console.log("lastMessageTime is, ", lastMessageTime);
+        const isOverdue =
+            lastMessageTime < Date.now() - flowDeninition.reminderIntervalMins
+                ? getMSFromMins(flowDeninition.reminderIntervalMins)
+                : DEFAULT_REMINDER_TIME_MS;
+
+        const notification_template = flowDeninition.notificationTemplates.find(
+            (item) => item.notificationType === FlowInstanceStateEnum.ABORTED,
+        );
 
         if (isOverdue) {
             console.log(
@@ -138,8 +215,8 @@ const processUser = async (user: IUser) => {
             // Send notification
             await sendPushNotification({
                 token: user.FCM_token,
-                title: "Your check-in is waiting",
-                body: "Let's continue where you left off.",
+                title: notification_template?.title!,
+                body: notification_template?.body!,
                 data: {
                     conversationId: lastInstance.conversationId.toString(),
                     flowSlug: lastInstance.flowSlug,
@@ -152,10 +229,6 @@ const processUser = async (user: IUser) => {
                     ]),
                 },
             });
-        } else {
-            console.log(
-                `User ${user.email ? user.email : user.mobile_number} is not overdue yet. No action.`,
-            );
         }
     }
 };

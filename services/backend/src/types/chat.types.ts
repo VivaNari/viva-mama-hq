@@ -115,12 +115,18 @@ export type FlowNodeType =
 
 export interface IFlowNode {
     id: string;
-    type: FlowNodeType;
+    categoryId: Schema.Types.ObjectId;
+    indicator: string;
+    nodeType: FlowNodeType;
     text: string | null;
+    educationalMessage: string;
+    whyThisMatters: string;
+    validWeekStart: number | null;
+    validWeekEnd: number | null;
     options: Array<{
-        key: string;
         label: string;
-        value?: any;
+        value: any;
+        score: number | null;
     }>;
     branch: Array<{
         when: { var: string; op: "eq" | "gt" | "lt" | "in"; val: any };
@@ -130,12 +136,27 @@ export interface IFlowNode {
     next: string | null;
 }
 
+export interface IFlowNodeCategory {
+    categoryName: string;
+}
+
+export interface INotificationTemplates {
+    notificationType:
+        | FlowInstanceStateEnum.ABORTED
+        | FlowInstanceStateEnum.REMIND_ME_LATER
+        | "NEW_FLOW_INSTANCE";
+    title: string;
+    body: string;
+}
+
 export interface IFlowDefinition {
     _id: Schema.Types.ObjectId;
     slug: string; // e.g. "breastfeeding-pain-v1"
     name: string;
     version: number;
     status: FlowDefinitionStatus;
+    reminderIntervalMins: number;
+    notificationTemplates: INotificationTemplates[];
     startNodeId: string;
     nodes: IFlowNode[];
     outcomes: Array<{
@@ -169,6 +190,7 @@ export interface IFlowInstance {
     flowDefId: Schema.Types.ObjectId;
     flowSlug: string;
     version: number;
+    postpartumWeek: number;
     state: FlowInstanceState;
     cursorNodeId: string | null;
     variables: Record<string, any>;

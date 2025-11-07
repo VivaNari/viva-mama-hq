@@ -8,12 +8,26 @@ const flowDefinitionSchema: Schema<IFlowDefinition> = new Schema<IFlowDefinition
         name: String,
         version: Number,
         status: String,
+        reminderIntervalMins: Number,
+        notificationTemplates: [
+            {
+                notificationType: String,
+                title: String,
+                body: String,
+            },
+        ],
         startNodeId: String,
         nodes: [
             {
                 id: String,
-                type1: String,
+                categoryId: Schema.Types.ObjectId,
+                indicator: String,
+                nodeType: String,
                 text: String,
+                educationalMessage: String,
+                whyThisMatters: String,
+                validWeekStart: Number,
+                validWeekEnd: Number,
                 options: [
                     {
                         key: String,
