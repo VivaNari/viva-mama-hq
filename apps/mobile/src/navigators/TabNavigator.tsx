@@ -1,8 +1,12 @@
+import messaging from '@react-native-firebase/messaging';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
-import { Image, TouchableOpacity, View } from 'react-native';
+import { useEffect } from 'react';
+import { Alert, Image, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCounterContext } from '../context/CounterContext';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import ArticleContent from '../screens/ArticleContent';
@@ -10,13 +14,38 @@ import ChatWithVivaAI from '../screens/ChatWithVivaAI';
 import Dashboard from '../screens/Dashboard';
 import Experts from '../screens/Experts';
 import Services from '../screens/Services';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+
 
 const Tab = createBottomTabNavigator();
 
 export const DashboardTabNavigator = () => {
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
+    const { counter, increase } = useCounterContext();
+
+    useEffect(() => {
+        (async function () {
+            const unsubscribe = messaging().onMessage(async remoteMessage => {
+
+                if (remoteMessage.data && remoteMessage.data.uiElements) {
+                    const uiElements = JSON.parse(remoteMessage.data.uiElements as string);
+                    // @TODO: Now do anything with the ui elements 
+                }
+
+                Toast.show({
+                    type: 'success',
+                    text1: remoteMessage.notification?.title,
+                    text2: remoteMessage.notification?.body,
+                    position: 'bottom'
+                });
+                increase();
+            });
+
+            return unsubscribe;
+        })();
+    }, [])
+
     return (
         <Tab.Navigator
             screenOptions={{
@@ -115,6 +144,7 @@ export const DashboardTabNavigator = () => {
             <Tab.Screen
                 name="VivaAI"
                 component={ChatWithVivaAI}
+
                 options={{
                     title: "Viva AI",
                     tabBarIcon: ({ color }) => (
@@ -124,6 +154,7 @@ export const DashboardTabNavigator = () => {
                             color={color}
                         />
                     ),
+                    tabBarBadge: counter > 0 ? counter : undefined,
                 }}
                 listeners={({ navigation }) => ({
                     tabPress: e => {

@@ -23,9 +23,9 @@ enum EQuestionType {
 }
 
 export interface IOption {
-  id: number;
+  id: string;
   label: string;
-  value: number;
+  value: string;
 }
 
 export interface IFollowUpQuestion {
@@ -33,3 +33,17 @@ export interface IFollowUpQuestion {
   questionType: questionType;
   options: IOption[];
 }
+
+interface IAiMessage {
+  type: 'ai';
+  id: string;
+  text: string;
+  options: IOption[];
+}
+
+interface IUserMessage {
+  type: 'user';
+  text: string;
+}
+
+type ChatMessage = IAiMessage | IUserMessage;

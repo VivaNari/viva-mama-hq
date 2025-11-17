@@ -4,7 +4,11 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
+        preQuestionText:
+          "Hi there! I'm Viva, your personal postpartum guide. I'm here to support you on this journey. To get started, what should I call you?",
         question: 'Enter your name',
+        postAnswerText:
+          "It's so nice to meet you! Thank you for trusting me to be a part of this.",
         answerType: 'text',
         isMultichoice: false,
         placeholder: 'Name',
@@ -18,7 +22,10 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
-        question: 'Date of birth',
+        preQuestionText:
+          'To personalize your care plan, I just need a few basic details.',
+        question: 'What is your date of birth?',
+        postAnswerText: 'Perfect, thank you.',
         answerType: 'datetime',
         isMultichoice: false,
         placeholder: 'DD/MM/YYYY',
@@ -32,7 +39,7 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
-        question: 'Height in centimeter',
+        question: 'Height in centimeters',
         answerType: 'numeric',
         isMultichoice: false,
         placeholder: 'Height',
@@ -46,7 +53,8 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
-        question: 'Enter Weight',
+        question: 'Enter your current weight in kg',
+        postAnswerText: "Great, that's all for the basics.",
         answerType: 'numeric',
         isMultichoice: false,
         placeholder: 'Weight',
@@ -60,10 +68,14 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
-        question: 'Did you have any of the conditions during your pregnancy?',
+        preQuestionText:
+          'Now for some health questions. Please know everything you share is safe with me and helps me to help you better.',
+        question:
+          'Did you have any of these conditions during your pregnancy? You can select more than one.',
+        postAnswerText:
+          "Thank you for sharing that. It's really helpful for me to understand your journey.",
         answerType: 'select',
         isMultichoice: true,
-        placeholder: '',
         options: [
           { label: 'Anemia', value: 0 },
           { label: 'Gestational Diabetes', value: 1 },
@@ -83,10 +95,10 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
+        preQuestionText: "You're doing great! Just a few more to go.",
         question: 'How was your pregnancy conceived?',
         answerType: 'select',
         isMultichoice: false,
-        placeholder: '',
         options: [
           { label: 'Natural', value: 0 },
           { label: 'Assisted IVF', value: 1 },
@@ -100,7 +112,8 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
-        question: 'Date of delivery',
+        preQuestionText: "Let's talk a little about the delivery.",
+        question: 'What was your date of delivery?',
         answerType: 'datetime',
         isMultichoice: false,
         placeholder: 'DD/MM/YYYY',
@@ -130,7 +143,11 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
+        preQuestionText:
+          "This next question can be difficult for some. Please take your time, and know that I'm here for you.",
         question: 'What was the outcome of your most recent delivery?',
+        postAnswerText:
+          'Thank you for your honesty. I appreciate you trusting me with this.',
         answerType: 'select',
         isMultichoice: false,
         options: [
@@ -146,6 +163,7 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
+        preQuestionText: 'Now, a couple of quick lifestyle questions.',
         question: 'Do you have a history of alcohol or smoking use?',
         answerType: 'select',
         isMultichoice: false,
@@ -162,7 +180,8 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
-        question: 'Is this your first or second child?',
+        question: 'Is this your first, second, or third (or more) child?',
+        postAnswerText: 'Wonderful! Every child brings a new adventure.',
         answerType: 'select',
         isMultichoice: false,
         options: [
@@ -179,8 +198,12 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
+        preQuestionText:
+          "Your emotional well-being is our absolute top priority. Don't worry, we'll get through this together. This is a safe space.",
         question:
-          'Have you ever experienced any mental health concerns such as anxiety, depression?',
+          'Have you ever experienced any mental health concerns such as anxiety or depression?',
+        postAnswerText:
+          "I appreciate you sharing that with me. It's brave and important, and helps me know how to best support you.",
         answerType: 'select',
         isMultichoice: false,
         options: [
@@ -196,7 +219,11 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
+        preQuestionText:
+          'It often takes a village to raise a child, and your support system is key.',
         question: 'What is your current family set-up?',
+        postAnswerText:
+          'That helps me understand your environment better. Thank you.',
         answerType: 'select',
         isMultichoice: false,
         options: [
@@ -214,30 +241,32 @@ export const phqdata: IOnboardingStep[] = [
   {
     phq: [
       {
-        question: 'Child Height',
+        preQuestionText:
+          "We're at the final step! Just a few details about your little one, if you have them handy. It's perfectly okay to skip this if you don't.",
+        question: "Child's Height",
         answerType: 'numeric',
         isMultichoice: false,
-        placeholder: 'Height',
+        placeholder: 'Height in cm',
         options: [],
         isRequired: false,
         answer: '',
         isEPHIData: true,
       },
       {
-        question: 'Child Weight',
+        question: "Child's Weight",
         answerType: 'numeric',
         isMultichoice: false,
-        placeholder: 'Weight',
+        placeholder: 'Weight in kg',
         options: [],
         isRequired: false,
         answer: '',
         isEPHIData: true,
       },
       {
-        question: 'Child Circumference',
+        question: "Child's Head Circumference",
         answerType: 'numeric',
         isMultichoice: false,
-        placeholder: 'Circumference',
+        placeholder: 'Circumference in cm',
         options: [],
         isRequired: false,
         answer: '',

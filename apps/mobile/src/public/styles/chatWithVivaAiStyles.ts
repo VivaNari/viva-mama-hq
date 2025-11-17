@@ -3,6 +3,15 @@ import { colors } from '../assets/colors';
 import { globalStyles } from './globalStyles';
 
 export const styles = StyleSheet.create({
+  headerContainer: {
+    backgroundColor: 'red',
+  },
+  headerTitle: {
+    color: 'green',
+  },
+  headerText: {
+    color: 'blue',
+  },
   hyperlink: {
     color: colors.primary,
     textDecorationLine: 'underline',
@@ -17,16 +26,17 @@ export const styles = StyleSheet.create({
   userMessage: {
     alignSelf: 'flex-end',
     backgroundColor: colors.secondary,
-    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
   },
   aiMessage: {
     alignSelf: 'flex-start',
     backgroundColor: colors.purple,
-    borderTopLeftRadius: 0,
+    borderBottomLeftRadius: 0,
   },
   messageText: {
     color: '#fff',
     fontSize: 14,
+    ...globalStyles.fontRegular,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -77,19 +87,19 @@ export const styles = StyleSheet.create({
   },
   promptText: { fontSize: 14, ...globalStyles.fontRegular },
   optionsInMessageContainer: {
-    marginTop: 10,
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
     justifyContent: 'flex-start',
+    width: '80%',
   },
   optionButton: {
     backgroundColor: colors.white,
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.primary,
+    borderWidth: 1.5,
+    borderColor: '#bdbdbd',
   },
   optionButtonText: {
     color: colors.primary,

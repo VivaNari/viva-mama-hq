@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 import { colors } from '../assets/colors';
-import { EFontWeight, getFontFamily } from '../../utils/fontFamily';
 
 export const landingStyles = StyleSheet.create({
   welcomeText: {

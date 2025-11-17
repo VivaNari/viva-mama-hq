@@ -12,6 +12,7 @@ export const globalStyles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 12,
     backgroundColor: colors.pageBG,
+    marginBottom: 10,
   },
   headingxl: {
     fontStyle: 'normal',

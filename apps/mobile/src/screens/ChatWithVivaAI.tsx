@@ -1,40 +1,367 @@
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
-import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { vivaAIData } from '../data/vivaAIData';
-import { colors } from '../public/assets/colors';
-import { globalStyles } from '../public/styles';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    TouchableOpacity,
+    Alert,
+    AppState,
+    AppStateStatus,
+    TextInput,
+} from 'react-native';
+import EventSource from 'react-native-sse';
+import axios from 'axios';
+import { useAuth } from '../context/AuthContext';
+import { chatDB, AiMessage, UserMessage, ChatMessage } from '../db/sqlite';
 import { styles as chatStyles } from '../public/styles/chatWithVivaAiStyles';
-import { IFollowUpSet, IMessage, IOption, IVivaAIData } from '../types/vivaAi.types';
-import MessageWithLinks from '../components/MessageWithLinks';
+import { IOption } from "../types/vivaAi.types";
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
+import { globalStyles } from '../public/styles';
+import { colors } from '../public/assets/colors';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 
-const RenderTypingIndicator = () => {
+
+const FLOW_SLUG = 'weekly-check-in-v1';
+const API_BASE_URL = 'http://192.168.1.22:4000/api/v1';
+const TYPING_SPEED_MS = 30;
+
+const RenderTypingIndicator: React.FC = () => (
+    <View style={[chatStyles.messageContainer, chatStyles.aiMessage]}>
+        <Text style={[chatStyles.messageText, globalStyles.fontRegular]}>AI is thinking...</Text>
+    </View>
+);
+
+export default function ChatWithVivaAi() {
+    const { userToken, userId } = useAuth();
+
+    const [inputText, setInputText] = useState('');
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [animatingMessageId, setAnimatingMessageId] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [isFlowComplete, setIsFlowComplete] = useState(false);
+
+    const eventSourceRef = useRef<EventSource | null>(null);
+    const scrollViewRef = useRef<ScrollView | null>(null);
+    const appState = useRef<AppStateStatus>(AppState.currentState);
+
+    useEffect(() => {
+        initializeChat();
+
+        const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+        return () => {
+            eventSourceRef.current?.close();
+            subscription.remove();
+        };
+    }, []);
+
+    useEffect(() => {
+        if (chatHistory.length > 0 && userId) {
+            saveChatToDatabase();
+        }
+    }, [chatHistory]);
+
+    const saveChatToDatabase = async () => {
+        try {
+            // Note: Individual messages are already saved when received/sent
+            // This is just a safety net for any edge cases
+            console.log('💾 Chat state synced');
+        } catch (error) {
+            console.error('Failed to save to database:', error);
+        }
+    };
+
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+        if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+            console.log('📱 App came to foreground, reloading history from SQLite...');
+            await loadHistory();
+        }
+        appState.current = nextAppState;
+    };
+
+    const initializeChat = async () => {
+        try {
+            await chatDB.init();
+            await loadHistory();
+            connectToServer();
+        } catch (error) {
+            console.error('Failed to initialize chat:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to initialize chat database',
+                position: 'bottom'
+            });
+        }
+    };
+
+    const loadHistory = async () => {
+        if (!userId) {
+            console.log('No userId available');
+            return;
+        }
+
+        try {
+            const messages = await chatDB.getChatHistory(userId, FLOW_SLUG);
+            setChatHistory(messages);
+            console.log('📚 Loaded history from SQLite:', messages.length, 'messages');
+        } catch (error) {
+            console.error('Failed to load history:', error);
+        }
+    };
+
+    const connectToServer = () => {
+        if (eventSourceRef.current) {
+            eventSourceRef.current.close();
+        }
+
+        const es = new EventSource(`${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken}`);
+        eventSourceRef.current = es;
+        console.log("${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken} is", `${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken}`)
+
+        if (chatHistory.length === 0) {
+            setIsLoading(true);
+        }
+
+        es.addEventListener('open', () => {
+            console.log('🔌 SSE Connected');
+        });
+
+        es.addEventListener('message', async (event) => {
+            try {
+                const data = JSON.parse(event.data!);
+
+                if (data.type === 'end_flow') {
+                    console.log('🏁 Flow completed');
+                    setIsFlowComplete(true);
+                    setIsLoading(false);
+                    es.close();
+                    Alert.alert('Complete', 'Chat session finished!');
+                    return;
+                }
+
+                if (data.type === 'error') {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error',
+                        text2: data.message || 'An error occurred',
+                        position: 'bottom'
+                    });
+                    setIsLoading(false);
+                    return;
+                }
+
+                const aiMessage: AiMessage = {
+                    type: 'ai',
+                    id: data.id,
+                    flowInstanceId: data.flowInstanceId,
+                    text: data.text,
+                    educationalMessage: data.educationalMessage,
+                    whyThisMatters: data.whyThisMatters,
+                    options: data.options,
+                    timestamp: Date.now(),
+                };
+
+                // Check if message already exists in database
+                const exists = await chatDB.messageExists(userId!, FLOW_SLUG, aiMessage.id);
+
+                if (exists) {
+                    console.log('⚠️ Duplicate question from SSE');
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Save to SQLite
+                await chatDB.saveAiMessage(userId!, FLOW_SLUG, aiMessage);
+                console.log('📡 New question via SSE:', data.id);
+
+                // Update UI
+                setChatHistory((prev) => [...prev, aiMessage]);
+                setAnimatingMessageId(aiMessage.id);
+                setIsLoading(false);
+            } catch (error) {
+                console.error('Parse error:', error);
+            }
+        });
+
+        es.addEventListener('error', (e: any) => {
+            console.error('❌ SSE error:', e);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Connection lost. Retrying...',
+                position: 'bottom'
+            });
+            setIsLoading(false);
+            setTimeout(connectToServer, 5000);
+        });
+    };
+
+    const handleSendAnswer = async (option: IOption) => {
+        if (isLoading || animatingMessageId || isFlowComplete || !userId) {
+            return;
+        }
+
+        // Get last AI message
+        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        if (!lastAi) {
+            console.error('No AI message found to respond to');
+            return;
+        }
+
+        // Create user message
+        const userMessage: UserMessage = {
+            type: 'user',
+            text: option.label,
+            timestamp: Date.now(),
+        };
+
+        // Save to SQLite
+        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+
+        // Update UI - remove options from last AI message
+        setChatHistory((prev) =>
+            prev.map((msg) =>
+                msg.type === 'ai' && msg.id === lastAi.id ? { ...msg, options: [] } : msg
+            ).concat(userMessage)
+        );
+
+        setIsLoading(true);
+
+        try {
+            await axios.post(
+                `${API_BASE_URL}/chat-flow/answer`,
+                {
+                    flowInstanceId: lastAi.flowInstanceId,
+                    nodeId: lastAi.id,
+                    selectedKeys: [option.id],
+                },
+                {
+                    headers: { Authorization: `Bearer ${userToken}` },
+                }
+            );
+            console.log('✅ Answer sent');
+        } catch (error: any) {
+            console.error('❌ Send error:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to send answer',
+                position: 'bottom'
+            });
+            setIsLoading(false);
+        }
+    };
+
+    const handleRestart = async () => {
+        if (!userId) return;
+
+        Alert.alert(
+            'Restart Chat',
+            'This will delete all chat history. Continue?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Restart',
+                    style: 'destructive',
+                    onPress: async () => {
+                        eventSourceRef.current?.close();
+                        await chatDB.clearChatHistory(userId, FLOW_SLUG);
+                        setChatHistory([]);
+                        setAnimatingMessageId(null);
+                        setIsLoading(false);
+                        setIsFlowComplete(false);
+                        setTimeout(connectToServer, 100);
+                    },
+                },
+            ]
+        );
+    };
+
     return (
-        <View style={[chatStyles.messageContainer, chatStyles.aiMessage]}>
-            <Text style={[chatStyles.messageText, globalStyles.fontRegular]}>AI is thinking...</Text>
-        </View>
+        <SafeAreaView style={{ flex: 1 }}>
+
+            <ScrollView
+                ref={scrollViewRef}
+                style={globalStyles.chatContainer}
+                onContentSizeChange={() =>
+                    scrollViewRef.current?.scrollToEnd({ animated: true })
+                }
+            >
+                {chatHistory.map((msg, i) => {
+                    const isLast = i === chatHistory.length - 1;
+                    const shouldAnimate = msg.type === 'ai' && msg.id === animatingMessageId;
+
+                    if (shouldAnimate) {
+                        return (
+                            <AnimatedBubble
+                                key={msg.id}
+                                message={msg}
+                                onComplete={() => setAnimatingMessageId(null)}
+                                onSelect={handleSendAnswer}
+                            />
+                        );
+                    }
+
+                    return (
+                        <StaticBubble
+                            key={msg.type === 'ai' ? msg.id : `user-${i}`}
+                            message={msg}
+                            isLast={isLast}
+                            isAnimating={!!animatingMessageId}
+                            isComplete={isFlowComplete}
+                            onSelect={handleSendAnswer}
+                        />
+                    );
+                })}
+
+                {isLoading && <RenderTypingIndicator />}
+            </ScrollView>
+            <View style={chatStyles.inputContainer}>
+                <TextInput
+                    style={[chatStyles.textInput, globalStyles.fontRegular]}
+                    value={inputText}
+                    onChangeText={setInputText}
+                    placeholder="Type your message..."
+                    placeholderTextColor={colors.black}
+                    editable={!isLoading}
+                />
+                <TouchableOpacity
+                    disabled={inputText.length === 0 || isLoading}
+                    style={[chatStyles.sendButton, (inputText.length === 0 || isLoading) && { backgroundColor: 'grey' }]}
+                >
+                    <MaterialDesignIcons name='send-outline' size={20} color={colors.white} style={{ transform: [{ rotate: '-35deg' }] }} />
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
     );
-};
+}
 
-const RenderMessage = ({ item, onOptionSelect, isLatestMessage }: { item: IMessage, onOptionSelect: (option: IOption) => void, isLatestMessage: boolean }) => {
+// StaticBubble Component
+const StaticBubble = ({ message, isLast, isAnimating, isComplete, onSelect }: any) => {
+    const showOptions =
+        message.type === 'ai' &&
+        isLast &&
+        !isAnimating &&
+        !isComplete &&
+        message.options.length > 0;
+
     return (
-        <View style={[chatStyles.messageContainer, item.sender === 'user' ? chatStyles.userMessage : chatStyles.aiMessage]}>
-            {/* --- THIS IS THE CHANGE --- */}
-            {/* Replace the old <Text> component with our new <MessageWithLinks> component */}
-            <MessageWithLinks text={item.text} />
-
-            {/* The rest of the component for rendering options remains the same */}
-            {item.sender === 'ai' && item.options && item.options.length > 0 && (
+        <View>
+            <View style={[styles.bubble, message.type === 'ai' ? chatStyles.aiMessage : chatStyles.userMessage]}>
+                <Text style={chatStyles.messageText}>{message.text}</Text>
+            </View>
+            {showOptions && (
                 <View style={chatStyles.optionsInMessageContainer}>
-                    {item.options.map((option) => (
+                    {message.options.map((opt: IOption) => (
                         <TouchableOpacity
-                            key={option.id}
+                            key={opt.id}
                             style={chatStyles.optionButton}
-                            disabled={!isLatestMessage}
-                            onPress={() => onOptionSelect(option)}
+                            onPress={() => onSelect(opt)}
                         >
-                            <Text style={chatStyles.optionButtonText}>{option.label}</Text>
+                            <Text style={chatStyles.optionButtonText}>{opt.label}</Text>
                         </TouchableOpacity>
                     ))}
                 </View>
@@ -43,194 +370,48 @@ const RenderMessage = ({ item, onOptionSelect, isLatestMessage }: { item: IMessa
     );
 };
 
+// AnimatedBubble Component
+const AnimatedBubble = ({ message, onComplete, onSelect }: any) => {
+    const [displayed, setDisplayed] = useState('');
+    const [showOptions, setShowOptions] = useState(false);
 
-
-const ChatWithVivaAI: React.FC = () => {
-    const flatListRef = useRef<FlatList>(null);
-
-    const [messages, setMessages] = useState<IMessage[]>([]);
-    const [inputText, setInputText] = useState<string>('');
-    const [loading, setLoading] = useState<boolean>(false);
-    const [currentFollowUpSet, setCurrentFollowUpSet] = useState<IFollowUpSet | null>(null);
-    const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-    const [score, setScore] = useState<number>(0);
-    const [isAnsweringFollowUps, setIsAnsweringFollowUps] = useState<boolean>(false);
-    const [awaitingFollowUpConfirmation, setAwaitingFollowUpConfirmation] = useState<boolean>(false);
-
-    // Effect to auto-scroll
     useEffect(() => {
-        if (flatListRef.current) {
-            setTimeout(() => {
-                flatListRef.current?.scrollToEnd({ animated: true });
-            }, 100);
-        }
-    }, [messages, loading]);
-
-
-    const getAIResponse = async (userMessage: string): Promise<IVivaAIData | null> => {
-        return new Promise(resolve => {
-            const resp = vivaAIData.find(
-                (item: IVivaAIData) => item.userQuery.toLowerCase() === userMessage.toLowerCase()
-            );
-            setTimeout(() => {
-                resolve(resp || null);
-            }, 1500);
-        });
-    };
-
-    const beginFollowUpQuestions = (followUpSet: IFollowUpSet) => {
-        setIsAnsweringFollowUps(true);
-        setCurrentQuestionIndex(0);
-        setScore(0);
-
-        setTimeout(() => {
-            const noteMessage: IMessage = { id: Date.now().toString() + 'note', text: followUpSet.note, sender: 'ai' };
-            const firstQuestion: IMessage = {
-                id: Date.now().toString() + 'q0',
-                text: followUpSet.followUps[0].question,
-                sender: 'ai',
-                options: followUpSet.followUps[0].options,
-            };
-            setMessages(prev => [...prev, noteMessage, firstQuestion]);
-        }, 500);
-    };
-
-    const handleSendMessage = async () => {
-        if (inputText.trim() === '') return;
-
-        const userMessageText = inputText.trim();
-        const newUserMessage: IMessage = { id: Date.now().toString(), text: userMessageText, sender: 'user' };
-        setMessages(prevMessages => [...prevMessages, newUserMessage]);
-        setInputText('');
-
-        if (awaitingFollowUpConfirmation && currentFollowUpSet) {
-            const userConfirmation = userMessageText.toLowerCase();
-            setAwaitingFollowUpConfirmation(false);
-
-            if (userConfirmation === 'yes' || userConfirmation === 'y') {
-                beginFollowUpQuestions(currentFollowUpSet);
-            } else {
-                const politeSignOff: IMessage = { id: Date.now().toString() + 'ai', text: "Okay, no problem. If you change your mind or have other questions, just let me know.", sender: 'ai' };
-                setMessages(prev => [...prev, politeSignOff]);
-                setCurrentFollowUpSet(null);
+        let i = 0;
+        const interval = setInterval(() => {
+            i++;
+            setDisplayed(message.text.substring(0, i));
+            if (i >= message.text.length) {
+                clearInterval(interval);
+                setShowOptions(true);
+                onComplete();
             }
-            return;
-        }
-
-        setLoading(true);
-        const aiResponseObject = await getAIResponse(userMessageText);
-
-        if (aiResponseObject) {
-            const newAIMessage: IMessage = { id: Date.now().toString() + 'ai', text: aiResponseObject.aiResponse, sender: 'ai' };
-            setMessages(prevMessages => [...prevMessages, newAIMessage]);
-
-            if (aiResponseObject.followUpSet) {
-                setAwaitingFollowUpConfirmation(true);
-                setCurrentFollowUpSet(aiResponseObject.followUpSet);
-            }
-        } else {
-            const fallbackMessage: IMessage = { id: Date.now().toString() + 'ai', text: "Sorry! I can't help you with that!", sender: 'ai' };
-            setMessages(prevMessages => [...prevMessages, fallbackMessage]);
-        }
-        setLoading(false);
-    };
-
-    const handleOptionSelect = (option: IOption) => {
-        if (!currentFollowUpSet) return;
-
-        setMessages(prev => {
-            const lastMessage = prev[prev.length - 1];
-            if (lastMessage.sender === 'ai' && lastMessage.options) {
-                const updatedMessage = { ...lastMessage, options: [] };
-                return [...prev.slice(0, -1), updatedMessage];
-            }
-            return prev;
-        });
-
-        const userAnswerMessage: IMessage = { id: option.id.toString() + Date.now(), text: option.label, sender: 'user' };
-        setMessages(prev => [...prev, userAnswerMessage]);
-
-        const newScore = score + option.value;
-        setScore(newScore);
-
-        const nextQuestionIndex = currentQuestionIndex + 1;
-        if (nextQuestionIndex < currentFollowUpSet.followUps.length) {
-            setCurrentQuestionIndex(nextQuestionIndex);
-            const nextQuestionMessage: IMessage = {
-                id: Date.now().toString() + 'q' + nextQuestionIndex,
-                text: currentFollowUpSet.followUps[nextQuestionIndex].question,
-                sender: 'ai',
-                options: currentFollowUpSet.followUps[nextQuestionIndex].options,
-            };
-            setTimeout(() => setMessages(prev => [...prev, nextQuestionMessage]), 500);
-        } else {
-            const finalScoreMessage: IMessage = { id: Date.now().toString() + 'score', text: `Your total score is ${newScore}, which is above the cutoff for concern. \n\nA score of 3 or more suggests you may be going through symptoms of postpartum depression or emotional distress. This doesn't mean a diagnosis, but it does mean it's a good time to talk to someone who can help.\n\nYou're carrying a lot - emotionally and physically and you don't have to do it alone. There are safe, supportive options for you. \n\nWould you like me to schedule a consultation with one of our experts?`, sender: 'ai' };
-            setTimeout(() => setMessages(prev => [...prev, finalScoreMessage]), 500);
-
-            setIsAnsweringFollowUps(false);
-            setCurrentFollowUpSet(null);
-            setCurrentQuestionIndex(0);
-        }
-    };
-
-
-    const InitialView = () => (
-        <View style={chatStyles.initialViewContainer}>
-            <Text style={chatStyles.initialHelpText}>How can I help?</Text>
-            <View style={chatStyles.initialPromptsContainer}>
-                {vivaAIData.map((item: IVivaAIData) => (
-                    <TouchableOpacity
-                        key={item.id.toString()}
-                        style={chatStyles.promptButton}
-                        onPress={() => { setInputText(item.userQuery); }}
-                    >
-                        <Text style={chatStyles.promptText}>{item.userQuery}</Text>
-                    </TouchableOpacity>
-                ))}
-            </View>
-        </View>
-    );
+        }, TYPING_SPEED_MS);
+        return () => clearInterval(interval);
+    }, []);
 
     return (
-        <SafeAreaView style={{ flex: 1 }} >
-            <View style={globalStyles.chatContainer}>
-                <FlatList
-                    ref={flatListRef}
-                    data={messages}
-                    renderItem={({ item, index }) => (
-                        <RenderMessage
-                            item={item}
-                            onOptionSelect={handleOptionSelect}
-                            isLatestMessage={index === messages.length - 1}
-                        />
-                    )}
-                    keyExtractor={item => item.id}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 10, justifyContent: messages.length === 0 ? 'center' : 'flex-start' }}
-                    ListEmptyComponent={InitialView}
-                    ListFooterComponent={() => (loading ? <RenderTypingIndicator /> : null)}
-                />
+        <View>
+            <View style={[styles.bubble, chatStyles.aiMessage]}>
+                <Text style={chatStyles.messageText}>{displayed}</Text>
             </View>
-
-            <View style={[chatStyles.inputContainer]}>
-                <TextInput
-                    style={[chatStyles.textInput, globalStyles.fontRegular]}
-                    value={inputText}
-                    onChangeText={setInputText}
-                    placeholder="Type your message..."
-                    placeholderTextColor={colors.black}
-                    editable={!isAnsweringFollowUps}
-                />
-                <TouchableOpacity
-                    disabled={inputText.length === 0 || isAnsweringFollowUps}
-                    style={[chatStyles.sendButton, (inputText.length === 0 || isAnsweringFollowUps) && { backgroundColor: 'grey' }]}
-                    onPress={handleSendMessage}
-                >
-                    <MaterialDesignIcons name='send-outline' size={20} color={colors.white} style={{ transform: [{ rotate: '-35deg' }] }} />
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView>
+            {showOptions && message.options.length > 0 && (
+                <View style={chatStyles.optionsInMessageContainer}>
+                    {message.options.map((opt: IOption) => (
+                        <TouchableOpacity
+                            key={opt.id}
+                            style={chatStyles.optionButton}
+                            onPress={() => onSelect(opt)}
+                        >
+                            <Text style={chatStyles.optionButtonText}>{opt.label}</Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            )}
+        </View>
     );
 };
 
-export default ChatWithVivaAI;
+const styles = StyleSheet.create({
+    bubble: { padding: 12, borderRadius: 20, maxWidth: '80%', marginBottom: 10 },
+    loader: { alignSelf: 'flex-start', marginLeft: 15 },
+});

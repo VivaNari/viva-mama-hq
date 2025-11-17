@@ -1,12 +1,15 @@
-import { View, Text, ScrollView, Image, TouchableOpacity } from 'react-native'
-import React from 'react'
+import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native'
+import React, { useState } from 'react'
 import { globalStyles, landingStyles } from '../public/styles'
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { colors } from '../public/assets/colors';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
 
 const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
+    const { signInWithGoogle } = useAuth();
+    const [getLoading, setLoading] = useState<boolean>(false);
     return (
         <SafeAreaView>
             <ScrollView style={{
@@ -47,6 +50,13 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                         <TouchableOpacity
                             style={{ flex: 1 }}
                             activeOpacity={0.8}
+                            onPress={async () => {
+                                setLoading(true);
+                                await signInWithGoogle()
+
+                                setLoading(false);
+                            }}
+                            disabled={getLoading}
                         >
                             <LinearGradient
                                 colors={[colors.primary, colors.secondary]}
@@ -64,7 +74,11 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
 
                                 }}
                             >
-                                <MaterialDesignIcons name="google" color={colors.white} size={20} />
+                                {
+                                    getLoading ?
+                                        <ActivityIndicator size="small" color={colors.white} /> :
+                                        <MaterialDesignIcons name="google" color={colors.white} size={20} />
+                                }
                                 <Text
                                     style={[{
                                         color: colors.white,
@@ -78,7 +92,9 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                         <TouchableOpacity
                             style={{ flex: 1 }}
                             activeOpacity={0.8}
-                            onPress={() => navigation.navigate("LoginWithPhone")}
+                            onPress={() => {
+                                navigation.navigate("LoginWithPhone")
+                            }}
                         >
                             <LinearGradient
                                 colors={[colors.primary, colors.secondary]}

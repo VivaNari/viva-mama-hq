@@ -15,7 +15,6 @@ import Landing from '../screens/Landing';
 import LoginwithPhone from '../screens/LoginwithPhone';
 import MyProfile from '../screens/MyProfile';
 import Notifications from '../screens/Notifications';
-import Onboarding from '../screens/OnboardingSteps';
 import PrivacyPolicy from '../screens/PrivacyPolicy';
 import Products from '../screens/Products';
 import SubCategoryArticles from '../screens/SubCategoryArticles';
@@ -30,12 +29,16 @@ import RecommendationDetails from '../screens/RecommendationDetails';
 import VivaClubPost from '../screens/VivaClubPost';
 import VivaClubPostDetails from '../screens/VivaClubPostDetails';
 import CreatePost from '../screens/CreatePost';
+import { useAuth } from '../context/AuthContext';
+import { ActivityIndicator, View } from 'react-native';
 
 const Stack = createNativeStackNavigator();
 
 const RootStack = () => {
+    const { isOnboarded } = useAuth();
     return (
         <Stack.Navigator
+            initialRouteName={isOnboarded ? 'DashboardTabNavigator' : 'ChatWithVivaAI'}
             screenOptions={{
                 animation: "fade_from_bottom",
                 statusBarAnimation: "slide",
@@ -47,27 +50,6 @@ const RootStack = () => {
 
             }}
         >
-            <Stack.Screen
-                name="Landing"
-                component={Landing}
-                options={{
-                    headerShown: false,
-                }}
-            />
-            <Stack.Screen
-                name="LoginWithPhone"
-                component={LoginwithPhone}
-                options={{
-                    headerShown: false,
-                }}
-            />
-            <Stack.Screen
-                name="Onboarding"
-                component={Onboarding}
-                options={{
-                    headerShown: false,
-                }}
-            />
             <Stack.Screen
                 options={{
                     headerShown: false,
@@ -256,10 +238,53 @@ const RootStack = () => {
     );
 }
 
+const AuthStack = () => {
+    return (
+        <Stack.Navigator
+            screenOptions={{
+                animation: "fade_from_bottom",
+                statusBarAnimation: "slide",
+                headerShadowVisible: false,
+                headerTitleStyle: { ...globalStyles.fontBold, fontSize: 18 },
+                headerStyle: {
+                    backgroundColor: colors.pageBG
+                }
+
+            }}
+        >
+            <Stack.Screen
+                name="Landing"
+                component={Landing}
+                options={{
+                    headerShown: false,
+                }}
+            />
+            <Stack.Screen
+                name="LoginWithPhone"
+                component={LoginwithPhone}
+                options={{
+                    headerShown: false,
+                }}
+            />
+        </Stack.Navigator>
+    );
+}
+
 export default function RootNavigator() {
+    const { userToken, isLoading } = useAuth();
+
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.white }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+        );
+    }
     return (
         <NavigationContainer>
-            <RootStack />
+            {
+                userToken ? <RootStack /> : <AuthStack />
+            }
         </NavigationContainer>
     );
 }

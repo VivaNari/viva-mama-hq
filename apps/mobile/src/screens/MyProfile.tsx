@@ -1,16 +1,18 @@
 import { useNavigation } from '@react-navigation/native'
-import React from 'react'
-import { FlatList, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useState } from 'react'
+import { FlatList, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { myProfileData, settingsMenu } from '../data/myProfileData'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
 import ProfileSettingsMenu from '../components/profile/ProfileSettingsMenu'
+import { useAuth } from '../context/AuthContext'
 
 const MyProfile = () => {
     const navigation = useNavigation<any>();
-
+    const { signOut } = useAuth();
+    const [getLoading, setLoading] = useState<boolean>(false);
     return (
         <SafeAreaView style={[globalStyles.container, { flex: 1 }]}>
             <FlatList
@@ -199,12 +201,27 @@ const MyProfile = () => {
                         }}
                     >
                         <TouchableOpacity
+                            activeOpacity={0.7}
                             style={{
                                 backgroundColor: colors.logout,
                                 padding: 14,
-                                borderRadius: 10
+                                borderRadius: 10,
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                gap: 10
+                            }}
+                            onPress={() => {
+                                setLoading(true);
+                                setTimeout(() => {
+                                    signOut()
+                                    setLoading(false);
+                                }, 500);
                             }}
                         >
+                            {
+                                getLoading && <ActivityIndicator />
+                            }
                             <Text
                                 style={[{
                                     fontSize: 16,
@@ -212,7 +229,9 @@ const MyProfile = () => {
                                     textAlign: 'center'
                                 }, globalStyles.fontBold]}
                             >
-                                Sign Out
+                                {
+                                    getLoading ? 'Signing Out...' : 'Sign Out'
+                                }
                             </Text>
                         </TouchableOpacity>
 

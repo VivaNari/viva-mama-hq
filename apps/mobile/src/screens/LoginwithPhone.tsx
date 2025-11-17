@@ -5,17 +5,26 @@ import {
     Text,
     TouchableOpacity,
     TextInput,
+    ActivityIndicator,
 } from 'react-native';
 import React, { useState } from 'react';
 import { OtpInput } from 'react-native-otp-entry';
-import { globalStyles, landingStyles } from '../public/styles';
+import { globalStyles } from '../public/styles';
 import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../public/assets/colors';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../context/AuthContext';
+import { IRequestOtpResponse } from '../types/auth.types';
 
 const LoginwithPhone = ({ navigation }: { navigation: { navigate: any } }) => {
     const [isSentOtp, setIsSentOtp] = useState(false);
+    const [phoneNumber, setPhoneNumber] = useState<string>('');
+    const [otp, setOTP] = useState<string>('');
+    const [verificationKey, setVerificationKey] = useState<string>('');
+    const [getLoading, setLoading] = useState<boolean>(false);
+    const { requestPhoneOTP, verifyPhoneOTP } = useAuth();
+
     return (
         <SafeAreaView>
             <ScrollView>
@@ -42,11 +51,28 @@ const LoginwithPhone = ({ navigation }: { navigation: { navigate: any } }) => {
                                     placeholderTextColor={colors.white}
                                     placeholder={'Enter Phone Number'}
                                     style={[globalStyles.input, globalStyles.fontRegular]}
+                                    onChangeText={setPhoneNumber}
+                                    value={phoneNumber}
                                 />
                                 <TouchableOpacity
-                                    onPress={() => setIsSentOtp(true)}
+                                    onPress={async () => {
+                                        try {
+
+                                            setLoading(true);
+                                            const { success, verification_key } = await requestPhoneOTP(phoneNumber) as IRequestOtpResponse;
+                                            if (success) {
+                                                setIsSentOtp(true);
+                                                setVerificationKey(verification_key as string);
+                                            }
+                                            setLoading(false);
+                                        } catch (error: any) {
+
+                                            setLoading(false);
+                                        }
+                                    }}
                                     style={{ flex: 1, marginTop: 30 }}
                                     activeOpacity={0.8}
+                                    disabled={getLoading}
                                 >
                                     <LinearGradient
                                         colors={[colors.primary, colors.secondary]}
@@ -63,17 +89,24 @@ const LoginwithPhone = ({ navigation }: { navigation: { navigate: any } }) => {
                                             gap: 20,
                                         }}
                                     >
-                                        <MaterialDesignIcons
-                                            name="phone-settings"
-                                            color={colors.white}
-                                            size={20}
-                                        />
+                                        {
+                                            getLoading ?
+                                                <ActivityIndicator
+                                                    color={colors.success}
+                                                /> :
+                                                <MaterialDesignIcons
+                                                    name="phone-settings"
+                                                    color={colors.white}
+                                                    size={20}
+                                                />
+                                        }
                                         <Text
                                             style={[{
                                                 color: colors.white,
                                                 fontSize: 18,
                                             }, globalStyles.fontRegular]}
                                         >
+
                                             Send OTP
                                         </Text>
                                     </LinearGradient>
@@ -98,7 +131,7 @@ const LoginwithPhone = ({ navigation }: { navigation: { navigate: any } }) => {
                                     focusStickBlinkingDuration={500}
                                     onFocus={() => console.log('Focused')}
                                     onBlur={() => console.log('Blurred')}
-                                    onTextChange={text => console.log(text)}
+                                    onTextChange={text => setOTP(text)}
                                     onFilled={text => console.log(`OTP is ${text}`)}
                                     textInputProps={{
                                         accessibilityLabel: 'One-Time Password',
@@ -108,11 +141,17 @@ const LoginwithPhone = ({ navigation }: { navigation: { navigate: any } }) => {
                                         accessibilityLabel: 'OTP digit',
                                         allowFontScaling: false,
                                     }}
+
                                 />
                                 <TouchableOpacity
-                                    onPress={() => navigation.navigate('Onboarding')}
+                                    onPress={async () => {
+                                        setLoading(true);
+                                        await verifyPhoneOTP(phoneNumber, otp, verificationKey);
+                                        setLoading(false);
+                                    }}
                                     style={{ flex: 1, marginTop: 30 }}
                                     activeOpacity={0.8}
+                                    disabled={getLoading}
                                 >
                                     <LinearGradient
                                         colors={[colors.primary, colors.secondary]}
@@ -129,6 +168,12 @@ const LoginwithPhone = ({ navigation }: { navigation: { navigate: any } }) => {
                                             gap: 10,
                                         }}
                                     >
+                                        {
+                                            getLoading &&
+                                            <ActivityIndicator
+                                                color={colors.success}
+                                            />
+                                        }
                                         <Text
                                             style={[{
                                                 color: colors.white,
