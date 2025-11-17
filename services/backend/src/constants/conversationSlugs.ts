@@ -1,1 +1,1 @@
-export const ONBOARDING_SLUG = "onboarding-check-in-v2";
+export const ONBOARDING_SLUG = "weekly-check-in-v1";

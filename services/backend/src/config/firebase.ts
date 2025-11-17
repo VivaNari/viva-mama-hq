@@ -1,8 +1,10 @@
 import admin, { ServiceAccount } from "firebase-admin";
-import serviceAccount from "../../VivaMamaServiceAccountKey.json";
+import serviceAccount from "../../VivaMamaServiceAccountKey.json"; // Adjust path as needed
 
-export const initFirebaseAdmin = () => {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as ServiceAccount),
-    });
-};
+const firebaseAdmin = admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount as ServiceAccount),
+});
+
+console.log("Firebase Admin Initialized");
+
+export default firebaseAdmin;
