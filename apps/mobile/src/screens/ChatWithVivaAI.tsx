@@ -148,7 +148,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
 
         try {
             const messages = await chatDB.getChatHistory(userId, FLOW_SLUG);
-            chatDB.clearChatHistory(userId, FLOW_SLUG); // this is for testing
+            // chatDB.clearChatHistory(userId, FLOW_SLUG); // this is for testing
             setChatHistory(messages);
             console.log('Loaded history from SQLite:', messages.length, 'messages');
         } catch (error) {
