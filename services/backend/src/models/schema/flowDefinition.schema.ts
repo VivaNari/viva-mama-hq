@@ -33,6 +33,10 @@ const flowDefinitionSchema: Schema<IFlowDefinition> = new Schema<IFlowDefinition
                         key: String,
                         label: String,
                         value: Schema.Types.Mixed,
+                        score: {
+                            type: Number,
+                            null: true,
+                        },
                     },
                 ],
                 branch: {

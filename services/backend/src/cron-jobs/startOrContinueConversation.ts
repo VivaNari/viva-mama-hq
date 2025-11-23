@@ -34,6 +34,7 @@ const createNewFlowForUser = async (
             flowSlug: flowDef.slug,
             version: flowDef.version,
             state: FlowInstanceStateEnum.ACTIVE,
+            postpartumWeek: user.current_postpartum_week,
             cursorNodeId: flowDef.startNodeId,
             variables: {},
             outcome: null,

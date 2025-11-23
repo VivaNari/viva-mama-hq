@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import FlowDefinitionService from "../../../services/chat-system/flow-definition.service";
-import { IFlowDefinition } from "../../../types/chat.types";
-import sendResponse from "../../../utils/commonFunctions/sendResponse";
+import FlowDefinitionService from "../../../../services/chat-system/flow-definition.service";
+import { IFlowDefinition } from "../../../../types/chat.types";
+import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 import { StatusCodes } from "http-status-codes";
+import { messages } from "../../../../constants/messages";
 
 class FlowDefinitionController {
     private flowDefinitionService: FlowDefinitionService;
@@ -18,7 +19,7 @@ class FlowDefinitionController {
                 data: instance,
                 statusCode: StatusCodes.CREATED,
                 success: true,
-                message: "",
+                message: messages.FLOW_DEFINITION_SAVED_SUCCESS,
                 response,
             });
         } catch (err) {
@@ -35,7 +36,7 @@ class FlowDefinitionController {
                 data: instances,
                 statusCode: StatusCodes.OK,
                 success: true,
-                message: "",
+                message: messages.FLOW_DEFINITION_RETRIEVED_SUCCESS,
                 response,
             });
         } catch (err) {

@@ -77,6 +77,30 @@ const userSchema = new Schema<IUser>(
         FCM_token: {
             type: String,
         },
+        current_postpartum_week: {
+            type: Number,
+        },
+        date_of_delivery: {
+            type: Date,
+        },
+        is_breastfeeding_currently: Boolean,
+        onboarding_data: {
+            preferred_name: { type: String },
+            date_of_birth: { type: Date },
+            location: { type: String },
+            conception_method: { type: String },
+            pregnancy_conditions: [{ type: String }],
+            delivery_date: { type: Date },
+            delivery_type: { type: String },
+            delivery_outcome: { type: String },
+            past_medications: [{ type: String }],
+            current_medications: [{ type: String }],
+            tobacco_use: { type: String },
+            alcohol_use: { type: String },
+            social_support: { type: String },
+            parity: { type: String },
+            onboarded_at: { type: Date },
+        },
     },
     {
         timestamps: true,

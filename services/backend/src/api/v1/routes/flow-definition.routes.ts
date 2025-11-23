@@ -1,9 +1,9 @@
 import { Router } from "express";
 import FlowDefinitionController from "../controllers/chat-system/flow-definition.controllers";
 
-const router = Router();
+const flowDefinitionrouter = Router();
 const flowDefinitionController = new FlowDefinitionController();
 
-router.route("/flow-definition").post(flowDefinitionController.create);
+flowDefinitionrouter.route("/flow-definition").post(flowDefinitionController.create);
 
-export default router;
+export default flowDefinitionrouter;

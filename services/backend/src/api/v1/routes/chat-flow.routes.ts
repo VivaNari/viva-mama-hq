@@ -1,6 +1,6 @@
 import { Router } from "express";
 import ChatFlowController from "../controllers/chat-system/chat-flow.controller";
-import authMiddleware from "../../middlewares/authorization.middleware";
+import authMiddleware from "../../../middlewares/authorization.middleware";
 
 const chatFlowRouter = Router();
 const chatFlowController = new ChatFlowController();

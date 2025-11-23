@@ -1,26 +1,25 @@
 import { NextFunction, Request, Response } from "express";
-import { IFlowNodeCategory } from "../../../types/chat.types";
-import sendResponse from "../../../utils/commonFunctions/sendResponse";
+import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 import { StatusCodes } from "http-status-codes";
-import FlowNodeCategoryService from "../../../services/chat-system/flow-definition-categiry.service";
+import { messages } from "../../../../constants/messages";
+import RecommendationService from "../../../../services/recommendations/recommendation.service";
+import { IRecommendation } from "../../../../types/recommendation.types";
 
-class FlowNodeController {
-    private flowNodeCategoryService: FlowNodeCategoryService;
+class RecommendationController {
+    private recommendationService: RecommendationService;
 
     constructor() {
-        this.flowNodeCategoryService = new FlowNodeCategoryService();
+        this.recommendationService = new RecommendationService();
     }
 
     create = async (request: Request, response: Response, next: NextFunction) => {
         try {
-            const instance: IFlowNodeCategory = await this.flowNodeCategoryService.create(
-                request.body,
-            );
+            const instance: IRecommendation = await this.recommendationService.create(request.body);
             sendResponse({
                 data: instance,
                 statusCode: StatusCodes.CREATED,
                 success: true,
-                message: "",
+                message: messages.RECOMMENDATION_SAVED_SUCCESS,
                 response,
             });
         } catch (err) {
@@ -30,14 +29,14 @@ class FlowNodeController {
 
     find = async (request: Request, response: Response, next: NextFunction) => {
         try {
-            const instances: IFlowNodeCategory[] = await this.flowNodeCategoryService.find(
+            const instances: IRecommendation[] = await this.recommendationService.find(
                 request.body,
             );
             sendResponse({
                 data: instances,
                 statusCode: StatusCodes.OK,
                 success: true,
-                message: "",
+                message: messages.RECOMMENDATION_RETRIEVED_SUCCESS,
                 response,
             });
         } catch (err) {
@@ -46,4 +45,4 @@ class FlowNodeController {
     };
 }
 
-export default FlowNodeController;
+export default RecommendationController;

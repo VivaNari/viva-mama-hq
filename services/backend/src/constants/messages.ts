@@ -1,0 +1,15 @@
+export const messages = {
+    FLOW_INSTANCE_REQUIRED: "flowInstanceId, nodeId, and selectedKeys (array) are required",
+    USER_AND_SLUG_REQUIRED: "userId and flow slug are required",
+    ANSWER_SAVED_SUCCESS: "Answer saved successfully",
+    ANSWER_SAVE_FAILED: "Failed to save answer",
+    FLOW_DEFINITION_SAVED_SUCCESS: "Flow definition created successfully",
+    FLOW_DEFINITION_RETRIEVED_SUCCESS: "Flow definition created successfully",
+    FLOW_NODE_CATEGORY_SAVED_SUCCESS: "Flow definition created successfully",
+    FLOW_NODE_CATEGORY_RETRIEVED_SUCCESS: "Flow definition created successfully",
+    TOKEN_MISSING: "Unauthorized: Access denied. Token missing.",
+    TOKEN_INVALID: "Forbidden: Invalid token.",
+    AUTH_BAD_REQUEST: "Bad Request: Error processing authorization.",
+    RECOMMENDATION_SAVED_SUCCESS: "Recommendation created successfully",
+    RECOMMENDATION_RETRIEVED_SUCCESS: "Recommendation created successfully",
+};

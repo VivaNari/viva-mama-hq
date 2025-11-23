@@ -9,7 +9,7 @@ const flowResponseSchema: Schema<IFlowResponse> = new Schema<IFlowResponse>(
         answer: {
             answerType: String,
             selectedKeys: {
-                type: [String],
+                type: [Number],
                 default: null,
             },
             freeText: {

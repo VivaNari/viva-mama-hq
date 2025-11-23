@@ -1,4 +1,6 @@
 import { Schema } from "mongoose";
+import { IUser } from "./user.types";
+import { Request } from "express";
 
 export enum ChatModeEnum {
     MIXED = "MIXED",
@@ -217,10 +219,36 @@ export interface IFlowResponse {
     nodeId: string;
     answer: {
         type: AnswerType;
-        selectedKeys: string[] | null;
+        selectedKeys: number[] | null;
         freeText: string | null;
     };
     computed: Record<string, any> | null;
     createdAt: Date;
     updatedAt: Date;
 }
+
+export interface QuestionPayload {
+    id: string;
+    flowInstanceId: string;
+    text: string;
+    educationalMessage: string;
+    whyThisMatters: string;
+    options: Array<{
+        id: string;
+        label: string;
+        value: any;
+    }>;
+    nodeType?: FlowNodeType;
+}
+
+export interface EndFlowPayload {
+    type: "end_flow";
+    message: string;
+    flowType: string;
+}
+
+export interface AuthenticatedRequest extends Request {
+    user: IUser & { _id: string };
+}
+
+export type FlowType = "ONBOARDING" | "CHECK_IN";
