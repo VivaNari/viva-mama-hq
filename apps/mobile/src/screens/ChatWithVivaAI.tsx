@@ -9,21 +9,21 @@ import {
     AppState,
     AppStateStatus,
     TextInput,
+    BackHandler,
 } from 'react-native';
 import EventSource from 'react-native-sse';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { chatDB, AiMessage, UserMessage, ChatMessage } from '../db/sqlite';
+import { chatDB } from '../db/sqlite';
 import { styles as chatStyles } from '../public/styles/chatWithVivaAiStyles';
-import { IOption } from "../types/vivaAi.types";
+import { IOption, IDBAiMessage, IDBUserMessage, IDBChatMessage } from "../types/vivaAi.types";
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { globalStyles } from '../public/styles';
 import { colors } from '../public/assets/colors';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import { useNavigation } from '@react-navigation/native';
 
-
-const FLOW_SLUG = 'weekly-check-in-v1';
 const API_BASE_URL = 'http://192.168.1.22:4000/api/v1';
 const TYPING_SPEED_MS = 30;
 
@@ -33,11 +33,19 @@ const RenderTypingIndicator: React.FC = () => (
     </View>
 );
 
-export default function ChatWithVivaAi() {
-    const { userToken, userId } = useAuth();
+export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?: string } } }) {
 
+    const { userToken, userId, isOnboarded, completeOnboarding } = useAuth();
+    let FLOW_SLUG = '';
+    if (isOnboarded) {
+        FLOW_SLUG = route.params?.flowSlug as string;
+    } else {
+        FLOW_SLUG = 'onboarding-flow-v1';
+    }
+    console.log("FLOW_SLUG as params =>", FLOW_SLUG)
+    const navigation = useNavigation();
     const [inputText, setInputText] = useState('');
-    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [chatHistory, setChatHistory] = useState<IDBChatMessage[]>([]);
     const [animatingMessageId, setAnimatingMessageId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isFlowComplete, setIsFlowComplete] = useState(false);
@@ -45,6 +53,43 @@ export default function ChatWithVivaAi() {
     const eventSourceRef = useRef<EventSource | null>(null);
     const scrollViewRef = useRef<ScrollView | null>(null);
     const appState = useRef<AppStateStatus>(AppState.currentState);
+
+    useEffect(() => {
+        const backAction = () => {
+            navigation.canGoBack() ?
+                navigation.goBack() :
+                isOnboarded ?
+                    navigation.navigate("DashboardTabNavigator" as never) : BackHandler.exitApp();
+            return true;
+        };
+
+        // Subscribe to the hardware back press event
+        const backHandler = BackHandler.addEventListener(
+            'hardwareBackPress',
+            backAction,
+        );
+
+        // Unsubscribe when the component unmounts
+        return () => backHandler.remove();
+    }, [isOnboarded]);
+
+    // determine if message is text input
+    const isTextInputMessage = (message: IDBChatMessage): boolean => {
+        if (!message) return false;
+        return (
+            message.type === 'ai' &&
+            message.nodeType === 'QUESTION_SINGLE' &&
+            message.options.length === 0
+        );
+    };
+
+    // Determine if we should show text input
+    const lastMessage = chatHistory[chatHistory.length - 1];
+    const shouldShowTextInput =
+        isTextInputMessage(lastMessage) &&
+        !isLoading &&
+        !isFlowComplete &&
+        !animatingMessageId;
 
     useEffect(() => {
         initializeChat();
@@ -65,9 +110,7 @@ export default function ChatWithVivaAi() {
 
     const saveChatToDatabase = async () => {
         try {
-            // Note: Individual messages are already saved when received/sent
-            // This is just a safety net for any edge cases
-            console.log('💾 Chat state synced');
+            console.log('Chat state synced');
         } catch (error) {
             console.error('Failed to save to database:', error);
         }
@@ -105,8 +148,9 @@ export default function ChatWithVivaAi() {
 
         try {
             const messages = await chatDB.getChatHistory(userId, FLOW_SLUG);
+            chatDB.clearChatHistory(userId, FLOW_SLUG); // this is for testing
             setChatHistory(messages);
-            console.log('📚 Loaded history from SQLite:', messages.length, 'messages');
+            console.log('Loaded history from SQLite:', messages.length, 'messages');
         } catch (error) {
             console.error('Failed to load history:', error);
         }
@@ -119,14 +163,13 @@ export default function ChatWithVivaAi() {
 
         const es = new EventSource(`${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken}`);
         eventSourceRef.current = es;
-        console.log("${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken} is", `${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken}`)
 
         if (chatHistory.length === 0) {
             setIsLoading(true);
         }
 
         es.addEventListener('open', () => {
-            console.log('🔌 SSE Connected');
+            console.log('SSE Connected');
         });
 
         es.addEventListener('message', async (event) => {
@@ -137,6 +180,10 @@ export default function ChatWithVivaAi() {
                     console.log('🏁 Flow completed');
                     setIsFlowComplete(true);
                     setIsLoading(false);
+
+                    if (data.flowType == "ONBOARDING") {
+                        completeOnboarding();
+                    }
                     es.close();
                     Alert.alert('Complete', 'Chat session finished!');
                     return;
@@ -153,14 +200,15 @@ export default function ChatWithVivaAi() {
                     return;
                 }
 
-                const aiMessage: AiMessage = {
+                const aiMessage: IDBAiMessage = {
                     type: 'ai',
                     id: data.id,
                     flowInstanceId: data.flowInstanceId,
                     text: data.text,
                     educationalMessage: data.educationalMessage,
                     whyThisMatters: data.whyThisMatters,
-                    options: data.options,
+                    options: data.options || [],
+                    nodeType: data.nodeType,
                     timestamp: Date.now(),
                 };
 
@@ -168,14 +216,14 @@ export default function ChatWithVivaAi() {
                 const exists = await chatDB.messageExists(userId!, FLOW_SLUG, aiMessage.id);
 
                 if (exists) {
-                    console.log('⚠️ Duplicate question from SSE');
+                    console.log('Duplicate question from SSE');
                     setIsLoading(false);
                     return;
                 }
 
                 // Save to SQLite
                 await chatDB.saveAiMessage(userId!, FLOW_SLUG, aiMessage);
-                console.log('📡 New question via SSE:', data.id);
+                console.log('New question via SSE:', data.id);
 
                 // Update UI
                 setChatHistory((prev) => [...prev, aiMessage]);
@@ -187,7 +235,7 @@ export default function ChatWithVivaAi() {
         });
 
         es.addEventListener('error', (e: any) => {
-            console.error('❌ SSE error:', e);
+            console.error('SSE error:', e);
             Toast.show({
                 type: 'error',
                 text1: 'Error',
@@ -212,7 +260,7 @@ export default function ChatWithVivaAi() {
         }
 
         // Create user message
-        const userMessage: UserMessage = {
+        const userMessage: IDBUserMessage = {
             type: 'user',
             text: option.label,
             timestamp: Date.now(),
@@ -236,15 +284,15 @@ export default function ChatWithVivaAi() {
                 {
                     flowInstanceId: lastAi.flowInstanceId,
                     nodeId: lastAi.id,
-                    selectedKeys: [option.id],
+                    selectedKeys: [option.score],
                 },
                 {
                     headers: { Authorization: `Bearer ${userToken}` },
                 }
             );
-            console.log('✅ Answer sent');
+            console.log('Answer sent');
         } catch (error: any) {
-            console.error('❌ Send error:', error);
+            console.error('Send error:', error);
             Toast.show({
                 type: 'error',
                 text1: 'Error',
@@ -255,29 +303,87 @@ export default function ChatWithVivaAi() {
         }
     };
 
-    const handleRestart = async () => {
-        if (!userId) return;
+    // Handle text input answers
+    const handleSendTextAnswer = async () => {
+        if (!inputText.trim() || !userId) {
+            return;
+        }
 
-        Alert.alert(
-            'Restart Chat',
-            'This will delete all chat history. Continue?',
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Restart',
-                    style: 'destructive',
-                    onPress: async () => {
-                        eventSourceRef.current?.close();
-                        await chatDB.clearChatHistory(userId, FLOW_SLUG);
-                        setChatHistory([]);
-                        setAnimatingMessageId(null);
-                        setIsLoading(false);
-                        setIsFlowComplete(false);
-                        setTimeout(connectToServer, 100);
-                    },
-                },
-            ]
+        if (isLoading || animatingMessageId || isFlowComplete) {
+            return;
+        }
+
+        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        if (!lastAi) {
+            console.error('No AI message found to respond to');
+            return;
+        }
+
+        // Validate that this is actually a text input question
+        if (!isTextInputMessage(lastAi)) {
+            console.error('Last message is not a text input question');
+            return;
+        }
+
+        const userMessage: IDBUserMessage = {
+            type: 'user',
+            text: inputText.trim(),
+            timestamp: Date.now(),
+        };
+
+        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+
+        setChatHistory((prev) =>
+            prev.map((msg) =>
+                msg.type === 'ai' && msg.id === lastAi.id ? { ...msg, options: [] } : msg
+            ).concat(userMessage)
         );
+
+        const textToSend = inputText.trim();
+        setInputText('');
+        setIsLoading(true);
+
+        try {
+            const response = await axios.post(
+                `${API_BASE_URL}/chat-flow/answer`,
+                {
+                    userId: userId,
+                    flowInstanceId: lastAi.flowInstanceId,
+                    nodeId: lastAi.id,
+                    freeText: textToSend,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${userToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                }
+            );
+
+            console.log('Text answer sent successfully:', textToSend);
+            console.log('Response:', response.data);
+
+        } catch (error: any) {
+            console.error('Send error:', error);
+
+            // Log detailed error info
+            if (error.response) {
+                console.error('Error status:', error.response.status);
+                console.error('Error data:', error.response.data);
+            } else if (error.request) {
+                console.error('No response received:', error.request);
+            } else {
+                console.error('Error message:', error.message);
+            }
+
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.response?.data?.message || 'Failed to send answer',
+                position: 'bottom'
+            });
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -301,6 +407,7 @@ export default function ChatWithVivaAi() {
                                 message={msg}
                                 onComplete={() => setAnimatingMessageId(null)}
                                 onSelect={handleSendAnswer}
+                                isTextInputHelper={isTextInputMessage}
                             />
                         );
                     }
@@ -313,44 +420,62 @@ export default function ChatWithVivaAi() {
                             isAnimating={!!animatingMessageId}
                             isComplete={isFlowComplete}
                             onSelect={handleSendAnswer}
+                            isTextInputHelper={isTextInputMessage}
                         />
                     );
                 })}
 
                 {isLoading && <RenderTypingIndicator />}
             </ScrollView>
-            <View style={chatStyles.inputContainer}>
-                <TextInput
-                    style={[chatStyles.textInput, globalStyles.fontRegular]}
-                    value={inputText}
-                    onChangeText={setInputText}
-                    placeholder="Type your message..."
-                    placeholderTextColor={colors.black}
-                    editable={!isLoading}
-                />
-                <TouchableOpacity
-                    disabled={inputText.length === 0 || isLoading}
-                    style={[chatStyles.sendButton, (inputText.length === 0 || isLoading) && { backgroundColor: 'grey' }]}
-                >
-                    <MaterialDesignIcons name='send-outline' size={20} color={colors.white} style={{ transform: [{ rotate: '-35deg' }] }} />
-                </TouchableOpacity>
-            </View>
+
+            {shouldShowTextInput && (
+                <View style={chatStyles.inputContainer}>
+                    <TextInput
+                        style={[chatStyles.textInput, globalStyles.fontRegular]}
+                        value={inputText}
+                        onChangeText={setInputText}
+                        placeholder="Type your answer..."
+                        placeholderTextColor={colors.black}
+                        editable={!isLoading}
+                        onSubmitEditing={handleSendTextAnswer}
+                        returnKeyType="send"
+                    />
+                    <TouchableOpacity
+                        disabled={inputText.trim().length === 0 || isLoading}
+                        style={[
+                            chatStyles.sendButton,
+                            (inputText.trim().length === 0 || isLoading) && { backgroundColor: 'grey' }
+                        ]}
+                        onPress={handleSendTextAnswer}
+                    >
+                        <MaterialDesignIcons
+                            name='send-outline'
+                            size={20}
+                            color={colors.white}
+                            style={{ transform: [{ rotate: '-35deg' }] }}
+                        />
+                    </TouchableOpacity>
+                </View>
+            )}
         </SafeAreaView>
     );
 }
 
 // StaticBubble Component
-const StaticBubble = ({ message, isLast, isAnimating, isComplete, onSelect }: any) => {
+const StaticBubble = ({ message, isLast, isAnimating, isComplete, onSelect, isTextInputHelper }: any) => {
+    const isTextInput = isTextInputHelper(message);
+
     const showOptions =
         message.type === 'ai' &&
         isLast &&
         !isAnimating &&
         !isComplete &&
+        !isTextInput &&
         message.options.length > 0;
 
     return (
         <View>
-            <View style={[styles.bubble, message.type === 'ai' ? chatStyles.aiMessage : chatStyles.userMessage]}>
+            <View style={[chatStyles.bubble, message.type === 'ai' ? chatStyles.aiMessage : chatStyles.userMessage]}>
                 <Text style={chatStyles.messageText}>{message.text}</Text>
             </View>
             {showOptions && (
@@ -371,9 +496,10 @@ const StaticBubble = ({ message, isLast, isAnimating, isComplete, onSelect }: an
 };
 
 // AnimatedBubble Component
-const AnimatedBubble = ({ message, onComplete, onSelect }: any) => {
+const AnimatedBubble = ({ message, onComplete, onSelect, isTextInputHelper }: any) => {
     const [displayed, setDisplayed] = useState('');
     const [showOptions, setShowOptions] = useState(false);
+    const isTextInput = isTextInputHelper(message);
 
     useEffect(() => {
         let i = 0;
@@ -391,10 +517,10 @@ const AnimatedBubble = ({ message, onComplete, onSelect }: any) => {
 
     return (
         <View>
-            <View style={[styles.bubble, chatStyles.aiMessage]}>
+            <View style={[chatStyles.bubble, chatStyles.aiMessage]}>
                 <Text style={chatStyles.messageText}>{displayed}</Text>
             </View>
-            {showOptions && message.options.length > 0 && (
+            {showOptions && !isTextInput && message.options.length > 0 && (
                 <View style={chatStyles.optionsInMessageContainer}>
                     {message.options.map((opt: IOption) => (
                         <TouchableOpacity
@@ -410,8 +536,3 @@ const AnimatedBubble = ({ message, onComplete, onSelect }: any) => {
         </View>
     );
 };
-
-const styles = StyleSheet.create({
-    bubble: { padding: 12, borderRadius: 20, maxWidth: '80%', marginBottom: 10 },
-    loader: { alignSelf: 'flex-start', marginLeft: 15 },
-});

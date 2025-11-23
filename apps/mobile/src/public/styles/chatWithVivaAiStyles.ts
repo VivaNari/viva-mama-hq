@@ -30,7 +30,7 @@ export const styles = StyleSheet.create({
   },
   aiMessage: {
     alignSelf: 'flex-start',
-    backgroundColor: colors.purple,
+    backgroundColor: colors.primary,
     borderBottomLeftRadius: 0,
   },
   messageText: {
@@ -105,5 +105,15 @@ export const styles = StyleSheet.create({
     color: colors.primary,
     ...globalStyles.fontRegular,
     fontSize: 14,
+  },
+  bubble: {
+    padding: 12,
+    borderRadius: 20,
+    maxWidth: '80%',
+    marginBottom: 10,
+  },
+  loader: {
+    alignSelf: 'flex-start',
+    marginLeft: 15,
   },
 });

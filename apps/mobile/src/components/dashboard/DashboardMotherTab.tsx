@@ -10,7 +10,7 @@ import VivaScoreGauge from '../VivaScoreGauge'
 import FLItemRecommendation from '../recommendations/FLItemRecommendation'
 import { recommendationsData } from '../../data/recommendationsData'
 
-const DashboardMotherTab = () => {
+const DashboardMotherTab = ({ score }: { score: string | null }) => {
     const navigation = useNavigation<any>();
     return (
         <View>
@@ -122,6 +122,13 @@ const DashboardMotherTab = () => {
                             Week {fullReportData.weekNumber}
                         </Text>
 
+                    </View>
+                    <View>
+                        <Text style={{ color: colors.black, fontSize: 12, ...globalStyles.fontSemiBold, marginTop: 10 }}>
+                            {
+                                score === null ? 'No Score Available' : `Score: ${score}`
+                            }
+                        </Text>
                     </View>
                     <View
                         style={{

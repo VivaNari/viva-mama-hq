@@ -1,41 +1,13 @@
 import SQLite, { SQLiteDatabase } from 'react-native-sqlite-storage';
+import {
+  IDBAiMessage,
+  IDBChatMessage,
+  IDBChatMessageRow,
+  IDBUserMessage,
+} from '../types/vivaAi.types';
 
 SQLite.DEBUG(false);
 SQLite.enablePromise(true);
-
-interface ChatMessageRow {
-  id: number;
-  user_id: string;
-  flow_slug: string;
-  message_type: 'ai' | 'user';
-  message_id: string | null;
-  flow_instance_id: string | null;
-  text: string;
-  educational_message: string | null;
-  why_this_matters: string | null;
-  options: string | null;
-  timestamp: number;
-  created_at: string;
-}
-
-export interface AiMessage {
-  type: 'ai';
-  id: string;
-  flowInstanceId: string;
-  text: string;
-  educationalMessage?: string;
-  whyThisMatters?: string;
-  options: Array<{ id: string; label: string; value: any }>;
-  timestamp: number;
-}
-
-export interface UserMessage {
-  type: 'user';
-  text: string;
-  timestamp: number;
-}
-
-export type ChatMessage = AiMessage | UserMessage;
 
 class ChatDatabase {
   private database: SQLiteDatabase | null = null;
@@ -44,7 +16,7 @@ class ChatDatabase {
   async init(): Promise<void> {
     try {
       if (this.database) {
-        console.log('📦 Database already initialized');
+        console.log('Database already initialized');
         return;
       }
 
@@ -53,10 +25,10 @@ class ChatDatabase {
         location: 'default',
       });
 
-      console.log('✅ Database opened successfully');
+      console.log('Database opened successfully');
       await this.createTables();
     } catch (error) {
-      console.error('❌ Failed to initialize database:', error);
+      console.error('Failed to initialize database:', error);
       throw error;
     }
   }
@@ -78,6 +50,7 @@ class ChatDatabase {
                 educational_message TEXT,
                 why_this_matters TEXT,
                 options TEXT,
+                node_type TEXT,
                 timestamp INTEGER NOT NULL,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
@@ -91,33 +64,60 @@ class ChatDatabase {
 
     try {
       await this.database.executeSql(createTableQuery);
-      console.log('✅ chat_messages table created');
+      console.log('chat_messages table created');
+
+      await this.addColumnIfNotExists('chat_messages', 'node_type', 'TEXT');
 
       for (const indexQuery of createIndexQueries) {
         await this.database.executeSql(indexQuery);
       }
-      console.log('✅ Indexes created');
+      console.log('Indexes created');
     } catch (error) {
-      console.error('❌ Failed to create tables:', error);
+      console.error('Failed to create tables:', error);
       throw error;
+    }
+  }
+
+  private async addColumnIfNotExists(
+    tableName: string,
+    columnName: string,
+    columnType: string,
+  ) {
+    const query = `PRAGMA table_info(${tableName});`;
+    const [result] = await this.database!.executeSql(query);
+
+    let exists = false;
+    for (let i = 0; i < result.rows.length; i++) {
+      if (result.rows.item(i).name === columnName) {
+        exists = true;
+        break;
+      }
+    }
+
+    if (!exists) {
+      const alterQuery = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType};`;
+      await this.database!.executeSql(alterQuery);
+      console.log(`Added missing column '${columnName}'`);
+    } else {
+      console.log(`Column '${columnName}' already exists`);
     }
   }
 
   async saveAiMessage(
     userId: string,
     flowSlug: string,
-    message: AiMessage,
+    message: IDBAiMessage,
   ): Promise<void> {
     if (!this.database) {
       await this.init();
     }
 
     const query = `
-            INSERT INTO chat_messages (
-                user_id, flow_slug, message_type, message_id, flow_instance_id,
-                text, educational_message, why_this_matters, options, timestamp
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        `;
+      INSERT INTO chat_messages (
+        user_id, flow_slug, message_type, message_id, flow_instance_id,
+        text, educational_message, why_this_matters, options, node_type, timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    `;
 
     const params = [
       userId,
@@ -129,14 +129,15 @@ class ChatDatabase {
       message.educationalMessage || null,
       message.whyThisMatters || null,
       JSON.stringify(message.options),
+      message.nodeType || null,
       message.timestamp,
     ];
 
     try {
       await this.database!.executeSql(query, params);
-      console.log(`✅ AI message saved: ${message.id}`);
+      console.log(`AI message saved: ${message.id}`);
     } catch (error) {
-      console.error('❌ Failed to save AI message:', error);
+      console.error('Failed to save AI message:', error);
       throw error;
     }
   }
@@ -144,7 +145,7 @@ class ChatDatabase {
   async saveUserMessage(
     userId: string,
     flowSlug: string,
-    message: UserMessage,
+    message: IDBUserMessage,
   ): Promise<void> {
     if (!this.database) {
       await this.init();
@@ -160,9 +161,9 @@ class ChatDatabase {
 
     try {
       await this.database!.executeSql(query, params);
-      console.log('✅ User message saved');
+      console.log('User message saved');
     } catch (error) {
-      console.error('❌ Failed to save user message:', error);
+      console.error('Failed to save user message:', error);
       throw error;
     }
   }
@@ -198,7 +199,7 @@ class ChatDatabase {
   async getChatHistory(
     userId: string,
     flowSlug: string,
-  ): Promise<ChatMessage[]> {
+  ): Promise<IDBChatMessage[]> {
     if (!this.database) {
       await this.init();
     }
@@ -214,10 +215,10 @@ class ChatDatabase {
         userId,
         flowSlug,
       ]);
-      const messages: ChatMessage[] = [];
+      const messages: IDBChatMessage[] = [];
 
       for (let i = 0; i < result.rows.length; i++) {
-        const row: ChatMessageRow = result.rows.item(i);
+        const row: IDBChatMessageRow = result.rows.item(i);
 
         if (row.message_type === 'ai') {
           messages.push({
@@ -228,6 +229,7 @@ class ChatDatabase {
             educationalMessage: row.educational_message || undefined,
             whyThisMatters: row.why_this_matters || undefined,
             options: row.options ? JSON.parse(row.options) : [],
+            nodeType: row.node_type as any,
             timestamp: row.timestamp,
           });
         } else {
@@ -257,9 +259,9 @@ class ChatDatabase {
 
     try {
       await this.database!.executeSql(query, [userId, flowSlug]);
-      console.log('✅ Chat history cleared');
+      console.log('Chat history cleared');
     } catch (error) {
-      console.error('❌ Failed to clear chat history:', error);
+      console.error('Failed to clear chat history:', error);
       throw error;
     }
   }
@@ -267,7 +269,7 @@ class ChatDatabase {
   async getLastAiMessage(
     userId: string,
     flowSlug: string,
-  ): Promise<AiMessage | null> {
+  ): Promise<IDBAiMessage | null> {
     if (!this.database) {
       await this.init();
     }
@@ -288,7 +290,7 @@ class ChatDatabase {
         return null;
       }
 
-      const row: ChatMessageRow = result.rows.item(0);
+      const row: IDBChatMessageRow = result.rows.item(0);
       return {
         type: 'ai',
         id: row.message_id!,
@@ -297,10 +299,11 @@ class ChatDatabase {
         educationalMessage: row.educational_message || undefined,
         whyThisMatters: row.why_this_matters || undefined,
         options: row.options ? JSON.parse(row.options) : [],
+        nodeType: row.node_type as any,
         timestamp: row.timestamp,
       };
     } catch (error) {
-      console.error('❌ Failed to get last AI message:', error);
+      console.error('Failed to get last AI message:', error);
       return null;
     }
   }
@@ -309,7 +312,7 @@ class ChatDatabase {
     if (this.database) {
       await this.database.close();
       this.database = null;
-      console.log('✅ Database closed');
+      console.log('Database closed');
     }
   }
 }

@@ -18,10 +18,29 @@ import { FLProductItem } from './Products'
 import { IProduct } from '../types/product.types'
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import LinearGradient from 'react-native-linear-gradient'
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import Toast from 'react-native-toast-message'
 
 const Dashboard = () => {
     const navigation = useNavigation<any>();
     const [isMotherTab, setIsMotherTab] = useState<boolean>(true)
+    const [vivaScore, setVivaScore] = useState<string | null>(null);
+    useEffect(() => {
+        (async function () {
+            // forground message received
+            const unsubscribe = messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+                console.log("remoteMessage.data inside Dashboard.tsx ==>> ", remoteMessage.data);
+                setVivaScore(remoteMessage.data?.score as string);
+                Toast.show({
+                    type: 'success',
+                    text1: remoteMessage.notification?.title,
+                    text2: remoteMessage.notification?.body,
+                    position: 'bottom'
+                });
+            });
+        })()
+    }, [])
+
 
     const username = "Harshaa";
     useEffect(() => {
@@ -34,14 +53,15 @@ const Dashboard = () => {
     );
 
     return (
-        <SafeAreaView
-            style={{ flex: 1, position: 'relative' }}
+        <View
+            style={{ flex: 1, position: 'relative', backgroundColor: "blue" }}
         >
             <ScrollView
                 showsVerticalScrollIndicator={false}
+                style={{ flex: 1, backgroundColor: "yellow" }}
             >
                 <View
-                    style={[globalStyles.container]}
+                    style={[globalStyles.container, { flex: 1 }]}
                 >
                     {/* Tabs View */}
                     <View
@@ -108,7 +128,7 @@ const Dashboard = () => {
                     >
                         {
                             isMotherTab ? (
-                                <DashboardMotherTab />
+                                <DashboardMotherTab score={vivaScore} />
                             ) : (
                                 <DashboardInfantTab />
                             )
@@ -223,7 +243,7 @@ const Dashboard = () => {
                     Call an Expert
                 </Text>
             </LinearGradient>
-        </SafeAreaView>
+        </View>
     )
 }
 

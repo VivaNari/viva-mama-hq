@@ -87,7 +87,7 @@ const RootStack = () => {
                     title: "Viva AI"
                 }}
                 name="ChatWithVivaAI"
-                component={ChatWithVivaAI}
+                component={ChatWithVivaAI as any}
             />
             <Stack.Screen
                 options={{

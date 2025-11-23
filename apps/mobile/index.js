@@ -6,7 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decodeToken } from './src/utils/decodeJWTToken';
 import { chatDB } from './src/db/sqlite';
 
-const STORAGE_KEY_PREFIX = 'chat_history_';
 const FLOW_SLUG = 'weekly-check-in-v1';
 
 const backgroundMessageHandler = async (remoteMessage) => {
@@ -55,17 +54,17 @@ const backgroundMessageHandler = async (remoteMessage) => {
         if (!exists) {
             // Save to SQLite
             await chatDB.saveAiMessage(userId, FLOW_SLUG, aiMessage);
-            console.log('[backgroundMessageHandler] ✅ Saved new question to SQLite');
+            console.log('[backgroundMessageHandler] Saved new question to SQLite');
 
             // Get updated count
             const history = await chatDB.getChatHistory(userId, FLOW_SLUG);
             console.log('[backgroundMessageHandler] Total messages in DB:', history.length);
         } else {
-            console.log('[backgroundMessageHandler] ⚠️  Question already exists, skipping');
+            console.log('[backgroundMessageHandler] Question already exists, skipping');
         }
 
     } catch (e) {
-        console.error('[backgroundMessageHandler] ❌ Failed to process push:', e);
+        console.error('[backgroundMessageHandler] Failed to process push:', e);
     }
 };
 

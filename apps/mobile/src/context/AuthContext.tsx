@@ -2,18 +2,19 @@ import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { AuthContextType, AuthProviderProps, AuthResponse } from '../types/authContext.types';
-import { API_GOOGLE_LOGIN, API_REQUEST_PHONE_OTP, API_VERIFY_OTP } from '../constants/urls';
+import { API_GOOGLE_LOGIN, API_REQUEST_PHONE_OTP, API_VERIFY_OTP, BASE_API_URL } from '../constants/urls';
 import { GOOGLE_CLIENT_ID } from '@env';
 import useApiInterceptor from '../utils/useApiInterceptor';
 import Toast from 'react-native-toast-message';
 import { getFCMToken } from '../utils/getFCMToken';
 import { decodeToken } from '../utils/decodeJWTToken';
+import axios from 'axios';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [userToken, setUserToken] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null); // ✅ Added userId
+  const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
   const [FCMToken, setFCMToken] = useState<string | null>(null);
@@ -41,7 +42,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       token = await AsyncStorage.getItem('userToken');
       isOnboarded = await AsyncStorage.getItem('isOnboarded');
 
-      // ✅ Decode token to get userId
+      // Decode token to get userId
       if (token) {
         const decodedUserId = decodeToken(token);
         setUserId(decodedUserId);
@@ -58,14 +59,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await GoogleSignin.hasPlayServices();
       const data = await GoogleSignin.signIn() as { data: { idToken: string } };
-      console.log("API_GOOGLE_LOGIN => ", API_GOOGLE_LOGIN)
+
       const { data: response } = await useApiInterceptor().post(API_GOOGLE_LOGIN, {
         idToken: data.data.idToken,
         FCM_token: FCMToken,
       }, {
         headers: { 'Content-Type': 'application/json' },
       });
-
       const { token, message }: AuthResponse = response;
 
       Toast.show({
@@ -78,7 +78,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       await AsyncStorage.setItem('userToken', token);
       setUserToken(token);
 
-      // ✅ Decode token and set userId
+      // Decode token and set userId
       const decodedUserId = decodeToken(token);
       setUserId(decodedUserId);
 
@@ -154,7 +154,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         await AsyncStorage.setItem('userToken', token);
         setUserToken(token);
 
-        // ✅ Decode token and set userId
+        // Decode token and set userId
         const decodedUserId = decodeToken(token);
         setUserId(decodedUserId);
 
@@ -181,7 +181,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await AsyncStorage.removeItem('userToken');
       setUserToken(null);
-      setUserId(null); // ✅ Clear userId on sign out
+      setUserId(null); // Clear userId on sign out
       await GoogleSignin.signOut();
     } catch (error) {
       console.error('Sign Out Error:', error);

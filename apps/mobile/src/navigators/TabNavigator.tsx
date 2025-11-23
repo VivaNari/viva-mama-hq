@@ -1,4 +1,4 @@
-import messaging from '@react-native-firebase/messaging';
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
@@ -16,8 +16,12 @@ import Experts from '../screens/Experts';
 import Services from '../screens/Services';
 import Toast from 'react-native-toast-message';
 
-
 const Tab = createBottomTabNavigator();
+
+interface NotificationData {
+    flowSlug: string;
+    conversationId: string;
+}
 
 export const DashboardTabNavigator = () => {
     const navigation = useNavigation<any>();
@@ -26,6 +30,7 @@ export const DashboardTabNavigator = () => {
 
     useEffect(() => {
         (async function () {
+            // forground message received
             const unsubscribe = messaging().onMessage(async remoteMessage => {
 
                 if (remoteMessage.data && remoteMessage.data.uiElements) {
@@ -37,9 +42,23 @@ export const DashboardTabNavigator = () => {
                     type: 'success',
                     text1: remoteMessage.notification?.title,
                     text2: remoteMessage.notification?.body,
-                    position: 'bottom'
+                    position: 'top'
                 });
                 increase();
+            });
+
+            messaging().onNotificationOpenedApp((remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+                console.log('App opened from notification:', remoteMessage);
+                console.log('App opened from notification data =>>>> :', remoteMessage.data);
+
+                const { flowSlug } = remoteMessage.data as unknown as NotificationData;
+                console.log("flowSlug==========> :", flowSlug);
+
+                if (true) {
+                    navigation.navigate("ChatWithVivaAI" as never, {
+                        flowSlug
+                    });
+                }
             });
 
             return unsubscribe;
@@ -143,7 +162,7 @@ export const DashboardTabNavigator = () => {
             /> */}
             <Tab.Screen
                 name="VivaAI"
-                component={ChatWithVivaAI}
+                component={ChatWithVivaAI as any}
 
                 options={{
                     title: "Viva AI",

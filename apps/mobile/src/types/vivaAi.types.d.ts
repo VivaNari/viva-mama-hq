@@ -26,6 +26,7 @@ export interface IOption {
   id: string;
   label: string;
   value: string;
+  score: number;
 }
 
 export interface IFollowUpQuestion {
@@ -47,3 +48,42 @@ interface IUserMessage {
 }
 
 type ChatMessage = IAiMessage | IUserMessage;
+
+export type NodeType = 'QUESTION_SINGLE' | 'QUESTION_MULTI' | 'INFO';
+
+// Types for SQLite rows
+export interface IDBChatMessageRow {
+  id: number;
+  user_id: string;
+  flow_slug: string;
+  message_type: 'ai' | 'user';
+  message_id: string | null;
+  flow_instance_id: string | null;
+  text: string;
+  educational_message: string | null;
+  why_this_matters: string | null;
+  options: string | null;
+  node_type: string | null;
+  timestamp: number;
+  created_at: string;
+}
+
+export interface IDBAiMessage {
+  type: 'ai';
+  id: string;
+  flowInstanceId: string;
+  text: string;
+  educationalMessage?: string;
+  whyThisMatters?: string;
+  options: Array<{ id: string; label: string; value: any; score: number }>;
+  nodeType?: NodeType;
+  timestamp: number;
+}
+
+export interface IDBUserMessage {
+  type: 'user';
+  text: string;
+  timestamp: number;
+}
+
+export type IDBChatMessage = IDBAiMessage | IDBUserMessage;

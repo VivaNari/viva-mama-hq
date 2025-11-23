@@ -6,37 +6,38 @@ import { AuthProvider } from './src/context/AuthContext';
 import CounterProvider from './src/context/CounterContext';
 import { chatDB } from './src/db/sqlite';
 import { useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 function App() {
   useEffect(() => {
     const checkDatabase = async () => {
       try {
-        console.log('🔍 Checking SQLite database...');
+        console.log('Checking SQLite database...');
 
         // Initialize database
         await chatDB.init();
-        console.log('✅ Database initialized');
+        console.log('Database initialized');
 
         // Get database statistics
         const stats = await getDatabaseStats();
-        console.log('📊 Database Statistics:', stats);
+        console.log('Database Statistics:', stats);
 
         // Get all chat history (you can limit this in production)
         const allMessages = await getAllMessages();
-        console.log('💬 Total messages in database:', allMessages.length);
+        console.log('Total messages in database:', allMessages.length);
 
         if (allMessages.length > 0) {
-          console.log('📝 Sample of latest messages:');
+          console.log('Sample of latest messages:');
           allMessages.slice(-5).forEach((msg, index) => {
             console.log(`  ${index + 1}. [${msg.message_type}] ${msg.text.substring(0, 50)}...`);
           });
         } else {
-          console.log('📭 Database is empty');
+          console.log('Database is empty');
         }
 
       } catch (error) {
-        console.error('❌ Error checking database:', error);
+        console.error('Error checking database:', error);
       }
     };
 
