@@ -1,41 +1,55 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import env from "../config/env";
-import { IUser } from "../types";
-declare global {
-    namespace Express {
-        interface Request {
-            user?: IUser;
-        }
-    }
-}
-const authMiddleware = () => {
+import { IUser, TTokenSource } from "../types";
+import sendResponse from "../utils/commonFunctions/sendResponse";
+import { messages } from "../constants/messages";
+import { StatusCodes } from "http-status-codes";
+
+const authMiddleware = (tokenSource: TTokenSource) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const authHeader = req.headers["authorization"];
-            const token = authHeader?.split(" ")[1];
+            let token: string | undefined;
+
+            if (tokenSource === "header") {
+                const authHeader = req.headers["authorization"];
+                token = authHeader?.split(" ")[1];
+            } else if (tokenSource === "query") {
+                token = req.query.token as string;
+            }
+
             if (!token) {
-                return res.status(401).json({
+                return sendResponse({
+                    data: null,
+                    message: messages.TOKEN_MISSING,
                     success: false,
-                    message: "Unautorize access denied",
+                    statusCode: StatusCodes.UNAUTHORIZED,
+                    response: res,
                 });
             }
 
             jwt.verify(token, env.JWT_SECRET as string, (err, user) => {
                 if (err) {
-                    return res.status(403).json({
+                    return sendResponse({
+                        data: null,
+                        message: messages.TOKEN_INVALID,
                         success: false,
-                        message: "Invalid Token!",
+                        statusCode: StatusCodes.FORBIDDEN,
+                        response: res,
                     });
                 }
-                console.log("user from middleware", user);
+
                 req.user = user as any;
                 next();
             });
         } catch (errors: any) {
-            console.log(errors);
-            return res.status(400).json({
-                error: errors,
+            console.error("Authorization error:", errors);
+            return sendResponse({
+                data: null,
+                message: messages.AUTH_BAD_REQUEST,
+                success: false,
+                statusCode: StatusCodes.BAD_REQUEST,
+                response: res,
             });
         }
     };

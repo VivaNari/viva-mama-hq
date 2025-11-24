@@ -1,0 +1,254 @@
+import { Schema } from "mongoose";
+import { IUser } from "./user.types";
+import { Request } from "express";
+
+export enum ChatModeEnum {
+    MIXED = "MIXED",
+    AI_ONLY = "AI_ONLY",
+    GUIDED_ONLY = "GUIDED_ONLY",
+}
+
+export type ChatMode = ChatModeEnum.MIXED | ChatModeEnum.AI_ONLY | ChatModeEnum.GUIDED_ONLY;
+
+export type Rating = 1 | 2 | 3 | 4 | 5;
+
+export type Channel = "App";
+
+export interface IConversation {
+    _id: Schema.Types.ObjectId;
+    userId: string;
+    title: string;
+    chatMode: ChatMode;
+    lastMessageAt: Date;
+    meta: {
+        channel: Channel;
+        tags: string[];
+    };
+    rating: Rating;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export enum MessageRoleEnum {
+    USER = "USER",
+    ASSITANT = "ASSISTANT",
+}
+
+export enum MessageTypeEnum {
+    AI = "AI",
+    GUIDED = "GUIDED",
+    SYSTEM = "SYSTEM",
+}
+export enum AttachmentTypeEnum {
+    IMAGE = "IMAGE",
+    PDF = "PDF",
+    AUDIO = "AUDIO",
+}
+export enum ProviderEnum {
+    OPENAI = "OPENAI",
+    GROQ = "GROQ",
+    LOCAL = "LOCAL",
+}
+export type MessageRole = MessageRoleEnum.USER | MessageRoleEnum.ASSITANT;
+export type MessageType = MessageTypeEnum.AI | MessageTypeEnum.GUIDED | MessageTypeEnum.SYSTEM;
+export type AttachmentType =
+    | AttachmentTypeEnum.AUDIO
+    | AttachmentTypeEnum.IMAGE
+    | AttachmentTypeEnum.PDF;
+export type Provider = ProviderEnum.OPENAI | ProviderEnum.LOCAL | ProviderEnum.GROQ;
+
+export interface IMessage {
+    _id: Schema.Types.ObjectId;
+    conversationId: Schema.Types.ObjectId;
+    userId: string;
+    role: MessageRole;
+    type: MessageType;
+    text: string;
+    rich: any;
+    attachments: Array<{
+        type: AttachmentType;
+        url: string;
+        meta: any;
+    }> | null;
+    ai: {
+        promptId: string;
+        provider: Provider;
+        model: string;
+        ragUsed: boolean;
+        citations: Array<{ title: string; url?: string }>;
+        tokens: { prompt: number; completion: number };
+        latencyMs?: number;
+    } | null;
+    guided: {
+        flowInstanceId: Schema.Types.ObjectId;
+        nodeId: string;
+        optionKey: string;
+    } | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export enum FlowDefinitionStatusEnum {
+    DRAFT = "DRAFT",
+    PUBLISHED = "PUBLISHED",
+    ARCHIVED = "ARCHIVED",
+}
+export type FlowDefinitionStatus =
+    | FlowDefinitionStatusEnum.ARCHIVED
+    | FlowDefinitionStatusEnum.DRAFT
+    | FlowDefinitionStatusEnum.PUBLISHED;
+
+export enum FlowNodeEnum {
+    QUESTION_SINGLE = "QUESTION_SINGLE",
+    QUESTION_MULTI = "QUESTION_MULTI",
+    INFO = "INFO",
+    BRANCH = "BRANCH",
+    CALC = "CALC",
+    END = "END",
+}
+
+export type FlowNodeType =
+    | FlowNodeEnum.QUESTION_SINGLE
+    | FlowNodeEnum.QUESTION_MULTI
+    | FlowNodeEnum.INFO
+    | FlowNodeEnum.BRANCH
+    | FlowNodeEnum.CALC
+    | FlowNodeEnum.END;
+
+export interface IFlowNode {
+    id: string;
+    categoryId: Schema.Types.ObjectId;
+    indicator: string;
+    nodeType: FlowNodeType;
+    text: string | null;
+    educationalMessage: string;
+    whyThisMatters: string;
+    validWeekStart: number | null;
+    validWeekEnd: number | null;
+    options: Array<{
+        label: string;
+        value: any;
+        score: number | null;
+    }>;
+    branch: Array<{
+        when: { var: string; op: "eq" | "gt" | "lt" | "in"; val: any };
+        goTo: string;
+    }> | null;
+    calc: Array<{ set: string; expr: string }> | null;
+    next: string | null;
+}
+
+export interface IFlowNodeCategory {
+    categoryName: string;
+}
+
+export interface INotificationTemplates {
+    notificationType:
+        | FlowInstanceStateEnum.ABORTED
+        | FlowInstanceStateEnum.REMIND_ME_LATER
+        | "NEW_FLOW_INSTANCE";
+    title: string;
+    body: string;
+}
+
+export interface IFlowDefinition {
+    _id: Schema.Types.ObjectId;
+    slug: string; // e.g. "breastfeeding-pain-v1"
+    name: string;
+    version: number;
+    status: FlowDefinitionStatus;
+    reminderIntervalMins: number;
+    notificationTemplates: INotificationTemplates[];
+    startNodeId: string;
+    nodes: IFlowNode[];
+    outcomes: Array<{
+        key: string; // e.g. "mild_pain"
+        title: string;
+        summary: string;
+        recommendations: string[];
+        nextAction: string | null;
+    }>;
+    createdBy: Schema.Types.ObjectId;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export enum FlowInstanceStateEnum {
+    ACTIVE = "ACTIVE",
+    COMPLETED = "COMPLETED",
+    REMIND_ME_LATER = "REMIND_ME_LATER",
+    ABORTED = "ABORTED",
+}
+export type FlowInstanceState =
+    | FlowInstanceStateEnum.ACTIVE
+    | FlowInstanceStateEnum.COMPLETED
+    | FlowInstanceStateEnum.REMIND_ME_LATER
+    | FlowInstanceStateEnum.ABORTED;
+
+export interface IFlowInstance {
+    _id: Schema.Types.ObjectId;
+    userId: Schema.Types.ObjectId;
+    conversationId: Schema.Types.ObjectId;
+    flowDefId: Schema.Types.ObjectId;
+    flowSlug: string;
+    version: number;
+    postpartumWeek: number;
+    state: FlowInstanceState;
+    cursorNodeId: string | null;
+    variables: Record<string, any>;
+    outcome: {
+        key: string;
+        title: string;
+        summary: string;
+        recommendations: string[];
+    } | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export enum AnswerTypeEnum {
+    SINGLE = "SINGLE",
+    MULTI = "MULTI",
+    FREE = "FREE",
+}
+export type AnswerType = AnswerTypeEnum.SINGLE | AnswerTypeEnum.MULTI | AnswerTypeEnum.FREE;
+
+export interface IFlowResponse {
+    _id: Schema.Types.ObjectId;
+    flowInstanceId: Schema.Types.ObjectId;
+    nodeId: string;
+    answer: {
+        type: AnswerType;
+        selectedKeys: number[] | null;
+        freeText: string | null;
+    };
+    computed: Record<string, any> | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface QuestionPayload {
+    id: string;
+    flowInstanceId: string;
+    text: string;
+    educationalMessage: string;
+    whyThisMatters: string;
+    options: Array<{
+        id: string;
+        label: string;
+        value: any;
+    }>;
+    nodeType?: FlowNodeType;
+}
+
+export interface EndFlowPayload {
+    type: "end_flow";
+    message: string;
+    flowType: string;
+}
+
+export interface AuthenticatedRequest extends Request {
+    user: IUser & { _id: string };
+}
+
+export type FlowType = "ONBOARDING" | "CHECK_IN";
