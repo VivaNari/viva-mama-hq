@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { AuthContextType, AuthProviderProps, AuthResponse } from '../types/authContext.types';
 import { API_GOOGLE_LOGIN, API_REQUEST_PHONE_OTP, API_VERIFY_OTP, BASE_API_URL } from '../constants/urls';
 import { GOOGLE_CLIENT_ID } from '@env';
@@ -8,7 +8,6 @@ import useApiInterceptor from '../utils/useApiInterceptor';
 import Toast from 'react-native-toast-message';
 import { getFCMToken } from '../utils/getFCMToken';
 import { decodeToken } from '../utils/decodeJWTToken';
-import axios from 'axios';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -58,6 +57,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const signInWithGoogle = async () => {
     try {
       await GoogleSignin.hasPlayServices();
+
+      await GoogleSignin.signOut(); // Ensure fresh sign-in each time
+
       const data = await GoogleSignin.signIn() as { data: { idToken: string } };
 
       const { data: response } = await useApiInterceptor().post(API_GOOGLE_LOGIN, {
@@ -83,6 +85,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUserId(decodedUserId);
 
     } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        console.log("User cancelled Google Sign-in");
+        return;
+      }
+
       Toast.show({
         type: 'error',
         text1: 'Error',

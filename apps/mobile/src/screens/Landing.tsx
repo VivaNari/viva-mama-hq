@@ -6,6 +6,7 @@ import { colors } from '../public/assets/colors';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
+import Toast from 'react-native-toast-message';
 
 const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
     const { signInWithGoogle } = useAuth();
@@ -51,10 +52,20 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                             style={{ flex: 1 }}
                             activeOpacity={0.8}
                             onPress={async () => {
-                                setLoading(true);
-                                await signInWithGoogle()
-
-                                setLoading(false);
+                                try {
+                                    setLoading(true);
+                                    await signInWithGoogle();
+                                } catch (e) {
+                                    console.log("Google sign-in cancelled or failed", e);
+                                    Toast.show({
+                                        type: 'error',
+                                        text1: 'Error',
+                                        text2: "Google sign-in failed!",
+                                        position: 'top'
+                                    });
+                                } finally {
+                                    setLoading(false);
+                                }
                             }}
                             disabled={getLoading}
                         >
