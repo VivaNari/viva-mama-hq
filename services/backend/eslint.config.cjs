@@ -1,21 +1,22 @@
+// eslint.config.cjs
+
 const tseslint = require("@typescript-eslint/eslint-plugin");
 const tsParser = require("@typescript-eslint/parser");
 const prettierPlugin = require("eslint-plugin-prettier");
 const importPlugin = require("eslint-plugin-import");
 const path = require("path");
+const tsResolver = require("eslint-import-resolver-typescript");
 
 module.exports = [
     {
-        // Which files to lint
         files: ["**/*.ts", "**/*.js"],
 
-        // What to ignore
         ignores: ["dist", "node_modules"],
 
         languageOptions: {
             parser: tsParser,
             parserOptions: {
-                project: "./tsconfig.eslint.json", // IMPORTANT
+                project: "./tsconfig.eslint.json",
                 tsconfigRootDir: __dirname,
             },
         },
@@ -26,21 +27,24 @@ module.exports = [
             prettier: prettierPlugin,
         },
 
-        rules: {
-            // Typescript recommended overrides
-            ...tseslint.configs.recommended.rules,
+        settings: {
+            "import/resolver": {
+                typescript: {
+                    project: path.resolve(__dirname, "./tsconfig.json"),
+                },
+            },
+        },
 
-            // Import plugin recommended behavior
+        rules: {
+            ...tseslint.configs.recommended.rules,
             ...importPlugin.configs.recommended.rules,
 
-            // Enforce Prettier formatting
             "prettier/prettier": "error",
-
-            // Helpful Node/TS backend rules
             "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
             "no-console": "off",
             "import/prefer-default-export": "off",
             "class-methods-use-this": "off",
+            "@typescript-eslint/no-explicit-any": "off",
         },
     },
 ];

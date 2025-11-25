@@ -9,7 +9,6 @@ dotenv.config();
 import env from "../../config/env";
 
 export function createPinoConfig(): LoggerOptions {
-    console.log("Creating Pino Logger with config: ", env.NODE_ENV, typeof env.LOG_LEVEL);
     const config: LoggerOptions = {
         name: env.SERVICE_NAME,
         level: env.LOG_LEVEL,
@@ -20,6 +19,7 @@ export function createPinoConfig(): LoggerOptions {
             service: env.SERVICE_NAME,
             version: env.SERVICE_VERSION,
             pid: process.pid,
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
             hostname: process.env.HOSTNAME || require("os").hostname(),
         },
         timestamp: () => `,"time":"${new Date().toISOString()}"`,
@@ -67,10 +67,6 @@ export function createPinoConfig(): LoggerOptions {
     }
 
     return config;
-    // return {
-    //   level: 'info', // Hardcoded for testing
-    //   name: 'test-service'
-    // }
 }
 
 export function createLogger() {

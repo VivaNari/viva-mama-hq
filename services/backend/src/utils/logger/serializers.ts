@@ -43,17 +43,17 @@ export function requestSerializer(req: Request): SerializedRequest {
             "content-length": req.headers["content-length"] || "",
             referer: req.headers.referer || "",
         },
-        remoteAddress: req.socket.remoteAddress || "",
-        remotePort: req.socket.remotePort || 0,
+        remoteAddress: req.socket?.remoteAddress || "",
+        remotePort: req.socket?.remotePort || 0,
     };
 }
 
-export function responseSerializer(res: Response): SerializedResponse {
+export function responseSerializer(res: any): SerializedResponse {
     return {
         statusCode: res.statusCode,
         headers: {
-            "content-type": String(res.getHeader("content-type")) || "",
-            "content-length": String(res.getHeader("content-length")) || "",
+            "content-type": String(res.headers["content-type"]) || "",
+            "content-length": String(res.headers["content-length"]) || "",
         },
         raw: res as unknown as ServerResponse,
     };

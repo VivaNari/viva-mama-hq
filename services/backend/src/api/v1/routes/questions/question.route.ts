@@ -12,6 +12,6 @@ questionRouter.post(
     requestValidator(questionValidator),
     getQuestionController.saveQuestion,
 );
-questionRouter.get("/questions", authMiddleware(), getQuestionController.getQuestions);
+questionRouter.get("/questions", authMiddleware("header"), getQuestionController.getQuestions);
 
 export default questionRouter;

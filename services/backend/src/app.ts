@@ -16,7 +16,7 @@ app.use(express.json());
 app.use(correlationIdMiddleware);
 app.use(requestLoggerMiddleware);
 
-app.get("/", (_, res) => {
+app.get("/healthz", (_, res) => {
     res.json({ message: "You have reached the root api endpoint" });
 });
 
@@ -24,5 +24,6 @@ app.use("/api/v1", userRouter);
 app.use("/api/v1", childRouter);
 app.use("/api/v1", questionRouter);
 app.use("/api/v1", answerRouter);
+app.use("/api/v1", router);
 
 export default app;

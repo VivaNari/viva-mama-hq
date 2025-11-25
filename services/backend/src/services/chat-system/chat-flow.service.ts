@@ -19,13 +19,15 @@ import {
 import { Schema } from "mongoose";
 import redisPublisherService from "../redis/redis-publisher.service";
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
+import axios from "axios";
+import { v4 as uuidv4 } from "uuid";
 
 const QUESTION_FETCH_DELAY_MS = 2000;
 const STOPPED_BREASTFEEDING_SCORE = -1;
 
 class ChatFlowService {
     private activeSessions = new Map<string, Response>();
-    private pendingQuestions = new Map<string, { questionId: string; timeoutId: NodeJS.Timeout }>();
+    private pendingQuestions = new Map<string, { questionId: string }>();
 
     private async detectFlowType(userId: string): Promise<FlowType> {
         const user = await userModel.findById(userId);
@@ -51,6 +53,7 @@ class ChatFlowService {
 
         console.log(`User ${userId} connected via SSE for flow: ${slug}`);
         this.activeSessions.set(userId, res);
+        console.log(` Active sessions count: ${this.activeSessions}`);
 
         try {
             const flowType = await this.detectFlowType(userId);
@@ -100,28 +103,10 @@ class ChatFlowService {
                     outcome: null,
                 }).save();
 
-                if (flowType === "ONBOARDING") {
-                    await this.sendCurrentQuestion(
-                        userId,
-                        flowInstance,
-                        flowDefinition,
-                        res,
-                        flowType,
-                    );
-                } else {
-                    const timeoutId = setTimeout(async () => {
-                        this.pendingQuestions.delete(userId);
-                        await this.sendCurrentQuestion(
-                            userId,
-                            flowInstance,
-                            flowDefinition,
-                            res,
-                            flowType,
-                        );
-                    }, QUESTION_FETCH_DELAY_MS);
+                this.pendingQuestions.delete(userId);
+                await this.sendCurrentQuestion(userId, flowInstance, flowDefinition, res, flowType);
 
-                    this.pendingQuestions.set(userId, { questionId: startNodeId, timeoutId });
-                }
+                this.pendingQuestions.set(userId, { questionId: startNodeId });
             } else {
                 console.log(`Returning user ${userId}. Cursor: ${flowInstance.cursorNodeId}`);
                 await this.sendCurrentQuestion(userId, flowInstance, flowDefinition, res, flowType);
@@ -137,7 +122,6 @@ class ChatFlowService {
 
             const pending = this.pendingQuestions.get(userId);
             if (pending) {
-                clearTimeout(pending.timeoutId);
                 this.pendingQuestions.delete(userId);
 
                 (async () => {
@@ -266,6 +250,49 @@ class ChatFlowService {
 
             console.log(`💬 User message saved to conversation`);
 
+            // SPECIAL VALIDATION FOR NAME NODE
+            console.log(` Checking special validations for node ${nodeId}`);
+            if (flowType === "ONBOARDING" && nodeId === "name") {
+                // 1. Call your LLM API to validate name
+                const llmRes = await axios.get(
+                    `http://localhost:8000/chat/username?response=${encodeURIComponent(freeText || "")}`,
+                );
+                console.log(` LLM response: ${JSON.stringify(llmRes.data)}`);
+                const { detected_name, has_name } = llmRes.data;
+
+                if (!has_name) {
+                    console.log("LLM could not detect a valid name. Asking question again.");
+                    this.pendingQuestions.delete(userId);
+
+                    // send same question again
+                    const userConnection = this.activeSessions.get(userId);
+                    console.log(` User connection: ${userConnection}`);
+                    if (userConnection) {
+                        await this.sendCurrentQuestion(
+                            userId,
+                            flowInstance,
+                            flowDefinition,
+                            userConnection,
+                            flowType,
+                            uuidv4(),
+                            "Please provide a valid name so we can address you properly.",
+                        );
+                    } else {
+                        await this.sendSilentPush(userId, flowInstance, flowDefinition, flowType);
+                    }
+
+                    // IMPORTANT: Keep cursor on same node
+                    // And DO NOT save answer
+                    return {
+                        success: false,
+                        message: "Invalid name. Asking again.",
+                    };
+                }
+
+                // If name is valid, override the freeText with LLM's detected name
+                freeText = detected_name;
+            }
+
             // FOR ONBOARDING: Update user profile with onboarding data
             if (flowType === "ONBOARDING") {
                 await this.updateOnboardingData(
@@ -350,24 +377,22 @@ class ChatFlowService {
             await flowInstance.save();
             console.log(`➡️ Moving cursor to: ${nextNodeId}`);
 
-            const timeoutId = setTimeout(async () => {
-                this.pendingQuestions.delete(userId);
+            this.pendingQuestions.delete(userId);
 
-                const userConnection = this.activeSessions.get(userId);
-                if (userConnection) {
-                    await this.sendCurrentQuestion(
-                        userId,
-                        flowInstance,
-                        flowDefinition,
-                        userConnection,
-                        flowType,
-                    );
-                } else {
-                    await this.sendSilentPush(userId, flowInstance, flowDefinition, flowType);
-                }
-            }, QUESTION_FETCH_DELAY_MS);
+            const userConnection = this.activeSessions.get(userId);
+            if (userConnection) {
+                await this.sendCurrentQuestion(
+                    userId,
+                    flowInstance,
+                    flowDefinition,
+                    userConnection,
+                    flowType,
+                );
+            } else {
+                await this.sendSilentPush(userId, flowInstance, flowDefinition, flowType);
+            }
 
-            this.pendingQuestions.set(userId, { questionId: nextNodeId, timeoutId });
+            this.pendingQuestions.set(userId, { questionId: nextNodeId });
 
             return { success: true, message: "Answer saved, fetching next question" };
         } catch (error: any) {
@@ -673,6 +698,8 @@ class ChatFlowService {
         flowDefinition: any,
         res: Response,
         flowType: FlowType,
+        questionOvverrideId?: string,
+        questionTextOverride?: string,
     ): Promise<void> {
         if (!flowInstance.cursorNodeId) {
             this.endFlow(userId, res);
@@ -686,23 +713,25 @@ class ChatFlowService {
             flowInstance.cursorNodeId,
             flowType,
         );
-
+        console.log(` Next valid node: ${validNodeId}`);
         if (!validNodeId) {
             console.log(`No valid questions remaining for user ${userId}`);
             this.endFlow(userId, res);
             return;
         }
-
+        console.log(` 2222`);
         if (validNodeId !== flowInstance.cursorNodeId) {
             flowInstance.cursorNodeId = validNodeId;
             await flowInstance.save();
+            console.log(` 33333`);
         }
 
         const currentNode = flowDefinition.nodes.find((n: IFlowNode) => n.id === validNodeId);
-
+        console.log(` 4444`);
         if (!currentNode) {
             console.error(`Node ${validNodeId} not found`);
             this.endFlow(userId, res, flowType);
+            console.log(` 55555`);
             return;
         }
 
@@ -712,17 +741,20 @@ class ChatFlowService {
             value: opt.value,
             score: opt.score,
         }));
+        console.log(`66666`);
 
-        const payload: QuestionPayload = {
+        const payload: QuestionPayload & { askId: any; uuid: any } = {
+            uuid: questionOvverrideId || uuidv4(),
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
-            text: currentNode.text || "",
+            text: questionTextOverride ? questionTextOverride : currentNode.text || "",
             educationalMessage: currentNode.educationalMessage || "",
             whyThisMatters: currentNode.whyThisMatters || "",
             options: formattedOptions,
             nodeType: currentNode.nodeType,
+            askId: Date.now(),
         };
-
+        console.log(`77777`);
         await new messageModel({
             conversationId: flowInstance.conversationId,
             userId: userId,
@@ -738,7 +770,7 @@ class ChatFlowService {
                 optionKey: null,
             },
         }).save();
-
+        console.log(`8888`);
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
         console.log(`Sent question via SSE: ${currentNode.id}`);
     }

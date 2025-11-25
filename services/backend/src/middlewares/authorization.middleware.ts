@@ -6,7 +6,7 @@ import sendResponse from "../utils/commonFunctions/sendResponse";
 import { messages } from "../constants/messages";
 import { StatusCodes } from "http-status-codes";
 
-const authMiddleware = (tokenSource: TTokenSource) => {
+const authMiddleware = (tokenSource: TTokenSource = "header") => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
             let token: string | undefined;
