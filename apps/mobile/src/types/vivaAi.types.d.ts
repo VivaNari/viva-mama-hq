@@ -66,6 +66,7 @@ export interface IDBChatMessageRow {
   node_type: string | null;
   timestamp: number;
   created_at: string;
+  uuid: string;
 }
 
 export interface IDBAiMessage {
@@ -78,6 +79,7 @@ export interface IDBAiMessage {
   options: Array<{ id: string; label: string; value: any; score: number }>;
   nodeType?: NodeType;
   timestamp: number;
+  uuid: string;
 }
 
 export interface IDBUserMessage {

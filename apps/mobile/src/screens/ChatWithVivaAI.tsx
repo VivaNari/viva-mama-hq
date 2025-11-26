@@ -24,7 +24,7 @@ import { colors } from '../public/assets/colors';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 import { useNavigation } from '@react-navigation/native';
 
-const API_BASE_URL = 'http://192.168.1.22:4000/api/v1';
+const API_BASE_URL = 'http://192.168.1.20:4000/api/v1';
 const TYPING_SPEED_MS = 30;
 
 const RenderTypingIndicator: React.FC = () => (
@@ -160,7 +160,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
         }
-
+        console.log(`${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken}`)
         const es = new EventSource(`${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken}`);
         eventSourceRef.current = es;
 
@@ -210,10 +210,11 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                     options: data.options || [],
                     nodeType: data.nodeType,
                     timestamp: Date.now(),
+                    uuid: data.uuid,
                 };
 
                 // Check if message already exists in database
-                const exists = await chatDB.messageExists(userId!, FLOW_SLUG, aiMessage.id);
+                const exists = await chatDB.messageExists(userId!, FLOW_SLUG, aiMessage.uuid);
 
                 if (exists) {
                     console.log('Duplicate question from SSE');
@@ -227,7 +228,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
 
                 // Update UI
                 setChatHistory((prev) => [...prev, aiMessage]);
-                setAnimatingMessageId(aiMessage.id);
+                setAnimatingMessageId(aiMessage.uuid);
                 setIsLoading(false);
             } catch (error) {
                 console.error('Parse error:', error);
@@ -398,12 +399,12 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             >
                 {chatHistory.map((msg, i) => {
                     const isLast = i === chatHistory.length - 1;
-                    const shouldAnimate = msg.type === 'ai' && msg.id === animatingMessageId;
+                    const shouldAnimate = msg.type === 'ai' && msg.uuid === animatingMessageId;
 
                     if (shouldAnimate) {
                         return (
                             <AnimatedBubble
-                                key={msg.id}
+                                key={msg.uuid}
                                 message={msg}
                                 onComplete={() => setAnimatingMessageId(null)}
                                 onSelect={handleSendAnswer}
@@ -414,7 +415,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
 
                     return (
                         <StaticBubble
-                            key={msg.type === 'ai' ? msg.id : `user-${i}`}
+                            key={i}
                             message={msg}
                             isLast={isLast}
                             isAnimating={!!animatingMessageId}

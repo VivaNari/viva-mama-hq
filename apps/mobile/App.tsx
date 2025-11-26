@@ -23,6 +23,7 @@ function App() {
         const stats = await getDatabaseStats();
         console.log('Database Statistics:', stats);
 
+        await chatDB.addColumnIfNotExists("chat_messages", "uuid", "TEXT");
         // Get all chat history (you can limit this in production)
         const allMessages = await getAllMessages();
         console.log('Total messages in database:', allMessages.length);

@@ -46,6 +46,7 @@ class ChatDatabase {
                 message_type TEXT NOT NULL,
                 message_id TEXT,
                 flow_instance_id TEXT,
+                uuid TEXT,
                 text TEXT NOT NULL,
                 educational_message TEXT,
                 why_this_matters TEXT,
@@ -78,7 +79,7 @@ class ChatDatabase {
     }
   }
 
-  private async addColumnIfNotExists(
+  async addColumnIfNotExists(
     tableName: string,
     columnName: string,
     columnType: string,
@@ -114,9 +115,9 @@ class ChatDatabase {
 
     const query = `
       INSERT INTO chat_messages (
-        user_id, flow_slug, message_type, message_id, flow_instance_id,
+        user_id, flow_slug, message_type, message_id, flow_instance_id, uuid, 
         text, educational_message, why_this_matters, options, node_type, timestamp
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `;
 
     const params = [
@@ -125,6 +126,7 @@ class ChatDatabase {
       'ai',
       message.id,
       message.flowInstanceId,
+      message.uuid,
       message.text,
       message.educationalMessage || null,
       message.whyThisMatters || null,
@@ -179,7 +181,7 @@ class ChatDatabase {
 
     const query = `
             SELECT COUNT(*) as count FROM chat_messages 
-            WHERE user_id = ? AND flow_slug = ? AND message_id = ?;
+            WHERE user_id = ? AND flow_slug = ? AND uuid = ?;
         `;
 
     try {
@@ -231,6 +233,7 @@ class ChatDatabase {
             options: row.options ? JSON.parse(row.options) : [],
             nodeType: row.node_type as any,
             timestamp: row.timestamp,
+            uuid: row.uuid,
           });
         } else {
           messages.push({
@@ -301,6 +304,7 @@ class ChatDatabase {
         options: row.options ? JSON.parse(row.options) : [],
         nodeType: row.node_type as any,
         timestamp: row.timestamp,
+        uuid: row.uuid,
       };
     } catch (error) {
       console.error('Failed to get last AI message:', error);

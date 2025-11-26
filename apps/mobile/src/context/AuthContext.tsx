@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       await GoogleSignin.signOut(); // Ensure fresh sign-in each time
 
       const data = await GoogleSignin.signIn() as { data: { idToken: string } };
-
+      console.log("Google Sign-In Data:", API_GOOGLE_LOGIN);
       const { data: response } = await useApiInterceptor().post(API_GOOGLE_LOGIN, {
         idToken: data.data.idToken,
         FCM_token: FCMToken,
