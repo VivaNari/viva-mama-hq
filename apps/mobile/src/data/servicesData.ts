@@ -3,24 +3,17 @@ import { IService } from '../types/services.types';
 export const servicesdata: IService[] = [
   {
     id: '1',
-    title: 'Viva Signature',
-    monthlyPrice: '₹4999 / mo',
-    yearlyPrice: '₹60000 / yearly',
-    yearlyLabel: '₹60000 / yearly',
+    title: 'Viva Basic (Free)',
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    yearlyLabel: 'Free',
   },
   {
     id: '2',
-    title: 'Viva Luxe',
-    monthlyPrice: '₹2499 / mo',
-    yearlyPrice: '₹30000 / yearly',
-    yearlyLabel: '₹30000 / yearly',
-  },
-  {
-    id: '3',
-    title: 'Viva Lite',
-    monthlyPrice: '₹999 / mo',
-    yearlyPrice: '₹12000 / yearly',
-    yearlyLabel: '₹12000 / yearly',
+    title: 'Viva Signature',
+    monthlyPrice: 999,
+    yearlyPrice: 10999,
+    yearlyLabel: 'Pay for 11 month & use for 1 year',
   },
 ];
 
@@ -37,7 +30,6 @@ export const FEATURE_ROWS = [
 ];
 
 export const FEATURES_MATRIX: Record<string, boolean[]> = {
-  '3': [true, true, true, true, false, false, false, false, false],
-  '2': [true, true, true, true, true, true, false, false, false],
-  '1': [true, true, true, true, true, true, true, true, true],
+  '1': [true, true, true, true, true, true, false, false, false],
+  '2': [true, true, true, true, true, true, true, true, true],
 };

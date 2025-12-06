@@ -6,14 +6,14 @@ import { useEffect } from 'react';
 import { Alert, Image, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCounterContext } from '../context/CounterContext';
-import { colors } from '../public/assets/colors';
-import { globalStyles } from '../public/styles';
-import ArticleContent from '../screens/ArticleContent';
-import ChatWithVivaAI from '../screens/ChatWithVivaAI';
-import Dashboard from '../screens/Dashboard';
-import Experts from '../screens/Experts';
-import Services from '../screens/Services';
+import { useCounterContext } from '../../context/CounterContext';
+import { colors } from '../../public/assets/colors';
+import { globalStyles } from '../../public/styles';
+import ArticleContent from '../../screens/ArticleContent';
+import ChatWithVivaAI from '../../screens/ChatWithVivaAI';
+import Dashboard from '../../screens/Dashboard';
+import Experts from '../../screens/Experts';
+import Services from '../../screens/Services';
 import Toast from 'react-native-toast-message';
 
 const Tab = createBottomTabNavigator();
@@ -23,7 +23,7 @@ interface NotificationData {
     conversationId: string;
 }
 
-export const DashboardTabNavigator = () => {
+export const DashboardTabs = () => {
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
     const { counter, increase } = useCounterContext();
@@ -49,10 +49,8 @@ export const DashboardTabNavigator = () => {
 
             messaging().onNotificationOpenedApp((remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
                 console.log('App opened from notification:', remoteMessage);
-                console.log('App opened from notification data =>>>> :', remoteMessage.data);
 
                 const { flowSlug } = remoteMessage.data as unknown as NotificationData;
-                console.log("flowSlug==========> :", flowSlug);
 
                 if (true) {
                     navigation.navigate("ChatWithVivaAI" as never, {
@@ -125,7 +123,7 @@ export const DashboardTabNavigator = () => {
                             }}
                         >
                             <Image
-                                source={require('../public/assets/images/doctors/Dr_Harsha_Tomar.png')}
+                                source={require('../../public/assets/images/doctors/Dr_Harsha_Tomar.png')}
                                 style={{ height: 40, width: 40, borderRadius: 8 }}
                             />
                         </TouchableOpacity>

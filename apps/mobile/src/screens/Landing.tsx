@@ -56,11 +56,11 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                     setLoading(true);
                                     await signInWithGoogle();
                                 } catch (e) {
-                                    console.log("Google sign-in cancelled or failed", e);
+                                    console.error("Google sign-in cancelled or failed", e);
                                     Toast.show({
                                         type: 'error',
                                         text1: 'Error',
-                                        text2: "Google sign-in failed!",
+                                        text2: "Google sign-in cancelled or failed!",
                                         position: 'top'
                                     });
                                 } finally {

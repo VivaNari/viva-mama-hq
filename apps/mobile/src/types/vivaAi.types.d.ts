@@ -49,7 +49,12 @@ interface IUserMessage {
 
 type ChatMessage = IAiMessage | IUserMessage;
 
-export type NodeType = 'QUESTION_SINGLE' | 'QUESTION_MULTI' | 'INFO';
+export type NodeType =
+  | 'QUESTION_SINGLE'
+  | 'QUESTION_MULTI'
+  | 'INFO'
+  | 'QUESTION_FREE_TEXT'
+  | 'QUESTION_DATE';
 
 // Types for SQLite rows
 export interface IDBChatMessageRow {
@@ -70,7 +75,7 @@ export interface IDBChatMessageRow {
 }
 
 export interface IDBAiMessage {
-  type: 'ai';
+  type: 'ai' | 'completion_message';
   id: string;
   flowInstanceId: string;
   text: string;
@@ -89,3 +94,8 @@ export interface IDBUserMessage {
 }
 
 export type IDBChatMessage = IDBAiMessage | IDBUserMessage;
+
+export interface IUserLocation {
+  latitude: number;
+  longitude: number;
+}

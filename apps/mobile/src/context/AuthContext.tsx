@@ -1,13 +1,13 @@
-import React, { createContext, useState, useEffect, useContext } from 'react';
+import { GOOGLE_CLIENT_ID } from '@env';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { AuthContextType, AuthProviderProps, AuthResponse } from '../types/authContext.types';
-import { API_GOOGLE_LOGIN, API_REQUEST_PHONE_OTP, API_VERIFY_OTP, BASE_API_URL } from '../constants/urls';
-import { GOOGLE_CLIENT_ID } from '@env';
-import useApiInterceptor from '../utils/useApiInterceptor';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import Toast from 'react-native-toast-message';
-import { getFCMToken } from '../utils/getFCMToken';
+import apiClientInterceptor from '../api/apiClientInterceptor';
+import { API_GOOGLE_LOGIN, API_REQUEST_PHONE_OTP, API_VERIFY_OTP } from '../constants/endpoints';
+import { AuthContextType, AuthProviderProps, AuthResponse, OnboardingStatus } from '../types/authContext.types';
 import { decodeToken } from '../utils/decodeJWTToken';
+import { getFCMToken } from '../utils/getFCMToken';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -15,7 +15,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isOnboarded, setIsOnboarded] = useState<boolean | null>(null);
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>({
+    is_questionnaire_completed: false,
+    is_subscription_completed: false,
+  });
   const [FCMToken, setFCMToken] = useState<string | null>(null);
 
   useEffect(() => {
@@ -25,9 +28,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   useEffect(() => {
-    console.log("userToken changed:", userToken);
-    console.log("userId:", userId);
-  }, [userToken, userId]);
+    console.log("[AUTHCONTEXT] userToken changed:", userToken);
+    console.log("[AUTHCONTEXT] userId:", userId);
+    console.log("[AUTHCONTEXT] onboardingStatus:", onboardingStatus);
+  }, [userToken, userId, onboardingStatus]);
 
   const getFCMTokenFunc = async () => {
     const FCM_token = await getFCMToken();
@@ -36,39 +40,45 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const checkTokenAndOnboarding = async () => {
     let token: string | null = null;
-    let isOnboarded: string | null = null;
+    let storedOnboardingStatus: string | null = null;
     try {
       token = await AsyncStorage.getItem('userToken');
-      isOnboarded = await AsyncStorage.getItem('isOnboarded');
+      storedOnboardingStatus = await AsyncStorage.getItem('onboardingStatus');
 
       // Decode token to get userId
       if (token) {
         const decodedUserId = decodeToken(token);
         setUserId(decodedUserId);
       }
+
+      // Parse onboarding status
+      if (storedOnboardingStatus) {
+        const parsedStatus = JSON.parse(storedOnboardingStatus);
+        setOnboardingStatus(parsedStatus);
+      }
     } catch (e) {
-      console.error('Failed to load token and onboarding data:', e);
+      console.error('[AUTHCONTEXT] Failed to load token and onboarding data:', e);
     }
     setUserToken(token);
-    setIsOnboarded(isOnboarded === 'true');
     setIsLoading(false);
   };
 
   const signInWithGoogle = async () => {
     try {
       await GoogleSignin.hasPlayServices();
-
       await GoogleSignin.signOut(); // Ensure fresh sign-in each time
 
       const data = await GoogleSignin.signIn() as { data: { idToken: string } };
-      console.log("Google Sign-In Data:", API_GOOGLE_LOGIN);
-      const { data: response } = await useApiInterceptor().post(API_GOOGLE_LOGIN, {
+      console.log("[AUTHCONTEXT] Google Sign-In Data:", API_GOOGLE_LOGIN);
+
+      const { data: response } = await apiClientInterceptor().post(API_GOOGLE_LOGIN, {
         idToken: data.data.idToken,
         FCM_token: FCMToken,
       }, {
         headers: { 'Content-Type': 'application/json' },
       });
-      const { token, message }: AuthResponse = response;
+
+      const { token, message, is_onboarded }: AuthResponse = response;
 
       Toast.show({
         type: 'success',
@@ -80,13 +90,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       await AsyncStorage.setItem('userToken', token);
       setUserToken(token);
 
+      // Set the onboarding status after login
+      await setOnboardingStatusAfterLogin(is_onboarded);
+
       // Decode token and set userId
       const decodedUserId = decodeToken(token);
       setUserId(decodedUserId);
 
     } catch (error: any) {
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log("User cancelled Google Sign-in");
+        console.log("[AUTHCONTEXT] User cancelled Google Sign-in");
         return;
       }
 
@@ -96,13 +109,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         text2: error.response.data.message || 'An error occurred.',
         position: 'bottom'
       });
-      console.error('Google Sign-In Error:', error);
+      console.error('[AUTHCONTEXT] Google Sign-In Error:', error);
     }
   };
 
   const requestPhoneOTP = async (phoneNumber: string) => {
     try {
-      const { data } = await useApiInterceptor().post(API_REQUEST_PHONE_OTP, {
+      const { data } = await apiClientInterceptor().post(API_REQUEST_PHONE_OTP, {
         mobile_number: phoneNumber,
         country_code: '+91',
       }, {
@@ -112,7 +125,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         type: 'success',
         text1: 'Success',
         text2: data.message,
-        position: 'bottom'
+        position: 'top'
       });
       return data;
     } catch (error: any) {
@@ -120,16 +133,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         type: 'error',
         text1: 'Error',
         text2: error.response.data.message || 'An error occurred.',
-        position: 'bottom'
+        position: 'top'
       });
-      console.error('Request OTP Error:', error);
+      console.error('[AUTHCONTEXT] Request OTP Error:', error);
       throw error;
     }
   };
 
   const verifyPhoneOTP = async (phone: string, otp: string, verification_key: string) => {
     try {
-      const { data, status } = await useApiInterceptor().post(`${API_VERIFY_OTP}`, {
+      const { data, status } = await apiClientInterceptor().post(`${API_VERIFY_OTP}`, {
         mobile_number: phone,
         country_code: '+91',
         otp,
@@ -140,7 +153,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
 
       if (status === 200) {
-        const { token }: AuthResponse = data;
+        const { token, is_onboarded }: AuthResponse = data;
         if (!token) {
           Toast.show({
             type: 'error',
@@ -159,12 +172,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         });
 
         await AsyncStorage.setItem('userToken', token);
-        setUserToken(token);
+
+        console.log("[AUTHCONTEXT] IS_ONBOARDED after phone login ", is_onboarded);
+
+        // Set the onboarding status after login
+        await setOnboardingStatusAfterLogin(is_onboarded);
 
         // Decode token and set userId
         const decodedUserId = decodeToken(token);
         setUserId(decodedUserId);
 
+        setUserToken(token);
       } else {
         Toast.show({
           type: 'error',
@@ -180,28 +198,78 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         text2: error.response.data.message || 'An error occurred.',
         position: 'bottom'
       });
-      console.error('Verify OTP Error:', error);
+      console.error('[AUTHCONTEXT] Verify OTP Error:', error);
+    }
+  };
+
+  const setOnboardingStatusAfterLogin = async (status: OnboardingStatus) => {
+    try {
+      await AsyncStorage.setItem('onboardingStatus', JSON.stringify(status));
+      setOnboardingStatus(status);
+    } catch (e) {
+      console.error('[AUTHCONTEXT] Failed to set onboarding status:', e);
+    }
+  };
+
+  const completeQuestionnaire = async () => {
+    try {
+      const updatedStatus = {
+        ...onboardingStatus,
+        is_questionnaire_completed: true,
+      };
+      await AsyncStorage.setItem('onboardingStatus', JSON.stringify(updatedStatus));
+      setOnboardingStatus(updatedStatus);
+    } catch (e) {
+      console.error('[AUTHCONTEXT] Failed to update questionnaire status:', e);
+    }
+  };
+
+  const completeSubscription = async () => {
+    try {
+      const updatedStatus = {
+        ...onboardingStatus,
+        is_subscription_completed: true,
+      };
+      await AsyncStorage.setItem('onboardingStatus', JSON.stringify(updatedStatus));
+      setOnboardingStatus(updatedStatus);
+    } catch (e) {
+      console.error('[AUTHCONTEXT] Failed to update subscription status:', e);
+    }
+  };
+
+  const completeOnboarding = async () => {
+    try {
+      const updatedStatus = {
+        is_questionnaire_completed: true,
+        is_subscription_completed: true,
+      };
+      await AsyncStorage.setItem('onboardingStatus', JSON.stringify(updatedStatus));
+      setOnboardingStatus(updatedStatus);
+    } catch (e) {
+      console.error('[AUTHCONTEXT] Failed to complete onboarding:', e);
     }
   };
 
   const signOut = async () => {
     try {
       await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('onboardingStatus');
       setUserToken(null);
-      setUserId(null); // Clear userId on sign out
+      setUserId(null);
+      setOnboardingStatus({
+        is_questionnaire_completed: false,
+        is_subscription_completed: false,
+      });
       await GoogleSignin.signOut();
     } catch (error) {
-      console.error('Sign Out Error:', error);
+      console.error('[AUTHCONTEXT] Sign Out Error:', error);
     }
   };
 
-  const completeOnboarding = async () => {
-    try {
-      await AsyncStorage.setItem('isOnboarded', 'true');
-      setIsOnboarded(true);
-    } catch (e) {
-      console.error('Failed to set onboarding status:', e);
-    }
+  // Helper to check if user is fully onboarded
+  const isFullyOnboarded = () => {
+    return onboardingStatus.is_questionnaire_completed &&
+      onboardingStatus.is_subscription_completed;
   };
 
   const value = {
@@ -212,7 +280,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     requestPhoneOTP,
     verifyPhoneOTP,
     signOut,
-    isOnboarded,
+    onboardingStatus,
+    isFullyOnboarded,
+    completeQuestionnaire,
+    completeSubscription,
     completeOnboarding,
   };
 

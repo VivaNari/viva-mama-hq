@@ -6,8 +6,6 @@ import { AuthProvider } from './src/context/AuthContext';
 import CounterProvider from './src/context/CounterContext';
 import { chatDB } from './src/db/sqlite';
 import { useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 
 function App() {
   useEffect(() => {
@@ -45,9 +43,6 @@ function App() {
     checkDatabase();
   }, []);
 
-  /**
-   * Get database statistics
-   */
   const getDatabaseStats = async () => {
     try {
       const db = await chatDB['database']; // Access private database property
@@ -78,9 +73,6 @@ function App() {
     }
   };
 
-  /**
-   * Get all messages from database
-   */
   const getAllMessages = async () => {
     try {
       const db = await chatDB['database'];
@@ -105,6 +97,7 @@ function App() {
       return [];
     }
   };
+
   const isDarkMode = useColorScheme() === 'dark';
 
   return (

@@ -17,7 +17,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../context/AuthContext';
 import { IRequestOtpResponse } from '../types/auth.types';
 
-const LoginwithPhone = ({ navigation }: { navigation: { navigate: any } }) => {
+const LoginwithPhone = () => {
     const [isSentOtp, setIsSentOtp] = useState(false);
     const [phoneNumber, setPhoneNumber] = useState<string>('');
     const [otp, setOTP] = useState<string>('');

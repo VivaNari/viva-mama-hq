@@ -1,5 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
     FlatList,
     Text,
@@ -15,6 +15,8 @@ import GradientButtonWithSlightRadius from "../components/GradientButtonWithSlig
 import { productData } from "../data/productsData";
 import { IProduct } from "../types/product.types";
 import { FLProductItem } from "./Products";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import VivaAILoader from "../components/VivaPlanAnimation";
 
 const Services: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -22,15 +24,44 @@ const Services: React.FC = () => {
         "monthly"
     );
     const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
+    const [isFirstTimeCuratingPlan, setIsFirstTimeCuratingPlan] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
 
     const onPressPlan = (plan: any) => {
         setSelectedPlan(plan.id);
         navigation.navigate("SubscriptionDetails", { plan, billingCycle });
     };
 
+    useEffect(() => {
+        (async function () {
+            try {
+                const curating_data = await AsyncStorage.getItem("is_first_time_curating_plan");
+                console.log("curating_dataa", curating_data);
+
+                if (!curating_data) {
+                    setIsFirstTimeCuratingPlan(true);
+
+                    setTimeout(async () => {
+                        await AsyncStorage.setItem("is_first_time_curating_plan", "true");
+                        setIsLoading(false);
+                    }, 5000);
+                } else {
+                    setIsFirstTimeCuratingPlan(false);
+                    setIsLoading(false);
+                }
+            } catch (error) {
+                console.error("Error checking first time status:", error);
+                setIsLoading(false);
+            }
+        })();
+    }, []);
+
+    if (isLoading && isFirstTimeCuratingPlan) {
+        return <VivaAILoader />;
+    }
+
     return (
         <SafeAreaView style={[{ flex: 1 }, globalStyles.container]}>
-
             <FlatList
                 data={productData.slice(0, 6)}
                 renderItem={FLProductItem}
@@ -42,7 +73,6 @@ const Services: React.FC = () => {
                         <View style={{ marginBottom: 40 }}>
                             <View style={styles.card}>
                                 <Text style={[styles.cardTitle, globalStyles.fontBold]}>Choose a plan</Text>
-
 
                                 <View style={styles.segmentRow}>
                                     <TouchableOpacity
@@ -82,7 +112,6 @@ const Services: React.FC = () => {
                                     </TouchableOpacity>
                                 </View>
 
-
                                 <View style={{ marginTop: 16 }}>
                                     {servicesdata.map((p) => {
                                         const isSelected = selectedPlan === p.id;
@@ -118,7 +147,10 @@ const Services: React.FC = () => {
                                                         styles.planSub,
                                                         globalStyles.fontRegular
                                                     ]}>
-                                                    {billingCycle === "monthly" ? p.monthlyPrice : p.yearlyPrice}
+                                                    {billingCycle === "monthly" ?
+                                                        `₹${p.monthlyPrice} /mo` :
+                                                        `₹${p.yearlyPrice} /year`
+                                                    }
                                                 </Text>
                                             </TouchableOpacity>
                                         );
@@ -148,5 +180,3 @@ const Services: React.FC = () => {
 };
 
 export default Services;
-
-

@@ -1,30 +1,30 @@
-import React, { useState, useEffect, useRef } from 'react';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import { useNavigation } from '@react-navigation/native';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    View,
-    TouchableOpacity,
     Alert,
     AppState,
     AppStateStatus,
-    TextInput,
     BackHandler,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import EventSource from 'react-native-sse';
-import axios from 'axios';
+import Toast from 'react-native-toast-message';
+import CustomDatePicker from '../components/CustomDatePicker';
 import { useAuth } from '../context/AuthContext';
 import { chatDB } from '../db/sqlite';
-import { styles as chatStyles } from '../public/styles/chatWithVivaAiStyles';
-import { IOption, IDBAiMessage, IDBUserMessage, IDBChatMessage } from "../types/vivaAi.types";
-import { SafeAreaView } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
-import { globalStyles } from '../public/styles';
 import { colors } from '../public/assets/colors';
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
-import { useNavigation } from '@react-navigation/native';
+import { globalStyles } from '../public/styles';
+import { styles as chatStyles } from '../public/styles/chatWithVivaAiStyles';
+import { IDBAiMessage, IDBChatMessage, IDBUserMessage, IOption } from "../types/vivaAi.types";
+import { CHAT_FLOW_ANSWER, CHAT_SESSION_URL } from '../constants/endpoints';
+import apiClientInterceptor from '../api/apiClientInterceptor';
 
-const API_BASE_URL = 'http://192.168.1.20:4000/api/v1';
 const TYPING_SPEED_MS = 30;
 
 const RenderTypingIndicator: React.FC = () => (
@@ -34,15 +34,14 @@ const RenderTypingIndicator: React.FC = () => (
 );
 
 export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?: string } } }) {
+    const [show, setShow] = useState<boolean>(false);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+    const [selectedMultiOptions, setSelectedMultiOptions] = useState<Set<string>>(new Set());
 
-    const { userToken, userId, isOnboarded, completeOnboarding } = useAuth();
-    let FLOW_SLUG = '';
-    if (isOnboarded) {
-        FLOW_SLUG = route.params?.flowSlug as string;
-    } else {
-        FLOW_SLUG = 'onboarding-flow-v1';
-    }
-    console.log("FLOW_SLUG as params =>", FLOW_SLUG)
+    const { userToken, userId, isFullyOnboarded, completeQuestionnaire } = useAuth();
+
+    let FLOW_SLUG = isFullyOnboarded() ? route.params?.flowSlug as string : 'onboarding-flow-v2';
+
     const navigation = useNavigation();
     const [inputText, setInputText] = useState('');
     const [chatHistory, setChatHistory] = useState<IDBChatMessage[]>([]);
@@ -58,38 +57,169 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         const backAction = () => {
             navigation.canGoBack() ?
                 navigation.goBack() :
-                isOnboarded ?
+                isFullyOnboarded() ?
                     navigation.navigate("DashboardTabNavigator" as never) : BackHandler.exitApp();
             return true;
         };
 
-        // Subscribe to the hardware back press event
         const backHandler = BackHandler.addEventListener(
             'hardwareBackPress',
             backAction,
         );
 
-        // Unsubscribe when the component unmounts
         return () => backHandler.remove();
-    }, [isOnboarded]);
+    }, [isFullyOnboarded, navigation]);
 
     // determine if message is text input
     const isTextInputMessage = (message: IDBChatMessage): boolean => {
         if (!message) return false;
         return (
             message.type === 'ai' &&
-            message.nodeType === 'QUESTION_SINGLE' &&
-            message.options.length === 0
+            message.nodeType === 'QUESTION_FREE_TEXT'
         );
     };
 
-    // Determine if we should show text input
+    // determine if the message to be take from date input
+    const isDateInputMessage = (message: IDBChatMessage): boolean => {
+        if (!message) return false;
+        return (
+            message.type === 'ai' &&
+            message.nodeType === 'QUESTION_DATE'
+        );
+    };
+
+    // determine if message is multi-select
+    const isMultiSelectMessage = (message: IDBChatMessage): boolean => {
+        if (!message) return false;
+        return (
+            message.type === 'ai' &&
+            message.nodeType === 'QUESTION_MULTI'
+        );
+    };
+
+    // Determine when we should show which type of input
     const lastMessage = chatHistory[chatHistory.length - 1];
     const shouldShowTextInput =
         isTextInputMessage(lastMessage) &&
         !isLoading &&
         !isFlowComplete &&
         !animatingMessageId;
+
+    const shouldShowDateInput =
+        isDateInputMessage(lastMessage) &&
+        lastMessage.type == "ai" &&
+        lastMessage?.id !== "delivery_date" &&
+        !shouldShowTextInput &&
+        !isLoading &&
+        !isFlowComplete &&
+        !animatingMessageId;
+
+    const shouldShowMultiSubmit =
+        isMultiSelectMessage(lastMessage) &&
+        !isLoading &&
+        !isFlowComplete &&
+        !animatingMessageId;
+
+    // Handle date answer input
+    const handleDateSelected = async (date: Date) => {
+        if (!userId || isLoading || animatingMessageId || isFlowComplete) {
+            return;
+        }
+
+        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        if (!lastAi || !isDateInputMessage(lastAi)) {
+            console.error('No valid date input message to respond to');
+            return;
+        }
+
+        const formatted = date.toISOString().split("T")[0];
+
+        // Create and save user message
+        const userMessage: IDBUserMessage = {
+            type: 'user',
+            text: formatted,
+            timestamp: Date.now(),
+        };
+
+        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+
+        // Update chat history
+        setChatHistory((prev) =>
+            prev.map((msg) =>
+                msg.type === 'ai' && msg.id === lastAi.id ? { ...msg, options: [] } : msg
+            ).concat(userMessage)
+        );
+
+        setIsLoading(true);
+
+        try {
+            await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+                userId: userId,
+                flowInstanceId: lastAi.flowInstanceId,
+                nodeId: lastAi.id,
+                freeText: formatted,
+            });
+
+            console.log('Date answer sent successfully:', formatted);
+        } catch (error: any) {
+            console.error('Send error:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.response?.data?.message || 'Failed to send answer',
+                position: 'bottom'
+            });
+            setIsLoading(false);
+        }
+    };
+
+    const handleNotPregnantSelected = async () => {
+        if (!userId || isLoading || animatingMessageId || isFlowComplete) {
+            return;
+        }
+
+        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        if (!lastAi) {
+            console.error('No AI message found to respond to');
+            return;
+        }
+
+        const userMessage: IDBUserMessage = {
+            type: 'user',
+            text: "I'm not pregnant yet",
+            timestamp: Date.now(),
+        };
+
+        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+
+        setChatHistory((prev) =>
+            prev.map((msg) =>
+                msg.type === 'ai' && msg.id === lastAi.id ? { ...msg, options: [] } : msg
+            ).concat(userMessage)
+        );
+
+        setIsLoading(true);
+
+        try {
+            await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+                userId: userId,
+                flowInstanceId: lastAi.flowInstanceId,
+                nodeId: lastAi.id,
+                freeText: "not_pragnent",
+            });
+
+            console.log('Not pregnant answer sent successfully');
+        } catch (error: any) {
+            console.error('Send error:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.response?.data?.message || 'Failed to send answer',
+                position: 'bottom'
+            });
+            setIsLoading(false);
+        }
+    };
 
     useEffect(() => {
         initializeChat();
@@ -98,6 +228,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
 
         return () => {
             eventSourceRef.current?.close();
+            eventSourceRef.current = null;
             subscription.remove();
         };
     }, []);
@@ -107,6 +238,13 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             saveChatToDatabase();
         }
     }, [chatHistory]);
+
+    // Clear multi-select state when a new question appears
+    useEffect(() => {
+        if (lastMessage && lastMessage.type === 'ai' && isMultiSelectMessage(lastMessage)) {
+            setSelectedMultiOptions(new Set());
+        }
+    }, [lastMessage && lastMessage.type === 'ai' ? lastMessage.uuid : null]);
 
     const saveChatToDatabase = async () => {
         try {
@@ -118,7 +256,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
 
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
         if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-            console.log('📱 App came to foreground, reloading history from SQLite...');
+            console.log('App came to foreground, reloading history from SQLite...');
             await loadHistory();
         }
         appState.current = nextAppState;
@@ -160,8 +298,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
         }
-        console.log(`${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken}`)
-        const es = new EventSource(`${API_BASE_URL}/chat-session/${FLOW_SLUG}?token=${userToken}`);
+        const es = new EventSource(CHAT_SESSION_URL(FLOW_SLUG, userToken as string));
         eventSourceRef.current = es;
 
         if (chatHistory.length === 0) {
@@ -177,15 +314,38 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 const data = JSON.parse(event.data!);
 
                 if (data.type === 'end_flow') {
-                    console.log('🏁 Flow completed');
+                    console.log(' == Flow completed == ');
                     setIsFlowComplete(true);
                     setIsLoading(false);
 
                     if (data.flowType == "ONBOARDING") {
-                        completeOnboarding();
+                        // complete the onboarding Questionnaire process
+                        await completeQuestionnaire();
+
+                        Toast.show({
+                            type: 'success',
+                            text1: 'Complete',
+                            text2: 'Your onboarding questionnaire is completed! You will be redirected soon',
+                            position: 'top',
+                            visibilityTime: 2500
+                        });
+                        // redirect the user to the subscriptions page
+                        setTimeout(() => {
+                            navigation.reset({
+                                index: 0,
+                                routes: [{ name: "Services" as never }],
+                            });
+                        }, 7000);
+                    } else {
+                        Toast.show({
+                            type: 'success',
+                            text1: 'Complete',
+                            text2: 'Chat Flow Completed!',
+                            position: 'bottom'
+                        });
                     }
+
                     es.close();
-                    Alert.alert('Complete', 'Chat session finished!');
                     return;
                 }
 
@@ -213,8 +373,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                     uuid: data.uuid,
                 };
 
-                // Check if message already exists in database
-                const exists = await chatDB.messageExists(userId!, FLOW_SLUG, aiMessage.uuid);
+                const exists = await chatDB.messageExists(userId as string, FLOW_SLUG, aiMessage.uuid);
 
                 if (exists) {
                     console.log('Duplicate question from SSE');
@@ -222,11 +381,9 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                     return;
                 }
 
-                // Save to SQLite
                 await chatDB.saveAiMessage(userId!, FLOW_SLUG, aiMessage);
                 console.log('New question via SSE:', data.id);
 
-                // Update UI
                 setChatHistory((prev) => [...prev, aiMessage]);
                 setAnimatingMessageId(aiMessage.uuid);
                 setIsLoading(false);
@@ -253,24 +410,20 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             return;
         }
 
-        // Get last AI message
         const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
         if (!lastAi) {
             console.error('No AI message found to respond to');
             return;
         }
 
-        // Create user message
         const userMessage: IDBUserMessage = {
             type: 'user',
             text: option.label,
             timestamp: Date.now(),
         };
 
-        // Save to SQLite
         await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
 
-        // Update UI - remove options from last AI message
         setChatHistory((prev) =>
             prev.map((msg) =>
                 msg.type === 'ai' && msg.id === lastAi.id ? { ...msg, options: [] } : msg
@@ -280,18 +433,118 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         setIsLoading(true);
 
         try {
-            await axios.post(
-                `${API_BASE_URL}/chat-flow/answer`,
-                {
-                    flowInstanceId: lastAi.flowInstanceId,
-                    nodeId: lastAi.id,
-                    selectedKeys: [option.score],
-                },
-                {
-                    headers: { Authorization: `Bearer ${userToken}` },
-                }
-            );
+            await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+                flowInstanceId: lastAi.flowInstanceId,
+                nodeId: lastAi.id,
+                selectedKeys: [option.score],
+            });
             console.log('Answer sent');
+        } catch (error: any) {
+            console.error('Send error:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to send answer',
+                position: 'bottom'
+            });
+            setIsLoading(false);
+        }
+    };
+
+    // Handle multi-select option toggle
+    const handleMultiOptionToggle = (option: IOption, allOptions: IOption[]) => {
+        setSelectedMultiOptions(prev => {
+            const newSet = new Set(prev);
+            const isNoneOption =
+                option.value === 'none' ||
+                option.value === 'history_none' ||
+                option.value === 'meds_none';
+
+            // Find if there's a "none" option in current selections
+            const noneOption = allOptions.find(opt =>
+                opt.value === 'none' ||
+                opt.value === 'history_none' ||
+                opt.value === 'meds_none'
+            );
+
+            if (isNoneOption) {
+                if (newSet.has(option.id)) {
+                    newSet.delete(option.id); // unselect none option if tapped again
+                } else {
+                    newSet.clear(); // deslect all other options
+                    newSet.add(option.id);
+                }
+            } else {
+                // If clicking any other option, remove "None" if it's selected
+                if (noneOption && newSet.has(noneOption.id)) {
+                    newSet.delete(noneOption.id);
+                }
+
+                // Toggle the current option
+                if (newSet.has(option.id)) {
+                    newSet.delete(option.id);
+                } else {
+                    newSet.add(option.id);
+                }
+            }
+
+            return newSet;
+        });
+    };
+
+    // Handle multi-select submit
+    const handleSubmitMultiSelect = async () => {
+        if (selectedMultiOptions.size === 0 || !userId) {
+            Toast.show({
+                type: 'info',
+                text1: 'Please select at least one option',
+                position: 'bottom'
+            });
+            return;
+        }
+
+        if (isLoading || animatingMessageId || isFlowComplete) {
+            return;
+        }
+
+        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        if (!lastAi) {
+            console.error('No AI message found to respond to');
+            return;
+        }
+
+        // Get selected options details
+        const selectedOptions = lastAi.options.filter(opt =>
+            selectedMultiOptions.has(opt.id)
+        );
+
+        const selectedLabels = selectedOptions.map(opt => opt.label).join(', ');
+        const selectedScores = selectedOptions.map(opt => opt.score);
+
+        const userMessage: IDBUserMessage = {
+            type: 'user',
+            text: selectedLabels,
+            timestamp: Date.now(),
+        };
+
+        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+
+        setChatHistory((prev) =>
+            prev.map((msg) =>
+                msg.type === 'ai' && msg.id === lastAi.id ? { ...msg, options: [] } : msg
+            ).concat(userMessage)
+        );
+
+        setSelectedMultiOptions(new Set());
+        setIsLoading(true);
+
+        try {
+            await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+                flowInstanceId: lastAi.flowInstanceId,
+                nodeId: lastAi.id,
+                selectedKeys: selectedScores,
+            });
+            console.log('Multi-select answer sent:', selectedScores);
         } catch (error: any) {
             console.error('Send error:', error);
             Toast.show({
@@ -320,9 +573,8 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             return;
         }
 
-        // Validate that this is actually a text input question
-        if (!isTextInputMessage(lastAi)) {
-            console.error('Last message is not a text input question');
+        if (!isTextInputMessage(lastAi) && !isDateInputMessage(lastAi)) {
+            console.error('Last message is not a text input or date input question');
             return;
         }
 
@@ -345,21 +597,12 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         setIsLoading(true);
 
         try {
-            const response = await axios.post(
-                `${API_BASE_URL}/chat-flow/answer`,
-                {
-                    userId: userId,
-                    flowInstanceId: lastAi.flowInstanceId,
-                    nodeId: lastAi.id,
-                    freeText: textToSend,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${userToken}`,
-                        'Content-Type': 'application/json',
-                    },
-                }
-            );
+            const response = await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+                userId: userId,
+                flowInstanceId: lastAi.flowInstanceId,
+                nodeId: lastAi.id,
+                freeText: textToSend,
+            });
 
             console.log('Text answer sent successfully:', textToSend);
             console.log('Response:', response.data);
@@ -367,7 +610,6 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         } catch (error: any) {
             console.error('Send error:', error);
 
-            // Log detailed error info
             if (error.response) {
                 console.error('Error status:', error.response.status);
                 console.error('Error data:', error.response.data);
@@ -386,10 +628,12 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             setIsLoading(false);
         }
     };
+    useEffect(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, [selectedMultiOptions.size]);
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
-
             <ScrollView
                 ref={scrollViewRef}
                 style={globalStyles.chatContainer}
@@ -408,7 +652,12 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                                 message={msg}
                                 onComplete={() => setAnimatingMessageId(null)}
                                 onSelect={handleSendAnswer}
+                                onMultiToggle={handleMultiOptionToggle}
+                                selectedMultiOptions={selectedMultiOptions}
                                 isTextInputHelper={isTextInputMessage}
+                                isMultiSelectHelper={isMultiSelectMessage}
+                                setShow={setShow}
+                                handleNotPregnantSelected={handleNotPregnantSelected}
                             />
                         );
                     }
@@ -421,7 +670,12 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                             isAnimating={!!animatingMessageId}
                             isComplete={isFlowComplete}
                             onSelect={handleSendAnswer}
+                            onMultiToggle={handleMultiOptionToggle}
+                            selectedMultiOptions={selectedMultiOptions}
                             isTextInputHelper={isTextInputMessage}
+                            isMultiSelectHelper={isMultiSelectMessage}
+                            setShow={setShow}
+                            handleNotPregnantSelected={handleNotPregnantSelected}
                         />
                     );
                 })}
@@ -429,28 +683,46 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 {isLoading && <RenderTypingIndicator />}
             </ScrollView>
 
-            {shouldShowTextInput && (
+            {(shouldShowTextInput || shouldShowDateInput) && (
                 <View style={chatStyles.inputContainer}>
-                    <TextInput
-                        style={[chatStyles.textInput, globalStyles.fontRegular]}
-                        value={inputText}
-                        onChangeText={setInputText}
-                        placeholder="Type your answer..."
-                        placeholderTextColor={colors.black}
-                        editable={!isLoading}
-                        onSubmitEditing={handleSendTextAnswer}
-                        returnKeyType="send"
-                    />
+                    <TouchableOpacity
+                        style={{ flex: 1 }}
+                        activeOpacity={1}
+                        onPress={() => {
+                            if (shouldShowDateInput) {
+                                setShow(true);
+                            }
+                        }}
+                    >
+                        <TextInput
+                            style={[chatStyles.textInput, globalStyles.fontRegular]}
+                            value={inputText}
+                            onChangeText={setInputText}
+                            placeholder={
+                                shouldShowDateInput
+                                    ? "Select a date"
+                                    : "Type your answer"
+                            }
+                            placeholderTextColor={colors.black}
+                            editable={!shouldShowDateInput}
+                            pointerEvents={shouldShowDateInput ? "none" : "auto"}
+                            onSubmitEditing={handleSendTextAnswer}
+                            returnKeyType="send"
+                        />
+                    </TouchableOpacity>
+
                     <TouchableOpacity
                         disabled={inputText.trim().length === 0 || isLoading}
                         style={[
                             chatStyles.sendButton,
-                            (inputText.trim().length === 0 || isLoading) && { backgroundColor: 'grey' }
+                            (inputText.trim().length === 0 || isLoading) && {
+                                backgroundColor: 'grey'
+                            }
                         ]}
                         onPress={handleSendTextAnswer}
                     >
                         <MaterialDesignIcons
-                            name='send-outline'
+                            name="send-outline"
                             size={20}
                             color={colors.white}
                             style={{ transform: [{ rotate: '-35deg' }] }}
@@ -458,13 +730,86 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                     </TouchableOpacity>
                 </View>
             )}
+
+            {/* Show the location input button */}
+            {
+                // shouldShowLocationInput && (
+                //     <View style={chatStyles.inputContainer}>
+                //         <GetUserLocation />
+
+                //         <TouchableOpacity
+                //             disabled={inputText.trim().length === 0 || isLoading}
+                //             style={[
+                //                 chatStyles.sendButton,
+                //                 (inputText.trim().length === 0 || isLoading) && {
+                //                     backgroundColor: 'grey'
+                //                 }
+                //             ]}
+                //             onPress={handleSendTextAnswer}
+                //         >
+                //             <MaterialDesignIcons
+                //                 name="send-outline"
+                //                 size={20}
+                //                 color={colors.white}
+                //                 style={{ transform: [{ rotate: '-35deg' }] }}
+                //             />
+                //         </TouchableOpacity>
+                //     </View>
+                // )
+            }
+
+            {shouldShowMultiSubmit && selectedMultiOptions.size > 0 && (
+                <View style={[chatStyles.inputContainer, { alignItems: 'center' }]}>
+                    <Text style={[{ ...globalStyles.fontMedium, color: colors.black, flex: 1 }]}>
+                        {selectedMultiOptions.size} selected, click the button to submit.
+                    </Text>
+
+                    <TouchableOpacity
+                        disabled={selectedMultiOptions.size === 0 || isLoading}
+                        style={[
+                            chatStyles.sendButton,
+                            (selectedMultiOptions.size === 0 || isLoading) && {
+                                backgroundColor: 'grey'
+                            }
+                        ]}
+                        onPress={handleSubmitMultiSelect}
+                    >
+                        <MaterialDesignIcons
+                            name="send-outline"
+                            size={20}
+                            color={colors.white}
+                            style={{ transform: [{ rotate: '-35deg' }] }}
+                        />
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            <CustomDatePicker
+                show={show}
+                setShow={setShow}
+                selectedDate={selectedDate}
+                onSelect={handleDateSelected}
+            />
         </SafeAreaView>
     );
 }
 
 // StaticBubble Component
-const StaticBubble = ({ message, isLast, isAnimating, isComplete, onSelect, isTextInputHelper }: any) => {
+const StaticBubble = ({
+    message,
+    isLast,
+    isAnimating,
+    isComplete,
+    onSelect,
+    onMultiToggle,
+    selectedMultiOptions,
+    isTextInputHelper,
+    isMultiSelectHelper,
+    setShow,
+    handleNotPregnantSelected,
+}: any) => {
     const isTextInput = isTextInputHelper(message);
+    const isMultiSelect = isMultiSelectHelper(message);
 
     const showOptions =
         message.type === 'ai' &&
@@ -479,17 +824,51 @@ const StaticBubble = ({ message, isLast, isAnimating, isComplete, onSelect, isTe
             <View style={[chatStyles.bubble, message.type === 'ai' ? chatStyles.aiMessage : chatStyles.userMessage]}>
                 <Text style={chatStyles.messageText}>{message.text}</Text>
             </View>
-            {showOptions && (
+
+            {/* for delivery_date node: show two option cards */}
+            {message.id === "delivery_date" && isLast && !isAnimating && !isComplete && (
                 <View style={chatStyles.optionsInMessageContainer}>
-                    {message.options.map((opt: IOption) => (
-                        <TouchableOpacity
-                            key={opt.id}
-                            style={chatStyles.optionButton}
-                            onPress={() => onSelect(opt)}
-                        >
-                            <Text style={chatStyles.optionButtonText}>{opt.label}</Text>
-                        </TouchableOpacity>
-                    ))}
+                    <TouchableOpacity
+                        style={chatStyles.optionButton}
+                        onPress={() => setShow(true)}
+                    >
+                        <Text style={chatStyles.optionButtonText}>Select Delivery Date</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={chatStyles.optionButton}
+                        onPress={handleNotPregnantSelected}
+                    >
+                        <Text style={chatStyles.optionButtonText}>I'm Not Pregnant Yet</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {showOptions && message.id !== "delivery_date" && (
+                <View style={chatStyles.optionsInMessageContainer}>
+                    {message.options.map((opt: IOption) => {
+                        const isSelected = selectedMultiOptions.has(opt.id);
+                        return (
+                            <TouchableOpacity
+                                key={opt.id}
+                                style={[
+                                    chatStyles.optionButton,
+                                    isMultiSelect && isSelected && {
+                                        backgroundColor: colors.secondary,
+                                        borderColor: colors.secondary,
+                                    }
+                                ]}
+                                onPress={() => isMultiSelect ? onMultiToggle(opt, message.options) : onSelect(opt)}
+                            >
+                                <Text style={[
+                                    chatStyles.optionButtonText,
+                                    isMultiSelect && isSelected && { color: colors.white }
+                                ]}>
+                                    {opt.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
             )}
         </View>
@@ -497,10 +876,22 @@ const StaticBubble = ({ message, isLast, isAnimating, isComplete, onSelect, isTe
 };
 
 // AnimatedBubble Component
-const AnimatedBubble = ({ message, onComplete, onSelect, isTextInputHelper }: any) => {
+const AnimatedBubble = ({
+    message,
+    onComplete,
+    onSelect,
+    onMultiToggle,
+    selectedMultiOptions,
+    isTextInputHelper,
+    isMultiSelectHelper,
+    setShow,
+    setInputText,
+    handleSendTextAnswer,
+}: any) => {
     const [displayed, setDisplayed] = useState('');
     const [showOptions, setShowOptions] = useState(false);
     const isTextInput = isTextInputHelper(message);
+    const isMultiSelect = isMultiSelectHelper(message);
 
     useEffect(() => {
         let i = 0;
@@ -521,17 +912,54 @@ const AnimatedBubble = ({ message, onComplete, onSelect, isTextInputHelper }: an
             <View style={[chatStyles.bubble, chatStyles.aiMessage]}>
                 <Text style={chatStyles.messageText}>{displayed}</Text>
             </View>
-            {showOptions && !isTextInput && message.options.length > 0 && (
+
+            {/* For delivery_date node, after typing finishes show the two option cards */}
+            {showOptions && message.id === "delivery_date" && (
                 <View style={chatStyles.optionsInMessageContainer}>
-                    {message.options.map((opt: IOption) => (
-                        <TouchableOpacity
-                            key={opt.id}
-                            style={chatStyles.optionButton}
-                            onPress={() => onSelect(opt)}
-                        >
-                            <Text style={chatStyles.optionButtonText}>{opt.label}</Text>
-                        </TouchableOpacity>
-                    ))}
+                    <TouchableOpacity
+                        style={chatStyles.optionButton}
+                        onPress={() => setShow(true)}
+                    >
+                        <Text style={chatStyles.optionButtonText}>Select Delivery Date</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={chatStyles.optionButton}
+                        onPress={() => {
+                            setInputText("not_pragnent");
+                            handleSendTextAnswer();
+                        }}
+                    >
+                        <Text style={chatStyles.optionButtonText}>I'm Not Pregnant</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+
+            {showOptions && !isTextInput && message.options.length > 0 && message.id !== "delivery_date" && (
+                <View style={chatStyles.optionsInMessageContainer}>
+                    {message.options.map((opt: IOption) => {
+                        const isSelected = selectedMultiOptions.has(opt.id);
+                        return (
+                            <TouchableOpacity
+                                key={opt.id}
+                                style={[
+                                    chatStyles.optionButton,
+                                    isMultiSelect && isSelected && {
+                                        backgroundColor: colors.secondary,
+                                        borderColor: colors.secondary,
+                                    }
+                                ]}
+                                onPress={() => isMultiSelect ? onMultiToggle(opt, message.options) : onSelect(opt)}
+                            >
+                                <Text style={[
+                                    chatStyles.optionButtonText,
+                                    isMultiSelect && isSelected && { color: colors.white }
+                                ]}>
+                                    {opt.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
             )}
         </View>
