@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response } from "express";
+import { Request, Response } from "express";
 import UserService from "../../../../services/users/user.service";
 
 const getUserService = new UserService();
@@ -13,5 +13,9 @@ export default class UserController {
 
     googleAuth = async (req: Request, res: Response) => {
         await getUserService.googleAuth(req, res);
+    };
+
+    getIsOnboarded = async (req: Request, res: Response) => {
+        await getUserService.getIsOnboarded(req, res);
     };
 }

@@ -35,32 +35,37 @@ const userSchema = new Schema<IUser>(
             unique: true,
             lowercase: true,
             trim: true,
+            default: null,
         },
         mobile_number: {
             type: String,
+            default: null,
         },
         country_code: {
             type: String,
+            default: null,
         },
         profile_picture: {
             type: String,
+            default: null,
         },
         is_onboarded: {
-            type: Boolean,
-            default: false,
+            is_questionnaire_completed: {
+                type: Boolean,
+                default: false,
+            },
+            is_subscription_completed: {
+                type: Boolean,
+                default: false,
+            },
         },
-        user_name: {
-            type: String,
+        childs: {
+            type: [childSchema],
+            default: [],
         },
-        date_of_birth: {
-            type: Date,
-        },
-        height: {
-            type: Number,
-        },
-        childs: [childSchema],
         partner_referral_code: {
             type: String,
+            default: null,
         },
         referral_code: {
             type: String,
@@ -69,37 +74,104 @@ const userSchema = new Schema<IUser>(
         },
         referred_user_id: {
             type: Number,
+            default: null,
         },
         referred_user_object_id: {
             type: Schema.Types.ObjectId,
             ref: "users",
+            default: null,
         },
         FCM_token: {
             type: String,
         },
         current_postpartum_week: {
             type: Number,
-        },
-        date_of_delivery: {
-            type: Date,
+            default: null,
         },
         is_breastfeeding_currently: Boolean,
         onboarding_data: {
-            preferred_name: { type: String },
-            date_of_birth: { type: Date },
-            location: { type: String },
-            conception_method: { type: String },
-            pregnancy_conditions: [{ type: String }],
-            delivery_date: { type: Date },
-            delivery_type: { type: String },
-            delivery_outcome: { type: String },
-            past_medications: [{ type: String }],
-            current_medications: [{ type: String }],
-            tobacco_use: { type: String },
-            alcohol_use: { type: String },
-            social_support: { type: String },
-            parity: { type: String },
-            onboarded_at: { type: Date },
+            preferred_name: {
+                type: String,
+                default: null,
+            },
+            date_of_birth: {
+                type: Date,
+                default: null,
+            },
+            location: {
+                type: String,
+                default: null,
+            },
+            conception_method: {
+                type: String,
+                default: null,
+            },
+            pregnancy_conditions: {
+                type: [String],
+                default: [],
+            },
+            is_not_pragnant_yet: {
+                type: Boolean,
+                default: null,
+            },
+            delivery_date: {
+                type: Date,
+                default: null,
+            },
+            delivery_type: {
+                type: String,
+                default: null,
+            },
+            delivery_outcome: {
+                type: String,
+                default: null,
+            },
+            past_medications: {
+                type: [String],
+                default: [],
+            },
+            current_medications: {
+                type: [String],
+                default: [],
+            },
+            tobacco_use: {
+                type: String,
+                default: null,
+            },
+            alcohol_use: {
+                type: String,
+                default: null,
+            },
+            social_support: {
+                type: String,
+                default: null,
+            },
+            parity: {
+                type: String,
+                default: null,
+            },
+            onboarded_at: {
+                type: Date,
+                default: null,
+            },
+        },
+        subscription: {
+            plan: {
+                type: String,
+                default: null,
+            },
+            status: {
+                type: String,
+                default: null,
+            },
+            billingCycle: {
+                type: String,
+                default: null,
+            },
+            expiryDate: {
+                type: Date,
+                default: null,
+            },
         },
     },
     {

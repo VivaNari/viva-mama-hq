@@ -1,10 +1,9 @@
 import { Router } from "express";
 import requestValidator from "../../../../middlewares/requestValidator.middleware";
 import UserController from "../../controllers/users/user.controller";
-import { sentOTPValidator, verifyOTPValidator } from "../../validators/users/otp.validator";
 import googleAuthValidator from "../../validators/users/googleAuth.validator";
+import { sentOTPValidator, verifyOTPValidator } from "../../validators/users/otp.validator";
 import authMiddleware from "../../../../middlewares/authorization.middleware";
-import childValidator from "../../validators/users/child.validator";
 
 const userRouter = Router();
 const getUserController = new UserController();
@@ -23,5 +22,6 @@ userRouter.post(
     requestValidator(googleAuthValidator),
     getUserController.googleAuth,
 );
+userRouter.get("/user/onboarded", authMiddleware("header"), getUserController.getIsOnboarded);
 
 export default userRouter;

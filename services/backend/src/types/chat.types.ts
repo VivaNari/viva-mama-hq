@@ -101,6 +101,8 @@ export type FlowDefinitionStatus =
 export enum FlowNodeEnum {
     QUESTION_SINGLE = "QUESTION_SINGLE",
     QUESTION_MULTI = "QUESTION_MULTI",
+    QUESTION_FREE_TEXT = "QUESTION_FREE_TEXT",
+    QUESTION_DATE = "QUESTION_DATE",
     INFO = "INFO",
     BRANCH = "BRANCH",
     CALC = "CALC",

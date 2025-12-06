@@ -12,4 +12,17 @@ export const messages = {
     AUTH_BAD_REQUEST: "Bad Request: Error processing authorization.",
     RECOMMENDATION_SAVED_SUCCESS: "Recommendation created successfully",
     RECOMMENDATION_RETRIEVED_SUCCESS: "Recommendation created successfully",
+    MISSING_PAYMENT_PARAMETERS: "Missing payment verification parameters",
+    MISSING_FREE_PLAN_PARAMETERS: "Plan and Billing Cycle are required to create an order",
+    MISSING_CREATE_ORDER_PARAMETERS:
+        "Amount, Plan and Billing Cycle are required to create an order",
+    PAYMENT_ORDER_CREATED: "Payment order created successfully",
+    PAYMENT_ORDER_FAILED: "Failed to create payment order",
+    PAYMENT_VERIFICATION_FAILED: "Payment verification failed",
+    ORDER_NOT_FOUND: "Order not found",
+    PAYMENT_VERIFIED_SUCCESSFULLY: "Payment verified successfully",
+    USER_NOT_FOUND: "User not found!",
+    USER_EXISTING_SUBCRIPTION_FOUND: "User already has an active subscription",
+    WARN_COMPLETE_QUESTIONNAIRE: "Please complete the questionnaire first",
+    PLAN_ACTIVATED_SUCCESSFULLY: "plan activated successfully",
 };
