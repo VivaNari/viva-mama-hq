@@ -1,4 +1,4 @@
 export const generalSchemaOptions = {
-    timestamp: true,
+    timestamps: true,
     validateBeforeSave: true,
 };

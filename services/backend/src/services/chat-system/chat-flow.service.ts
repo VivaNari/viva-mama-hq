@@ -1,28 +1,29 @@
 import { Response } from "express";
+import { Schema } from "mongoose";
+import admin from "../../config/firebase";
+import conversationModel from "../../models/conversation.model";
 import flowDefinitionModel from "../../models/flowDefinition.model";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
-import conversationModel from "../../models/conversation.model";
 import userModel from "../../models/user.model";
-import admin from "../../config/firebase";
 import {
-    FlowInstanceStateEnum,
     AnswerTypeEnum,
+    EndFlowPayload,
+    FlowInstanceStateEnum,
+    FlowType,
+    IFlowNode,
     MessageRoleEnum,
     MessageTypeEnum,
-    IFlowNode,
     QuestionPayload,
-    EndFlowPayload,
-    FlowType,
 } from "../../types/chat.types";
-import { Schema } from "mongoose";
-import redisPublisherService from "../redis/redis-publisher.service";
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
-import axios from "axios";
+import redisPublisherService from "../redis/redis-publisher.service";
+// @ts-ignore
 import { v4 as uuidv4 } from "uuid";
+import { IUser } from "../../types";
 
-const QUESTION_FETCH_DELAY_MS = 2000;
+// const QUESTION_FETCH_DELAY_MS = 2000;
 const STOPPED_BREASTFEEDING_SCORE = -1;
 
 class ChatFlowService {
@@ -36,7 +37,10 @@ class ChatFlowService {
             throw new Error(` User not found: ${userId}`);
         }
 
-        if (user.is_onboarded) {
+        if (
+            user.is_onboarded.is_questionnaire_completed &&
+            user.is_onboarded.is_subscription_completed
+        ) {
             console.log(` User ${userId} is onboarded. Flow type: CHECK_IN`);
             return "CHECK_IN";
         } else {
@@ -53,7 +57,6 @@ class ChatFlowService {
 
         console.log(`User ${userId} connected via SSE for flow: ${slug}`);
         this.activeSessions.set(userId, res);
-        console.log(` Active sessions count: ${this.activeSessions}`);
 
         try {
             const flowType = await this.detectFlowType(userId);
@@ -77,7 +80,10 @@ class ChatFlowService {
 
             const pending = this.pendingQuestions.get(userId);
             if (pending) {
-                console.log(`User ${userId} reconnected. Pending question will complete shortly.`);
+                console.log(
+                    `User ${userId} reconnected with pending question: ${pending.questionId}. ` +
+                        `Question already sent - waiting for user to submit answer. No new question will be sent.`,
+                );
                 return;
             }
 
@@ -87,8 +93,8 @@ class ChatFlowService {
                 const conversationId = await this.getOrCreateConversation(userId, flowType);
                 const startNodeId = flowDefinition.startNodeId;
 
-                const user = await userModel.findById(userId);
-                const currentWeek = user?.current_postpartum_week || 1;
+                const user = (await userModel.findById(userId)) as IUser;
+                const currentWeek = user.current_postpartum_week;
 
                 flowInstance = await new flowInstanceModel({
                     userId: userId,
@@ -252,46 +258,46 @@ class ChatFlowService {
 
             // SPECIAL VALIDATION FOR NAME NODE
             console.log(` Checking special validations for node ${nodeId}`);
-            if (flowType === "ONBOARDING" && nodeId === "name") {
-                // 1. Call your LLM API to validate name
-                const llmRes = await axios.get(
-                    `http://localhost:8000/chat/username?response=${encodeURIComponent(freeText || "")}`,
-                );
-                console.log(` LLM response: ${JSON.stringify(llmRes.data)}`);
-                const { detected_name, has_name } = llmRes.data;
+            // if (flowType === "ONBOARDING" && nodeId === "name") {
+            //     // 1. Call your LLM API to validate name
+            //     const llmRes = await axios.get(
+            //         `http://192.168.1.20:8001/chat/username?response=${encodeURIComponent(freeText || "")}`,
+            //     );
+            //     console.log(` LLM response: ${JSON.stringify(llmRes.data)}`);
+            //     const { detected_name, has_name } = llmRes.data;
 
-                if (!has_name) {
-                    console.log("LLM could not detect a valid name. Asking question again.");
-                    this.pendingQuestions.delete(userId);
+            //     if (!has_name) {
+            //         console.log("LLM could not detect a valid name. Asking question again.");
+            //         this.pendingQuestions.delete(userId);
 
-                    // send same question again
-                    const userConnection = this.activeSessions.get(userId);
-                    console.log(` User connection: ${userConnection}`);
-                    if (userConnection) {
-                        await this.sendCurrentQuestion(
-                            userId,
-                            flowInstance,
-                            flowDefinition,
-                            userConnection,
-                            flowType,
-                            uuidv4(),
-                            "Please provide a valid name so we can address you properly.",
-                        );
-                    } else {
-                        await this.sendSilentPush(userId, flowInstance, flowDefinition, flowType);
-                    }
+            //         // send same question again
+            //         const userConnection = this.activeSessions.get(userId);
+            //         console.log(` User connection: ${userConnection}`);
+            //         if (userConnection) {
+            //             await this.sendCurrentQuestion(
+            //                 userId,
+            //                 flowInstance,
+            //                 flowDefinition,
+            //                 userConnection,
+            //                 flowType,
+            //                 uuidv4(),
+            //                 "Please provide a valid name so we can address you properly.",
+            //             );
+            //         } else {
+            //             await this.sendSilentPush(userId, flowInstance, flowDefinition, flowType);
+            //         }
 
-                    // IMPORTANT: Keep cursor on same node
-                    // And DO NOT save answer
-                    return {
-                        success: false,
-                        message: "Invalid name. Asking again.",
-                    };
-                }
+            //         // IMPORTANT: Keep cursor on same node
+            //         // And DO NOT save answer
+            //         return {
+            //             success: false,
+            //             message: "Invalid name. Asking again.",
+            //         };
+            //     }
 
-                // If name is valid, override the freeText with LLM's detected name
-                freeText = detected_name;
-            }
+            //     // If name is valid, override the freeText with LLM's detected name
+            //     freeText = detected_name;
+            // }
 
             // FOR ONBOARDING: Update user profile with onboarding data
             if (flowType === "ONBOARDING") {
@@ -356,7 +362,10 @@ class ChatFlowService {
                     );
 
                     await userModel.findByIdAndUpdate(userId, {
-                        is_onboarded: true,
+                        is_onboarded: {
+                            is_questionnaire_completed: true,
+                            is_subscription_completed: user?.is_onboarded.is_subscription_completed,
+                        },
                     });
                 }
 
@@ -375,7 +384,7 @@ class ChatFlowService {
 
             flowInstance.cursorNodeId = nextNodeId;
             await flowInstance.save();
-            console.log(`➡️ Moving cursor to: ${nextNodeId}`);
+            console.log(`Moving cursor to: ${nextNodeId}`);
 
             this.pendingQuestions.delete(userId);
 
@@ -422,14 +431,12 @@ class ChatFlowService {
 
                 case "name":
                     user.onboarding_data.preferred_name = freeText as string;
-                    user.user_name = freeText as string;
                     console.log(` Saved preferred_name: ${freeText}`);
                     break;
 
                 case "dob":
                     const dobDate = new Date(freeText!);
                     user.onboarding_data.date_of_birth = dobDate;
-                    user.date_of_birth = dobDate;
                     console.log(` Saved date_of_birth: ${dobDate}`);
                     break;
 
@@ -453,11 +460,15 @@ class ChatFlowService {
                     break;
 
                 case "delivery_date":
+                    if (freeText == "not_pragnent") {
+                        user.onboarding_data.is_not_pragnant_yet = true;
+                        break;
+                    }
                     const deliveryDate = new Date(freeText!);
                     user.onboarding_data.delivery_date = deliveryDate;
-                    user.date_of_delivery = deliveryDate;
                     const postpartumWeek = this.calculatePostpartumWeek(deliveryDate);
                     user.current_postpartum_week = postpartumWeek;
+                    user.onboarding_data.is_not_pragnant_yet = false;
                     console.log(` Saved delivery_date: ${deliveryDate}, week: ${postpartumWeek}`);
                     break;
 
@@ -522,7 +533,7 @@ class ChatFlowService {
                     break;
 
                 case "wrap_up":
-                    user.is_onboarded = true;
+                    user.is_onboarded.is_questionnaire_completed = true;
                     user.onboarding_data.onboarded_at = new Date();
                     console.log(` Onboarding marked as complete`);
                     break;
@@ -545,12 +556,24 @@ class ChatFlowService {
             .map((opt) => opt.value);
     }
 
+    // private calculatePostpartumWeek(deliveryDate: Date): number {
+    //     const today = new Date();
+    //     const diffMs = today.getTime() - deliveryDate.getTime();
+    //     const diffDays = diffMs / (1000 * 60 * 60 * 24);
+    //     const weeks = Math.floor(diffDays / 7);
+    //     return Math.max(1, weeks);
+    // }
+
     private calculatePostpartumWeek(deliveryDate: Date): number {
         const today = new Date();
         const diffMs = today.getTime() - deliveryDate.getTime();
         const diffDays = diffMs / (1000 * 60 * 60 * 24);
         const weeks = Math.floor(diffDays / 7);
-        return Math.max(1, weeks);
+        if (diffMs < 0) {
+            return -1;
+        }
+
+        return Math.max(1, weeks + 1);
     }
     private async findNextValidNode(
         userId: string,
@@ -559,18 +582,63 @@ class ChatFlowService {
         startingNodeId: string | null,
         flowType: FlowType,
     ): Promise<string | null> {
-        if (flowType === "ONBOARDING") {
-            console.log(`Onboarding: returning next node`);
-            return startingNodeId;
+        // if (flowType === "ONBOARDING") {
+        //     console.log(`Onboarding: returning next node`);
+        //     return startingNodeId;
+        // }
+        if (flowType === "CHECK_IN") {
+            let currentNodeId = startingNodeId;
+            const user = await userModel.findById(userId);
+            const currentWeek = flowInstance.postpartumWeek;
+            const isBreastfeeding = user?.is_breastfeeding_currently ?? true;
+
+            console.log(`Finding next valid node starting from: ${currentNodeId}`);
+            console.log(`Week: ${currentWeek}, Breastfeeding: ${isBreastfeeding}`);
+
+            while (currentNodeId) {
+                const node = flowDefinition.nodes.find((n: IFlowNode) => n.id === currentNodeId);
+
+                if (!node) {
+                    console.log(`Node ${currentNodeId} not found`);
+                    return null;
+                }
+
+                console.log(`Checking node: ${node.id} (${node.indicator})`);
+
+                if (!this.isNodeActiveForWeek(node, currentWeek)) {
+                    console.log(`⏭️ Skipping - Not active for week ${currentWeek}`);
+                    currentNodeId = node.next;
+                    continue;
+                }
+
+                if (!this.isNodeValidForBreastfeeding(node, isBreastfeeding)) {
+                    console.log(`⏭️ Skipping - Not breastfeeding`);
+                    currentNodeId = node.next;
+                    continue;
+                }
+
+                const isEliminated = await this.isNodeEliminated(userId, node, flowInstance);
+                if (isEliminated) {
+                    console.log(`⏭️ Skipping - Eliminated (scored 2 for 2 weeks)`);
+                    currentNodeId = node.next;
+                    continue;
+                }
+
+                console.log(` Valid node found: ${node.id}\n`);
+                return currentNodeId;
+            }
+
+            console.log(`No more valid nodes - flow complete\n`);
+            return null;
         }
 
-        let currentNodeId = startingNodeId;
-        const user = await userModel.findById(userId);
-        const currentWeek = flowInstance.postpartumWeek;
-        const isBreastfeeding = user?.is_breastfeeding_currently ?? true;
+        // ONBOARDING flow logic with pregnancy skip
+        console.log(`Onboarding: checking if pregnancy-related questions should be skipped`);
 
-        console.log(`Finding next valid node starting from: ${currentNodeId}`);
-        console.log(`Week: ${currentWeek}, Breastfeeding: ${isBreastfeeding}`);
+        const user = await userModel.findById(userId);
+        const isNotPregnantYet = user?.onboarding_data?.is_not_pragnant_yet ?? false;
+
+        let currentNodeId = startingNodeId;
 
         while (currentNodeId) {
             const node = flowDefinition.nodes.find((n: IFlowNode) => n.id === currentNodeId);
@@ -580,34 +648,52 @@ class ChatFlowService {
                 return null;
             }
 
-            console.log(`Checking node: ${node.id} (${node.indicator})`);
-
-            if (!this.isNodeActiveForWeek(node, currentWeek)) {
-                console.log(`⏭️ Skipping - Not active for week ${currentWeek}`);
+            // Skip pregnancy-related questions if user is not pregnant yet
+            if (isNotPregnantYet && this.isPregnancyRelatedNode(node.id)) {
+                console.log(`Skipping pregnancy related node: ${node.id} (user not pregnant yet)`);
                 currentNodeId = node.next;
                 continue;
             }
 
-            if (!this.isNodeValidForBreastfeeding(node, isBreastfeeding)) {
-                console.log(`⏭️ Skipping - Not breastfeeding`);
-                currentNodeId = node.next;
-                continue;
+            if (!isNotPregnantYet && this.isFutureDeliveryRalatedNode(node.id)) {
+                const deliveryDate = user?.onboarding_data?.delivery_date;
+                if (deliveryDate) {
+                    const postpartumWeek = this.calculatePostpartumWeek(deliveryDate);
+                    if (postpartumWeek < 1) {
+                        console.log(
+                            `Skipping delivery_date node: ${node.id} (delivery date in future)`,
+                        );
+                        currentNodeId = node.next;
+                        continue;
+                    }
+                }
             }
 
-            const isEliminated = await this.isNodeEliminated(userId, node, flowInstance);
-            if (isEliminated) {
-                console.log(`⏭️ Skipping - Eliminated (scored 2 for 2 weeks)`);
-                currentNodeId = node.next;
-                continue;
-            }
-
-            console.log(` Valid node found: ${node.id}\n`);
+            console.log(`Valid onboarding node found: ${node.id}`);
             return currentNodeId;
         }
 
-        console.log(`No more valid nodes - flow complete\n`);
+        console.log(`No more valid nodes - onboarding complete\n`);
         return null;
     }
+
+    private isPregnancyRelatedNode(nodeId: string): boolean {
+        const pregnancyRelatedNodes = [
+            "conception",
+            "pregnancy_conditions",
+            "delivery_type",
+            "delivery_outcome",
+            "parity",
+        ];
+
+        return pregnancyRelatedNodes.includes(nodeId);
+    }
+
+    private isFutureDeliveryRalatedNode = (nodeId: string) => {
+        const futureDeliveryRelatedNodes = ["delivery_type", "delivery_outcome"];
+
+        return futureDeliveryRelatedNodes.includes(nodeId);
+    };
 
     private isNodeActiveForWeek(node: IFlowNode, currentWeek: number): boolean {
         if (node.validWeekStart === null && node.validWeekEnd === null) {
@@ -822,6 +908,7 @@ class ChatFlowService {
         const thankYouMessage = {
             type: "completion_message",
             text: text,
+            uuid: uuidv4(),
         };
 
         await new messageModel({

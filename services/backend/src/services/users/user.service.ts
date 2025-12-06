@@ -8,6 +8,8 @@ import { generateJWT } from "../../utils/functions/generateJWT";
 import { OAuth2Client } from "google-auth-library";
 import { IGoogleLoginPayload } from "../../types";
 import env from "../../config/env";
+import sendResponse from "../../utils/commonFunctions/sendResponse";
+import { StatusCodes } from "http-status-codes";
 
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
@@ -120,6 +122,7 @@ export default class UserService {
     };
 
     googleAuth = async (req: Request, res: Response) => {
+        console.log("===================CALLD");
         try {
             const { idToken, FCM_token } = req.body;
 
@@ -156,5 +159,16 @@ export default class UserService {
             console.error("Google Sign-In Error:", error);
             res.status(401).json({ message: "Invalid Google token." });
         }
+    };
+
+    getIsOnboarded = async (req: Request, res: Response) => {
+        const user = await UserModel.findById(req.user?._id).select("is_onboarded");
+        sendResponse({
+            data: user,
+            message: "User onboarded status fetched successfully",
+            response: res,
+            statusCode: StatusCodes.OK,
+            success: true,
+        });
     };
 }

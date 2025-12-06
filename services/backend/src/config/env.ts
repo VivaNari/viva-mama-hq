@@ -15,6 +15,8 @@ const env = {
     LOG_PRETTY_PRINT: process.env.LOG_PRETTY_PRINT === "true",
     LOG_FILE_PATH: process.env.LOG_FILE_PATH || "./logs",
     LOG_TO_FILE: process.env.LOG_TO_FILE === "true",
+    RAZORPAY_API_KEY: process.env.RAZORPAY_API_KEY,
+    RAZORPAY_SECRET_KEY: process.env.RAZORPAY_SECRET_KEY,
     isDevelopment(): boolean {
         return env.NODE_ENV === "development";
     },

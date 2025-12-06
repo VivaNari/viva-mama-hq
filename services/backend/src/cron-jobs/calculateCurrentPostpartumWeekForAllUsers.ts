@@ -7,18 +7,24 @@ export const calculateCurrentPostpartumWeek = async () => {
         {
             $set: {
                 current_postpartum_week: {
-                    $max: [
-                        0,
+                    $cond: [
+                        { $lt: [{ $subtract: ["$$NOW", "$date_of_delivery"] }, 0] },
+                        -1, // If delivery is in future, return -1
                         {
-                            $add: [
+                            $max: [
                                 1,
                                 {
-                                    $floor: {
-                                        $divide: [
-                                            { $subtract: ["$$NOW", "$date_of_delivery"] },
-                                            millisecondsPerWeek,
-                                        ],
-                                    },
+                                    $add: [
+                                        1,
+                                        {
+                                            $floor: {
+                                                $divide: [
+                                                    { $subtract: ["$$NOW", "$date_of_delivery"] },
+                                                    millisecondsPerWeek,
+                                                ],
+                                            },
+                                        },
+                                    ],
                                 },
                             ],
                         },
