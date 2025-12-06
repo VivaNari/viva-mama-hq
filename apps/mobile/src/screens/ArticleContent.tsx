@@ -1,166 +1,99 @@
-import React from 'react'
-import { Dimensions, FlatList, Image, ImageBackground, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
+import React, { useMemo, useState } from 'react'
+import { FlatList, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import FLCategoryItem from '../components/community/FLCategoryItem'
+import FLSubCategoryItem from '../components/community/FLSubCategoryItem'
 import SearchInput from '../components/SearchInput'
 import { contentsData } from '../data/contentsData'
 import { globalStyles } from '../public/styles'
-import { ICategory, IContent, ISubCategory } from '../types/content.types'
+import { ICategory } from '../types/content.types'
 import { colors } from '../public/assets/colors'
+import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
+import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
+import { vivaClubData } from '../data/vivaClubData'
+import { ArticleCard } from '../components/ArticleCard'
+import DashboardCard from '../components/dashboard/DashboardCard'
 
-const { width } = Dimensions.get("window");
+const ArticleContent = ({ navigation }: { navigation: { navigate: any } }) => {
+    const [searchData, setSearchData] = useState<string>("");
 
-const categoryItem = ({ item }: { item: ICategory }) => {
-    return (
-        <TouchableOpacity
-            activeOpacity={0.6}
-        >
-            <View
-                style={{
-                    alignItems: 'center',
-                    paddingBottom: 5
-                }}
-            >
-                <Image
-                    source={item.categoryIcon}
-                    width={200}
-                    height={100}
-                />
-            </View>
-            <Text>{item.categoryName}</Text>
-        </TouchableOpacity>
-    )
-}
+    const filteredData = useMemo(() => {
+        if (!searchData.trim()) return contentsData;
 
-const subCategories = ({ item }: { item: ICategory }) => {
-    return (
-        <View>
-            <FlatList
-                keyExtractor={(item) => item.id.toString()}
-                data={item.subCategories}
-                renderItem={subCategoryItem}
-            />
-        </View>
-    )
-}
+        return contentsData.map(category => ({
+            ...category,
+            subCategories: category.subCategories.filter(sub =>
+                sub.subCategoryName.toLowerCase().includes(searchData.toLowerCase())
+            )
+        })).filter(category => category.subCategories.length > 0); // remove empty categories
+    }, [searchData]);
 
-const subCategoryItem = ({ item }: { item: ISubCategory }) => {
-    return (
-        <View>
-            <View
-                style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between'
-                }}
-            >
-                <Text
-                    style={{
-                        fontSize: 16,
-                        fontWeight: 'bold'
-                    }}
-                >{item.subCategoryName}</Text>
-                <TouchableOpacity>
-                    <Text>See All</Text>
-                </TouchableOpacity>
-
-            </View>
-
-            <FlatList
-                keyExtractor={(item) => item.id.toString()}
-                data={item.contents}
-                renderItem={categoryArticle}
-                numColumns={2}
-                columnWrapperStyle={{
-                    justifyContent: 'space-between',
-                    gap: 10
-                }}
-                style={{
-                    paddingTop: 5
-                }}
-            />
-        </View>
-    )
-}
-
-const categoryArticle = ({ item }: { item: IContent }) => {
-    return (
-        <View
-            style={{
-                width: (width - 60) / 2, // adjust for padding & gap
-                marginBottom: 15,
-            }}
-        >
-            <View
-                style={{
-                    borderRadius: 20,
-                    overflow: 'hidden',
-                }}
-            >
-                <ImageBackground
-                    source={item.thumbnailImage}
-                    resizeMode="cover"
-                    style={{
-                        height: 180,
-                        width: '100%',
-                        borderRadius: 20,
-                        // overflow: 'hidden'
-                        justifyContent: "flex-end",
-                    }}>
-                    <View style={{
-                        ...StyleSheet.absoluteFillObject,
-                        backgroundColor: "rgba(0,0,0,0.4)",
-                    }} />
-                    <Text style={{
-                        color: colors.white,
-                        paddingHorizontal: 15,
-                        fontSize: 15,
-                        paddingVertical: 4,
-                    }}>{item.title}</Text>
-                </ImageBackground>
-            </View>
-        </View>
-    )
-}
-
-const ArticleContent = () => {
     return (
         <SafeAreaView style={[globalStyles.container]}>
             <FlatList
-                data={contentsData}
+                data={filteredData}
                 keyExtractor={(item: ICategory) => item.id.toString()}
                 renderItem={({ item }) => (
                     <FlatList
                         keyExtractor={(sub) => sub.id.toString()}
                         data={item.subCategories}
-                        renderItem={subCategoryItem}
-                        scrollEnabled={false} // disable nested scroll
+                        renderItem={({ item }) => FLSubCategoryItem({ item, navigation })}
+                        scrollEnabled={false}
+                        style={{ marginTop: 25 }}
+                        keyboardShouldPersistTaps="handled"
                     />
                 )}
                 ListHeaderComponent={
                     <>
+                        {/* Viva club redirect button */}
+                        <View
+                            style={{
+                                paddingHorizontal: 5
+                            }}
+                        >
+                            <DashboardCard>
+                                <FLVivaClubPostItem
+                                    isFromCommunityScreen={true}
+                                    item={vivaClubData[0]}
+                                />
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        paddingBottom: 20,
+
+                                    }}
+                                >
+
+                                    <GradientButtonWithSlightRadius
+                                        title='Go to Viva Club'
+                                        onPress={() => navigation.navigate("VivaClub")}
+                                    />
+                                </View>
+                            </DashboardCard>
+                        </View>
                         {/* Search */}
                         <View style={{ marginBottom: 15 }}>
-                            <SearchInput />
+                            <SearchInput setSearchData={setSearchData} />
                         </View>
 
                         {/* Categories */}
                         <FlatList
                             keyExtractor={(item: ICategory) => item.id.toString()}
                             data={contentsData}
-                            renderItem={categoryItem}
+                            renderItem={({ item }) => FLCategoryItem({ item, navigation })}
                             numColumns={3}
                             columnWrapperStyle={{
                                 justifyContent: 'space-between',
                                 alignItems: 'flex-end',
                                 flexWrap: 'wrap',
                             }}
-                            style={{ paddingHorizontal: 20, marginBottom: 20 }}
+                            style={{ paddingHorizontal: 30, marginBottom: 20 }}
                             scrollEnabled={false}
+                            keyboardShouldPersistTaps="handled"
                         />
                     </>
                 }
-                contentContainerStyle={{}} // so last item is visible above tab bar
             />
-
         </SafeAreaView>
     )
 }

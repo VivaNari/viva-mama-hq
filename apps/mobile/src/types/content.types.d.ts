@@ -3,7 +3,7 @@ export interface IContent {
   title: string;
   author: string;
   thumbnailImage: number;
-  isLiked: boolean;
+  isBookmarked: boolean;
   likes: number;
   comments: number;
   content: string;

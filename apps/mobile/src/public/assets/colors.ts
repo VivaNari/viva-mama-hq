@@ -1,6 +1,9 @@
 export const colors = {
+  pageBG: '#f5f5f5',
+  // pageBG: '#fffafa',
   primary: '#0A2463',
   secondary: '#8B61C2',
+  logout: 'rgba(255, 25, 74, 1)',
   text: '#212121',
   border: '#E0E0E0',
   white: '#FFFFFF',
@@ -13,4 +16,9 @@ export const colors = {
   error: '#F44336',
   offWhite: '#D9D9D9',
   purple: '#8B80FE',
+  subscriptionTabActiveBG: 'rgba(139, 97, 194, 1)',
+  subscriptionTabInactiveBG: 'rgba(190, 163, 248, 1)',
+  SubscriptionOptionsBG: 'rgba(232, 215, 255, 1)',
+  profileOptionsBG: 'rgba(224, 200, 255, 1)',
+  notoficatioBorder: 'rgba(139, 127, 252, 1)',
 };

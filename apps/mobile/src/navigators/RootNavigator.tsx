@@ -1,71 +1,86 @@
+// RootNavigator.tsx
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import React, { useEffect, useRef } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { useAuth } from "../context/AuthContext";
+import { colors } from "../public/assets/colors";
 
-import * as React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Onboarding from '../screens/OnboardingSteps';
-import { DashboardTabNavigator } from './TabNavigator';
-import Landing from '../screens/Landing';
-import LoginwithPhone from '../screens/LoginwithPhone';
-import Products from '../screens/Products';
-import ArticleContent from '../screens/ArticleContent';
+import AppStack from "./stacks/AppStack";
+import AuthStack from "./stacks/AuthStack";
+import OnboardingStack from "./stacks/OnboardingStack";
 
 const Stack = createNativeStackNavigator();
 
-const RootStack = () => {
-    return (
-        <Stack.Navigator>
-            <Stack.Screen
-                name="Landing"
-                component={Landing}
-                options={{
-                    headerShown: false,
-                }}
-            />
-            <Stack.Screen
-                name="LoginWithPhone"
-                component={LoginwithPhone}
-                options={{
-                    headerShown: false,
-                }}
-            />
-            <Stack.Screen
-                name="Onboarding"
-                component={Onboarding}
-                options={{
-                    headerShown: false,
-                }}
-            />
-            <Stack.Screen
-                options={{
-                    headerShown: false,
-                }}
-                name="DashboardTabNavigator"
-                component={DashboardTabNavigator}
-            />
-            <Stack.Screen
-                options={{
-                    headerShown: true,
-                    title: 'Suggested Products',
-                }}
-                name="Products"
-                component={Products}
-            />
-            <Stack.Screen
-                options={{
-                    headerShown: true,
-                    title: 'Content',
-                }}
-                name="Content"
-                component={ArticleContent}
-            />
-        </Stack.Navigator>
-    );
-}
-
 export default function RootNavigator() {
+    const { userToken, isLoading, isFullyOnboarded, onboardingStatus } = useAuth();
+    const navigationRef = useRef<any>(null);
+
+    // Track previous auth state to detect changes
+    const prevAuthState = useRef({
+        userToken: userToken,
+        isOnboarded: isFullyOnboarded()
+    });
+
+    useEffect(() => {
+        // Only reset navigation if auth state actually changed
+        const currentIsOnboarded = isFullyOnboarded();
+        const authStateChanged =
+            prevAuthState.current.userToken !== userToken ||
+            prevAuthState.current.isOnboarded !== currentIsOnboarded;
+
+        if (!isLoading && authStateChanged && navigationRef.current) {
+            // Determine target stack
+            let targetStack = "AuthStack";
+            if (userToken) {
+                targetStack = currentIsOnboarded ? "AppStack" : "OnboardingStack";
+            }
+
+            console.log("[ROOT_NAVIGATOR] Auth state changed, navigating to:", targetStack);
+
+            // Reset navigation to the appropriate stack
+            setTimeout(() => {
+                navigationRef.current?.reset({
+                    index: 0,
+                    routes: [{ name: targetStack }],
+                });
+            }, 50);
+
+            // Update previous state
+            prevAuthState.current = {
+                userToken: userToken,
+                isOnboarded: currentIsOnboarded
+            };
+        }
+    }, [userToken, onboardingStatus.is_questionnaire_completed, onboardingStatus.is_subscription_completed, isLoading]);
+
+    if (isLoading) {
+        return (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+        );
+    }
+
+    // Determine initial route
+    let initialRouteName = "AuthStack";
+    if (userToken) {
+        initialRouteName = isFullyOnboarded() ? "AppStack" : "OnboardingStack";
+    }
+
     return (
-        <NavigationContainer>
-            <RootStack />
+        <NavigationContainer ref={navigationRef}>
+            <Stack.Navigator
+                initialRouteName={initialRouteName}
+                screenOptions={{
+                    headerShown: false,
+                    animation: "fade"
+                }}
+            >
+                <Stack.Screen name="AuthStack" component={AuthStack} />
+                <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
+                <Stack.Screen name="AppStack" component={AppStack} />
+            </Stack.Navigator>
         </NavigationContainer>
     );
 }

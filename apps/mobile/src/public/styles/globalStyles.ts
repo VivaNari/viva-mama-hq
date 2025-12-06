@@ -1,14 +1,20 @@
 import { StyleSheet } from 'react-native';
 import { colors } from '../assets/colors';
+import { EFontWeight, getFontFamily } from '../../utils/fontFamily';
 
 export const globalStyles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.pageBG,
+  },
+  chatContainer: {
+    flex: 1,
+    paddingHorizontal: 12,
+    backgroundColor: colors.pageBG,
+    marginBottom: 10,
   },
   headingxl: {
-    fontWeight: 600,
     fontStyle: 'normal',
     fontSize: 20,
     textAlign: 'center',
@@ -45,5 +51,30 @@ export const globalStyles = StyleSheet.create({
     backgroundColor: colors.primary,
     height: 52,
     justifyContent: 'center',
+  },
+  card: {
+    borderWidth: 2,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    padding: 20,
+    marginVertical: 10,
+    borderRadius: 10,
+  },
+  fontLight: {
+    fontFamily: getFontFamily(EFontWeight.LIGHT),
+  },
+  fontRegular: {
+    fontFamily: getFontFamily(EFontWeight.REGULAR),
+  },
+  fontMedium: {
+    fontFamily: getFontFamily(EFontWeight.MEDIUM),
+  },
+  fontBold: {
+    fontFamily: getFontFamily(EFontWeight.BOLD),
+  },
+  fontExtraBold: {
+    fontFamily: getFontFamily(EFontWeight.EXTRABOLD),
+  },
+  fontSemiBold: {
+    fontFamily: getFontFamily(EFontWeight.SEMIBOLD),
   },
 });
