@@ -1,0 +1,38 @@
+version: "1.0"
+
+services:
+    backend:
+        container_name: core-backend
+        build:
+            context: .
+            dockerfile: vivamama-backend-server:latest
+        env_file:
+            - .env
+        ports:
+            - "4000:4000"
+        depends_on:
+            - redis
+            - mongo
+        restart: always
+
+    redis:
+        container_name: redis-server
+        image: redis:7.2-alpine
+        ports:
+            - "6379:6379"
+        command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+        environment:
+            - REDIS_PASSWORD=${REDIS_PASSWORD}
+        restart: always
+
+    mongo:
+        container_name: mongodb
+        image: mongo:6.0
+        ports:
+            - "27017:27017"
+        volumes:
+            - mongo_data:/data/db
+        restart: always
+
+volumes:
+    mongo_data:

@@ -349,7 +349,7 @@ class ChatFlowService {
                     await redisPublisherService.publishScoreJob(
                         userId,
                         indicators,
-                        user?.FCM_token!,
+                        user?.FCM_token as string,
                     );
                     console.log(`Score processing job published.\n`);
                 }

@@ -1,0 +1,98 @@
+name: Deploy to AWS ECS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: vivamama-backend
+  ECS_CLUSTER: vivamama-cluster
+  ECS_SERVICE: vivamama-backend-service
+  ECS_TASK_DEFINITION: vivamama-task-definition
+  CONTAINER_NAME: backend
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy to ECS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push backend image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Download task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ env.ECS_TASK_DEFINITION }} \
+            --query taskDefinition > task-definition.json
+
+      - name: Fill in the new image ID in the Amazon ECS task definition
+        id: task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build-image.outputs.image }}
+          environment-variables: |
+            MONGO_URI=${{ secrets.MONGO_URI }}
+            PORT=${{ vars.PORT }}
+            TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
+            TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}
+            TWILIO_PHONE_NUMBER=${{ secrets.TWILIO_PHONE_NUMBER }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            CRYPTO_PASSWORD=${{ secrets.CRYPTO_PASSWORD }}
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            LOG_LEVEL=${{ vars.LOG_LEVEL }}
+            LOG_PRETTY_PRINT=${{ vars.LOG_PRETTY_PRINT }}
+            LOG_FILE_PATH=${{ vars.LOG_FILE_PATH }}
+            NODE_ENV=${{ vars.NODE_ENV }}
+            SERVICE_NAME=${{ vars.SERVICE_NAME }}
+            SERVICE_VERSION=${{ vars.SERVICE_VERSION }}
+            ENABLE_PII_REDACTION=${{ vars.ENABLE_PII_REDACTION }}
+            LOG_TO_FILE=${{ vars.LOG_TO_FILE }}
+            RAZORPAY_API_KEY=${{ secrets.RAZORPAY_API_KEY }}
+            RAZORPAY_SECRET_KEY=${{ secrets.RAZORPAY_SECRET_KEY }}
+            REDIS_HOST=${{ vars.REDIS_HOST }}
+            REDIS_PORT=${{ vars.REDIS_PORT }}
+            REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+
+      - name: Deploy Amazon ECS task definition
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        with:
+          task-definition: ${{ steps.task-def.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      - name: Deployment Summary
+        run: |
+          echo "✅ Deployment completed successfully!"
+          echo "🏷️ Image: ${{ steps.build-image.outputs.image }}"
+          echo "🔧 Service: ${{ env.ECS_SERVICE }}"
+          echo "📦 Cluster: ${{ env.ECS_CLUSTER }}"

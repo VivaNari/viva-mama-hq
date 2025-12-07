@@ -11,7 +11,9 @@ RUN npm ci --legacy-peer-deps
 
 # Copy TypeScript config and source code
 COPY tsconfig.json ./
+COPY VivaMamaServiceAccountKey.json ./
 COPY src ./src
+# COPY .env ./
 
 # Build TypeScript to JavaScript
 RUN npm run build
@@ -28,7 +30,10 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --legacy-peer-deps --only=production && npm cache clean --force
+# RUN npm ci --legacy-peer-deps --only=production && npm cache clean --force
+RUN npm config set ignore-scripts true \
+    && npm ci --legacy-peer-deps --only=production \
+    && npm cache clean --force
 
 # Copy built JavaScript files from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/build ./build
@@ -40,7 +45,7 @@ COPY --chown=nodejs:nodejs VivaMamaServiceAccountKey.json ./
 USER nodejs
 
 # Expose port (adjust if your app uses different port)
-EXPOSE 3000
+EXPOSE 4000
 
 # Set environment to production
 ENV NODE_ENV=production
