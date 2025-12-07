@@ -16,8 +16,12 @@ app.use(express.json());
 app.use(correlationIdMiddleware);
 app.use(requestLoggerMiddleware);
 
-app.get("/healthz", (_, res) => {
-    res.json({ message: "You have reached the root api endpoint" });
+app.get("/", (_, res) => {
+    res.status(200).json({ message: "You have reached the root api endpoint" });
+});
+
+app.get("/health", (_, res) => {
+    res.status(200).json({ status: "ok" });
 });
 
 app.use("/api/v1", userRouter);
