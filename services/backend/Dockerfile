@@ -15,6 +15,9 @@ COPY VivaMamaServiceAccountKey.json ./
 COPY src ./src
 # COPY .env ./
 
+# If tests fail, Docker build stops here
+RUN npm test
+
 # Build TypeScript to JavaScript
 RUN npm run build
 
