@@ -19,8 +19,7 @@ import {
 } from "../../types/chat.types";
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
-// @ts-ignore
-import { v4 as uuidv4 } from "uuid";
+// import { v4 as uuidv4 } from "uuid";
 import { IUser } from "../../types";
 
 // const QUESTION_FETCH_DELAY_MS = 2000;
@@ -830,7 +829,8 @@ class ChatFlowService {
         console.log(`66666`);
 
         const payload: QuestionPayload & { askId: any; uuid: any } = {
-            uuid: questionOvverrideId || uuidv4(),
+            // uuid: questionOvverrideId || uuidv4(),
+            uuid: questionOvverrideId,
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
             text: questionTextOverride ? questionTextOverride : currentNode.text || "",
@@ -908,7 +908,7 @@ class ChatFlowService {
         const thankYouMessage = {
             type: "completion_message",
             text: text,
-            uuid: uuidv4(),
+            // uuid: uuidv4(),
         };
 
         await new messageModel({
@@ -1028,7 +1028,7 @@ class ChatFlowService {
                 },
             };
 
-            await admin.messaging().send(message);
+            await admin!.messaging().send(message);
             console.log(`📬 Sent silent push for question ${currentNode.id}`);
 
             await new messageModel({
