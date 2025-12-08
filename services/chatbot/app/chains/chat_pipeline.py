@@ -94,7 +94,45 @@ def chat_once(
     redacted_text, redaction_report = redact(user_text)
     safe_text, scope_notes = enforce_scope(redacted_text)
 
+    print("safe_text-->",safe_text,"scope_notes--->",scope_notes)
+
+    if scope_notes["offtopic"]:
+        # refusal_message = (
+        #     "I'm sorry, but I'm a postpartum wellness assistant. "
+        #     "I can only help with questions related to postpartum care, recovery, and wellness.\n\n"
+        #     "— *Wellness information only; not medical advice.*"
+        # )
+
+        # Store both turns in memory for continuity
+        # memory.append(session_id, "user", user_text)
+        # memory.append(session_id, "assistant", safe_text)
+
+        return {
+            "session_id": session_id,
+            "answer": safe_text,  
+            "intent": "OUT_OF_SCOPE",
+            "redaction": redaction_report,
+            "scope": scope_notes,
+            "used_rag": False,
+            "rag_best_score": 0.0,
+            "products": [],
+            "escalation_banner": "",
+            "memory_turns": memory.get_last_n(session_id, history_window),
+        }
+    
+
     intent = route_intent(safe_text)
+
+    empathetic_prefix = ""
+    if intent != "PRODUCT_QUERY":
+        empathetic_prefix = (
+            "- Begin with a warm, validating emotional acknowledgment.\n"
+            "- Use extra empathetic tone because the user may need comfort.\n"
+            "- Respond with warmth and empathy — imagine you’re cmforting and guiding a new mother.\n"
+            "- Acknowledge the user’s feelings before giving information (e.g., 'That sounds challenging, but you’re doing great!').\n"
+            "- Provide clear, simple, and supportive steps.\n"
+            "- Answer empathetically with clear, simple steps.\n"
+        )
 
     products: List[Dict[str, Any]] = []
     if intent == "PRODUCT_QUERY":
@@ -111,21 +149,41 @@ def chat_once(
 
     history_block = _format_history(prior_turns)
     product_block = _format_product_section(products)
+    user_name = "Diya"
+    # prompt = (
+    #     f"{SYSTEM_PROMPT}\n\n"
+    #     f"Conversation history (recent):\n{history_block if history_block else 'None'}\n\n"
+    #     f"USER QUESTION:\n{safe_text}\n\n"
+    #     f"CONTEXT (RAG):\n{context_block}\n\n"
+    #     f"PRODUCT_CANDIDATES:\n{product_block}\n\n"
+    #     "TASK:\n"
+    #     f"- Address the user by their name ({user_name}) at the start of your response.\n"
+    #     f"{empathetic_prefix}"
+    #     "- Respond with warmth and empathy — imagine you’re cmforting and guiding a new mother.\n"
+    #     "- Acknowledge the user’s feelings before giving information (e.g., 'That sounds challenging, but you’re doing great!').\n"
+    #     "- Provide clear, simple, and supportive steps.\n"
+    #     "- Answer empathetically with clear, simple steps.\n"
+    #     "- If PRODUCT_CANDIDATES are relevant, mention up to 1–2 with usage tips; never invent products.\n"
+    #     "- If CONTEXT is None, answer from general postpartum wellness knowledge.\n"
+    #     "- Do not provide diagnosis, prescriptions, or dosages.\n"
+    #     "- End with: 'Wellness information only; not medical advice.'"
+    # )
+
 
     prompt = (
-        f"{SYSTEM_PROMPT}\n\n"
-        f"Conversation history (recent):\n{history_block if history_block else 'None'}\n\n"
-        f"USER QUESTION:\n{safe_text}\n\n"
-        f"CONTEXT (RAG):\n{context_block}\n\n"
-        f"PRODUCT_CANDIDATES:\n{product_block}\n\n"
-        "TASK:\n"
-        "- Answer empathetically with clear, simple steps.\n"
-        "- If PRODUCT_CANDIDATES are relevant, mention up to 1–2 with usage tips; never invent products.\n"
-        "- If CONTEXT is None, answer from general postpartum wellness knowledge.\n"
-        "- Do not provide diagnosis, prescriptions, or dosages.\n"
-        "- End with: 'Wellness information only; not medical advice.'"
-    )
-
+            f"{SYSTEM_PROMPT}\n\n"
+            f"Conversation history (recent):\n{history_block if history_block else 'None'}\n\n"
+            f"USER QUESTION:\n{safe_text}\n\n"
+            f"CONTEXT (RAG):\n{context_block}\n\n"
+            f"PRODUCT_CANDIDATES:\n{product_block}\n\n"
+            "TASK:\n"
+            f"- Address the user by their name ({user_name}) at the start of your response.\n"
+            f"{empathetic_prefix}"
+            "- If PRODUCT_CANDIDATES are relevant, mention up to 1–2 with usage tips; never invent products.\n"
+            "- If CONTEXT is None, answer from general postpartum wellness knowledge.\n"
+            "- Do not provide diagnosis, prescriptions, or dosages.\n"
+            "- End with: 'Wellness information only; not medical advice.'"
+        )
     llm = get_llm()
     llm_response = llm.invoke(prompt)
     draft_answer = llm_response.content if hasattr(llm_response, "content") else str(llm_response)
