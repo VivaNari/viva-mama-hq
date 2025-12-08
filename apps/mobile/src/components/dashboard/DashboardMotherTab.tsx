@@ -123,23 +123,26 @@ const DashboardMotherTab = ({ score }: { score: string | null }) => {
                         </Text>
 
                     </View>
-                    <View>
-                        <Text style={{ color: colors.black, fontSize: 12, ...globalStyles.fontSemiBold, marginTop: 10 }}>
-                            {
-                                score === null ? 'No Score Available' : `Score: ${score}`
-                            }
-                        </Text>
-                    </View>
+                    
                     <View
                         style={{
                             paddingHorizontal: 20
                         }}
                     >
                         <VivaScoreGauge percentage={fullReportData.vivaRecoveryScroreInPercentage} />
+                        <View style={{
+                            marginTop: -100,
+                        }}>
+                                <Text style={{ color: colors.black, fontSize: 40, textAlign:"center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
+                                    {
+                                        `${String(score).split(".")[0]}`
+                                    }
+                                </Text>
+                        </View>
                         <View
                             style={{
                                 flexDirection: 'row',
-                                marginTop: -30,
+                                
                             }}
                         >
                             <GradientButtonWithSlightRadius
@@ -150,6 +153,7 @@ const DashboardMotherTab = ({ score }: { score: string | null }) => {
                         </View>
                     </View>
                 </View>
+                
 
                 {/* Weekly Check In */}
                 <View
