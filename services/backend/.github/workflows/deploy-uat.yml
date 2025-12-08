@@ -3,7 +3,6 @@ name: Build, Test, Audit & Push Docker
 on:
   push:
     branches:
-      - main
       - uat
   workflow_dispatch:
 
