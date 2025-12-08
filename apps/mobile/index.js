@@ -6,8 +6,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decodeToken } from './src/utils/decodeJWTToken';
 import { chatDB } from './src/db/sqlite';
 
-const FLOW_SLUG = 'weekly-check-in-v1';
-
 const backgroundMessageHandler = async (remoteMessage) => {
     console.log('[backgroundMessageHandler] Silent push received:', remoteMessage);
 
@@ -33,6 +31,22 @@ const backgroundMessageHandler = async (remoteMessage) => {
             console.log('[backgroundMessageHandler] No userId found, cannot save');
             return;
         }
+
+        //  Read onboarding status EXACTLY as stored by AuthContext
+        const stored = await AsyncStorage.getItem('onboardingStatus');
+        let onboardingStatus = null;
+
+        if (stored) {
+            onboardingStatus = JSON.parse(stored);
+        }
+
+        const isFullyOnboarded =
+        onboardingStatus?.is_questionnaire_completed &&
+        onboardingStatus?.is_subscription_completed;
+
+        const flowSlug = isFullyOnboarded ? 'weekly-check-in-v1' : 'onboarding-flow-v2';
+
+        console.log("[backgroundMessageHandler] Flow slug:", flowSlug);
 
         // Initialize database
         await chatDB.init();

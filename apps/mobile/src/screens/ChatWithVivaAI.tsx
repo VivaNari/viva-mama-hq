@@ -40,7 +40,11 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
 
     const { userToken, userId, isFullyOnboarded, completeQuestionnaire } = useAuth();
 
-    let FLOW_SLUG = isFullyOnboarded() ? route.params?.flowSlug as string : 'onboarding-flow-v2';
+    let FLOW_SLUG = isFullyOnboarded() ? 'weekly-check-in-v1' : 'onboarding-flow-v2';
+
+    useEffect(() => {
+        console.log("FLOW_SLUG =>", FLOW_SLUG);
+    }, [FLOW_SLUG])
 
     const navigation = useNavigation();
     const [inputText, setInputText] = useState('');
@@ -48,6 +52,10 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
     const [animatingMessageId, setAnimatingMessageId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isFlowComplete, setIsFlowComplete] = useState(false);
+
+    useEffect(()=>{
+        console.log(isFlowComplete);
+    }, [isFlowComplete])
 
     const eventSourceRef = useRef<EventSource | null>(null);
     const scrollViewRef = useRef<ScrollView | null>(null);

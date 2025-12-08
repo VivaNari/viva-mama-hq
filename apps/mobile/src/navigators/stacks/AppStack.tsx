@@ -25,6 +25,7 @@ import VaccinationLog from '../../screens/VaccinationLog';
 import VivaClubPost from '../../screens/VivaClubPost';
 import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
 import { DashboardTabs } from '../tabs/DashboardTabs';
+import ChatWithVivaAi from '../../screens/ChatWithVivaAI';
 
 const Stack = createNativeStackNavigator();
 
@@ -42,6 +43,7 @@ const AppStack = () => {
 
             }}
         >
+            
             <Stack.Screen
                 name="DashboardTabNavigator"
                 component={DashboardTabs}
@@ -87,6 +89,14 @@ const AppStack = () => {
                 }}
                 name="Content"
                 component={ArticleContent}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: "Viva AI"
+                }}
+                name="ChatWithVivaAI"
+                component={ChatWithVivaAi as any}
             />
             <Stack.Screen
                 options={{
