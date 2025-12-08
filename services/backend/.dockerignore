@@ -25,11 +25,11 @@ coverage
 *.swo
 
 # Config files
-.env
-.env.*
-.env.local
-.env.development
-.env.test
+# .env
+# .env.*
+# .env.local
+# .env.development
+# .env.test
 
 # Linting
 .eslintrc

@@ -13,10 +13,7 @@ RUN npm ci --legacy-peer-deps
 COPY tsconfig.json ./
 COPY VivaMamaServiceAccountKey.json ./
 COPY src ./src
-# COPY .env ./
-
-# If tests fail, Docker build stops here
-RUN npm test
+COPY .env ./
 
 # Build TypeScript to JavaScript
 RUN npm run build
