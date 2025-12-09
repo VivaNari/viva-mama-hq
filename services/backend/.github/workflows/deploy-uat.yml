@@ -1,4 +1,4 @@
-name: Build, Test, Audit & Push Docker
+name: Deploy Vivamama Core Server
 
 on:
   push:
