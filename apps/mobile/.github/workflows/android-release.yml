@@ -134,7 +134,7 @@ jobs:
         with:
           name: android-apk-release
           path: android/app/build/outputs/apk/release/*.apk
-          retention-days: 30
+          retention-days: 45
 
       # Step 15: Upload AAB
       - name: Upload AAB Artifacts
@@ -142,7 +142,7 @@ jobs:
         with:
           name: android-aab-release
           path: android/app/build/outputs/bundle/release/*.aab
-          retention-days: 30
+          retention-days: 45
 
       # Step 16: Upload mapping files
       - name: Upload ProGuard mapping files
