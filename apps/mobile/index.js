@@ -44,9 +44,7 @@ const backgroundMessageHandler = async (remoteMessage) => {
         onboardingStatus?.is_questionnaire_completed &&
         onboardingStatus?.is_subscription_completed;
 
-        const flowSlug = isFullyOnboarded ? 'weekly-check-in-v1' : 'onboarding-flow-v2';
-
-        console.log("[backgroundMessageHandler] Flow slug:", flowSlug);
+        const FLOW_SLUG = isFullyOnboarded ? 'weekly-check-in-v1' : 'onboarding-flow-v2';
 
         // Initialize database
         await chatDB.init();

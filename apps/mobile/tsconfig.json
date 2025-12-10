@@ -3,6 +3,6 @@
   "include": ["**/*.ts", "**/*.tsx", "react-native.config.js", "index.js"],
   "exclude": ["**/node_modules", "**/Pods"],
   "compilerOptions": {
-    "types": ["node"]
+    "types": ["node", "jest"]
   }
 }

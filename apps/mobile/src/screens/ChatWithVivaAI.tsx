@@ -42,10 +42,6 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
 
     let FLOW_SLUG = isFullyOnboarded() ? 'weekly-check-in-v1' : 'onboarding-flow-v2';
 
-    useEffect(() => {
-        console.log("FLOW_SLUG =>", FLOW_SLUG);
-    }, [FLOW_SLUG])
-
     const navigation = useNavigation();
     const [inputText, setInputText] = useState('');
     const [chatHistory, setChatHistory] = useState<IDBChatMessage[]>([]);
