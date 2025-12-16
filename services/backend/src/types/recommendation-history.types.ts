@@ -1,13 +1,14 @@
-import { Schema, Document } from "mongoose";
+import { Schema, Document, Types } from "mongoose";
+import { CategoryKey } from "./score-engine.types";
 
-export interface IRecommendationHistory extends Document {
-    userId: Schema.Types.ObjectId;
+export interface IRecommendationHistory {
+    userId: Schema.Types.ObjectId | string;
     week: number;
     finalScore: number;
     zone: "RED" | "YELLOW" | "GREEN";
-    weakestCategory: "physical" | "lactation" | "emotional";
+    weakestCategory: CategoryKey;
     breastfeeding: boolean;
-    recommendationId: Schema.Types.ObjectId;
+    recommendationId: Types.ObjectId | string;
     categoryScores: {
         physical: { raw: number; weighted: number };
         lactation: { raw: number; weighted: number };

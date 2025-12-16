@@ -23,7 +23,7 @@ export default class ScoreRecommendationHandler {
             console.log(`Recommendation fetched: ${recommendation._id}`);
 
             // Store History
-            await RecommendationHistoryService.create({
+            await RecommendationHistoryService.createRH({
                 userId: scoreResult.userId,
                 week: scoreResult.week,
                 finalScore: scoreResult.finalScore,

@@ -13,7 +13,7 @@ recommendationHistoryRouter.get(
 recommendationHistoryRouter.get(
     "/user/recommendations-formatted",
     authMiddleware("header"),
-    recommendationhistoryController.getAllFormatedrecommendations,
+    recommendationhistoryController.getAllFormatedRecommendations,
 );
 
 export default recommendationHistoryRouter;

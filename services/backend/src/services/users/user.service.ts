@@ -12,16 +12,17 @@ import sendResponse from "../../utils/commonFunctions/sendResponse";
 import { StatusCodes } from "http-status-codes";
 import recommendationHistoryModel from "../../models/recommendation-history.model";
 import { messages } from "../../constants/messages";
+import { IRecommendationHistory } from "../../types/recommendation-history.types";
 
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 export default class UserService {
     getUserbyAuthToken = async (req: Request, res: Response) => {
         try {
-            if (1) {
+            if (!req.user) {
                 throw new Error(messages.USER_FETCH_FAILED);
             }
-            const user = await UserModel.findById(req.user?._id);
+            const user = await UserModel.findById(req.user._id);
             sendResponse({
                 data: user,
                 message: messages.USER_FETCHED_SUCCESSFULLY,
@@ -179,22 +180,5 @@ export default class UserService {
             console.error("Google Sign-In Error:", error);
             res.status(401).json({ message: "Invalid Google token." });
         }
-    };
-
-    getCheckinScoreData = async (req: Request, res: Response) => {
-        const recommendationHistory = await recommendationHistoryModel
-            .findOne({
-                userId: req.user?._id,
-            })
-            .sort({ createdAt: -1 })
-            .select(["zone", "finalScore", "week"]);
-
-        sendResponse({
-            data: recommendationHistory,
-            message: "Score Data Fetched successfully",
-            response: res,
-            statusCode: StatusCodes.OK,
-            success: true,
-        });
     };
 }
