@@ -10,6 +10,7 @@ const flowInstanceSchema: Schema<IFlowInstance> = new Schema<IFlowInstance>(
         flowSlug: String,
         version: Number,
         postpartumWeek: Number,
+        postpartumDays: Number,
         state: String,
         cursorNodeId: {
             type: String,

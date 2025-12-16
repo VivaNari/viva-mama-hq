@@ -40,6 +40,7 @@ const authMiddleware = (tokenSource: TTokenSource = "header") => {
                 }
 
                 req.user = user as any;
+                console.log("Hiiii");
                 next();
             });
         } catch (errors: any) {

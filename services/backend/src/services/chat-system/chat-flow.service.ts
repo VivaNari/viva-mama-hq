@@ -20,7 +20,9 @@ import {
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
 // import { v4 as uuidv4 } from "uuid";
-import { IUser } from "../../types";
+import { EUserCategory, IUser } from "../../types";
+import UserModel from "../../models/user.model";
+import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
 
 // const QUESTION_FETCH_DELAY_MS = 2000;
 const STOPPED_BREASTFEEDING_SCORE = -1;
@@ -93,7 +95,7 @@ class ChatFlowService {
                 const startNodeId = flowDefinition.startNodeId;
 
                 const user = (await userModel.findById(userId)) as IUser;
-                const currentWeek = user.current_postpartum_week;
+                const currentWeek = user.current_weekdays.weeks;
 
                 flowInstance = await new flowInstanceModel({
                     userId: userId,
@@ -461,14 +463,28 @@ class ChatFlowService {
                 case "delivery_date":
                     if (freeText == "not_pragnent") {
                         user.onboarding_data.is_not_pragnant_yet = true;
+                        user.user_category = EUserCategory.NN;
                         break;
                     }
                     const deliveryDate = new Date(freeText!);
                     user.onboarding_data.delivery_date = deliveryDate;
-                    const postpartumWeek = this.calculatePostpartumWeek(deliveryDate);
-                    user.current_postpartum_week = postpartumWeek;
+                    const user_current_week_and_days = calculateUserCurrentWeek(deliveryDate);
+
+                    user.user_category =
+                        user_current_week_and_days.mode === "pregnancy"
+                            ? EUserCategory.NP
+                            : EUserCategory.PP;
+
+                    // user.current_postpartum_week = postpartumWeek;
+                    await UserModel.findOneAndUpdate(
+                        { _id: user._id },
+                        { $set: { current_weekdays: user_current_week_and_days } },
+                        { new: true },
+                    );
                     user.onboarding_data.is_not_pragnant_yet = false;
-                    console.log(` Saved delivery_date: ${deliveryDate}, week: ${postpartumWeek}`);
+                    console.log(
+                        ` Saved delivery_date: ${deliveryDate}, week: ${user_current_week_and_days.weeks}`,
+                    );
                     break;
 
                 case "delivery_type":
@@ -555,25 +571,6 @@ class ChatFlowService {
             .map((opt) => opt.value);
     }
 
-    // private calculatePostpartumWeek(deliveryDate: Date): number {
-    //     const today = new Date();
-    //     const diffMs = today.getTime() - deliveryDate.getTime();
-    //     const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    //     const weeks = Math.floor(diffDays / 7);
-    //     return Math.max(1, weeks);
-    // }
-
-    private calculatePostpartumWeek(deliveryDate: Date): number {
-        const today = new Date();
-        const diffMs = today.getTime() - deliveryDate.getTime();
-        const diffDays = diffMs / (1000 * 60 * 60 * 24);
-        const weeks = Math.floor(diffDays / 7);
-        if (diffMs < 0) {
-            return -1;
-        }
-
-        return Math.max(1, weeks + 1);
-    }
     private async findNextValidNode(
         userId: string,
         flowInstance: any,
@@ -657,8 +654,8 @@ class ChatFlowService {
             if (!isNotPregnantYet && this.isFutureDeliveryRalatedNode(node.id)) {
                 const deliveryDate = user?.onboarding_data?.delivery_date;
                 if (deliveryDate) {
-                    const postpartumWeek = this.calculatePostpartumWeek(deliveryDate);
-                    if (postpartumWeek < 1) {
+                    const postpartumWeek = calculateUserCurrentWeek(deliveryDate);
+                    if (postpartumWeek.mode == "pregnancy") {
                         console.log(
                             `Skipping delivery_date node: ${node.id} (delivery date in future)`,
                         );

@@ -27,7 +27,7 @@ export default class ScoreEngineService {
 
         return this.calculate(
             indicators,
-            user.current_postpartum_week || 1,
+            user.current_weekdays.weeks || 1,
             user.is_breastfeeding_currently ?? true,
             String(userId),
         );

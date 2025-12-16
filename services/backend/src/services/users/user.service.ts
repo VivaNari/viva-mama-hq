@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import sendSMS from "../twilio/sendSMS";
 import { addMinutesToDate } from "../date/date.service";
 import { decode, encode } from "../crypto/crypto.service";
@@ -10,10 +10,29 @@ import { IGoogleLoginPayload } from "../../types";
 import env from "../../config/env";
 import sendResponse from "../../utils/commonFunctions/sendResponse";
 import { StatusCodes } from "http-status-codes";
+import recommendationHistoryModel from "../../models/recommendation-history.model";
+import { messages } from "../../constants/messages";
 
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
 export default class UserService {
+    getUserbyAuthToken = async (req: Request, res: Response) => {
+        try {
+            if (1) {
+                throw new Error(messages.USER_FETCH_FAILED);
+            }
+            const user = await UserModel.findById(req.user?._id);
+            sendResponse({
+                data: user,
+                message: messages.USER_FETCHED_SUCCESSFULLY,
+                response: res,
+                statusCode: StatusCodes.OK,
+                success: true,
+            });
+        } catch (err) {
+            throw err;
+        }
+    };
     sendOTPToPhone = async (req: Request, res: Response) => {
         try {
             const { mobile_number, country_code, FCM_token } = req.body;
@@ -112,6 +131,7 @@ export default class UserService {
                 message: "OTP verified successfully",
                 token: jwt,
                 is_onboarded: user.is_onboarded,
+                user: user,
             });
         } catch (error: any) {
             console.error("verifyOTP error:", error);
@@ -122,7 +142,6 @@ export default class UserService {
     };
 
     googleAuth = async (req: Request, res: Response) => {
-        console.log("===================CALLD");
         try {
             const { idToken, FCM_token } = req.body;
 
@@ -154,6 +173,7 @@ export default class UserService {
                 message: "Logged in successfully",
                 token: jwt,
                 is_onboarded: user.is_onboarded,
+                user: user,
             });
         } catch (error) {
             console.error("Google Sign-In Error:", error);
@@ -161,11 +181,17 @@ export default class UserService {
         }
     };
 
-    getIsOnboarded = async (req: Request, res: Response) => {
-        const user = await UserModel.findById(req.user?._id).select("is_onboarded");
+    getCheckinScoreData = async (req: Request, res: Response) => {
+        const recommendationHistory = await recommendationHistoryModel
+            .findOne({
+                userId: req.user?._id,
+            })
+            .sort({ createdAt: -1 })
+            .select(["zone", "finalScore", "week"]);
+
         sendResponse({
-            data: user,
-            message: "User onboarded status fetched successfully",
+            data: recommendationHistory,
+            message: "Score Data Fetched successfully",
             response: res,
             statusCode: StatusCodes.OK,
             success: true,

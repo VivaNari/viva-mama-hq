@@ -7,7 +7,7 @@ export const messages = {
     FLOW_DEFINITION_RETRIEVED_SUCCESS: "Flow definition created successfully",
     FLOW_NODE_CATEGORY_SAVED_SUCCESS: "Flow definition created successfully",
     FLOW_NODE_CATEGORY_RETRIEVED_SUCCESS: "Flow definition created successfully",
-    TOKEN_MISSING: "Unauthorized: Access denied. Token missing.",
+    TOKEN_MISSING: "Unauthorized: access denied. token missing.",
     TOKEN_INVALID: "Forbidden: Invalid token.",
     AUTH_BAD_REQUEST: "Bad Request: Error processing authorization.",
     RECOMMENDATION_SAVED_SUCCESS: "Recommendation created successfully",
@@ -25,4 +25,7 @@ export const messages = {
     USER_EXISTING_SUBCRIPTION_FOUND: "User already has an active subscription",
     WARN_COMPLETE_QUESTIONNAIRE: "Please complete the questionnaire first",
     PLAN_ACTIVATED_SUCCESSFULLY: "plan activated successfully",
+    USER_FETCHED_SUCCESSFULLY: "User fetched successfully!",
+    USER_FETCH_FAILED: "Failed to fetch user!",
+    INTERNAL_SERVER_ERROR: "Internal server error",
 };

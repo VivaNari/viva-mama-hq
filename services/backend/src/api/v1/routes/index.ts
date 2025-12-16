@@ -4,7 +4,7 @@ import flowNodeCategoryRouter from "./flow-node-category.route";
 import chatFlowRouter from "./chat-flow.routes";
 import recommendationRouter from "./recommendation.routes";
 import paymentrouter from "./payments/payment.route";
-
+import recommendationHistoryRouter from "./recommendation-history.routes";
 const router = Router();
 
 router.use(flowDefinitionRouter);
@@ -12,5 +12,6 @@ router.use(flowNodeCategoryRouter);
 router.use(chatFlowRouter);
 router.use(recommendationRouter);
 router.use(paymentrouter);
+router.use(recommendationHistoryRouter);
 
 export default router;

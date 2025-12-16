@@ -195,6 +195,7 @@ export interface IFlowInstance {
     flowSlug: string;
     version: number;
     postpartumWeek: number;
+    postpartumDays: number;
     state: FlowInstanceState;
     cursorNodeId: string | null;
     variables: Record<string, any>;

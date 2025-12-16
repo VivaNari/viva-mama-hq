@@ -9,6 +9,7 @@
         "test": "NODE_ENV=test jest",
         "dev": "nodemon --exec ts-node src/index.ts",
         "build": "tsc",
+        "cron:core-job": "ts-node src/cron-jobs/currentWeekAndPreviousUpcomingDueDaysCalculator",
         "start": "node build/index.js",
         "lint": "eslint . --ext .ts,.js",
         "lint:fix": "eslint . --ext .ts,.js --fix",

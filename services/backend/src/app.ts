@@ -7,6 +7,7 @@ import childRouter from "./api/v1/routes/childs/child.route";
 import answerRouter from "./api/v1/routes/answers/answer.route";
 import { correlationIdMiddleware } from "./middlewares/correlationId.middleware";
 import { requestLoggerMiddleware } from "./middlewares/requestLogger.middleware";
+import errorHandler from "./middlewares/errorHandler.middleware";
 
 const app = express();
 
@@ -29,5 +30,7 @@ app.use("/api/v1", childRouter);
 app.use("/api/v1", questionRouter);
 app.use("/api/v1", answerRouter);
 app.use("/api/v1", router);
+
+app.use(errorHandler);
 
 export default app;

@@ -23,6 +23,7 @@ export enum ESex {
 export interface IUser {
     _id: Schema.Types.ObjectId;
     user_id: number;
+    user_category: string;
     email: string;
     mobile_number: string | null;
     country_code: string | null;
@@ -37,7 +38,12 @@ export interface IUser {
     referred_user_id: number | null;
     referred_user_object_id: Schema.Types.ObjectId | null;
     FCM_token: string;
-    current_postpartum_week: number | null;
+    current_weekdays: {
+        weeks: number | null;
+        days: number | null;
+    };
+    previous_weekly_checkin_due_days: number;
+    upcoming_weekly_checkin_due_days: number;
     is_breastfeeding_currently: boolean;
     onboarding_data: {
         preferred_name: string | null;
@@ -73,3 +79,10 @@ export interface IGoogleLoginPayload {
 }
 
 export type TTokenSource = "header" | "query";
+export enum EUserCategory {
+    PP = "Postpartum Women",
+    NP = "Non-Postpartum Pregnant Women",
+    NN = "Non-Postpartum Non-Pregnant Women",
+}
+
+export type TUsercategory = EUserCategory.NN | EUserCategory.PP | EUserCategory.NP;
