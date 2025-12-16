@@ -17,7 +17,7 @@ export default class ScoreEngineService {
         indicators: Indicators,
     ): Promise<ScoreResult> {
         const user = await UserModel.findById(userId)
-            .select("current_postpartum_week is_breastfeeding_currently")
+            .select("current_weekdays is_breastfeeding_currently")
             .lean()
             .exec();
 
@@ -63,6 +63,15 @@ export default class ScoreEngineService {
         const lactationComputed = categoryRaw(lactationArr);
         const emotionalComputed = categoryRaw(emotionalArr);
 
+        // Calculate individual score percentage
+        const individualPhysicalScorePercentage = physicalComputed.raw * 100;
+        const individualLactationScorePercentage = lactationComputed.raw * 100;
+        const individualEmotionalScorePercentage = emotionalComputed.raw * 100;
+
+        const zoneForPhysical = this.getZoneForWeek(week, individualPhysicalScorePercentage);
+        const zoneForLactation = this.getZoneForWeek(week, individualLactationScorePercentage);
+        const zoneForEmotional = this.getZoneForWeek(week, individualEmotionalScorePercentage);
+
         // Get weights based on week and breastfeeding status
         const weights = this.getWeightsForWeek(week, breastfeeding);
 
@@ -103,18 +112,30 @@ export default class ScoreEngineService {
                     weighted: this.roundToTwo(physicalWeighted),
                     maxPossible: physicalComputed.maxPossible,
                     sum: physicalComputed.sum,
+                    invidual: {
+                        score: individualPhysicalScorePercentage,
+                        zone: zoneForPhysical,
+                    },
                 },
                 lactation: {
                     raw: this.roundToThree(lactationComputed.raw),
                     weighted: this.roundToTwo(lactationWeighted),
                     maxPossible: lactationComputed.maxPossible,
                     sum: lactationComputed.sum,
+                    invidual: {
+                        score: individualLactationScorePercentage,
+                        zone: zoneForLactation,
+                    },
                 },
                 emotional: {
                     raw: this.roundToThree(emotionalComputed.raw),
                     weighted: this.roundToTwo(emotionalWeighted),
                     maxPossible: emotionalComputed.maxPossible,
                     sum: emotionalComputed.sum,
+                    invidual: {
+                        score: individualEmotionalScorePercentage,
+                        zone: zoneForEmotional,
+                    },
                 },
             },
             finalScore,

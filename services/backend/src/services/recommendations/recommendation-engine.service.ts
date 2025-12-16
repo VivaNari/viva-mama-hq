@@ -1,6 +1,6 @@
 import RecommendationModel from "../../models/recommendation.model";
-import { CategoryKey } from "../../types/score-engine.types";
-import { IRecommendationLean } from "../../types/recommendation.types";
+import { CategoryKey, IndividualCategoryScore } from "../../types/score-engine.types";
+import { IRecommendationLean, IRecommendationResponse } from "../../types/recommendation.types";
 
 export default class RecommendationEngineService {
     public static async getRecommendation(
@@ -8,68 +8,151 @@ export default class RecommendationEngineService {
         zone: "RED" | "YELLOW" | "GREEN",
         weakestCategory: CategoryKey,
         breastfeeding: boolean,
-    ): Promise<IRecommendationLean> {
+        physicalIndividual: IndividualCategoryScore,
+        lactationIndividual: IndividualCategoryScore,
+        emotionalIndividual: IndividualCategoryScore,
+    ): Promise<IRecommendationResponse> {
         const phase = this.getPhaseKey(week);
 
         try {
-            // For GREEN zone, category is "all"
-            if (zone === "GREEN") {
-                const recommendation = await RecommendationModel.findOne({
-                    phase,
-                    zone: "GREEN",
-                    category: "all",
-                }).lean<IRecommendationLean>();
-
-                if (!recommendation) {
-                    throw new Error(`No recommendation found for phase ${phase}, zone GREEN`);
-                }
-
-                return recommendation;
-            }
-
-            // For RED/YELLOW zones, get category-specific recommendation
-            let categoryToQuery = weakestCategory;
-
-            // Handle weeks 7+ where physical is inactive
-            if (week >= 7 && weakestCategory === "physical") {
-                categoryToQuery = breastfeeding ? "lactation" : "emotional";
-            }
-
-            let recommendation = await RecommendationModel.findOne({
+            // Get overall recommendation (existing logic)
+            const overallRecommendation = await this.getOverallRecommendation(
                 phase,
                 zone,
-                category: categoryToQuery,
-            }).lean<IRecommendationLean>();
+                weakestCategory,
+                week,
+                breastfeeding,
+            );
 
-            // Fallback: if not found, try other categories
-            if (!recommendation) {
-                const fallbackCategories: CategoryKey[] = [
-                    "lactation",
-                    "emotional",
+            // Get individual category recommendations
+            const [physicalRec, lactationRec, emotionalRec] = await Promise.all([
+                this.getIndividualRecommendation(
+                    phase,
                     "physical",
-                ].filter((c) => c !== categoryToQuery) as CategoryKey[];
+                    physicalIndividual,
+                    week,
+                    breastfeeding,
+                ),
+                this.getIndividualRecommendation(
+                    phase,
+                    "lactation",
+                    lactationIndividual,
+                    week,
+                    breastfeeding,
+                ),
+                this.getIndividualRecommendation(
+                    phase,
+                    "emotional",
+                    emotionalIndividual,
+                    week,
+                    breastfeeding,
+                ),
+            ]);
 
-                for (const fallbackCat of fallbackCategories) {
-                    recommendation = await RecommendationModel.findOne({
-                        phase,
-                        zone,
-                        category: fallbackCat,
-                    }).lean<IRecommendationLean>();
-
-                    if (recommendation) break;
-                }
-            }
-
-            if (!recommendation) {
-                throw new Error(
-                    `No recommendation found for phase ${phase}, zone ${zone}, category ${categoryToQuery}`,
-                );
-            }
-
-            return recommendation;
+            return {
+                overall: overallRecommendation,
+                individual: {
+                    physical: physicalRec,
+                    lactation: lactationRec,
+                    emotional: emotionalRec,
+                },
+            };
         } catch (error) {
             console.error("Error fetching recommendation:", error);
             throw error;
+        }
+    }
+
+    private static async getOverallRecommendation(
+        phase: string,
+        zone: "RED" | "YELLOW" | "GREEN",
+        weakestCategory: CategoryKey,
+        week: number,
+        breastfeeding: boolean,
+    ): Promise<IRecommendationLean> {
+        // For GREEN zone, category is "all"
+        if (zone === "GREEN") {
+            const recommendation = await RecommendationModel.findOne({
+                phase,
+                zone: "GREEN",
+                category: "all",
+            }).lean<IRecommendationLean>();
+
+            if (!recommendation) {
+                throw new Error(`No recommendation found for phase ${phase}, zone GREEN`);
+            }
+
+            return recommendation;
+        }
+
+        // For RED/YELLOW zones, get category-specific recommendation
+        let categoryToQuery = weakestCategory;
+
+        // Handle weeks 7+ where physical is inactive
+        if (week >= 7 && weakestCategory === "physical") {
+            categoryToQuery = breastfeeding ? "lactation" : "emotional";
+        }
+
+        let recommendation = await RecommendationModel.findOne({
+            phase,
+            zone,
+            category: categoryToQuery,
+        }).lean<IRecommendationLean>();
+
+        // Fallback: if not found, try other categories
+        if (!recommendation) {
+            const fallbackCategories: CategoryKey[] = ["lactation", "emotional", "physical"].filter(
+                (c) => c !== categoryToQuery,
+            ) as CategoryKey[];
+
+            for (const fallbackCat of fallbackCategories) {
+                recommendation = await RecommendationModel.findOne({
+                    phase,
+                    zone,
+                    category: fallbackCat,
+                }).lean<IRecommendationLean>();
+
+                if (recommendation) break;
+            }
+        }
+
+        if (!recommendation) {
+            throw new Error(
+                `No recommendation found for phase ${phase}, zone ${zone}, category ${categoryToQuery}`,
+            );
+        }
+
+        return recommendation;
+    }
+
+    private static async getIndividualRecommendation(
+        phase: string,
+        category: CategoryKey,
+        individualData: IndividualCategoryScore,
+        week: number,
+        breastfeeding: boolean,
+    ): Promise<IRecommendationLean | null> {
+        // Skip physical for weeks 7+
+        if (week >= 7 && category === "physical") {
+            return null;
+        }
+
+        // Skip lactation if not breastfeeding for weeks 7+
+        if (week >= 7 && !breastfeeding && category === "lactation") {
+            return null;
+        }
+
+        try {
+            const rec = await RecommendationModel.findOne({
+                phase,
+                zone: individualData.zone,
+                category: individualData.zone === "GREEN" ? "all" : category,
+            }).lean<IRecommendationLean>();
+
+            return rec;
+        } catch (error) {
+            console.error(`Error fetching individual recommendation for ${category}:`, error);
+            return null;
         }
     }
 

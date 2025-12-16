@@ -27,6 +27,56 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
             ref: "Recommendation",
             required: true,
         },
+        individualRecommendations: {
+            physical: {
+                recommendationId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "Recommendation",
+                    default: null,
+                },
+                score: {
+                    type: Number,
+                    required: true,
+                },
+                zone: {
+                    type: String,
+                    required: true,
+                    enum: ["RED", "YELLOW", "GREEN"],
+                },
+            },
+            lactation: {
+                recommendationId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "Recommendation",
+                    default: null,
+                },
+                score: {
+                    type: Number,
+                    required: true,
+                },
+                zone: {
+                    type: String,
+                    required: true,
+                    enum: ["RED", "YELLOW", "GREEN"],
+                },
+            },
+            emotional: {
+                recommendationId: {
+                    type: Schema.Types.ObjectId,
+                    ref: "Recommendation",
+                    default: null,
+                },
+                score: {
+                    type: Number,
+                    required: true,
+                },
+                zone: {
+                    type: String,
+                    required: true,
+                    enum: ["RED", "YELLOW", "GREEN"],
+                },
+            },
+        },
         categoryScores: {
             physical: {
                 raw: { type: Number, required: true },

@@ -23,3 +23,12 @@ export interface IRecommendationLean extends IRecommendationBase {
     createdAt: Date;
     updatedAt: Date;
 }
+
+export interface IRecommendationResponse {
+    overall: IRecommendationLean;
+    individual: {
+        physical: IRecommendationLean | null;
+        lactation: IRecommendationLean | null;
+        emotional: IRecommendationLean | null;
+    };
+}

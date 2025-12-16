@@ -13,6 +13,10 @@ import { StatusCodes } from "http-status-codes";
 import recommendationHistoryModel from "../../models/recommendation-history.model";
 import { messages } from "../../constants/messages";
 import { IRecommendationHistory } from "../../types/recommendation-history.types";
+import { significance } from "../../constants/significance";
+import { recoveryScoreBriefInfo } from "../../constants/recoveryScoreBriefInfo";
+import { NNWomanRecoveryScoreText } from "../../constants/NNWomenRecoveryScoreText";
+import { caremanager } from "../../constants/careManager";
 
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
@@ -24,7 +28,13 @@ export default class UserService {
             }
             const user = await UserModel.findById(req.user._id);
             sendResponse({
-                data: user,
+                data: {
+                    user,
+                    significance,
+                    recoveryScoreBriefInfo,
+                    NNWomanRecoveryScoreText,
+                    caremanager,
+                },
                 message: messages.USER_FETCHED_SUCCESSFULLY,
                 response: res,
                 statusCode: StatusCodes.OK,

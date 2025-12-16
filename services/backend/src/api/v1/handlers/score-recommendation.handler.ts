@@ -19,8 +19,11 @@ export default class ScoreRecommendationHandler {
                 scoreResult.zone,
                 scoreResult.weakestCategory,
                 scoreResult.breastfeeding,
+                scoreResult.categories.physical.invidual,
+                scoreResult.categories.lactation.invidual,
+                scoreResult.categories.emotional.invidual,
             );
-            console.log(`Recommendation fetched: ${recommendation._id}`);
+            console.log(`Recommendation fetched: ${recommendation.overall._id}`);
 
             // Store History
             await RecommendationHistoryService.createRH({
@@ -30,7 +33,24 @@ export default class ScoreRecommendationHandler {
                 zone: scoreResult.zone,
                 weakestCategory: scoreResult.weakestCategory,
                 breastfeeding: scoreResult.breastfeeding,
-                recommendationId: recommendation._id,
+                recommendationId: recommendation.overall._id,
+                individualRecommendations: {
+                    physical: {
+                        recommendationId: recommendation.individual.physical?._id || null,
+                        score: scoreResult.categories.physical.invidual.score,
+                        zone: scoreResult.categories.physical.invidual.zone,
+                    },
+                    lactation: {
+                        recommendationId: recommendation.individual.lactation?._id || null,
+                        score: scoreResult.categories.lactation.invidual.score,
+                        zone: scoreResult.categories.lactation.invidual.zone,
+                    },
+                    emotional: {
+                        recommendationId: recommendation.individual.emotional?._id || null,
+                        score: scoreResult.categories.emotional.invidual.score,
+                        zone: scoreResult.categories.emotional.invidual.zone,
+                    },
+                },
                 categoryScores: {
                     physical: {
                         raw: scoreResult.categories.physical.raw,
@@ -48,16 +68,18 @@ export default class ScoreRecommendationHandler {
             });
             console.log(`Recommendation History saved`);
 
-            const formattedMessage =
-                RecommendationEngineService.formatRecommendationMessage(recommendation);
+            const formattedMessage = RecommendationEngineService.formatRecommendationMessage(
+                recommendation.overall,
+            );
 
             return {
                 success: true,
                 score: scoreResult,
                 recommendation: {
-                    id: recommendation._id,
+                    id: recommendation.overall._id,
                     message: formattedMessage,
-                    raw: recommendation,
+                    raw: recommendation.overall,
+                    individual: recommendation.individual,
                 },
             };
         } catch (error) {

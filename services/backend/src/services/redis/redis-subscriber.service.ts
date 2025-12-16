@@ -52,8 +52,6 @@ class RedisSubscriberService {
             // Process the score and recommendation
             const result = await ScoreRecommendationHandler.process(userId, indicators);
 
-            // TODO: Now send the score and recommendation back to the user via push notification
-
             console.log(`\nSCORE DETAILS:`);
             console.log(`   Final Score: ${result.score.finalScore}%`);
             console.log(`   Zone: ${result.score.zone}`);

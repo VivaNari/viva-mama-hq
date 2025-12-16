@@ -24,7 +24,6 @@ import { EUserCategory, IUser } from "../../types";
 import UserModel from "../../models/user.model";
 import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
 
-// const QUESTION_FETCH_DELAY_MS = 2000;
 const STOPPED_BREASTFEEDING_SCORE = -1;
 
 class ChatFlowService {
@@ -145,7 +144,7 @@ class ChatFlowService {
                             );
                             const flowType = await this.detectFlowType(userId);
 
-                            if (flowDefinition /*&& flowType === "CHECK_IN"*/) {
+                            if (flowDefinition) {
                                 await this.sendSilentPush(
                                     userId,
                                     flowInstance,
@@ -578,10 +577,6 @@ class ChatFlowService {
         startingNodeId: string | null,
         flowType: FlowType,
     ): Promise<string | null> {
-        // if (flowType === "ONBOARDING") {
-        //     console.log(`Onboarding: returning next node`);
-        //     return startingNodeId;
-        // }
         if (flowType === "CHECK_IN") {
             let currentNodeId = startingNodeId;
             const user = await userModel.findById(userId);
@@ -780,7 +775,7 @@ class ChatFlowService {
         flowDefinition: any,
         res: Response,
         flowType: FlowType,
-        questionOvverrideId?: string,
+        questionOvverideId?: string,
         questionTextOverride?: string,
     ): Promise<void> {
         if (!flowInstance.cursorNodeId) {
@@ -801,19 +796,17 @@ class ChatFlowService {
             this.endFlow(userId, res);
             return;
         }
-        console.log(` 2222`);
+
         if (validNodeId !== flowInstance.cursorNodeId) {
             flowInstance.cursorNodeId = validNodeId;
             await flowInstance.save();
-            console.log(` 33333`);
         }
 
         const currentNode = flowDefinition.nodes.find((n: IFlowNode) => n.id === validNodeId);
-        console.log(` 4444`);
+
         if (!currentNode) {
             console.error(`Node ${validNodeId} not found`);
             this.endFlow(userId, res, flowType);
-            console.log(` 55555`);
             return;
         }
 
@@ -823,11 +816,10 @@ class ChatFlowService {
             value: opt.value,
             score: opt.score,
         }));
-        console.log(`66666`);
 
         const payload: QuestionPayload & { askId: any; uuid: any } = {
-            // uuid: questionOvverrideId || uuidv4(),
-            uuid: questionOvverrideId,
+            // uuid: questionOvverideId || uuidv4(),
+            uuid: questionOvverideId,
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
             text: questionTextOverride ? questionTextOverride : currentNode.text || "",
@@ -837,7 +829,7 @@ class ChatFlowService {
             nodeType: currentNode.nodeType,
             askId: Date.now(),
         };
-        console.log(`77777`);
+
         await new messageModel({
             conversationId: flowInstance.conversationId,
             userId: userId,
@@ -853,7 +845,7 @@ class ChatFlowService {
                 optionKey: null,
             },
         }).save();
-        console.log(`8888`);
+
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
         console.log(`Sent question via SSE: ${currentNode.id}`);
     }
@@ -954,11 +946,6 @@ class ChatFlowService {
         flowDefinition: any,
         flowType: FlowType,
     ): Promise<void> {
-        // if (flowType === "ONBOARDING") {
-        //     console.log(`Skipping silent push for onboarding flow`);
-        //     return;
-        // }
-
         try {
             const user = await userModel.findById(userId);
             if (!user || !user.FCM_token) {
