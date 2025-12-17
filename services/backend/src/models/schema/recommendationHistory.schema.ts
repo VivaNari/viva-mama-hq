@@ -21,8 +21,12 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
         individualRecommendations: {
             physical: {
                 recommendation: {
-                    type: Schema.Types.Mixed,
-                    default: null,
+                    title: { type: String, required: true },
+                    goingWell: { type: String, required: true },
+                    needsHelp: { type: String },
+                    celebrate: { type: String },
+                    tips: { type: String },
+                    next: { type: String },
                 },
                 score: {
                     type: Number,
@@ -36,8 +40,12 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
             },
             lactation: {
                 recommendation: {
-                    type: Schema.Types.Mixed,
-                    default: null,
+                    title: { type: String, required: true },
+                    goingWell: { type: String, required: true },
+                    needsHelp: { type: String },
+                    celebrate: { type: String },
+                    tips: { type: String },
+                    next: { type: String },
                 },
                 score: {
                     type: Number,
@@ -51,8 +59,12 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
             },
             emotional: {
                 recommendation: {
-                    type: Schema.Types.Mixed,
-                    default: null,
+                    title: { type: String, required: true },
+                    goingWell: { type: String, required: true },
+                    needsHelp: { type: String },
+                    celebrate: { type: String },
+                    tips: { type: String },
+                    next: { type: String },
                 },
                 score: {
                     type: Number,
