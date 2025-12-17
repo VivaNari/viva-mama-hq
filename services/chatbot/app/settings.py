@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     llm_model: str = "llama-3.1-70b-versatile"
 
     scope_classifier_model:str = "llama-3.1-8b-instant"
+    
+    #auth
+    api_key: str
+    
     # Redis (session memory)
     redis_url: str = "redis://localhost:6379/0"
     memory_ttl_seconds: int = 7200  # 2 hours per session

@@ -254,3 +254,34 @@ async def chat_once(
         "escalation_banner": banner,
         "memory_turns": memory.get_last_n(session_id, history_window),
     }
+
+def chat_once_name_detector(
+    user_text: str,
+    session_id: Optional[str] = None,
+    history_window: int = 4,
+) -> Dict[str, Any]:
+
+    prompt = f"""
+    You are a name-detection microservice.
+
+    Your ONLY job:
+    1. Detect whether the user's message contains their NAME.
+    2. If yes → return JSON with: has_name=true, name="<detected_name>", ask_back=""
+    3. If no → return JSON with: has_name=false, name="", ask_back="Please tell me your name."
+
+    Rules:
+    - A name is usually 1–3 words, e.g., "John", "Mary Jane".
+    - If user gives something that is NOT a name (e.g., "why?", "guess", "idk"), treat as has_name=false.
+    - Do NOT answer anything else. Only return the JSON.
+
+    User message: "{user_text}"
+    Return JSON only:
+    """
+    print(prompt)
+    llm = get_llm()
+    llm_response = llm.invoke(prompt)
+    draft_answer = llm_response.content if hasattr(llm_response, "content") else str(llm_response)
+    print(f"LLM response: {draft_answer}")
+    return {
+        "answer": draft_answer
+    }
