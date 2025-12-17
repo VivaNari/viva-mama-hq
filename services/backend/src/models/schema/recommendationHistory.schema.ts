@@ -16,22 +16,12 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
             required: true,
             enum: ["RED", "YELLOW", "GREEN"],
         },
-        weakestCategory: {
-            type: String,
-            required: true,
-            enum: ["physical", "lactation", "emotional"],
-        },
         breastfeeding: { type: Boolean, required: true },
-        recommendationId: {
-            type: Schema.Types.ObjectId,
-            ref: "Recommendation",
-            required: true,
-        },
+        tagline: { type: String },
         individualRecommendations: {
             physical: {
-                recommendationId: {
-                    type: Schema.Types.ObjectId,
-                    ref: "Recommendation",
+                recommendation: {
+                    type: Schema.Types.Mixed,
                     default: null,
                 },
                 score: {
@@ -45,9 +35,8 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
                 },
             },
             lactation: {
-                recommendationId: {
-                    type: Schema.Types.ObjectId,
-                    ref: "Recommendation",
+                recommendation: {
+                    type: Schema.Types.Mixed,
                     default: null,
                 },
                 score: {
@@ -61,9 +50,8 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
                 },
             },
             emotional: {
-                recommendationId: {
-                    type: Schema.Types.ObjectId,
-                    ref: "Recommendation",
+                recommendation: {
+                    type: Schema.Types.Mixed,
                     default: null,
                 },
                 score: {
