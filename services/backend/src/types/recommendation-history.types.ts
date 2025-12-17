@@ -31,4 +31,8 @@ export interface IRecommendationHistory {
         lactation: { raw: number; weighted: number };
         emotional: { raw: number; weighted: number };
     };
+    checkinAnswersDump: {
+        question: string;
+        answer: string | number | boolean;
+    }[];
 }

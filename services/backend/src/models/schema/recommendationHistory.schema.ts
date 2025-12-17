@@ -91,6 +91,12 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
                 weighted: { type: Number, required: true },
             },
         },
+        checkinAnswersDump: [
+            {
+                question: { type: String, required: true },
+                answer: { type: Schema.Types.Mixed, required: true },
+            },
+        ],
     },
     { timestamps: true },
 );
