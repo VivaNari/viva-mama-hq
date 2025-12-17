@@ -34,4 +34,8 @@ class Settings(BaseSettings):
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
+    mongodb_uri: str = "mongodb://localhost:27017/viva_mama"
+
+    mongodb_database: str = "viva_mama"
+
 settings = Settings()
