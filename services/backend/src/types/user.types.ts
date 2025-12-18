@@ -41,6 +41,8 @@ export interface IUser {
     current_weekdays: {
         weeks: number | null;
         days: number | null;
+        upcoming_checkin_due_days: number;
+        previous_checkin_due_days: number;
     };
     previous_weekly_checkin_due_days: number;
     upcoming_weekly_checkin_due_days: number;

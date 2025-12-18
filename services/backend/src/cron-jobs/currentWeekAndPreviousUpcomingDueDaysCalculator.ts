@@ -3,224 +3,225 @@ import UserModel from "../models/user.model";
 import { IUser } from "../types";
 import { IFlowInstance } from "../types/chat.types";
 import { calculateUserCurrentWeek } from "../utils/functions/calculateUserCurrentWeek";
+import logger from "../utils/logger";
 
-const getRecentFlowInstances = async ({ user }: { user: IUser }) => {
-    const latestFlowInstance = await flowInstanceModel
-        .findOne({
-            userId: user._id,
+const getRecentFlowInstances = async ({
+    userInstance,
+}: {
+    userInstance: IUser;
+}): Promise<{ latestFlowInstance: IFlowInstance; previousFlowInstance: IFlowInstance }> => {
+    const latestFlowInstances: IFlowInstance[] = await flowInstanceModel
+        .find({
+            userId: userInstance._id,
         })
-        .sort({ createdAt: -1 });
-    let previousFlowInstance = await flowInstanceModel
-        .findOne({
-            userId: user._id,
+        .sort({ _id: -1 })
+        .limit(1)
+        .lean();
+    let previousFlowInstances: IFlowInstance[] = await flowInstanceModel
+        .find({
+            userId: userInstance._id,
         })
-        .sort({ createdAt: -1 })
-        .skip(1);
+        .sort({ _id: -1 })
+        .skip(1)
+        .limit(1)
+        .lean();
 
-    if (previousFlowInstance === null) {
-        previousFlowInstance = latestFlowInstance;
+    if (latestFlowInstances.length === 0) {
+        throw new Error("No flow instances found for user");
     }
 
-    return { latestFlowInstance, previousFlowInstance };
+    const latestFlowInstance: IFlowInstance = latestFlowInstances[0] as IFlowInstance;
+    const previousFlowInstance = (
+        previousFlowInstances.length > 0 ? previousFlowInstances[0] : latestFlowInstances[0]
+    ) as IFlowInstance;
+
+    return {
+        latestFlowInstance,
+        previousFlowInstance,
+    };
 };
 
-const processUser = async (user: IUser) => {
-    console.log(`Processing user: ${user.email ? user.email : user.mobile_number}`);
+const validateUser = (user: IUser): boolean => {
     if (!user.FCM_token) {
         console.warn(
             `User ${user.email ? user.email : user.mobile_number} has no FCM token. Skipping.`,
         );
-        return;
+        return false;
     }
 
     if (!user.onboarding_data.delivery_date) {
         console.warn(
             `User ${user.email ? user.email : user.mobile_number} has no delivery date. Skipping.`,
         );
-        return;
+        return false;
     }
 
-    const user_current_week_and_days = calculateUserCurrentWeek(
-        user.onboarding_data.delivery_date as Date,
-    );
+    return true;
+};
 
-    await UserModel.findOneAndUpdate(
-        { _id: user._id },
-        { $set: { current_weekdays: user_current_week_and_days } },
-        { new: true },
-    );
+const getUserWeekdays = (user: IUser): { weeks: number; days: number } => {
+    const currentWeekDays = calculateUserCurrentWeek(user.onboarding_data.delivery_date as Date);
 
-    const userInstance = await UserModel.findById(user._id);
+    return currentWeekDays;
+};
 
-    if (userInstance === null) {
-        return;
-    }
+const formatUserWeek = (weeks: number, days: number): number => {
+    return Number(weeks + "." + days);
+};
 
+const generateNewFlowInstance = async (
+    latestFlowInstance: IFlowInstance,
+): Promise<IFlowInstance> => {
+    let newFlowInstancePayload: Partial<IFlowInstance & { _id: any }> = latestFlowInstance;
+    delete newFlowInstancePayload._id;
+
+    const newFlowInstance: IFlowInstance = await new flowInstanceModel({
+        ...newFlowInstancePayload,
+        postpartumWeek: latestFlowInstance.postpartumWeek + 1,
+    }).save();
+
+    return newFlowInstance;
+};
+
+const updateFlowInstance = async (
+    userInstance: IUser,
+    weeks: number,
+    days: number,
+): Promise<{
+    formattedUserWeek: number;
+    latestPostpartumWeek: number;
+    previousPostpartumWeek: number;
+}> => {
     let { latestFlowInstance, previousFlowInstance } = await getRecentFlowInstances({
-        user,
+        userInstance,
     });
 
-    if (latestFlowInstance === null || previousFlowInstance === null) {
-        return;
-    }
+    const formattedUserWeek = formatUserWeek(weeks, days);
 
-    const formattedUserWeek = Number(
-        user.current_weekdays.weeks + "." + user.current_weekdays.days,
-    );
     let previousPostpartumWeek = previousFlowInstance.postpartumWeek;
     let latestPostpartumWeek = latestFlowInstance.postpartumWeek;
+
     if (formattedUserWeek > latestPostpartumWeek) {
+        console.log(formatUserWeek, ">", latestPostpartumWeek);
         previousPostpartumWeek = latestPostpartumWeek;
-        let newFlowInstancePayload: Partial<IFlowInstance & { _id: any }> = latestFlowInstance;
-        delete newFlowInstancePayload._id;
-        const newFlowInstance = await new flowInstanceModel({
-            ...newFlowInstancePayload,
-            postpartumWeek: latestFlowInstance.postpartumWeek + 1,
-        }).save();
+
+        const newFlowInstance = await generateNewFlowInstance(latestFlowInstance);
+
         latestPostpartumWeek = newFlowInstance.postpartumWeek;
+
         previousFlowInstance = latestFlowInstance;
         latestFlowInstance = newFlowInstance;
     }
 
-    console.log("previousPostpartumWeek", previousPostpartumWeek);
-    console.log("latestPostpartumWeek", latestPostpartumWeek);
+    return { formattedUserWeek, latestPostpartumWeek, previousPostpartumWeek };
+};
 
-    const upcomingDays =
-        formattedUserWeek - previousPostpartumWeek == 1
+const calculateUpcomingAndPreviousDueDays = ({
+    formattedUserWeek,
+    previousPostpartumWeek,
+    latestPostpartumWeek,
+}: {
+    formattedUserWeek: number;
+    previousPostpartumWeek: number;
+    latestPostpartumWeek: number;
+}): { previousDays: number; upcomingDays: number } => {
+    const previousDays = Number(
+        (formattedUserWeek - previousPostpartumWeek == 1
             ? 0
-            : formattedUserWeek - previousPostpartumWeek;
-    const previousDays =
-        latestPostpartumWeek - formattedUserWeek - 0.3 < 0
+            : formattedUserWeek - previousPostpartumWeek
+        ).toFixed(1),
+    );
+    const upcomingDays = Number(
+        (latestPostpartumWeek - formattedUserWeek - 0.3 < 0
             ? 0
-            : latestPostpartumWeek - formattedUserWeek - 0.3;
+            : latestPostpartumWeek - formattedUserWeek - 0.3
+        ).toFixed(1),
+    );
 
-    console.log("upcomingDays, previousDays", upcomingDays, previousDays);
-    // user.previous_weekly_checkin_due_days = previousDays.toFixed(1);
-    // user.upcoming_weekly_checkin_due_days = previousDays.toFixed(1);
+    return { previousDays, upcomingDays };
+};
 
-    if (upcomingDays === previousDays) {
-        console.log("fireeeeeeeeee!!!!!!!");
+const updateUserDueDays = async ({
+    userInstance,
+    previousCheckinDueDays,
+    upcomingCheckinDueDays,
+    weeks,
+    days,
+}: {
+    userInstance: IUser;
+    previousCheckinDueDays: number;
+    upcomingCheckinDueDays: number;
+    weeks: number;
+    days: number;
+}): Promise<IUser> => {
+    await UserModel.findByIdAndUpdate(
+        userInstance._id,
+        {
+            $set: {
+                "current_weekdays.previous_checkin_due_days": previousCheckinDueDays,
+                "current_weekdays.upcoming_checkin_due_days": upcomingCheckinDueDays,
+                "current_weekdays.weeks": weeks,
+                "current_weekdays.days": days,
+            },
+        },
+        { new: true },
+    );
+    const updatedUserInstance = await UserModel.findById(userInstance._id).lean();
+    if (!updatedUserInstance) {
+        throw new Error("Failed to fetch updated user instance");
+    }
+    return updatedUserInstance;
+};
+
+const fireWeeklyCheckinPushNotification = async (userInstance: IUser) => {
+    if (userInstance.current_weekdays.upcoming_checkin_due_days === 0) {
+        console.log(`Firing weekly check-in push notification to user ${userInstance._id}`);
+        // Implement push notification logic here
     }
 };
 
-// const processUser = async (user: any) => {
-//     console.log(`Processing user: ${user.email ?? user.mobile_number}`);
+const processUser = async (userInstance: IUser) => {
+    const isValidUser = validateUser(userInstance);
+    if (!isValidUser) {
+        logger.warn({ userId: userInstance._id }, "Invalid user data. Skipping user:");
+        return;
+    }
 
-//     if (!user.FCM_token) return console.warn("Skipping: No FCM token.");
-//     if (!user.onboarding_data.delivery_date) return console.warn("Skipping: No delivery date.");
+    const userWeekdays = getUserWeekdays(userInstance);
 
-//     const weekDays = getPostpartumWeekAndDays(user.onboarding_data.delivery_date);
+    const { formattedUserWeek, latestPostpartumWeek, previousPostpartumWeek } =
+        await updateFlowInstance(userInstance, userWeekdays.weeks, userWeekdays.days);
 
-//     await UserModel.updateOne({ _id: user._id }, { $set: { current_weekdays: weekDays } });
+    const { previousDays, upcomingDays } = calculateUpcomingAndPreviousDueDays({
+        formattedUserWeek,
+        previousPostpartumWeek,
+        latestPostpartumWeek,
+    });
 
-//     const updatedUser = await UserModel.findById(user._id);
-//     if (!updatedUser) return;
+    console.log(formattedUserWeek, previousDays, upcomingDays);
 
-//     const currentWeek = weekDays.weeks;
-//     const currentDay = weekDays.days;
-//     const currentTotalDays = currentWeek * 7 + currentDay;
+    const updateUserInstance = await updateUserDueDays({
+        userInstance,
+        previousCheckinDueDays: previousDays,
+        upcomingCheckinDueDays: upcomingDays,
+        weeks: userWeekdays.weeks,
+        days: userWeekdays.days,
+    });
 
-//     let { latestFlowInstance, previousFlowInstance } = await getRecentFlowInstances(updatedUser);
-
-//     // If NO flow instances exist yet → CREATE FIRST FLOW FOR CURRENT WEEK
-//     if (!latestFlowInstance) {
-//         console.log("Creating FIRST flowInstance for postpartum week:", currentWeek);
-
-//         latestFlowInstance = await flowInstanceModel.create({
-//             userId: updatedUser._id,
-//             postpartumWeek: currentWeek,
-//             postpartumDays: currentDay,
-//             state: "started",
-//             flowSlug: "weekly-checkin",
-//             version: 1,
-//         });
-
-//         previousFlowInstance = latestFlowInstance;
-//     }
-
-//     let previousWeek = previousFlowInstance!.postpartumWeek;
-//     let latestWeek = latestFlowInstance.postpartumWeek;
-
-//     // ---------------------------------------------------------
-//     // Step C: Create next flow instance ONLY IF user progressed
-//     // ---------------------------------------------------------
-//     if (currentWeek > latestWeek) {
-//         console.log("User progressed → creating next flow:", latestWeek + 1);
-
-//         const payload: Partial<IFlowInstance & { _id: any }> = latestFlowInstance.toObject();
-//         delete payload._id;
-
-//         const newFlow = await flowInstanceModel.create({
-//             ...payload,
-//             postpartumWeek: latestWeek + 1,
-//             postpartumDays: 0,
-//         });
-
-//         previousFlowInstance = latestFlowInstance;
-//         latestFlowInstance = newFlow;
-
-//         previousWeek = previousFlowInstance.postpartumWeek;
-//         latestWeek = latestFlowInstance.postpartumWeek;
-//     }
-
-//     // ---------------------------------------------------------
-//     // Step D: Calculate due days
-//     // ---------------------------------------------------------
-//     const previousDueDay = previousWeek * 7;
-//     const nextDueDay = (latestWeek + 1) * 7;
-
-//     let previousDays = currentTotalDays - previousDueDay;
-//     if (previousDays < 0) previousDays = 0;
-
-//     let upcomingDays = nextDueDay - currentTotalDays;
-//     if (upcomingDays < 0) upcomingDays = 0;
-
-//     console.log({
-//         user: updatedUser.email ?? updatedUser.mobile_number,
-//         currentWeek,
-//         currentDay,
-//         previousWeek,
-//         latestWeek,
-//         previousDays,
-//         upcomingDays,
-//     });
-
-//     // ---------------------------------------------------------
-//     // Step E: Update user table
-//     // ---------------------------------------------------------
-//     await UserModel.updateOne(
-//         { _id: user._id },
-//         {
-//             $set: {
-//                 previous_weekly_checkin_due_days: previousDays,
-//                 upcoming_weekly_checkin_due_days: upcomingDays,
-//             },
-//         },
-//     );
-
-//     // ---------------------------------------------------------
-//     // Optional: Notify if check-in due today
-//     // ---------------------------------------------------------
-//     if (upcomingDays === 0) {
-//         console.log("🔥 Weekly check-in is due TODAY!");
-//     }
-// };
+    await fireWeeklyCheckinPushNotification(updateUserInstance);
+};
 
 export const currentWeekAndPreviousUpcomingDueDaysCalculator = async () => {
-    console.log("--- Running Start/Continue Conversation Job ---");
-
-    // Get all users who have an FCM token
-    const users = await UserModel.find({
+    const userInstances = await UserModel.find({
         FCM_token: { $exists: true, $ne: null },
     });
 
-    for (const user of users) {
+    for (const userInstance of userInstances) {
         try {
-            await processUser(user);
+            await processUser(userInstance);
         } catch (error: any) {
-            console.error(`Failed to process user ${user._id}:`, error.message);
+            logger.error(`Failed to process user ${userInstance._id}:`, error.message);
         }
     }
-
-    console.log("--- Start/Continue Conversation Job Finished ---");
+    console.log("Completed processing all users for current week and due days calculation.");
 };

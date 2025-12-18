@@ -6,6 +6,7 @@ type FindOptions<T> = {
     populate?: string | string[];
     selectedKeys?: string[];
     limit?: number;
+    _id?: string;
 };
 class BaseService<T> {
     protected model: Model<T>;
@@ -14,7 +15,7 @@ class BaseService<T> {
         this.model = model;
     }
 
-    create = async (payload: T): Promise<T> => {
+    create = async (payload: Partial<T>): Promise<T> => {
         const instance = await new this.model(payload).save();
         return instance as T;
     };
@@ -39,6 +40,37 @@ class BaseService<T> {
             query = query.populate(populate);
         }
 
+        if (selectedKeys) {
+            query = query.select(selectedKeys);
+        }
+
+        return query.exec();
+    };
+
+    findById = async ({ _id, populate, selectedKeys }: FindOptions<T>): Promise<T | null> => {
+        let query = this.model.findById(_id);
+
+        if (populate) {
+            query = query.populate(populate);
+        }
+
+        if (selectedKeys) {
+            query = query.select(selectedKeys);
+        }
+
+        return query.exec();
+    };
+
+    findOne = async ({
+        filter = {},
+        populate,
+        selectedKeys,
+    }: FindOptions<T>): Promise<T | null> => {
+        let query = this.model.findOne(filter);
+
+        if (populate) {
+            query = query.populate(populate);
+        }
         if (selectedKeys) {
             query = query.select(selectedKeys);
         }

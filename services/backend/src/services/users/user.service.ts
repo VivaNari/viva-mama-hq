@@ -6,7 +6,7 @@ import OTPModel from "../../models/opt.model";
 import UserModel from "../../models/user.model";
 import { generateJWT } from "../../utils/functions/generateJWT";
 import { OAuth2Client } from "google-auth-library";
-import { IGoogleLoginPayload } from "../../types";
+import { IGoogleLoginPayload, IUser } from "../../types";
 import env from "../../config/env";
 import sendResponse from "../../utils/commonFunctions/sendResponse";
 import { StatusCodes } from "http-status-codes";
@@ -17,10 +17,15 @@ import { significance } from "../../constants/significance";
 import { recoveryScoreBriefInfo } from "../../constants/recoveryScoreBriefInfo";
 import { NNWomanRecoveryScoreText } from "../../constants/NNWomenRecoveryScoreText";
 import { caremanager } from "../../constants/careManager";
+import BaseService from "../base.service";
 
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 
-export default class UserService {
+export default class UserService extends BaseService<IUser> {
+    constructor() {
+        super(UserModel);
+    }
+
     getUserbyAuthToken = async (req: Request, res: Response) => {
         try {
             if (!req.user) {

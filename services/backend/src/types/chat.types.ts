@@ -255,4 +255,16 @@ export interface AuthenticatedRequest extends Request {
     user: IUser & { _id: string };
 }
 
-export type FlowType = "ONBOARDING" | "CHECK_IN" | "CHATBOT";
+export enum FlowTypeEnum {
+    ONBOARDING = "ONBOARDING",
+    CHECK_IN = "CHECK_IN",
+    CHATBOT = "CHATBOT",
+}
+
+export type FlowType = FlowTypeEnum.ONBOARDING | FlowTypeEnum.CHECK_IN | FlowTypeEnum.CHATBOT;
+
+export type AIGreetingMessage = {
+    type: "chatbot_message";
+    text: string;
+    timestamp: number;
+};

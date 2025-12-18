@@ -38,7 +38,7 @@ export const calculateUserCurrentWeek = (deliveryDate: Date) => {
 
     return {
         mode: "postpartum",
-        weeks: Math.max(1, week),
+        weeks: week + 1, // Start from week 1
         days,
     };
 };

@@ -98,14 +98,14 @@ const userSchema = new Schema<IUser>(
                 type: Number,
                 default: null,
             },
-        },
-        previous_weekly_checkin_due_days: {
-            type: Number,
-            default: 0,
-        },
-        upcoming_weekly_checkin_due_days: {
-            type: Number,
-            default: 0,
+            upcoming_checkin_due_days: {
+                type: Number,
+                default: 0,
+            },
+            previous_checkin_due_days: {
+                type: Number,
+                default: 0,
+            },
         },
         is_breastfeeding_currently: Boolean,
         onboarding_data: {

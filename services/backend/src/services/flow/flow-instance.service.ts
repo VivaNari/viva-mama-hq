@@ -1,9 +1,19 @@
 import { IUser } from "../../types/user.types";
-import { FlowInstanceStateEnum, IConversation, IFlowDefinition } from "../../types/chat.types";
+import {
+    FlowInstanceStateEnum,
+    IConversation,
+    IFlowDefinition,
+    IFlowInstance,
+} from "../../types/chat.types";
 import conversationModel from "../../models/conversation.model";
 import flowInstanceModel from "../../models/flowInstance.model";
+import BaseService from "../base.service";
 
-export class FlowInstanceService {
+export class FlowInstanceService extends BaseService<IFlowInstance> {
+    constructor() {
+        super(flowInstanceModel);
+    }
+
     async createNewFlowForUser(
         user: IUser,
         flowDef: IFlowDefinition,
@@ -40,4 +50,8 @@ export class FlowInstanceService {
             return null;
         }
     }
+
+    createFlowInstance = async (payload: Partial<IFlowInstance>): Promise<IFlowInstance> => {
+        return await flowInstanceModel.create(payload);
+    };
 }

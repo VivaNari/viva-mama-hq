@@ -7,10 +7,14 @@ import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
 import {
+    AIGreetingMessage,
     AnswerTypeEnum,
     EndFlowPayload,
     FlowInstanceStateEnum,
     FlowType,
+    FlowTypeEnum,
+    IFlowDefinition,
+    IFlowInstance,
     IFlowNode,
     MessageRoleEnum,
     MessageTypeEnum,
@@ -37,157 +41,224 @@ import {
 } from "../../types";
 import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
 import { FlowInstanceService } from "../flow/flow-instance.service";
+import { getAIGreetingMessage } from "../../utils/commonFunctions/chatbot";
+import BaseService from "../base.service";
+import UserService from "../users/user.service";
 
 const STOPPED_BREASTFEEDING_SCORE = -1;
 
-class ChatFlowService {
+class ChatFlowService extends BaseService<IFlowDefinition> {
     private activeSessions = new Map<string, Response>();
     private pendingQuestions = new Map<string, { questionId: string }>();
-
+    private userInstance: IUser = {} as IUser;
     private flowInstanceService: FlowInstanceService;
+    private userService: UserService;
+    private res: Response = {} as Response;
+
     constructor() {
+        super(flowDefinitionModel);
         this.flowInstanceService = new FlowInstanceService();
+        this.userService = new UserService();
     }
 
-    public async handleSseConnection(
+    setResponse = (res: Response): void => {
+        this.res = res;
+    };
+
+    setUserInstance = async (userId: string): Promise<void> => {
+        this.userInstance = (await this.userService.findById({ _id: userId })) as IUser;
+    };
+
+    setSseConnection = (): void => {
+        this.res.setHeader("Content-Type", "text/event-stream");
+        this.res.setHeader("Cache-Control", "no-cache");
+        this.res.setHeader("Connection", "keep-alive");
+        this.res.flushHeaders();
+    };
+
+    writeToSse = (res: Response, payload: Record<string, unknown>): void => {
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    sendInitialGreeting = async (): Promise<void> => {
+        try {
+            const {
+                onboarding_data: { preferred_name },
+            } = this.userInstance as IUser;
+
+            const greeetingMessage: AIGreetingMessage = {
+                type: "chatbot_message",
+                text: getAIGreetingMessage(preferred_name || "there"),
+                timestamp: Date.now(),
+            };
+            this.writeToSse(this.res, greeetingMessage);
+        } catch (error) {
+            throw error;
+        }
+    };
+
+    processAIFlowConnection = async (): Promise<boolean> => {
+        await this.getOrCreateChatbotConversation();
+        await this.sendInitialGreeting();
+        return true;
+    };
+
+    getPendingQuestion = (): { questionId: string } | undefined => {
+        return this.pendingQuestions.get(this.userInstance._id as unknown as string);
+    };
+
+    deletePendingQuestion = (): void => {
+        this.pendingQuestions.delete(this.userInstance._id as unknown as string);
+    };
+
+    sendGuidedFlowResponse = async (
+        flowDefinition: IFlowDefinition,
+        flowType: string,
+        slug: string,
+    ) => {
+        let flowInstance = await this.flowInstanceService.findOne({
+            filter: {
+                userId: this.userInstance._id,
+                flowDefId: flowDefinition._id,
+                state: FlowInstanceStateEnum.ACTIVE,
+            },
+        });
+        if (!flowInstance) {
+            const conversationId = await this.getOrCreateConversation(flowType as FlowType);
+            const startNodeId: string = flowDefinition.startNodeId;
+            const currentWeek: number = this.userInstance.current_weekdays.weeks as number;
+
+            flowInstance = await this.flowInstanceService.create({
+                userId: this.userInstance._id,
+                conversationId: conversationId,
+                flowDefId: flowDefinition._id,
+                flowSlug: slug,
+                version: flowDefinition.version,
+                postpartumWeek: currentWeek,
+                state: FlowInstanceStateEnum.ACTIVE,
+                cursorNodeId: startNodeId,
+                variables: {},
+                outcome: null,
+            });
+            this.deletePendingQuestion();
+        }
+        this.sendCurrentQuestion(flowInstance, flowDefinition, flowType as FlowType);
+    };
+
+    processGuidedFlowConnection = async (slug: string, flowType: FlowType): Promise<boolean> => {
+        const flowDefinition = await this.findOne({
+            filter: { slug: slug, status: "PUBLISHED" },
+        });
+        if (!flowDefinition) {
+            throw new Error("Flow not found");
+        }
+
+        const pendingQuestion = this.getPendingQuestion();
+        if (pendingQuestion) {
+            console.log(
+                `User ${this.userInstance._id} reconnected with pending question: ${pendingQuestion.questionId}. ` +
+                    `Question already sent - waiting for user to submit answer. No new question will be sent.`,
+            );
+            return false;
+        }
+        this.sendGuidedFlowResponse(flowDefinition, flowType, slug);
+        return true;
+    };
+
+    initInstanceVariables = async ({
+        res,
+        userId,
+    }: {
+        res: Response;
+        userId: string;
+    }): Promise<void> => {
+        this.setResponse(res);
+        this.setSseConnection();
+        await this.setUserInstance(userId);
+    };
+
+    sendSilentPushNotification = async (slug: string, flowType: FlowType): Promise<void> => {
+        try {
+            const flowInstance = await this.flowInstanceService.findOne({
+                filter: {
+                    userId: this.userInstance._id as unknown as string,
+                    state: FlowInstanceStateEnum.ACTIVE,
+                    flowSlug: slug,
+                },
+            });
+            if (!flowInstance) {
+                throw new Error("No active flow instance found for silent push");
+            }
+
+            const flowDefinition = await this.findById({ filter: { _id: flowInstance.flowDefId } });
+            if (!flowDefinition) {
+                throw new Error("Flow definition not found for silent push");
+            }
+
+            await this.sendSilentPush(
+                this.userInstance._id as unknown as string,
+                flowInstance,
+                flowDefinition,
+                flowType,
+            );
+        } catch (error) {
+            console.error(`Error handling disconnect for ${this.userInstance._id}:`, error);
+        }
+    };
+
+    handleOnCloseSseConnection = (flowType: FlowType, slug: string): void => {
+        this.res.on("close", async () => {
+            console.log(`User ${this.userInstance._id} disconnected`);
+            this.activeSessions.delete(this.userInstance._id as unknown as string);
+            if (flowType === FlowTypeEnum.CHATBOT) {
+                return;
+            }
+
+            const pendingQuestion = this.getPendingQuestion();
+            if (!pendingQuestion) {
+                return;
+            }
+
+            this.deletePendingQuestion();
+
+            await this.sendSilentPushNotification(slug, flowType);
+        });
+    };
+
+    handleSseConnection = async (
         userId: string,
         slug: string,
         flowType: FlowType,
         res: Response,
-    ): Promise<void> {
-        res.setHeader("Content-Type", "text/event-stream");
-        res.setHeader("Cache-Control", "no-cache");
-        res.setHeader("Connection", "keep-alive");
-        res.flushHeaders();
-
-        console.log(`User ${userId} connected via SSE for flow: ${slug}, type: ${flowType}`);
-        this.activeSessions.set(userId, res);
-
+    ): Promise<void> => {
         try {
-            // ===== CHATBOT FLOW =====
-            if (flowType === "CHATBOT") {
-                console.log(`Chatbot session established for user ${userId}`);
-
-                // Get or create chatbot conversation
-                await this.getOrCreateChatbotConversation(userId);
-
-                // Send initial greeting
-                const greeting = {
-                    type: "chatbot_message",
-                    text: "Hello! How can I help you today?",
-                    timestamp: Date.now(),
-                };
-
-                res.write(`data: ${JSON.stringify(greeting)}\n\n`);
-                console.log(`Sent chatbot greeting`);
-
-                // Just keep connection open and wait for user messages
-                return;
+            await this.initInstanceVariables({ res, userId });
+            if (this.userInstance === null) {
+                throw new Error("User not found");
             }
 
-            // ===== GUIDED FLOWS (ONBOARDING/CHECK-IN) =====
-            console.log(`Flow type detected: ${flowType}`);
+            console.log(`User ${userId} connected via SSE for flow: ${slug}, type: ${flowType}`);
+            this.activeSessions.set(userId, res);
 
-            const flowDefinition = await flowDefinitionModel.findOne({
-                slug: slug,
-                status: "PUBLISHED",
-            });
+            switch (flowType) {
+                // Chatbot Flow
+                case FlowTypeEnum.CHATBOT: {
+                    this.processAIFlowConnection();
+                    break;
+                }
 
-            if (!flowDefinition) {
-                this.sendError(res, "Flow not found");
-                return;
+                // Guided Flows
+                case FlowTypeEnum.ONBOARDING || FlowTypeEnum.CHECK_IN: {
+                    this.processGuidedFlowConnection(slug, flowType);
+                    break;
+                }
             }
-
-            let flowInstance = await flowInstanceModel.findOne({
-                userId: userId,
-                flowDefId: flowDefinition._id,
-                state: FlowInstanceStateEnum.ACTIVE,
-            });
-
-            const pending = this.pendingQuestions.get(userId);
-            if (pending) {
-                console.log(
-                    `User ${userId} reconnected with pending question: ${pending.questionId}. ` +
-                        `Question already sent - waiting for user to submit answer. No new question will be sent.`,
-                );
-                return;
-            }
-
-            if (!flowInstance) {
-                console.log(`New user ${userId}. Creating flow instance...`);
-
-                const conversationId = await this.getOrCreateConversation(userId, flowType);
-                const startNodeId = flowDefinition.startNodeId;
-
-                const user = (await UserModel.findById(userId)) as IUser;
-                const currentWeek = user.current_weekdays.weeks;
-
-                flowInstance = await new flowInstanceModel({
-                    userId: userId,
-                    conversationId: conversationId,
-                    flowDefId: flowDefinition._id,
-                    flowSlug: slug,
-                    version: flowDefinition.version,
-                    postpartumWeek: currentWeek,
-                    state: FlowInstanceStateEnum.ACTIVE,
-                    cursorNodeId: startNodeId,
-                    variables: {},
-                    outcome: null,
-                }).save();
-
-                this.pendingQuestions.delete(userId);
-                await this.sendCurrentQuestion(userId, flowInstance, flowDefinition, res, flowType);
-
-                this.pendingQuestions.set(userId, { questionId: startNodeId });
-            } else {
-                console.log(`Returning user ${userId}. Cursor: ${flowInstance.cursorNodeId}`);
-                await this.sendCurrentQuestion(userId, flowInstance, flowDefinition, res, flowType);
-            }
+            this.handleOnCloseSseConnection(flowType, slug);
         } catch (error) {
             console.error("SSE connection error:", error);
             this.sendError(res, "Internal server error");
         }
-
-        res.on("close", () => {
-            console.log(`User ${userId} disconnected`);
-            this.activeSessions.delete(userId);
-
-            // Only handle pending questions for guided flows
-            if (flowType !== "CHATBOT") {
-                const pending = this.pendingQuestions.get(userId);
-                if (pending) {
-                    this.pendingQuestions.delete(userId);
-
-                    (async () => {
-                        try {
-                            const flowInstance = await flowInstanceModel.findOne({
-                                userId: userId,
-                                state: FlowInstanceStateEnum.ACTIVE,
-                                flowSlug: slug,
-                            });
-
-                            if (flowInstance) {
-                                const flowDefinition = await flowDefinitionModel.findById(
-                                    flowInstance.flowDefId,
-                                );
-
-                                if (flowDefinition) {
-                                    await this.sendSilentPush(
-                                        userId,
-                                        flowInstance,
-                                        flowDefinition,
-                                        flowType,
-                                    );
-                                }
-                            }
-                        } catch (error) {
-                            console.error(`Error handling disconnect for ${userId}:`, error);
-                        }
-                    })();
-                }
-            }
-        });
-    }
+    };
 
     public async saveAnswer(
         userId: string,
@@ -442,13 +513,7 @@ class ChatFlowService {
 
             const userConnection = this.activeSessions.get(userId);
             if (userConnection) {
-                await this.sendCurrentQuestion(
-                    userId,
-                    flowInstance,
-                    flowDefinition,
-                    userConnection,
-                    flowType,
-                );
+                await this.sendCurrentQuestion(flowInstance, flowDefinition, flowType);
             } else {
                 await this.sendSilentPush(userId, flowInstance, flowDefinition, flowType);
             }
@@ -534,17 +599,17 @@ class ChatFlowService {
     }
 
     // ===== NEW METHOD: Get or Create Chatbot Conversation =====
-    private async getOrCreateChatbotConversation(userId: string): Promise<Schema.Types.ObjectId> {
+    private async getOrCreateChatbotConversation(): Promise<Schema.Types.ObjectId> {
         let conversation = await conversationModel.findOne({
-            userId: userId,
+            userId: this.userInstance?._id,
             chatMode: "AI_ONLY",
             "meta.tags": "chatbot",
         });
 
         if (!conversation) {
-            console.log(`Creating new chatbot conversation for user ${userId}`);
+            console.log(`Creating new chatbot conversation for user ${this.userInstance?._id}`);
             conversation = await new conversationModel({
-                userId: userId,
+                userId: this.userInstance?._id,
                 title: "Chat with AI Assistant",
                 chatMode: "AI_ONLY",
                 lastMessageAt: new Date(),
@@ -931,21 +996,19 @@ class ChatFlowService {
     }
 
     private async sendCurrentQuestion(
-        userId: string,
-        flowInstance: any,
-        flowDefinition: any,
-        res: Response,
+        flowInstance: IFlowInstance,
+        flowDefinition: IFlowDefinition,
         flowType: FlowType,
         questionOvverideId?: string,
         questionTextOverride?: string,
     ): Promise<void> {
         if (!flowInstance.cursorNodeId) {
-            this.endFlow(userId, res);
+            this.endFlow(this.userInstance._id as unknown as string, this.res);
             return;
         }
 
         const validNodeId = await this.findNextValidNode(
-            userId,
+            this.userInstance._id as unknown as string,
             flowInstance,
             flowDefinition,
             flowInstance.cursorNodeId,
@@ -953,8 +1016,8 @@ class ChatFlowService {
         );
         console.log(`Next valid node: ${validNodeId}`);
         if (!validNodeId) {
-            console.log(`No valid questions remaining for user ${userId}`);
-            this.endFlow(userId, res);
+            console.log(`No valid questions remaining for user ${this.userInstance._id}`);
+            this.endFlow(this.userInstance._id as unknown as string, this.res);
             return;
         }
 
@@ -967,7 +1030,7 @@ class ChatFlowService {
 
         if (!currentNode) {
             console.error(`Node ${validNodeId} not found`);
-            this.endFlow(userId, res, flowType);
+            this.endFlow(this.userInstance._id as unknown as string, this.res, flowType);
             return;
         }
 
@@ -993,7 +1056,7 @@ class ChatFlowService {
 
         await new messageModel({
             conversationId: flowInstance.conversationId,
-            userId: userId,
+            userId: this.userInstance._id as unknown as string,
             role: MessageRoleEnum.ASSITANT,
             type: MessageTypeEnum.GUIDED,
             text: payload.text,
@@ -1007,14 +1070,11 @@ class ChatFlowService {
             },
         }).save();
 
-        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+        this.res.write(`data: ${JSON.stringify(payload)}\n\n`);
         console.log(`Sent question via SSE: ${currentNode.id}`);
     }
 
-    private async getOrCreateConversation(
-        userId: string,
-        flowType: FlowType,
-    ): Promise<Schema.Types.ObjectId> {
+    private async getOrCreateConversation(flowType: FlowType): Promise<Schema.Types.ObjectId> {
         let title: string;
         let tag: string;
 
@@ -1032,14 +1092,14 @@ class ChatFlowService {
         const chatMode = flowType === "CHATBOT" ? "AI_ONLY" : "GUIDED_ONLY";
 
         let conversation = await conversationModel.findOne({
-            userId: userId,
+            userId: this.userInstance._id,
             chatMode: chatMode,
             "meta.tags": tag,
         });
 
         if (!conversation) {
             conversation = await new conversationModel({
-                userId: userId,
+                userId: this.userInstance._id,
                 title: title,
                 chatMode: chatMode,
                 lastMessageAt: new Date(),
