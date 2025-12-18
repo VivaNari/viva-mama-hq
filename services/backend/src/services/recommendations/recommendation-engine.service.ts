@@ -26,27 +26,9 @@ export default class RecommendationEngineService {
 
             // Get individual category recommendations
             const [physicalRec, lactationRec, emotionalRec] = await Promise.all([
-                this.getIndividualRecommendation(
-                    phase,
-                    "physical",
-                    physicalIndividual,
-                    week,
-                    breastfeeding,
-                ),
-                this.getIndividualRecommendation(
-                    phase,
-                    "lactation",
-                    lactationIndividual,
-                    week,
-                    breastfeeding,
-                ),
-                this.getIndividualRecommendation(
-                    phase,
-                    "emotional",
-                    emotionalIndividual,
-                    week,
-                    breastfeeding,
-                ),
+                this.getIndividualRecommendation(phase, "physical", physicalIndividual, week),
+                this.getIndividualRecommendation(phase, "lactation", lactationIndividual, week),
+                this.getIndividualRecommendation(phase, "emotional", emotionalIndividual, week),
             ]);
 
             return {
@@ -88,8 +70,8 @@ export default class RecommendationEngineService {
         // For RED/YELLOW zones, get category-specific recommendation
         let categoryToQuery = weakestCategory;
 
-        // Handle weeks 7+ where physical is inactive
-        if (week >= 7 && weakestCategory === "physical") {
+        // Handle weeks 9+ where physical is inactive
+        if (week >= 9 && weakestCategory === "physical") {
             categoryToQuery = breastfeeding ? "lactation" : "emotional";
         }
 
@@ -130,17 +112,16 @@ export default class RecommendationEngineService {
         category: CategoryKey,
         individualData: IndividualCategoryScore,
         week: number,
-        breastfeeding: boolean,
     ): Promise<IRecommendationLean | null> {
-        // Skip physical for weeks 7+
-        if (week >= 7 && category === "physical") {
+        // Skip physical for weeks 9+
+        if (week >= 9 && category === "physical") {
             return null;
         }
 
         // Skip lactation if not breastfeeding for weeks 7+
-        if (week >= 7 && !breastfeeding && category === "lactation") {
-            return null;
-        }
+        // if (week >= 7 && !breastfeeding && category === "lactation") {
+        //     return null;
+        // }
 
         try {
             const rec = await RecommendationModel.findOne({

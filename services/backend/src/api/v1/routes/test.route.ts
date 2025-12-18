@@ -48,12 +48,12 @@ testRouter.post("/checkin", async (req: Request, res: Response) => {
             (val) => typeof val !== "number" || val < 0 || val > 2,
         );
 
-        if (hasInvalidValues) {
-            return res.status(400).json({
-                success: false,
-                error: "All indicator values must be numbers between 0 and 2",
-            });
-        }
+        // if (hasInvalidValues) {
+        //     return res.status(400).json({
+        //         success: false,
+        //         error: "All indicator values must be numbers between 0 and 2",
+        //     });
+        // }
 
         // Process the complete flow
         const result = await ScoreRecommendationHandler.process(

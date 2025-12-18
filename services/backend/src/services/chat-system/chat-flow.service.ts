@@ -485,6 +485,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     this.flowInstanceService.createNewFlowForUser(user, flowDeninition);
 
                     await UserModel.findByIdAndUpdate(userId, {
+                        is_breastfeeding_currently: true,
                         is_onboarded: {
                             is_questionnaire_completed: true,
                             is_subscription_completed: user?.is_onboarded.is_subscription_completed,
