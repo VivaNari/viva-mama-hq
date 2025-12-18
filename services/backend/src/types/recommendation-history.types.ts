@@ -1,27 +1,46 @@
-import { Schema, Document, Types } from "mongoose";
-import { CategoryKey } from "./score-engine.types";
+import { Schema, Types } from "mongoose";
 
 export interface IRecommendationHistory {
     userId: Schema.Types.ObjectId | string;
     week: number;
     finalScore: number;
     zone: "RED" | "YELLOW" | "GREEN";
-    weakestCategory: CategoryKey;
     breastfeeding: boolean;
-    recommendationId: Types.ObjectId | string;
+    tagline: string;
     individualRecommendations: {
         physical: {
-            recommendationId: Types.ObjectId | null;
+            recommendation: {
+                title: string;
+                goingWell: string;
+                needsHelp?: string;
+                celebrate?: string[];
+                tips?: string[];
+                next?: string[];
+            };
             score: number;
             zone: "RED" | "YELLOW" | "GREEN";
         };
         lactation: {
-            recommendationId: Types.ObjectId | null;
+            recommendation: {
+                title: string;
+                goingWell: string;
+                needsHelp?: string;
+                celebrate?: string[];
+                tips?: string[];
+                next?: string[];
+            };
             score: number;
             zone: "RED" | "YELLOW" | "GREEN";
         };
         emotional: {
-            recommendationId: Types.ObjectId | null;
+            recommendation: {
+                title: string;
+                goingWell: string;
+                needsHelp?: string;
+                celebrate?: string[];
+                tips?: string[];
+                next?: string[];
+            };
             score: number;
             zone: "RED" | "YELLOW" | "GREEN";
         };

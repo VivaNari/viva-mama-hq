@@ -45,12 +45,17 @@ class RedisSubscriberService {
             userId = data.userId;
             const indicators = data.indicators;
             const FCM_token = data.FCM_token;
+            const flowInstanceId = data.flowInstanceId;
 
             console.log(`[WORKER] Processing score for user ${userId}...`);
             console.log(`[WORKER] Indicators:`, JSON.stringify(indicators, null, 2));
 
             // Process the score and recommendation
-            const result = await ScoreRecommendationHandler.process(userId, indicators);
+            const result = await ScoreRecommendationHandler.process(
+                userId,
+                indicators,
+                flowInstanceId,
+            );
 
             console.log(`\nSCORE DETAILS:`);
             console.log(`   Final Score: ${result.score.finalScore}%`);

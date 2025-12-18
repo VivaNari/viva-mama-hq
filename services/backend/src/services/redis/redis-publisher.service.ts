@@ -12,11 +12,13 @@ class RedisPublisherService {
         userId: string,
         indicators: { physical: number[]; lactation: number[]; emotional: number[] },
         FCM_token: string,
+        flowInstanceId: string,
     ) {
         const message = JSON.stringify({
             userId,
             indicators,
             FCM_token,
+            flowInstanceId,
             timestamp: new Date().toISOString(),
         });
 

@@ -7,9 +7,9 @@ export interface IRecommendationBase {
     title: string;
     goingWell: string;
     needsHelp?: string;
-    celebrate?: string;
-    tips?: string;
-    next?: string;
+    celebrate?: string[];
+    tips?: string[];
+    next?: string[];
 }
 
 // For Mongoose documents

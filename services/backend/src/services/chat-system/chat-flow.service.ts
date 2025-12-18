@@ -6,7 +6,6 @@ import flowDefinitionModel from "../../models/flowDefinition.model";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
-import userModel from "../../models/user.model";
 import {
     AnswerTypeEnum,
     EndFlowPayload,
@@ -20,9 +19,24 @@ import {
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
 // import { v4 as uuidv4 } from "uuid";
-import { EUserCategory, IUser } from "../../types";
+import { ONBOARDING_SLUG } from "../../constants/conversationSlugs";
 import UserModel from "../../models/user.model";
+import {
+    AlcoholUseEnum,
+    ConceptionMethod,
+    CurrentMedicationEnum,
+    DeliveryOutcomeEnum,
+    DeliveryTypeEnum,
+    EUserCategory,
+    IUser,
+    ParityEnum,
+    PastMedicationEnum,
+    PregnancyConditionEnum,
+    SocialSupportEnum,
+    TobaccoUseEnum,
+} from "../../types";
 import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
+import { FlowInstanceService } from "../flow/flow-instance.service";
 
 const STOPPED_BREASTFEEDING_SCORE = -1;
 
@@ -30,36 +44,48 @@ class ChatFlowService {
     private activeSessions = new Map<string, Response>();
     private pendingQuestions = new Map<string, { questionId: string }>();
 
-    private async detectFlowType(userId: string): Promise<FlowType> {
-        const user = await userModel.findById(userId);
-
-        if (!user) {
-            throw new Error(` User not found: ${userId}`);
-        }
-
-        if (
-            user.is_onboarded.is_questionnaire_completed &&
-            user.is_onboarded.is_subscription_completed
-        ) {
-            console.log(` User ${userId} is onboarded. Flow type: CHECK_IN`);
-            return "CHECK_IN";
-        } else {
-            console.log(` User ${userId} is not onboarded. Flow type: ONBOARDING`);
-            return "ONBOARDING";
-        }
+    private flowInstanceService: FlowInstanceService;
+    constructor() {
+        this.flowInstanceService = new FlowInstanceService();
     }
 
-    public async handleSseConnection(userId: string, slug: string, res: Response): Promise<void> {
+    public async handleSseConnection(
+        userId: string,
+        slug: string,
+        flowType: FlowType,
+        res: Response,
+    ): Promise<void> {
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
         res.flushHeaders();
 
-        console.log(`User ${userId} connected via SSE for flow: ${slug}`);
+        console.log(`User ${userId} connected via SSE for flow: ${slug}, type: ${flowType}`);
         this.activeSessions.set(userId, res);
 
         try {
-            const flowType = await this.detectFlowType(userId);
+            // ===== CHATBOT FLOW =====
+            if (flowType === "CHATBOT") {
+                console.log(`Chatbot session established for user ${userId}`);
+
+                // Get or create chatbot conversation
+                await this.getOrCreateChatbotConversation(userId);
+
+                // Send initial greeting
+                const greeting = {
+                    type: "chatbot_message",
+                    text: "Hello! How can I help you today?",
+                    timestamp: Date.now(),
+                };
+
+                res.write(`data: ${JSON.stringify(greeting)}\n\n`);
+                console.log(`Sent chatbot greeting`);
+
+                // Just keep connection open and wait for user messages
+                return;
+            }
+
+            // ===== GUIDED FLOWS (ONBOARDING/CHECK-IN) =====
             console.log(`Flow type detected: ${flowType}`);
 
             const flowDefinition = await flowDefinitionModel.findOne({
@@ -88,12 +114,12 @@ class ChatFlowService {
             }
 
             if (!flowInstance) {
-                console.log(`✨ New user ${userId}. Creating flow instance...`);
+                console.log(`New user ${userId}. Creating flow instance...`);
 
                 const conversationId = await this.getOrCreateConversation(userId, flowType);
                 const startNodeId = flowDefinition.startNodeId;
 
-                const user = (await userModel.findById(userId)) as IUser;
+                const user = (await UserModel.findById(userId)) as IUser;
                 const currentWeek = user.current_weekdays.weeks;
 
                 flowInstance = await new flowInstanceModel({
@@ -118,7 +144,7 @@ class ChatFlowService {
                 await this.sendCurrentQuestion(userId, flowInstance, flowDefinition, res, flowType);
             }
         } catch (error) {
-            console.error(" SSE connection error:", error);
+            console.error("SSE connection error:", error);
             this.sendError(res, "Internal server error");
         }
 
@@ -126,37 +152,39 @@ class ChatFlowService {
             console.log(`User ${userId} disconnected`);
             this.activeSessions.delete(userId);
 
-            const pending = this.pendingQuestions.get(userId);
-            if (pending) {
-                this.pendingQuestions.delete(userId);
+            // Only handle pending questions for guided flows
+            if (flowType !== "CHATBOT") {
+                const pending = this.pendingQuestions.get(userId);
+                if (pending) {
+                    this.pendingQuestions.delete(userId);
 
-                (async () => {
-                    try {
-                        const flowInstance = await flowInstanceModel.findOne({
-                            userId: userId,
-                            state: FlowInstanceStateEnum.ACTIVE,
-                            flowSlug: slug,
-                        });
+                    (async () => {
+                        try {
+                            const flowInstance = await flowInstanceModel.findOne({
+                                userId: userId,
+                                state: FlowInstanceStateEnum.ACTIVE,
+                                flowSlug: slug,
+                            });
 
-                        if (flowInstance) {
-                            const flowDefinition = await flowDefinitionModel.findById(
-                                flowInstance.flowDefId,
-                            );
-                            const flowType = await this.detectFlowType(userId);
-
-                            if (flowDefinition) {
-                                await this.sendSilentPush(
-                                    userId,
-                                    flowInstance,
-                                    flowDefinition,
-                                    flowType,
+                            if (flowInstance) {
+                                const flowDefinition = await flowDefinitionModel.findById(
+                                    flowInstance.flowDefId,
                                 );
+
+                                if (flowDefinition) {
+                                    await this.sendSilentPush(
+                                        userId,
+                                        flowInstance,
+                                        flowDefinition,
+                                        flowType,
+                                    );
+                                }
                             }
+                        } catch (error) {
+                            console.error(`Error handling disconnect for ${userId}:`, error);
                         }
-                    } catch (error) {
-                        console.error(` Error handling disconnect for ${userId}:`, error);
-                    }
-                })();
+                    })();
+                }
             }
         });
     }
@@ -165,15 +193,25 @@ class ChatFlowService {
         userId: string,
         flowInstanceId: string,
         nodeId: string,
+        flowType: FlowType,
         selectedKeys?: number[],
         freeText?: string,
-    ): Promise<{ success: boolean; message: string }> {
+    ): Promise<{ success: boolean; message: string } | void> {
         try {
+            // ===== CHATBOT FLOW =====
+            if (flowType === "CHATBOT") {
+                if (!freeText) {
+                    throw new Error("Message text is required for chatbot");
+                }
+                return await this.handleChatbotMessage(userId, freeText);
+            }
+
+            // ===== GUIDED FLOWS (ONBOARDING/CHECK-IN) =====
             if (!selectedKeys && !freeText) {
                 throw new Error("Either selectedKeys or freeText must be provided");
             }
 
-            const user = await userModel.findOne({ _id: userId });
+            const user = await UserModel.findOne({ _id: userId });
 
             const flowInstance = await flowInstanceModel.findOne({
                 _id: flowInstanceId,
@@ -185,11 +223,9 @@ class ChatFlowService {
                 throw new Error("FlowInstance not found or already completed");
             }
 
-            const flowType = await this.detectFlowType(userId);
-
             if (flowInstance.cursorNodeId !== nodeId) {
                 throw new Error(
-                    ` Wrong question. Expected: ${flowInstance.cursorNodeId}, Got: ${nodeId}`,
+                    `Wrong question. Expected: ${flowInstance.cursorNodeId}, Got: ${nodeId}`,
                 );
             }
 
@@ -224,12 +260,13 @@ class ChatFlowService {
 
             await new flowResponseModel({
                 flowInstanceId: flowInstance._id,
+                flowDefId: flowInstance.flowDefId,
                 nodeId: nodeId,
                 answer: answerData,
                 computed: null,
             }).save();
 
-            console.log(` Answer saved to FlowResponse`);
+            console.log(`Answer saved to FlowResponse`);
 
             const userAnswerText =
                 freeText ||
@@ -254,7 +291,7 @@ class ChatFlowService {
                 },
             }).save();
 
-            console.log(`💬 User message saved to conversation`);
+            console.log(`User message saved to conversation`);
 
             // SPECIAL VALIDATION FOR NAME NODE
             console.log(` Checking special validations for node ${nodeId}`);
@@ -314,7 +351,7 @@ class ChatFlowService {
             if (flowType === "CHECK_IN" && currentNode.indicator === "Lactation Status") {
                 if (selectedKeys?.includes(STOPPED_BREASTFEEDING_SCORE)) {
                     console.log(`User ${userId} stopped breastfeeding. Updating user record...`);
-                    await userModel.findByIdAndUpdate(userId, {
+                    await UserModel.findByIdAndUpdate(userId, {
                         is_breastfeeding_currently: false,
                     });
                 }
@@ -329,7 +366,7 @@ class ChatFlowService {
             );
 
             if (!nextNodeId) {
-                console.log(`🏁 FLOW COMPLETE FOR USER ${userId}`);
+                console.log(`FLOW COMPLETE FOR USER ${userId}`);
 
                 flowInstance.cursorNodeId = null;
                 flowInstance.state = FlowInstanceStateEnum.COMPLETED;
@@ -351,17 +388,32 @@ class ChatFlowService {
                         userId,
                         indicators,
                         user?.FCM_token as string,
+                        flowInstance._id.toString(),
                     );
                     console.log(`Score processing job published.\n`);
                 }
 
-                // FOR ONBOARDING: Update user collection to mark onboarding as complete and make the flowInstance as completed
+                // FOR ONBOARDING: Update user collection to mark onboarding as complete
                 if (flowType === "ONBOARDING") {
                     console.log(
                         `Onboarding completed for user ${userId}. Update is_onboarded in users collection`,
                     );
 
-                    await userModel.findByIdAndUpdate(userId, {
+                    const flowDeninition = await flowDefinitionModel.findOne({
+                        slug: ONBOARDING_SLUG,
+                        status: "PUBLISHED",
+                    });
+
+                    if (!flowDeninition) {
+                        console.error(
+                            `Default flow "${ONBOARDING_SLUG}" not found or not published.`,
+                        );
+                        return;
+                    }
+                    const user = (await UserModel.findById(userId)) as IUser;
+                    this.flowInstanceService.createNewFlowForUser(user, flowDeninition);
+
+                    await UserModel.findByIdAndUpdate(userId, {
                         is_onboarded: {
                             is_questionnaire_completed: true,
                             is_subscription_completed: user?.is_onboarded.is_subscription_completed,
@@ -405,9 +457,118 @@ class ChatFlowService {
 
             return { success: true, message: "Answer saved, fetching next question" };
         } catch (error: any) {
-            console.error(" Error saving answer:", error);
+            console.error("Error saving answer:", error);
             throw error;
         }
+    }
+
+    // ===== NEW METHOD: Handle Chatbot Messages =====
+    private async handleChatbotMessage(
+        userId: string,
+        message: string,
+    ): Promise<{ success: boolean; message: string }> {
+        try {
+            console.log(`Processing chatbot message from user ${userId}`);
+
+            // Get or create chatbot conversation
+            const conversationId = await this.getOrCreateChatbotConversation(userId);
+
+            // Save user message
+            await new messageModel({
+                conversationId: conversationId,
+                userId: userId,
+                role: MessageRoleEnum.USER,
+                type: MessageTypeEnum.AI,
+                text: message,
+                rich: null,
+                attachments: null,
+                ai: null,
+                guided: null,
+            }).save();
+
+            console.log(`User chatbot message saved`);
+
+            // Get AI response from your LLM service
+            const aiResponse = await this.getAIResponse(userId, message);
+
+            // Save AI message
+            await new messageModel({
+                conversationId: conversationId,
+                userId: userId,
+                role: MessageRoleEnum.ASSITANT,
+                type: MessageTypeEnum.AI,
+                text: aiResponse,
+                rich: null,
+                attachments: null,
+                ai: null,
+                guided: null,
+            }).save();
+
+            console.log(`AI response saved`);
+
+            // Update conversation timestamp
+            await conversationModel.findByIdAndUpdate(conversationId, {
+                lastMessageAt: new Date(),
+            });
+
+            // Send AI response via SSE
+            const userConnection = this.activeSessions.get(userId);
+            if (userConnection) {
+                const payload = {
+                    type: "chatbot_message",
+                    text: aiResponse,
+                    timestamp: Date.now(),
+                };
+                userConnection.write(`data: ${JSON.stringify(payload)}\n\n`);
+                console.log(`AI response sent via SSE`);
+            }
+
+            return {
+                success: true,
+                message: "Chatbot message processed successfully",
+            };
+        } catch (error: any) {
+            console.error("Error handling chatbot message:", error);
+            throw error;
+        }
+    }
+
+    // ===== NEW METHOD: Get or Create Chatbot Conversation =====
+    private async getOrCreateChatbotConversation(userId: string): Promise<Schema.Types.ObjectId> {
+        let conversation = await conversationModel.findOne({
+            userId: userId,
+            chatMode: "AI_ONLY",
+            "meta.tags": "chatbot",
+        });
+
+        if (!conversation) {
+            console.log(`Creating new chatbot conversation for user ${userId}`);
+            conversation = await new conversationModel({
+                userId: userId,
+                title: "Chat with AI Assistant",
+                chatMode: "AI_ONLY",
+                lastMessageAt: new Date(),
+                meta: {
+                    channel: "App",
+                    tags: ["chatbot"],
+                },
+            }).save();
+        }
+
+        return conversation._id;
+    }
+
+    // Get AI Response
+    private async getAIResponse(userId: string, message: string): Promise<string> {
+        // TODO: Implement  LLM service integration
+        // Example:
+        // const response = await axios.post('YOUR_LLM_ENDPOINT', {
+        //     userId: userId,
+        //     message: message,
+        // });
+        // return response.data.message;
+
+        return `This is a placeholder AI response to: "${message}". Please integrate your LLM service here.`;
     }
 
     private async updateOnboardingData(
@@ -418,7 +579,7 @@ class ChatFlowService {
         freeText?: string,
     ): Promise<void> {
         try {
-            const user = await userModel.findById(userId);
+            const user = await UserModel.findById(userId);
             if (!user) {
                 throw new Error("User not found");
             }
@@ -431,32 +592,33 @@ class ChatFlowService {
 
                 case "name":
                     user.onboarding_data.preferred_name = freeText as string;
-                    console.log(` Saved preferred_name: ${freeText}`);
+                    console.log(`Saved preferred_name: ${freeText}`);
                     break;
 
                 case "dob":
                     const dobDate = new Date(freeText!);
                     user.onboarding_data.date_of_birth = dobDate;
-                    console.log(` Saved date_of_birth: ${dobDate}`);
+                    console.log(`Saved date_of_birth: ${dobDate}`);
                     break;
 
                 case "location":
                     user.onboarding_data.location = freeText as string;
-                    console.log(` Saved location: ${freeText}`);
+                    console.log(`Saved location: ${freeText}`);
                     break;
 
                 case "conception":
                     const conception = this.getOptionValuesByScores(node, selectedKeys);
                     if (conception[0]) {
-                        user.onboarding_data.conception_method = conception[0];
-                        console.log(` Saved conception_method: ${conception[0]}`);
+                        user.onboarding_data.conception_method = conception[0] as ConceptionMethod;
+                        console.log(`Saved conception_method: ${conception[0]}`);
                     }
                     break;
 
                 case "pregnancy_conditions":
                     const conditions = this.getOptionValuesByScores(node, selectedKeys);
-                    user.onboarding_data.pregnancy_conditions = conditions;
-                    console.log(` Saved pregnancy_conditions: ${conditions.join(", ")}`);
+                    user.onboarding_data.pregnancy_conditions =
+                        conditions as PregnancyConditionEnum[];
+                    console.log(`Saved pregnancy_conditions: ${conditions.join(", ")}`);
                     break;
 
                 case "delivery_date":
@@ -474,7 +636,6 @@ class ChatFlowService {
                             ? EUserCategory.NP
                             : EUserCategory.PP;
 
-                    // user.current_postpartum_week = postpartumWeek;
                     await UserModel.findOneAndUpdate(
                         { _id: user._id },
                         { $set: { current_weekdays: user_current_week_and_days } },
@@ -482,80 +643,81 @@ class ChatFlowService {
                     );
                     user.onboarding_data.is_not_pragnant_yet = false;
                     console.log(
-                        ` Saved delivery_date: ${deliveryDate}, week: ${user_current_week_and_days.weeks}`,
+                        `Saved delivery_date: ${deliveryDate}, week: ${user_current_week_and_days.weeks}`,
                     );
                     break;
 
                 case "delivery_type":
                     const deliveryType = this.getOptionValuesByScores(node, selectedKeys);
                     if (deliveryType[0]) {
-                        user.onboarding_data.delivery_type = deliveryType[0];
-                        console.log(` Saved delivery_type: ${deliveryType[0]}`);
+                        user.onboarding_data.delivery_type = deliveryType[0] as DeliveryTypeEnum;
+                        console.log(`Saved delivery_type: ${deliveryType[0]}`);
                     }
                     break;
 
                 case "delivery_outcome":
                     const outcome = this.getOptionValuesByScores(node, selectedKeys);
                     if (outcome[0]) {
-                        user.onboarding_data.delivery_outcome = outcome[0];
-                        console.log(` Saved delivery_outcome: ${outcome[0]}`);
+                        user.onboarding_data.delivery_outcome = outcome[0] as DeliveryOutcomeEnum;
+                        console.log(`Saved delivery_outcome: ${outcome[0]}`);
                     }
                     break;
 
                 case "meds_history":
                     const historyMeds = this.getOptionValuesByScores(node, selectedKeys);
-                    user.onboarding_data.past_medications = historyMeds;
-                    console.log(` Saved past_medications: ${historyMeds.join(", ")}`);
+                    user.onboarding_data.past_medications = historyMeds as PastMedicationEnum[];
+                    console.log(`Saved past_medications: ${historyMeds.join(", ")}`);
                     break;
 
                 case "current_meds":
                     const currentMeds = this.getOptionValuesByScores(node, selectedKeys);
-                    user.onboarding_data.current_medications = currentMeds;
-                    console.log(` Saved current_medications: ${currentMeds.join(", ")}`);
+                    user.onboarding_data.current_medications =
+                        currentMeds as CurrentMedicationEnum[];
+                    console.log(`Saved current_medications: ${currentMeds.join(", ")}`);
                     break;
 
                 case "smoking":
                     const smoking = this.getOptionValuesByScores(node, selectedKeys);
                     if (smoking[0]) {
-                        user.onboarding_data.tobacco_use = smoking[0];
-                        console.log(` Saved tobacco_use: ${smoking[0]}`);
+                        user.onboarding_data.tobacco_use = smoking[0] as TobaccoUseEnum;
+                        console.log(`Saved tobacco_use: ${smoking[0]}`);
                     }
                     break;
 
                 case "alcohol":
                     const alcohol = this.getOptionValuesByScores(node, selectedKeys);
                     if (alcohol[0]) {
-                        user.onboarding_data.alcohol_use = alcohol[0];
-                        console.log(` Saved alcohol_use: ${alcohol[0]}`);
+                        user.onboarding_data.alcohol_use = alcohol[0] as AlcoholUseEnum;
+                        console.log(`Saved alcohol_use: ${alcohol[0]}`);
                     }
                     break;
 
                 case "support":
                     const support = this.getOptionValuesByScores(node, selectedKeys);
                     if (support[0]) {
-                        user.onboarding_data.social_support = support[0];
-                        console.log(` Saved social_support: ${support[0]}`);
+                        user.onboarding_data.social_support = support[0] as SocialSupportEnum;
+                        console.log(`Saved social_support: ${support[0]}`);
                     }
                     break;
 
                 case "parity":
                     const parity = this.getOptionValuesByScores(node, selectedKeys);
                     if (parity[0]) {
-                        user.onboarding_data.parity = parity[0];
-                        console.log(` Saved parity: ${parity[0]}`);
+                        user.onboarding_data.parity = parity[0] as ParityEnum;
+                        console.log(`Saved parity: ${parity[0]}`);
                     }
                     break;
 
                 case "wrap_up":
                     user.is_onboarded.is_questionnaire_completed = true;
                     user.onboarding_data.onboarded_at = new Date();
-                    console.log(` Onboarding marked as complete`);
+                    console.log(`Onboarding marked as complete`);
                     break;
             }
 
             await user.save();
         } catch (error) {
-            console.error(` Error updating onboarding data for nodeId ${nodeId}:`, error);
+            console.error(`Error updating onboarding data for nodeId ${nodeId}:`, error);
             throw error;
         }
     }
@@ -579,7 +741,7 @@ class ChatFlowService {
     ): Promise<string | null> {
         if (flowType === "CHECK_IN") {
             let currentNodeId = startingNodeId;
-            const user = await userModel.findById(userId);
+            const user = await UserModel.findById(userId);
             const currentWeek = flowInstance.postpartumWeek;
             const isBreastfeeding = user?.is_breastfeeding_currently ?? true;
 
@@ -597,36 +759,36 @@ class ChatFlowService {
                 console.log(`Checking node: ${node.id} (${node.indicator})`);
 
                 if (!this.isNodeActiveForWeek(node, currentWeek)) {
-                    console.log(`⏭️ Skipping - Not active for week ${currentWeek}`);
+                    console.log(`Skipping - Not active for week ${currentWeek}`);
                     currentNodeId = node.next;
                     continue;
                 }
 
                 if (!this.isNodeValidForBreastfeeding(node, isBreastfeeding)) {
-                    console.log(`⏭️ Skipping - Not breastfeeding`);
+                    console.log(`Skipping - Not breastfeeding`);
                     currentNodeId = node.next;
                     continue;
                 }
 
                 const isEliminated = await this.isNodeEliminated(userId, node, flowInstance);
                 if (isEliminated) {
-                    console.log(`⏭️ Skipping - Eliminated (scored 2 for 2 weeks)`);
+                    console.log(`Skipping - Eliminated (scored 2 for 2 weeks)`);
                     currentNodeId = node.next;
                     continue;
                 }
 
-                console.log(` Valid node found: ${node.id}\n`);
+                console.log(`Valid node found: ${node.id}\n`);
                 return currentNodeId;
             }
 
-            console.log(`No more valid nodes - flow complete\n`);
+            console.log(`🏁 No more valid nodes - flow complete\n`);
             return null;
         }
 
         // ONBOARDING flow logic with pregnancy skip
         console.log(`Onboarding: checking if pregnancy-related questions should be skipped`);
 
-        const user = await userModel.findById(userId);
+        const user = await UserModel.findById(userId);
         const isNotPregnantYet = user?.onboarding_data?.is_not_pragnant_yet ?? false;
 
         let currentNodeId = startingNodeId;
@@ -639,7 +801,6 @@ class ChatFlowService {
                 return null;
             }
 
-            // Skip pregnancy-related questions if user is not pregnant yet
             if (isNotPregnantYet && this.isPregnancyRelatedNode(node.id)) {
                 console.log(`Skipping pregnancy related node: ${node.id} (user not pregnant yet)`);
                 currentNodeId = node.next;
@@ -790,7 +951,7 @@ class ChatFlowService {
             flowInstance.cursorNodeId,
             flowType,
         );
-        console.log(` Next valid node: ${validNodeId}`);
+        console.log(`Next valid node: ${validNodeId}`);
         if (!validNodeId) {
             console.log(`No valid questions remaining for user ${userId}`);
             this.endFlow(userId, res);
@@ -818,7 +979,7 @@ class ChatFlowService {
         }));
 
         const payload: QuestionPayload & { askId: any; uuid: any } = {
-            // uuid: questionOvverideId || uuidv4(),
+            // uuid: questionOvverideId || uuidv4()
             uuid: questionOvverideId,
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
@@ -854,12 +1015,25 @@ class ChatFlowService {
         userId: string,
         flowType: FlowType,
     ): Promise<Schema.Types.ObjectId> {
-        const title = flowType === "ONBOARDING" ? "Onboarding" : "Check-in";
-        const tag = flowType === "ONBOARDING" ? "onboarding" : "check-in";
+        let title: string;
+        let tag: string;
+
+        if (flowType === "ONBOARDING") {
+            title = "Onboarding";
+            tag = "onboarding";
+        } else if (flowType === "CHATBOT") {
+            title = "Chat with AI Assistant";
+            tag = "chatbot";
+        } else {
+            title = "Check-in";
+            tag = "check-in";
+        }
+
+        const chatMode = flowType === "CHATBOT" ? "AI_ONLY" : "GUIDED_ONLY";
 
         let conversation = await conversationModel.findOne({
             userId: userId,
-            chatMode: "GUIDED_ONLY",
+            chatMode: chatMode,
             "meta.tags": tag,
         });
 
@@ -867,7 +1041,7 @@ class ChatFlowService {
             conversation = await new conversationModel({
                 userId: userId,
                 title: title,
-                chatMode: "GUIDED_ONLY",
+                chatMode: chatMode,
                 lastMessageAt: new Date(),
                 meta: {
                     channel: "App",
@@ -913,7 +1087,7 @@ class ChatFlowService {
         }).save();
 
         res.write(`data: ${JSON.stringify(thankYouMessage)}\n\n`);
-        console.log(`💬 Sent thank you message`);
+        console.log(`Sent thank you message`);
     }
 
     private endFlow(userId: string, res: Response, flowType?: FlowType): void {
@@ -927,7 +1101,7 @@ class ChatFlowService {
         res.end();
 
         this.activeSessions.delete(userId);
-        console.log(`🏁 Flow ended for user ${userId}`);
+        console.log(`Flow ended for user ${userId}`);
     }
 
     private sendError(res: Response, message: string): void {
@@ -947,7 +1121,7 @@ class ChatFlowService {
         flowType: FlowType,
     ): Promise<void> {
         try {
-            const user = await userModel.findById(userId);
+            const user = await UserModel.findById(userId);
             if (!user || !user.FCM_token) {
                 console.log(`No FCM token for user ${userId}`);
                 return;
@@ -1013,7 +1187,7 @@ class ChatFlowService {
             };
 
             await admin!.messaging().send(message);
-            console.log(`📬 Sent silent push for question ${currentNode.id}`);
+            console.log(`Sent silent push for question ${currentNode.id}`);
 
             await new messageModel({
                 conversationId: flowInstance.conversationId,
@@ -1031,7 +1205,7 @@ class ChatFlowService {
                 },
             }).save();
         } catch (error) {
-            console.error(" Error sending silent push:", error);
+            console.error("Error sending silent push:", error);
         }
     }
 }

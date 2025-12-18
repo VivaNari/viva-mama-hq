@@ -219,6 +219,7 @@ export type AnswerType = AnswerTypeEnum.SINGLE | AnswerTypeEnum.MULTI | AnswerTy
 export interface IFlowResponse {
     _id: Schema.Types.ObjectId;
     flowInstanceId: Schema.Types.ObjectId;
+    flowDefId: Schema.Types.ObjectId;
     nodeId: string;
     answer: {
         type: AnswerType;
@@ -254,4 +255,4 @@ export interface AuthenticatedRequest extends Request {
     user: IUser & { _id: string };
 }
 
-export type FlowType = "ONBOARDING" | "CHECK_IN";
+export type FlowType = "ONBOARDING" | "CHECK_IN" | "CHATBOT";

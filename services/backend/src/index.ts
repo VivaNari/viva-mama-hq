@@ -13,7 +13,7 @@ const startServer = async () => {
     try {
         await RedisSubscriberService.initialize();
 
-        app.listen(env.PORT, () => {
+        app.listen(4000, () => {
             console.log("info", `\x1b[33m \x1b[1m Server is running on port ${env.PORT} \x1b[0m`);
             initScheduledJobs();
         });
@@ -23,6 +23,3 @@ const startServer = async () => {
     }
 };
 startServer();
-app.listen(env.PORT, () => {
-    console.log("info --", `\x1b[33m \x1b[1m Server is running on port ${env.PORT} \x1b[0m`);
-});

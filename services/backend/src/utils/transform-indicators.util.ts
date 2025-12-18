@@ -41,17 +41,17 @@ export async function transformFlowResponsesToIndicators(flowInstanceId: string)
 
         if (
             nodeId.includes("lochia") ||
-            nodeId.includes("mobility") ||
             nodeId.includes("perineal") ||
+            nodeId.includes("mobility") ||
             nodeId.includes("fever") ||
             nodeId.includes("constipation")
         ) {
             indicators.physical.push(answerValue);
         } else if (
-            nodeId.includes("supplement_adherence") ||
+            nodeId.includes("general_pain") ||
+            nodeId.includes("lactation") ||
             nodeId.includes("nutrition") ||
-            nodeId.includes("supplements") ||
-            nodeId.includes("lactation")
+            nodeId.includes("supplement")
         ) {
             indicators.lactation.push(answerValue);
         } else if (

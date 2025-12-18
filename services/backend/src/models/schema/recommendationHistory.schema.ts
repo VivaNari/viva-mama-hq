@@ -1,5 +1,6 @@
 import { Schema } from "mongoose";
 import { IRecommendationHistory } from "../../types/recommendation-history.types";
+import { required } from "joi";
 
 export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
     {
@@ -21,12 +22,12 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
         individualRecommendations: {
             physical: {
                 recommendation: {
-                    title: { type: String, required: true },
-                    goingWell: { type: String, required: true },
+                    title: { type: String, required: false },
+                    goingWell: { type: String, required: false },
                     needsHelp: { type: String },
-                    celebrate: { type: String },
-                    tips: { type: String },
-                    next: { type: String },
+                    celebrate: { type: [String], default: [] },
+                    tips: { type: [String], default: [] },
+                    next: { type: [String], default: [] },
                 },
                 score: {
                     type: Number,
@@ -43,9 +44,9 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
                     title: { type: String, required: true },
                     goingWell: { type: String, required: true },
                     needsHelp: { type: String },
-                    celebrate: { type: String },
-                    tips: { type: String },
-                    next: { type: String },
+                    celebrate: { type: [String], default: [] },
+                    tips: { type: [String], default: [] },
+                    next: { type: [String], default: [] },
                 },
                 score: {
                     type: Number,
@@ -62,9 +63,9 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
                     title: { type: String, required: true },
                     goingWell: { type: String, required: true },
                     needsHelp: { type: String },
-                    celebrate: { type: String },
-                    tips: { type: String },
-                    next: { type: String },
+                    celebrate: { type: [String], default: [] },
+                    tips: { type: [String], default: [] },
+                    next: { type: [String], default: [] },
                 },
                 score: {
                     type: Number,

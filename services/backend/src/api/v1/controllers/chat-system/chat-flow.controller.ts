@@ -4,7 +4,7 @@ import { IUser } from "../../../../types";
 import { StatusCodes } from "http-status-codes";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 import { messages } from "../../../../constants/messages";
-import { AuthenticatedRequest } from "../../../../types/chat.types";
+import { AuthenticatedRequest, FlowType } from "../../../../types/chat.types";
 
 class ChatFlowController {
     private chatFlowService: ChatFlowService;
@@ -18,6 +18,7 @@ class ChatFlowController {
             const req = request as AuthenticatedRequest;
             const { slug } = req.params;
             const userId = req.user._id;
+            const { flowType } = req.query;
 
             if (!userId || !slug) {
                 return sendResponse({
@@ -29,7 +30,7 @@ class ChatFlowController {
                 });
             }
 
-            this.chatFlowService.handleSseConnection(userId, slug, response);
+            this.chatFlowService.handleSseConnection(userId, slug, flowType as FlowType, response);
         } catch (err) {
             next(err);
         }
@@ -39,7 +40,7 @@ class ChatFlowController {
         try {
             const req = request as AuthenticatedRequest;
             const userId = req.user._id;
-            const { flowInstanceId, nodeId, selectedKeys, freeText } = req.body;
+            const { flowInstanceId, nodeId, selectedKeys, freeText, flowType } = req.body;
 
             // ✅ Validate required fields
             if (!flowInstanceId || !nodeId) {
@@ -90,6 +91,7 @@ class ChatFlowController {
                 userId,
                 flowInstanceId,
                 nodeId,
+                flowType,
                 selectedKeys, // Can be undefined
                 freeText, // Can be undefined
             );
