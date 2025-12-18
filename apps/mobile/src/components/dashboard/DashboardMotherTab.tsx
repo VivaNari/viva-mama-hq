@@ -170,7 +170,11 @@ const DashboardMotherTab = ({ score }: { score: string | null }) => {
 
                     <TouchableOpacity
                         activeOpacity={0.8}
-                        onPress={() => { }}
+                        onPress={() => {
+                            navigation.navigate("ChatWithVivaAI", {
+                                flowSlug: "weekly-check-in-v1",
+                            });
+                        }}
                         style={{
                             borderRadius: 30,
                             justifyContent: "center",

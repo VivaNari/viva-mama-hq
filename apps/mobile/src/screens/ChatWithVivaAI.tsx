@@ -2,7 +2,6 @@ import MaterialDesignIcons from '@react-native-vector-icons/material-design-icon
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
     AppState,
     AppStateStatus,
     BackHandler,
@@ -15,15 +14,21 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import EventSource from 'react-native-sse';
 import Toast from 'react-native-toast-message';
+import apiClientInterceptor from '../api/apiClientInterceptor';
 import CustomDatePicker from '../components/CustomDatePicker';
+import { CHAT_FLOW_ANSWER, CHAT_SESSION_URL } from '../constants/endpoints';
 import { useAuth } from '../context/AuthContext';
 import { chatDB } from '../db/sqlite';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { styles as chatStyles } from '../public/styles/chatWithVivaAiStyles';
 import { IDBAiMessage, IDBChatMessage, IDBUserMessage, IOption } from "../types/vivaAi.types";
-import { CHAT_FLOW_ANSWER, CHAT_SESSION_URL } from '../constants/endpoints';
-import apiClientInterceptor from '../api/apiClientInterceptor';
+
+export enum EFlowType {
+    ONBOARDING = 'ONBOARDING',
+    CHECKIN = 'CHECK_IN',
+    CHATBOT = 'CHATBOT',
+}
 
 const TYPING_SPEED_MS = 30;
 
@@ -34,13 +39,29 @@ const RenderTypingIndicator: React.FC = () => (
 );
 
 export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?: string } } }) {
+    console.log("route.params ---------------->", route.params)
     const [show, setShow] = useState<boolean>(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedMultiOptions, setSelectedMultiOptions] = useState<Set<string>>(new Set());
 
     const { userToken, userId, isFullyOnboarded, completeQuestionnaire } = useAuth();
 
-    let FLOW_SLUG = isFullyOnboarded() ? 'weekly-check-in-v1' : 'onboarding-flow-v2';
+    const getFlowType = (): EFlowType => {
+        if (route.params?.flowSlug) {
+            return EFlowType.CHECKIN;
+        }
+
+        if (!isFullyOnboarded()) {
+            return EFlowType.ONBOARDING;
+        }
+
+        return EFlowType.CHATBOT;
+    };
+
+    const flowType = getFlowType();
+
+    const FLOW_SLUG = route.params?.flowSlug ||
+        (flowType === EFlowType.ONBOARDING ? 'onboarding-flow-v2' : 'chatbot-flow');
 
     const navigation = useNavigation();
     const [inputText, setInputText] = useState('');
@@ -49,7 +70,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
     const [isLoading, setIsLoading] = useState(false);
     const [isFlowComplete, setIsFlowComplete] = useState(false);
 
-    useEffect(()=>{
+    useEffect(() => {
         console.log(isFlowComplete);
     }, [isFlowComplete])
 
@@ -103,13 +124,13 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
 
     // Determine when we should show which type of input
     const lastMessage = chatHistory[chatHistory.length - 1];
-    const shouldShowTextInput =
-        isTextInputMessage(lastMessage) &&
-        !isLoading &&
-        !isFlowComplete &&
-        !animatingMessageId;
+
+    const shouldShowTextInput = flowType === EFlowType.CHATBOT
+        ? !isLoading && !animatingMessageId
+        : isTextInputMessage(lastMessage) && !isLoading && !isFlowComplete && !animatingMessageId;
 
     const shouldShowDateInput =
+        flowType !== EFlowType.CHATBOT &&
         isDateInputMessage(lastMessage) &&
         lastMessage.type == "ai" &&
         lastMessage?.id !== "delivery_date" &&
@@ -119,6 +140,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         !animatingMessageId;
 
     const shouldShowMultiSubmit =
+        flowType !== EFlowType.CHATBOT &&
         isMultiSelectMessage(lastMessage) &&
         !isLoading &&
         !isFlowComplete &&
@@ -162,6 +184,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 flowInstanceId: lastAi.flowInstanceId,
                 nodeId: lastAi.id,
                 freeText: formatted,
+                flowType
             });
 
             console.log('Date answer sent successfully:', formatted);
@@ -210,6 +233,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 flowInstanceId: lastAi.flowInstanceId,
                 nodeId: lastAi.id,
                 freeText: "not_pragnent",
+                flowType
             });
 
             console.log('Not pregnant answer sent successfully');
@@ -302,7 +326,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
         }
-        const es = new EventSource(CHAT_SESSION_URL(FLOW_SLUG, userToken as string));
+        const es = new EventSource(CHAT_SESSION_URL(FLOW_SLUG, userToken as string, flowType));
         eventSourceRef.current = es;
 
         if (chatHistory.length === 0) {
@@ -322,7 +346,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                     setIsFlowComplete(true);
                     setIsLoading(false);
 
-                    if (data.flowType == "ONBOARDING") {
+                    if (data.flowType === "ONBOARDING") {
                         // complete the onboarding Questionnaire process
                         await completeQuestionnaire();
 
@@ -339,7 +363,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                                 index: 0,
                                 routes: [{ name: "Services" as never }],
                             });
-                        }, 7000);
+                        }, 5000);
                     } else {
                         Toast.show({
                             type: 'success',
@@ -441,6 +465,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 flowInstanceId: lastAi.flowInstanceId,
                 nodeId: lastAi.id,
                 selectedKeys: [option.score],
+                flowType
             });
             console.log('Answer sent');
         } catch (error: any) {
@@ -547,6 +572,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 flowInstanceId: lastAi.flowInstanceId,
                 nodeId: lastAi.id,
                 selectedKeys: selectedScores,
+                flowType
             });
             console.log('Multi-select answer sent:', selectedScores);
         } catch (error: any) {
@@ -568,6 +594,46 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         }
 
         if (isLoading || animatingMessageId || isFlowComplete) {
+            return;
+        }
+
+        // === CHATBOT FLOW ===
+        if (flowType === EFlowType.CHATBOT) {
+            const userMessage: IDBUserMessage = {
+                type: 'user',
+                text: inputText.trim(),
+                timestamp: Date.now(),
+            };
+
+            await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+
+            setChatHistory((prev) => [...prev, userMessage]);
+
+            const textToSend = inputText.trim();
+            setInputText('');
+            setIsLoading(true);
+
+            try {
+                // For chatbot, we don't need flowInstanceId or nodeId
+                await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+                    userId: userId,
+                    flowInstanceId: 'chatbot', // Backend will ignore this
+                    nodeId: 'chatbot', // Backend will ignore this
+                    freeText: textToSend,
+                    flowType: EFlowType.CHATBOT
+                });
+
+                console.log('Chatbot message sent successfully:', textToSend);
+            } catch (error: any) {
+                console.error('Send error:', error);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: error.response?.data?.message || 'Failed to send message',
+                    position: 'bottom'
+                });
+                setIsLoading(false);
+            }
             return;
         }
 
@@ -606,6 +672,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 flowInstanceId: lastAi.flowInstanceId,
                 nodeId: lastAi.id,
                 freeText: textToSend,
+                flowType
             });
 
             console.log('Text answer sent successfully:', textToSend);

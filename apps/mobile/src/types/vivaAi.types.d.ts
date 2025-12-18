@@ -17,11 +17,6 @@ export interface IFollowUpSet {
   followUps: IFollowUps[];
 }
 
-enum EQuestionType {
-  SELECT = 'select',
-  TEXT = 'text',
-}
-
 export interface IOption {
   id: string;
   label: string;
@@ -98,4 +93,10 @@ export type IDBChatMessage = IDBAiMessage | IDBUserMessage;
 export interface IUserLocation {
   latitude: number;
   longitude: number;
+}
+
+export enum EFlowType {
+  ONBOARDING = 'ONBOARDING',
+  CHECKIN = 'CHECK_IN',
+  CHATBOT = 'CHATBOT',
 }

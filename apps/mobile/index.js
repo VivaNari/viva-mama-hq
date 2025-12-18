@@ -26,7 +26,6 @@ const backgroundMessageHandler = async (remoteMessage) => {
         // get the jwt token from async storage
         const token = await AsyncStorage.getItem('userToken');
         const userId = decodeToken(token);
-        console.log("UserId index.js:", userId);
         if (!userId) {
             console.log('[backgroundMessageHandler] No userId found, cannot save');
             return;
@@ -41,8 +40,8 @@ const backgroundMessageHandler = async (remoteMessage) => {
         }
 
         const isFullyOnboarded =
-        onboardingStatus?.is_questionnaire_completed &&
-        onboardingStatus?.is_subscription_completed;
+            onboardingStatus?.is_questionnaire_completed &&
+            onboardingStatus?.is_subscription_completed;
 
         const FLOW_SLUG = isFullyOnboarded ? 'weekly-check-in-v1' : 'onboarding-flow-v2';
 
