@@ -263,8 +263,16 @@ export enum FlowTypeEnum {
 
 export type FlowType = FlowTypeEnum.ONBOARDING | FlowTypeEnum.CHECK_IN | FlowTypeEnum.CHATBOT;
 
-export type AIGreetingMessage = {
+export type AIGreetingMessage = AILLMResponse;
+
+export type AILLMResponse = {
     type: "chatbot_message";
     text: string;
     timestamp: number;
+};
+
+export type AnswerData = {
+    type: AnswerTypeEnum;
+    freeText: string | null;
+    selectedKeys: number[] | null;
 };

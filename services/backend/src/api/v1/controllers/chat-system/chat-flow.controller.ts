@@ -36,7 +36,7 @@ class ChatFlowController {
         }
     };
 
-    saveAnswer = async (request: Request, response: Response, next: NextFunction) => {
+    saveResponse = async (request: Request, response: Response, next: NextFunction) => {
         try {
             const req = request as AuthenticatedRequest;
             const userId = req.user._id;
@@ -87,7 +87,7 @@ class ChatFlowController {
             }
 
             // Call service with both optional parameters
-            const result = await this.chatFlowService.saveAnswer(
+            const result = await this.chatFlowService.saveResponse(
                 userId,
                 flowInstanceId,
                 nodeId,

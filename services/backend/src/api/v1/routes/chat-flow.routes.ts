@@ -10,6 +10,6 @@ chatFlowRouter.get(
     authMiddleware("query"),
     chatFlowController.handleSseConnection,
 );
-chatFlowRouter.post("/chat-flow/answer", authMiddleware("header"), chatFlowController.saveAnswer);
+chatFlowRouter.post("/chat-flow/answer", authMiddleware("header"), chatFlowController.saveResponse);
 
 export default chatFlowRouter;

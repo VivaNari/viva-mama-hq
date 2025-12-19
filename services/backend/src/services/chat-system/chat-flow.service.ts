@@ -8,6 +8,8 @@ import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
 import {
     AIGreetingMessage,
+    AILLMResponse,
+    AnswerData,
     AnswerTypeEnum,
     EndFlowPayload,
     FlowInstanceStateEnum,
@@ -16,6 +18,7 @@ import {
     IFlowDefinition,
     IFlowInstance,
     IFlowNode,
+    IMessage,
     MessageRoleEnum,
     MessageTypeEnum,
     QuestionPayload,
@@ -44,92 +47,99 @@ import { FlowInstanceService } from "../flow/flow-instance.service";
 import { getAIGreetingMessage } from "../../utils/commonFunctions/chatbot";
 import BaseService from "../base.service";
 import UserService from "../users/user.service";
+import MessageService from "../message/message.service";
+import LLMService from "../llm/llm.service";
+import FlowResponseService from "./flowResponse.service";
+import axios from "axios";
+import { getUuid } from "../../utils/commonFunctions/uuid";
+import { NAME_QUERY } from "../../constants/chat";
 
 const STOPPED_BREASTFEEDING_SCORE = -1;
 
 class ChatFlowService extends BaseService<IFlowDefinition> {
     private activeSessions = new Map<string, Response>();
     private pendingQuestions = new Map<string, { questionId: string }>();
-    private userInstance: IUser = {} as IUser;
     private flowInstanceService: FlowInstanceService;
     private userService: UserService;
-    private res: Response = {} as Response;
+    private messageService: MessageService;
+    private llmService: LLMService;
+    private flowResponseService: FlowResponseService;
 
     constructor() {
         super(flowDefinitionModel);
         this.flowInstanceService = new FlowInstanceService();
         this.userService = new UserService();
+        this.messageService = new MessageService();
+        this.llmService = new LLMService();
+        this.flowResponseService = new FlowResponseService();
     }
 
-    setResponse = (res: Response): void => {
-        this.res = res;
-    };
-
-    setUserInstance = async (userId: string): Promise<void> => {
-        this.userInstance = (await this.userService.findById({ _id: userId })) as IUser;
-    };
-
-    setSseConnection = (): void => {
-        this.res.setHeader("Content-Type", "text/event-stream");
-        this.res.setHeader("Cache-Control", "no-cache");
-        this.res.setHeader("Connection", "keep-alive");
-        this.res.flushHeaders();
+    setSseConnection = (res: Response): void => {
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.flushHeaders();
     };
 
     writeToSse = (res: Response, payload: Record<string, unknown>): void => {
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
     };
 
-    sendInitialGreeting = async (): Promise<void> => {
+    sendInitialGreeting = async (userInstance: IUser, res: Response): Promise<void> => {
         try {
             const {
                 onboarding_data: { preferred_name },
-            } = this.userInstance as IUser;
+            } = userInstance as IUser;
 
             const greeetingMessage: AIGreetingMessage = {
                 type: "chatbot_message",
                 text: getAIGreetingMessage(preferred_name || "there"),
                 timestamp: Date.now(),
             };
-            this.writeToSse(this.res, greeetingMessage);
+            this.writeToSse(res, greeetingMessage);
         } catch (error) {
             throw error;
         }
     };
 
-    processAIFlowConnection = async (): Promise<boolean> => {
-        await this.getOrCreateChatbotConversation();
-        await this.sendInitialGreeting();
+    processAIFlowConnection = async (userInstance: IUser, res: Response): Promise<boolean> => {
+        await this.getOrCreateChatbotConversation(userInstance);
+        await this.sendInitialGreeting(userInstance, res);
         return true;
     };
 
-    getPendingQuestion = (): { questionId: string } | undefined => {
-        return this.pendingQuestions.get(this.userInstance._id as unknown as string);
+    getPendingQuestion = (userInstance: IUser): { questionId: string } | undefined => {
+        return this.pendingQuestions.get(userInstance._id as unknown as string);
     };
 
-    deletePendingQuestion = (): void => {
-        this.pendingQuestions.delete(this.userInstance._id as unknown as string);
+    deletePendingQuestion = (userInstance: IUser): void => {
+        this.pendingQuestions.delete(userInstance._id as unknown as string);
     };
 
     sendGuidedFlowResponse = async (
+        userInstance: IUser,
+        res: Response,
         flowDefinition: IFlowDefinition,
         flowType: string,
         slug: string,
     ) => {
         let flowInstance = await this.flowInstanceService.findOne({
             filter: {
-                userId: this.userInstance._id,
+                userId: userInstance._id,
                 flowDefId: flowDefinition._id,
                 state: FlowInstanceStateEnum.ACTIVE,
             },
         });
         if (!flowInstance) {
-            const conversationId = await this.getOrCreateConversation(flowType as FlowType);
+            const conversationId = await this.getOrCreateConversation(
+                userInstance,
+                flowType as FlowType,
+            );
             const startNodeId: string = flowDefinition.startNodeId;
-            const currentWeek: number = this.userInstance.current_weekdays.weeks as number;
+            const currentWeek: number = userInstance.current_weekdays.weeks as number;
 
             flowInstance = await this.flowInstanceService.create({
-                userId: this.userInstance._id,
+                userId: userInstance._id,
                 conversationId: conversationId,
                 flowDefId: flowDefinition._id,
                 flowSlug: slug,
@@ -140,12 +150,23 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                 variables: {},
                 outcome: null,
             });
-            this.deletePendingQuestion();
+            this.deletePendingQuestion(userInstance);
         }
-        this.sendCurrentQuestion(flowInstance, flowDefinition, flowType as FlowType);
+        this.sendCurrentQuestion(
+            userInstance,
+            res,
+            flowInstance,
+            flowDefinition,
+            flowType as FlowType,
+        );
     };
 
-    processGuidedFlowConnection = async (slug: string, flowType: FlowType): Promise<boolean> => {
+    processGuidedFlowConnection = async (
+        userInstance: IUser,
+        res: Response,
+        slug: string,
+        flowType: FlowType,
+    ): Promise<boolean> => {
         const flowDefinition = await this.findOne({
             filter: { slug: slug, status: "PUBLISHED" },
         });
@@ -153,35 +174,31 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             throw new Error("Flow not found");
         }
 
-        const pendingQuestion = this.getPendingQuestion();
+        const pendingQuestion = this.getPendingQuestion(userInstance);
         if (pendingQuestion) {
             console.log(
-                `User ${this.userInstance._id} reconnected with pending question: ${pendingQuestion.questionId}. ` +
+                `User ${userInstance._id} reconnected with pending question: ${pendingQuestion.questionId}. ` +
                     `Question already sent - waiting for user to submit answer. No new question will be sent.`,
             );
             return false;
         }
-        this.sendGuidedFlowResponse(flowDefinition, flowType, slug);
+        this.sendGuidedFlowResponse(userInstance, res, flowDefinition, flowType, slug);
         return true;
     };
 
-    initInstanceVariables = async ({
-        res,
-        userId,
-    }: {
-        res: Response;
-        userId: string;
-    }): Promise<void> => {
-        this.setResponse(res);
-        this.setSseConnection();
-        await this.setUserInstance(userId);
+    initInstanceVariables = async ({ res }: { res: Response }): Promise<void> => {
+        this.setSseConnection(res);
     };
 
-    sendSilentPushNotification = async (slug: string, flowType: FlowType): Promise<void> => {
+    sendSilentPushNotification = async (
+        userInstance: IUser,
+        slug: string,
+        flowType: FlowType,
+    ): Promise<void> => {
         try {
             const flowInstance = await this.flowInstanceService.findOne({
                 filter: {
-                    userId: this.userInstance._id as unknown as string,
+                    userId: userInstance._id as unknown as string,
                     state: FlowInstanceStateEnum.ACTIVE,
                     flowSlug: slug,
                 },
@@ -196,32 +213,37 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             }
 
             await this.sendSilentPush(
-                this.userInstance._id as unknown as string,
+                userInstance._id as unknown as string,
                 flowInstance,
                 flowDefinition,
                 flowType,
             );
         } catch (error) {
-            console.error(`Error handling disconnect for ${this.userInstance._id}:`, error);
+            console.error(`Error handling disconnect for ${userInstance._id}:`, error);
         }
     };
 
-    handleOnCloseSseConnection = (flowType: FlowType, slug: string): void => {
-        this.res.on("close", async () => {
-            console.log(`User ${this.userInstance._id} disconnected`);
-            this.activeSessions.delete(this.userInstance._id as unknown as string);
+    handleOnCloseSseConnection = (
+        userInstance: IUser,
+        res: Response,
+        flowType: FlowType,
+        slug: string,
+    ): void => {
+        res.on("close", async () => {
+            console.log(`User ${userInstance._id} disconnected`);
+            this.activeSessions.delete(userInstance._id as unknown as string);
             if (flowType === FlowTypeEnum.CHATBOT) {
                 return;
             }
 
-            const pendingQuestion = this.getPendingQuestion();
+            const pendingQuestion = this.getPendingQuestion(userInstance);
             if (!pendingQuestion) {
                 return;
             }
 
-            this.deletePendingQuestion();
+            this.deletePendingQuestion(userInstance);
 
-            await this.sendSilentPushNotification(slug, flowType);
+            await this.sendSilentPushNotification(userInstance, slug, flowType);
         });
     };
 
@@ -232,8 +254,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         res: Response,
     ): Promise<void> => {
         try {
-            await this.initInstanceVariables({ res, userId });
-            if (this.userInstance === null) {
+            console.log("slug", slug);
+            await this.initInstanceVariables({ res });
+            const userInstance: IUser | null = await this.userService.findById({ _id: userId });
+
+            if (userInstance === null) {
                 throw new Error("User not found");
             }
 
@@ -243,20 +268,475 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             switch (flowType) {
                 // Chatbot Flow
                 case FlowTypeEnum.CHATBOT: {
-                    this.processAIFlowConnection();
+                    this.processAIFlowConnection(userInstance, res);
                     break;
                 }
 
                 // Guided Flows
                 case FlowTypeEnum.ONBOARDING || FlowTypeEnum.CHECK_IN: {
-                    this.processGuidedFlowConnection(slug, flowType);
+                    this.processGuidedFlowConnection(userInstance, res, slug, flowType);
                     break;
                 }
             }
-            this.handleOnCloseSseConnection(flowType, slug);
+            this.handleOnCloseSseConnection(userInstance, res, flowType, slug);
         } catch (error) {
             console.error("SSE connection error:", error);
             this.sendError(res, "Internal server error");
+        }
+    };
+
+    createMessage = async (payload: Partial<IMessage>): Promise<IMessage> => {
+        const messageInstance = await this.messageService.create(payload);
+        return messageInstance;
+    };
+
+    getUserConnection = (userId: string): Response | undefined => {
+        const userSession: Response | undefined = this.activeSessions.get(userId);
+        return userSession;
+    };
+
+    processChatbotResponse = async (
+        userInstance: IUser,
+        message: string,
+    ): Promise<{ success: boolean; message: string }> => {
+        try {
+            console.log(`Processing chatbot message from user ${userInstance._id}`);
+            const conversationId = await this.getOrCreateChatbotConversation(userInstance);
+            await this.createMessage({
+                conversationId: conversationId,
+                userId: userInstance._id as unknown as string,
+                role: MessageRoleEnum.USER,
+                type: MessageTypeEnum.AI,
+                text: message,
+                rich: null,
+                attachments: null,
+                ai: null,
+                guided: null,
+            });
+            console.log(`User chatbot message saved`);
+            const llmResponse = await this.llmService.sendUserQuery(userInstance, message);
+            await conversationModel.findByIdAndUpdate(conversationId, {
+                lastMessageAt: new Date(),
+            });
+            const userSession = this.getUserConnection(userInstance._id as unknown as string);
+            if (userSession) {
+                const aiLlmResponse: AILLMResponse = {
+                    type: "chatbot_message",
+                    text: llmResponse,
+                    timestamp: Date.now(),
+                };
+                this.writeToSse(userSession, aiLlmResponse);
+            }
+            return {
+                success: true,
+                message: "Chatbot message processed successfully",
+            };
+        } catch (error) {
+            console.error("Error handling chatbot message:", error);
+            throw error;
+        }
+    };
+
+    validateResponseArgs = (selectedKeys: number[], freeText?: string): boolean => {
+        if (!selectedKeys && !freeText) {
+            throw new Error("Either selectedKeys or freeText must be provided");
+        }
+        return true;
+    };
+
+    getCurrentNodeId = (flowDefinition: IFlowDefinition, nodeId: string): IFlowNode | undefined => {
+        const currentNode = flowDefinition.nodes.find((n) => n.id === nodeId);
+        return currentNode;
+    };
+
+    getFlowDetails = async (
+        userInstance: IUser,
+        flowInstanceId: string,
+        nodeId: string,
+    ): Promise<{
+        currentNode: IFlowNode;
+        flowDefinition: IFlowDefinition;
+        flowInstance: IFlowInstance;
+    }> => {
+        const flowInstance = await this.flowInstanceService.findOne({
+            filter: {
+                _id: flowInstanceId,
+                userId: userInstance._id,
+                state: FlowInstanceStateEnum.ACTIVE,
+            },
+        });
+        if (!flowInstance) {
+            throw new Error("Flow instance not found");
+        }
+
+        if (flowInstance.cursorNodeId !== nodeId) {
+            throw new Error(
+                `Wrong question. Expected: ${flowInstance.cursorNodeId}, Got: ${nodeId}`,
+            );
+        }
+
+        const flowDefinition = await this.findById({
+            _id: flowInstance.flowDefId as unknown as string,
+        });
+
+        if (!flowDefinition) {
+            throw new Error("FlowDefinition not found");
+        }
+
+        const currentNode = this.getCurrentNodeId(flowDefinition, nodeId);
+        if (!currentNode) {
+            throw new Error("Node not found");
+        }
+
+        return {
+            currentNode,
+            flowDefinition,
+            flowInstance,
+        };
+    };
+
+    getAnswerDetails = (
+        currentNode: IFlowNode,
+        selectedKeys: number[],
+        freeText?: string,
+    ): {
+        answerType: AnswerTypeEnum;
+        answerData: any;
+    } => {
+        let answerType: AnswerTypeEnum;
+        if (freeText) {
+            answerType = AnswerTypeEnum.FREE;
+        } else if (currentNode.nodeType === "QUESTION_SINGLE") {
+            answerType = AnswerTypeEnum.SINGLE;
+        } else if (currentNode.nodeType === "QUESTION_MULTI") {
+            answerType = AnswerTypeEnum.MULTI;
+        } else {
+            answerType = AnswerTypeEnum.FREE;
+        }
+
+        const answerData: AnswerData = { type: answerType, selectedKeys: [], freeText: null };
+        if (freeText) {
+            answerData.freeText = freeText;
+        } else {
+            answerData.selectedKeys = [...selectedKeys];
+        }
+
+        return { answerType, answerData };
+    };
+
+    insertAnswer = async (
+        userInstance: IUser,
+        flowInstance: IFlowInstance,
+        nodeId: string,
+        answerData: AnswerData,
+        currentNode: IFlowNode,
+    ) => {
+        await this.flowResponseService.create({
+            flowInstanceId: flowInstance._id,
+            flowDefId: flowInstance.flowDefId,
+            nodeId: nodeId,
+            answer: answerData,
+            computed: null,
+        });
+
+        console.log(`Answer saved to FlowResponse`);
+
+        const userAnswerText =
+            answerData.freeText ||
+            currentNode.options
+                .filter((opt) => answerData.selectedKeys?.includes(opt.score!))
+                .map((o) => o.label)
+                .join(", ");
+
+        await this.messageService.create({
+            conversationId: flowInstance.conversationId,
+            userId: userInstance._id as unknown as string,
+            role: MessageRoleEnum.USER,
+            type: MessageTypeEnum.GUIDED,
+            text: userAnswerText,
+            rich: null,
+            attachments: null,
+            ai: null,
+            guided: {
+                flowInstanceId: flowInstance._id,
+                nodeId: nodeId,
+                optionKey:
+                    (answerData.freeText as string) ||
+                    (answerData.selectedKeys?.join(",") as string),
+            },
+        });
+
+        console.log(`User message saved to conversation`);
+
+        // SPECIAL VALIDATION FOR NAME NODE
+        console.log(` Checking special validations for node ${nodeId}`);
+    };
+
+    completeFlowInstance = async (flowInstance: any) => {
+        flowInstance.cursorNodeId = null;
+        flowInstance.state = FlowInstanceStateEnum.COMPLETED;
+        await flowInstance.save();
+    };
+
+    completeCheckinFlow = async (userInstance: IUser, flowInstance: IFlowInstance) => {
+        const indicators = await transformFlowResponsesToIndicators(flowInstance._id.toString());
+
+        console.log(`Publishing score job to Redis...`);
+        await redisPublisherService.publishScoreJob(
+            userInstance._id as unknown as string,
+            indicators,
+            userInstance.FCM_token as string,
+            flowInstance._id.toString(),
+        );
+    };
+
+    completeOnboardingFlow = async (userInstance: IUser) => {
+        console.log(
+            `Onboarding completed for user ${userInstance._id}. Update is_onboarded in users collection`,
+        );
+
+        const flowDeninition = await flowDefinitionModel.findOne({
+            slug: ONBOARDING_SLUG,
+            status: "PUBLISHED",
+        });
+
+        if (!flowDeninition) {
+            console.error(`Default flow "${ONBOARDING_SLUG}" not found or not published.`);
+            return;
+        }
+        const updatedUserInstance = await this.userService.findById({
+            _id: userInstance._id as unknown as string,
+        });
+        if (!updatedUserInstance) {
+            throw new Error("User not found");
+        }
+        this.flowInstanceService.createNewFlowForUser(updatedUserInstance, flowDeninition);
+
+        await this.userService.findByIdAndUpdate({
+            _id: updatedUserInstance._id as unknown as string,
+            payload: {
+                is_onboarded: {
+                    is_questionnaire_completed: true,
+                    is_subscription_completed:
+                        updatedUserInstance.is_onboarded.is_subscription_completed,
+                },
+            },
+        });
+    };
+
+    processGuidedResponse = async (
+        userInstance: IUser,
+        flowInstanceId: string,
+        nodeId: string,
+        flowType: FlowType,
+        selectedKeys: number[],
+        freeText?: string,
+    ) => {
+        this.validateResponseArgs(selectedKeys, freeText);
+        const { currentNode, flowDefinition, flowInstance } = await this.getFlowDetails(
+            userInstance,
+            flowInstanceId,
+            nodeId,
+        );
+        const { answerData } = this.getAnswerDetails(currentNode, selectedKeys, freeText);
+
+        await this.insertAnswer(userInstance, flowInstance, nodeId, answerData, currentNode);
+        const specialCaseNode = await this.handleSpecialNodeCase(
+            userInstance,
+            flowInstance,
+            flowDefinition,
+            nodeId,
+            flowType,
+            freeText,
+        );
+        if (specialCaseNode?.success === false) {
+            return;
+        } else if (specialCaseNode?.success) {
+            freeText = specialCaseNode.data as string;
+        }
+        if (flowType === "ONBOARDING") {
+            await this.updateOnboardingData(
+                userInstance._id as unknown as string,
+                flowDefinition,
+                nodeId,
+                selectedKeys,
+                freeText,
+            );
+        }
+        if (flowType === "CHECK_IN" && currentNode.indicator === "Lactation Status") {
+            if (selectedKeys?.includes(STOPPED_BREASTFEEDING_SCORE)) {
+                console.log(
+                    `User ${userInstance._id} stopped breastfeeding. Updating user record...`,
+                );
+                await this.userService.findByIdAndUpdate({
+                    _id: userInstance._id as unknown as string,
+                    payload: {
+                        is_breastfeeding_currently: false,
+                    },
+                });
+            }
+        }
+        const nextNodeId = await this.findNextValidNode(
+            userInstance._id as unknown as string,
+            flowInstance,
+            flowDefinition,
+            currentNode.next,
+            flowType,
+        );
+        if (!nextNodeId) {
+            await this.completeFlowInstance(flowInstance);
+            const userConnection = this.getUserConnection(userInstance._id as unknown as string);
+            if (userConnection) {
+                await this.sendThankYouMessage(
+                    userInstance._id as unknown as string,
+                    flowInstance,
+                    userConnection,
+                    flowType,
+                );
+            }
+            switch (flowType) {
+                case FlowTypeEnum.CHECK_IN: {
+                    await this.completeCheckinFlow(userInstance, flowInstance);
+                }
+                case FlowTypeEnum.ONBOARDING: {
+                    await this.completeOnboardingFlow(userInstance);
+                }
+            }
+            if (userConnection) {
+                this.endFlow(userInstance._id as unknown as string, userConnection, flowType);
+            }
+            return {
+                success: true,
+                message:
+                    flowType === "ONBOARDING"
+                        ? "Onboarding completed!"
+                        : "Check-in completed. Score processing initiated.",
+            };
+        } else {
+            flowInstance.cursorNodeId = nextNodeId;
+            await (flowInstance as any).save();
+            console.log(`Moving cursor to: ${nextNodeId}`);
+
+            this.deletePendingQuestion(userInstance);
+
+            const userConnection = this.getUserConnection(userInstance._id as unknown as string);
+            if (userConnection) {
+                await this.sendCurrentQuestion(
+                    userInstance,
+                    userConnection,
+                    flowInstance,
+                    flowDefinition,
+                    flowType,
+                );
+            } else {
+                await this.sendSilentPush(
+                    userInstance._id as unknown as string,
+                    flowInstance,
+                    flowDefinition,
+                    flowType,
+                );
+            }
+
+            this.pendingQuestions.set(userInstance._id as unknown as string, {
+                questionId: nextNodeId,
+            });
+            return { success: true, message: "Answer saved, fetching next question" };
+        }
+    };
+
+    handleSpecialNodeCase = async (
+        userInstance: IUser,
+        flowInstance: IFlowInstance,
+        flowDefinition: IFlowDefinition,
+        nodeId: string,
+        flowType: FlowType,
+        freeText?: string,
+    ) => {
+        if (flowType !== FlowTypeEnum.ONBOARDING && nodeId !== "name") {
+            return;
+        }
+        if (!freeText) {
+            throw new Error("Free text not found");
+        }
+        // 1. Call your LLM API to validate name
+        const { has_name, detected_name } = await this.llmService.sendNameQuery(freeText);
+        if (!has_name) {
+            console.log("LLM could not detect a valid name. Asking question again.");
+            this.deletePendingQuestion(userInstance);
+            // send same question again
+            const userConnection = this.getUserConnection(userInstance._id as unknown as string);
+            console.log(` User connection: ${userConnection}`);
+            if (userConnection) {
+                await this.sendCurrentQuestion(
+                    userInstance,
+                    userConnection,
+                    flowInstance,
+                    flowDefinition,
+                    flowType,
+                    getUuid(),
+                    NAME_QUERY,
+                );
+            } else {
+                await this.sendSilentPush(
+                    userInstance._id as unknown as string,
+                    flowInstance,
+                    flowDefinition,
+                    flowType,
+                );
+            }
+            // IMPORTANT: Keep cursor on same node
+            // And DO NOT save answer
+            return {
+                success: false,
+                message: "Invalid name. Asking again.",
+                data: null,
+            };
+        }
+        // If name is valid, override the freeText with LLM's detected name
+        const specialCaseNodeResponse = {
+            success: false,
+            message: "Invalid name. Asking again.",
+            data: detected_name,
+        };
+        return specialCaseNodeResponse;
+    };
+
+    saveResponse = async (
+        userId: string,
+        flowInstanceId: string,
+        nodeId: string,
+        flowType: FlowType,
+        selectedKeys: number[],
+        freeText?: string,
+    ) => {
+        try {
+            const userInstance: IUser | null = await this.userService.findById({ _id: userId });
+            if (!userInstance) {
+                throw new Error("User not found");
+            }
+            switch (flowType) {
+                case FlowTypeEnum.CHATBOT: {
+                    if (!freeText) {
+                        throw new Error("Message text is required for chatbot");
+                    }
+                    await this.processChatbotResponse(userInstance, freeText);
+                    return;
+                }
+                case FlowTypeEnum.CHECK_IN || FlowTypeEnum.ONBOARDING: {
+                    await this.processGuidedResponse(
+                        userInstance,
+                        flowInstanceId,
+                        nodeId,
+                        flowType,
+                        selectedKeys,
+                        freeText,
+                    );
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error("Error saving answer:", error);
+            throw error;
         }
     };
 
@@ -513,7 +993,12 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
 
             const userConnection = this.activeSessions.get(userId);
             if (userConnection) {
-                await this.sendCurrentQuestion(flowInstance, flowDefinition, flowType);
+                // await this.sendCurrentQuestion(
+                //     userConnection,
+                //     flowInstance,
+                //     flowDefinition,
+                //     flowType,
+                // );
             } else {
                 await this.sendSilentPush(userId, flowInstance, flowDefinition, flowType);
             }
@@ -536,7 +1021,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             console.log(`Processing chatbot message from user ${userId}`);
 
             // Get or create chatbot conversation
-            const conversationId = await this.getOrCreateChatbotConversation(userId);
+            const conversationId = await this.getOrCreateChatbotConversation({} as any);
 
             // Save user message
             await new messageModel({
@@ -599,17 +1084,19 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
     }
 
     // ===== NEW METHOD: Get or Create Chatbot Conversation =====
-    private async getOrCreateChatbotConversation(): Promise<Schema.Types.ObjectId> {
+    private async getOrCreateChatbotConversation(
+        userInstance: IUser,
+    ): Promise<Schema.Types.ObjectId> {
         let conversation = await conversationModel.findOne({
-            userId: this.userInstance?._id,
+            userId: userInstance._id,
             chatMode: "AI_ONLY",
             "meta.tags": "chatbot",
         });
 
         if (!conversation) {
-            console.log(`Creating new chatbot conversation for user ${this.userInstance?._id}`);
+            console.log(`Creating new chatbot conversation for user ${userInstance._id}`);
             conversation = await new conversationModel({
-                userId: this.userInstance?._id,
+                userId: userInstance._id,
                 title: "Chat with AI Assistant",
                 chatMode: "AI_ONLY",
                 lastMessageAt: new Date(),
@@ -996,6 +1483,8 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
     }
 
     private async sendCurrentQuestion(
+        userInstance: IUser,
+        res: Response,
         flowInstance: IFlowInstance,
         flowDefinition: IFlowDefinition,
         flowType: FlowType,
@@ -1003,12 +1492,12 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         questionTextOverride?: string,
     ): Promise<void> {
         if (!flowInstance.cursorNodeId) {
-            this.endFlow(this.userInstance._id as unknown as string, this.res);
+            this.endFlow(userInstance._id as unknown as string, res);
             return;
         }
 
         const validNodeId = await this.findNextValidNode(
-            this.userInstance._id as unknown as string,
+            userInstance._id as unknown as string,
             flowInstance,
             flowDefinition,
             flowInstance.cursorNodeId,
@@ -1016,21 +1505,21 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         );
         console.log(`Next valid node: ${validNodeId}`);
         if (!validNodeId) {
-            console.log(`No valid questions remaining for user ${this.userInstance._id}`);
-            this.endFlow(this.userInstance._id as unknown as string, this.res);
+            console.log(`No valid questions remaining for user ${userInstance._id}`);
+            this.endFlow(userInstance._id as unknown as string, res);
             return;
         }
 
         if (validNodeId !== flowInstance.cursorNodeId) {
             flowInstance.cursorNodeId = validNodeId;
-            await flowInstance.save();
+            await (flowInstance as any).save();
         }
 
         const currentNode = flowDefinition.nodes.find((n: IFlowNode) => n.id === validNodeId);
 
         if (!currentNode) {
             console.error(`Node ${validNodeId} not found`);
-            this.endFlow(this.userInstance._id as unknown as string, this.res, flowType);
+            this.endFlow(userInstance._id as unknown as string, res, flowType);
             return;
         }
 
@@ -1056,7 +1545,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
 
         await new messageModel({
             conversationId: flowInstance.conversationId,
-            userId: this.userInstance._id as unknown as string,
+            userId: userInstance._id as unknown as string,
             role: MessageRoleEnum.ASSITANT,
             type: MessageTypeEnum.GUIDED,
             text: payload.text,
@@ -1070,11 +1559,14 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             },
         }).save();
 
-        this.res.write(`data: ${JSON.stringify(payload)}\n\n`);
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
         console.log(`Sent question via SSE: ${currentNode.id}`);
     }
 
-    private async getOrCreateConversation(flowType: FlowType): Promise<Schema.Types.ObjectId> {
+    private async getOrCreateConversation(
+        userInstance: IUser,
+        flowType: FlowType,
+    ): Promise<Schema.Types.ObjectId> {
         let title: string;
         let tag: string;
 
@@ -1092,14 +1584,14 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         const chatMode = flowType === "CHATBOT" ? "AI_ONLY" : "GUIDED_ONLY";
 
         let conversation = await conversationModel.findOne({
-            userId: this.userInstance._id,
+            userId: userInstance._id,
             chatMode: chatMode,
             "meta.tags": tag,
         });
 
         if (!conversation) {
             conversation = await new conversationModel({
-                userId: this.userInstance._id,
+                userId: userInstance._id,
                 title: title,
                 chatMode: chatMode,
                 lastMessageAt: new Date(),
