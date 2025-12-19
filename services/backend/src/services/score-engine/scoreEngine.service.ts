@@ -8,7 +8,7 @@ export default class ScoreEngineService {
         "3-4": { red: 72, yellow: 91, green: 92 },
         "5-6": { red: 82, yellow: 96, green: 97 },
         "7-12": { red: 77, yellow: 97, green: 98 },
-        "13-26": { red: 85, yellow: 100, green: 100 },
+        "13-26": { red: 85, yellow: 99, green: 100 },
         "27-52": { red: 93, yellow: 98, green: 99 },
     };
 
@@ -39,9 +39,13 @@ export default class ScoreEngineService {
         breastfeeding: boolean,
         userId: string,
     ): ScoreResult {
-        const physicalArr = indicators.physical || [];
-        const lactationArr = indicators.lactation || [];
-        const emotionalArr = indicators.emotional || [];
+        // do the filter to remove negative values as when the user chooses not breastfeeding then the value is coming as -1
+        const physicalArr =
+            indicators.physical.filter((phsyicalScore: number) => phsyicalScore >= 0) || [];
+        const lactationArr =
+            indicators.lactation.filter((lactationScore: number) => lactationScore >= 0) || [];
+        const emotionalArr =
+            indicators.emotional.filter((emotionalScore: number) => emotionalScore >= 0) || [];
 
         // Helper functions
         const sum = (arr: number[]) => arr.reduce((s, v) => s + (typeof v === "number" ? v : 0), 0);
@@ -58,12 +62,12 @@ export default class ScoreEngineService {
             };
         };
 
-        // Calculate raw scores
+        // Calculate raw scores (before multiplying by the weight)
         const physicalComputed = categoryRaw(physicalArr);
         const lactationComputed = categoryRaw(lactationArr);
         const emotionalComputed = categoryRaw(emotionalArr);
 
-        // Calculate individual score percentage
+        // Calculate individual score percentage (as it is individual that's why multiplying by 100)
         const individualPhysicalScorePercentage = physicalComputed.raw * 100;
         const individualLactationScorePercentage = lactationComputed.raw * 100;
         const individualEmotionalScorePercentage = emotionalComputed.raw * 100;
@@ -145,15 +149,15 @@ export default class ScoreEngineService {
     }
 
     private static getWeightsForWeek(week: number, breastfeeding: boolean) {
-        if (week >= 1 && week <= 6) {
+        if (week >= 1 && week <= 8) {
             return { physical: 33.33, lactation: 33.33, emotional: 33.33 };
         }
 
-        if (week >= 7 && week <= 52) {
+        if (week >= 9 && week <= 52) {
             if (breastfeeding) {
                 return { physical: 0, lactation: 50, emotional: 50 };
             } else {
-                return { physical: 0, lactation: 0, emotional: 100 };
+                return { physical: 0, lactation: 40, emotional: 60 };
             }
         }
 

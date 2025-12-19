@@ -28,4 +28,6 @@ export const messages = {
     USER_FETCHED_SUCCESSFULLY: "User fetched successfully!",
     USER_FETCH_FAILED: "Failed to fetch user!",
     INTERNAL_SERVER_ERROR: "Internal server error",
+    CONTENT_SAVED_SUCCESS: "Content saved successfully",
+    CONTENT_FETCH_SUCCESS: "Content fetched successfully",
 };

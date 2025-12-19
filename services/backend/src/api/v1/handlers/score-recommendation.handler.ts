@@ -17,6 +17,18 @@ export default class ScoreRecommendationHandler {
             // Calculate Score
             const scoreResult = await ScoreEngineService.calculateForUser(userId, indicators);
             console.log(`Score calculated: ${scoreResult.finalScore} (${scoreResult.zone})`);
+            console.log(
+                `scoreResult.categories.physical.invidual`,
+                scoreResult.categories.physical.invidual,
+            );
+            console.log(
+                `scoreResult.categories.lactation.invidual`,
+                scoreResult.categories.lactation.invidual,
+            );
+            console.log(
+                `scoreResult.categories.emotional.invidual`,
+                scoreResult.categories.emotional.invidual,
+            );
 
             // Get Recommendation
             const recommendation = await RecommendationEngineService.getRecommendation(
