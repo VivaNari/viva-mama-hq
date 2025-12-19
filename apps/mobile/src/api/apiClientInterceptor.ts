@@ -9,7 +9,7 @@ const getToken = async (): Promise<string | null> => {
 
 const apiClientInterceptor = (): AxiosInstance => {
   const apiInstance = axios.create({
-    baseURL: BASE_API_URL,
+    baseURL: 'http://192.168.1.17:4000',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',

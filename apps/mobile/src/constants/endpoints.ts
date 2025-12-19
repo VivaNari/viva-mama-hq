@@ -7,8 +7,11 @@ export const CHAT_SESSION_URL = (
   flowSlug: string,
   token: string,
   flowType: string,
-) =>
-  `${BASE_API_URL}${API_VERSION_URL}/chat-session/${flowSlug}?token=${token}&flowType=${flowType}`;
+) => {
+  console.log("test", `http://192.168.1.17:4000${API_VERSION_URL}/chat-session/${flowSlug}?token=${token}&flowType=${flowType}`);
+  return `http://192.168.1.17:4000${API_VERSION_URL}/chat-session/${flowSlug}?token=${token}&flowType=${flowType}`;
+}
+  
 
 export const API_GOOGLE_LOGIN = `${API_VERSION_URL}/auth/google`;
 export const API_REQUEST_PHONE_OTP = `${API_VERSION_URL}/auth/send-otp`;

@@ -181,14 +181,13 @@ class ChatDatabase {
 
     const query = `
             SELECT COUNT(*) as count FROM chat_messages 
-            WHERE user_id = ? AND flow_slug = ? AND uuid = ?;
+            WHERE message_id = ? AND flow_slug = ?;
         `;
 
     try {
       const [result] = await this.database!.executeSql(query, [
-        userId,
-        flowSlug,
         messageId,
+        flowSlug,
       ]);
       const count = result.rows.item(0).count;
       return count > 0;

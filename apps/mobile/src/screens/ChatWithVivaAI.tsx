@@ -340,7 +340,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         es.addEventListener('message', async (event) => {
             try {
                 const data = JSON.parse(event.data!);
-
+                console.log(data, "data");
                 if (data.type === 'end_flow') {
                     console.log(' == Flow completed == ');
                     setIsFlowComplete(true);
@@ -401,8 +401,8 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                     uuid: data.uuid,
                 };
 
-                const exists = await chatDB.messageExists(userId as string, FLOW_SLUG, aiMessage.uuid);
-
+                const exists = await chatDB.messageExists(userId as string, FLOW_SLUG, aiMessage.id);
+                console.log("exists", exists)
                 if (exists) {
                     console.log('Duplicate question from SSE');
                     setIsLoading(false);
@@ -413,7 +413,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 console.log('New question via SSE:', data.id);
 
                 setChatHistory((prev) => [...prev, aiMessage]);
-                setAnimatingMessageId(aiMessage.uuid);
+                setAnimatingMessageId(aiMessage.id);
                 setIsLoading(false);
             } catch (error) {
                 console.error('Parse error:', error);
@@ -432,7 +432,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             setTimeout(connectToServer, 5000);
         });
     };
-
+    console.log("animated", animatingMessageId);
     const handleSendAnswer = async (option: IOption) => {
         if (isLoading || animatingMessageId || isFlowComplete || !userId) {
             return;
@@ -714,8 +714,8 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             >
                 {chatHistory.map((msg, i) => {
                     const isLast = i === chatHistory.length - 1;
-                    const shouldAnimate = msg.type === 'ai' && msg.uuid === animatingMessageId;
-
+                    const shouldAnimate = msg.type === 'ai' && msg.id === animatingMessageId;
+                    console.log("shouldAnimate", shouldAnimate)
                     if (shouldAnimate) {
                         return (
                             <AnimatedBubble
