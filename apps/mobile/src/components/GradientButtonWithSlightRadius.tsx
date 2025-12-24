@@ -17,7 +17,7 @@ const GradientButtonWithSlightRadius = ({ title, onPress, fullRounded = false, f
                 justifyContent: "center",
                 alignItems: "center",
                 paddingVertical: fullWidth ? 15 : 8,
-                paddingHorizontal: 10,
+                paddingHorizontal: fullWidth ? 10 : 20,
                 flex: fullWidth ? 1 : 0.15,
                 marginTop: fullWidth ? 10 : 0
             }}

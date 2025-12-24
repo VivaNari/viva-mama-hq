@@ -1,19 +1,26 @@
-import { Alert, StatusBar, useColorScheme } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StatusBar, useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import RootNavigator from './src/navigators/RootNavigator';
 import Toast from 'react-native-toast-message';
+import SplashScreen from 'react-native-splash-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AuthProvider } from './src/context/AuthContext';
 import CounterProvider from './src/context/CounterContext';
 import { chatDB } from './src/db/sqlite';
-import { useEffect } from 'react';
+import RootNavigator from './src/navigators/RootNavigator';
+import { getUserData } from './src/api/userData.api';
 
 function App() {
+  const [userDataLoaded, setUserDataLoaded] = useState(false);
+
   useEffect(() => {
-    const checkDatabase = async () => {
+    const initializeApp = async () => {
       try {
-        console.log('Checking SQLite database...');
+        console.log('Initializing app...');
 
         // Initialize database
+        console.log('Checking SQLite database...');
         await chatDB.init();
         console.log('Database initialized');
 
@@ -22,6 +29,7 @@ function App() {
         console.log('Database Statistics:', stats);
 
         await chatDB.addColumnIfNotExists("chat_messages", "uuid", "TEXT");
+
         // Get all chat history (you can limit this in production)
         const allMessages = await getAllMessages();
         console.log('Total messages in database:', allMessages.length);
@@ -35,12 +43,27 @@ function App() {
           console.log('Database is empty');
         }
 
+        // Fetch user data if user is logged in
+        const userToken = await AsyncStorage.getItem('userToken');
+        if (userToken) {
+          try {
+            const userData = await getUserData();
+            console.log("[App.tsx] userData", userData);
+          } catch (error) {
+            console.error('Error fetching user data:', error);
+          }
+        } else {
+          console.log('No user token found, skipping user data fetch');
+        }
+
       } catch (error) {
-        console.error('Error checking database:', error);
+        console.error('Error initializing app:', error);
+      } finally {
+        SplashScreen.hide();
       }
     };
 
-    checkDatabase();
+    initializeApp();
   }, []);
 
   const getDatabaseStats = async () => {
@@ -112,11 +135,13 @@ function App() {
 function AppContent() {
 
   return (
-    <AuthProvider>
-      <CounterProvider>
-        <RootNavigator />
-      </CounterProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <CounterProvider>
+          <RootNavigator />
+        </CounterProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }
 

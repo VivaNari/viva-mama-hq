@@ -1,34 +1,50 @@
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging'
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import { useNavigation } from '@react-navigation/native'
 import React, { useEffect, useState } from 'react'
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import LinearGradient from 'react-native-linear-gradient'
+import Toast from 'react-native-toast-message'
+import { getUserContents } from '../api/getUserContents'
+import { getUserProducts } from '../api/getUserProducts'
+import { getUserData } from '../api/userData.api'
+import { ArticleCard } from '../components/ArticleCard'
+import DashboardCard from '../components/dashboard/DashboardCard'
+import DashboardInfantTab from '../components/dashboard/DashboardInfantTab'
+import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
+import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
-import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
-import DashboardInfantTab from '../components/dashboard/DashboardInfantTab'
-import { contentsData } from '../data/contentsData'
-import { ICategory } from '../types/content.types'
-import FLCategoryItem from '../components/community/FLCategoryItem'
-import FLSubCategoryItem from '../components/community/FLSubCategoryItem'
-import DashboardCard from '../components/dashboard/DashboardCard'
-import { ArticleCard } from '../components/ArticleCard'
-import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
-import { productData } from '../data/productsData'
+import { IUserContent, IUserContentresponse } from '../types/content.types'
+import { IUserAllData, IUserDataResponse } from '../types/dashboard.types'
+import { IUserProduct, IUserProductResponse } from '../types/product.types'
 import { FLProductItem } from './Products'
-import { IProduct } from '../types/product.types'
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
-import LinearGradient from 'react-native-linear-gradient'
-import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
-import Toast from 'react-native-toast-message'
 
 const Dashboard = () => {
     const navigation = useNavigation<any>();
     const [isMotherTab, setIsMotherTab] = useState<boolean>(true)
     const [vivaScore, setVivaScore] = useState<string | null>(null);
+    const [userData, setUserdata] = useState<IUserAllData>();
+    const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
+    const [productsData, setProductsData] = useState<IUserProduct[]>([]);
+
+    useEffect(() => {
+        (async () => {
+            const theUserData: IUserDataResponse = await getUserData();
+            setUserdata(theUserData.data);
+
+            const getContents: IUserContentresponse = await getUserContents();
+            setUserContentsData(getContents.data);
+
+            const getProducts: IUserProductResponse = await getUserProducts();
+            setProductsData(getProducts.data);
+        })()
+    }, [])
+
     useEffect(() => {
         (async function () {
             // forground message received
-            const unsubscribe = messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+            messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
                 console.log("remoteMessage.data inside Dashboard.tsx ==>> ", remoteMessage.data);
                 setVivaScore(remoteMessage.data?.score as string);
                 Toast.show({
@@ -41,16 +57,14 @@ const Dashboard = () => {
         })()
     }, [])
 
-
-    const username = "Harshaa";
+    const username = userData?.user.onboarding_data.preferred_name ?
+        userData.user.onboarding_data.preferred_name.split(" ")[0] :
+        'User';
     useEffect(() => {
         navigation.setOptions({
             headerTitle: `Hi, ${username}`,
         });
     }, [navigation, username]);
-    const allArticles = contentsData.flatMap(category =>
-        category.subCategories.flatMap(subCategory => subCategory.contents)
-    );
 
     return (
         <View
@@ -128,7 +142,7 @@ const Dashboard = () => {
                     >
                         {
                             isMotherTab ? (
-                                <DashboardMotherTab score={vivaScore} />
+                                <DashboardMotherTab userData={userData as IUserAllData} score={Number(vivaScore)} />
                             ) : (
                                 <DashboardInfantTab />
                             )
@@ -136,38 +150,44 @@ const Dashboard = () => {
                     </View>
 
                     {/* View to show at every tab */}
-                    <View>
-                        <DashboardCard>
-                            <Text
+                    <View
+                    >
+                        <View>
+                            {/* <Text
                                 style={[{
-                                    fontSize: 20
+                                    fontSize: 20,
                                 }, globalStyles.fontBold]}
                             >
-                                Content section
-                            </Text>
+                                Contents
+                            </Text> */}
                             <FlatList
-                                data={allArticles.slice(0, 3)}
-                                keyExtractor={(item) => item.id.toString()}
+                                data={userContentsData.slice(1, 5)}
+                                keyExtractor={(item) => item._id.toString()}
                                 renderItem={({ item }) => (
                                     <ArticleCard
-                                        key={item.id.toString()}
+                                        key={item._id.toString()}
                                         item={item}
+
                                     />
                                 )}
                                 scrollEnabled={false}
                                 nestedScrollEnabled={false}
+                                columnWrapperStyle={{
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-end',
+                                }}
+                                numColumns={2}
                                 ListHeaderComponent={
                                     <FlatList
-                                        keyExtractor={(item: ICategory) => item.id.toString()}
-                                        data={contentsData}
-                                        renderItem={({ item }) => FLCategoryItem({ item, navigation })}
-                                        numColumns={3}
-                                        columnWrapperStyle={{
-                                            justifyContent: 'space-between',
-                                            alignItems: 'flex-end',
-                                            flexWrap: 'wrap',
-                                        }}
-                                        style={{ paddingHorizontal: 30, marginBottom: 20 }}
+                                        data={userContentsData.slice(0, 1)}
+                                        keyExtractor={(item) => item._id.toString()}
+                                        renderItem={({ item }) => (
+                                            <ArticleCard
+                                                key={item._id.toString()}
+                                                item={item}
+                                                width='full'
+                                            />
+                                        )}
                                         scrollEnabled={false}
                                         nestedScrollEnabled={false}
                                     />
@@ -182,9 +202,13 @@ const Dashboard = () => {
                                     onPress={() => navigation.navigate("Community")}
                                 />
                             </View>
-                        </DashboardCard>
+                        </View>
 
-                        <DashboardCard>
+                        <DashboardCard
+                            style={{
+                                marginTop: 30
+                            }}
+                        >
                             <Text
                                 style={[{
                                     fontSize: 20
@@ -193,11 +217,11 @@ const Dashboard = () => {
                                 Suggested Products
                             </Text>
                             <FlatList
-                                data={productData.slice(0, 6)}
+                                data={productsData.slice(0, 6)}
                                 renderItem={FLProductItem}
-                                keyExtractor={(item: IProduct, index: number) => index.toString()}
+                                keyExtractor={(item: IUserProduct) => item._id}
                                 numColumns={2}
-                                columnWrapperStyle={{ gap: 2, marginBottom: 20, justifyContent: 'space-between' }}
+                                columnWrapperStyle={{ gap: 10, marginBottom: 20, justifyContent: 'space-between' }}
                                 nestedScrollEnabled={false}
                                 scrollEnabled={false}
                                 style={{

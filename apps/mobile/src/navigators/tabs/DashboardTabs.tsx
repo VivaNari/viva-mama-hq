@@ -1,11 +1,13 @@
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import { Lucide } from '@react-native-vector-icons/lucide';
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect } from 'react';
-import { Alert, Image, TouchableOpacity, View } from 'react-native';
+import { Image, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { useCounterContext } from '../../context/CounterContext';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
@@ -14,7 +16,6 @@ import ChatWithVivaAI from '../../screens/ChatWithVivaAI';
 import Dashboard from '../../screens/Dashboard';
 import Experts from '../../screens/Experts';
 import Services from '../../screens/Services';
-import Toast from 'react-native-toast-message';
 
 const Tab = createBottomTabNavigator();
 
@@ -96,9 +97,9 @@ export const DashboardTabs = () => {
                 tabBarInactiveTintColor: colors.white,
                 tabBarActiveBackgroundColor: colors.white,
                 headerShadowVisible: false,
-                headerTitleStyle: { ...globalStyles.fontBold },
+                headerTitleStyle: { ...globalStyles.fontBold, color: colors.darkGray, fontSize: 20 },
                 headerStyle: {
-                    backgroundColor: colors.pageBG
+                    backgroundColor: colors.pageBG,
                 },
 
                 headerRight: () => (
@@ -110,23 +111,30 @@ export const DashboardTabs = () => {
                             onPress={() => navigation.navigate("Notifications")}
 
                         >
-                            <MaterialDesignIcons name='bell-outline' size={30} color={colors.primary} />
+                            <Lucide name='bell' size={25} color={colors.darkGray} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => navigation.navigate("MyProfile")}
-                            style={{
-                                borderWidth: 2,
-                                padding: 2,
-                                borderRadius: 8,
-                                borderColor: colors.primary
-                            }}
+
                         >
-                            <Image
-                                source={require('../../public/assets/images/doctors/Dr_Harsha_Tomar.png')}
-                                style={{ height: 40, width: 40, borderRadius: 8 }}
-                            />
+                            <Lucide name='user-round' size={25} color={colors.darkGray} />
                         </TouchableOpacity>
+                    </View>
+                ),
+                headerLeft: () => (
+                    <View style={{
+                        paddingLeft: 15,
+                    }}>
+                        <Image
+                            source={require("../../public/assets/images/viva_logo_icon.png")}
+                            style={{
+                                height: 40,
+                                width: 40,
+                                objectFit: 'contain'
+                            }}
+
+                        />
                     </View>
                 )
             }}

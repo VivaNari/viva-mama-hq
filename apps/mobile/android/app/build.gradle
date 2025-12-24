@@ -132,4 +132,7 @@ dependencies {
 
     implementation platform('com.google.firebase:firebase-bom:34.4.0')
     implementation 'com.google.firebase:firebase-messaging'
+    
+    // Manual linking for react-native-splash-screen
+    implementation project(':react-native-splash-screen')
 }

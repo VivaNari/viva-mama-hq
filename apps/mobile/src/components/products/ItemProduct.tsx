@@ -1,14 +1,14 @@
-import { View, Text, Image, Dimensions, TouchableOpacity, Linking } from 'react-native'
-import React from 'react'
-import { IProduct } from '../../types/product.types'
+import React from 'react';
+import { Dimensions, Image, Linking, Text, TouchableOpacity } from 'react-native';
 import { globalStyles } from '../../public/styles';
+import { IUserProduct } from '../../types/product.types';
 
 const { width } = Dimensions.get('window');
 
-const ItemProduct = ({ item }: { item: IProduct }) => {
+const ItemProduct = ({ item }: { item: IUserProduct }) => {
     return (
         <TouchableOpacity
-            onPress={() => Linking.openURL(item.productURL)}
+            onPress={() => Linking.openURL(item.productAffiliateLink)}
             activeOpacity={0.8}
             style={[{
                 justifyContent: 'flex-start',
@@ -16,8 +16,8 @@ const ItemProduct = ({ item }: { item: IProduct }) => {
                 maxWidth: (width - 55) / 2,
             }]}>
             <Image
-                source={item.productImage}
-                style={{ width: "100%", borderRadius: 8 }}
+                source={{ uri: item.productImageURL }}
+                style={{ width: "100%", height: 160, borderRadius: 8 }}
             />
 
             <Text

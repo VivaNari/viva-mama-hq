@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, View, Text } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import { globalStyles } from '../public/styles';
 
 const { width } = Dimensions.get("window");
 
@@ -10,7 +11,7 @@ export default function VivaScoreGauge({ percentage = 0, size = width, strokeWid
 
     useEffect(() => {
         setScore(percentage)
-    }, [])
+    }, [percentage])
 
     const clampedPercentage = Math.max(0, Math.min(100, score));
 
@@ -26,6 +27,8 @@ export default function VivaScoreGauge({ percentage = 0, size = width, strokeWid
     // Path for the semi-circle arc
     const arcPath = `M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`;
 
+    // Labels to display at the bottom
+    const labels = [0, 25, 50, 75, 100];
 
     return (
         <View style={[styles.gaugeContainer, { width: '100%', padding: 0 }]}>
@@ -66,6 +69,49 @@ export default function VivaScoreGauge({ percentage = 0, size = width, strokeWid
                     strokeWidth="2"
                 />
             </Svg>
+
+            {/* Labels positioned at the bottom */}
+            <View
+                pointerEvents="none"
+                style={{
+                    position: 'absolute',
+                    width: size,
+                    height: size / 2 + strokeWidth,
+                    top: 0,
+                }}
+            >
+                {labels.map((label) => {
+                    const angle = Math.PI * (1 - label / 100);
+
+                    // Slightly outside the arc
+                    const labelRadius = radius - strokeWidth * 1.6;
+
+                    const x = cx + labelRadius * Math.cos(angle);
+                    const y = cy - labelRadius * Math.sin(angle);
+
+                    return (
+                        <Text
+                            key={label}
+                            style={[globalStyles.fontSemiBold, {
+                                position: 'absolute',
+                                left: x - 10,
+                                top: y - strokeWidth * 0.5, // 👈 SMALL downward shift (this is the key)
+                                fontSize: 13,
+                                fontWeight: '600',
+                                color: '#6B6B6B',
+                            }]}
+                        >
+                            {label}
+                        </Text>
+                    );
+                })}
+
+
+
+
+
+            </View>
+
         </View>
     );
 }
@@ -86,6 +132,13 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
+    labelsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        paddingHorizontal: 10,
+        marginTop: 10,
+    },
     textContainer: {
         position: 'absolute',
         alignItems: 'center',
@@ -99,6 +152,11 @@ const styles = StyleSheet.create({
     subtitle: {
         fontSize: 14,
         color: '#888',
+    },
+    labelText: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#666',
     },
     sliderContainer: {
         width: '90%',
@@ -158,4 +216,3 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     }
 });
-

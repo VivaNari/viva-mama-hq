@@ -1,40 +1,54 @@
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { IContent } from "../types/content.types";
 import { useNavigation } from "@react-navigation/native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { globalStyles } from "../public/styles";
+import { IUserContent } from "../types/content.types";
+import DashboardCard from "./dashboard/DashboardCard";
 
-export const ArticleCard = ({ item }: { item: IContent }) => {
+export const ArticleCard = ({ item, width }: { item: IUserContent, width?: string }) => {
     const navigation = useNavigation() as any;
     return (
-        <TouchableOpacity
-            onPress={() => navigation.navigate("ArticleDetails", { articleId: item.id })}
-            activeOpacity={0.8}
-            style={styles.articleCard}
+        <View
+            style={{
+                paddingHorizontal: 1,
+                width: width === 'full' ? 'auto' : '48%'
+            }}
         >
-            <Image source={item.thumbnailImage} style={styles.articleImage} />
-            <View style={{ flex: 1 }}>
-                <Text style={[styles.articleTitle, globalStyles.fontSemiBold]} numberOfLines={1}>
-                    {item.title}
-                </Text>
-                <Text style={[styles.articleDesc, globalStyles.fontRegular]} numberOfLines={2}>
-                    {item.content}
-                </Text>
-            </View>
-        </TouchableOpacity>
+
+            <DashboardCard>
+                <TouchableOpacity
+                    onPress={() => navigation.navigate("ArticleDetails", { articleId: item._id })}
+                    activeOpacity={0.8}
+                    style={styles.articleCard}
+                >
+
+                    <Image source={{ uri: item.featuredImage }} style={{
+                        ...styles.articleImage,
+                        height: width === 'full' ? 250 : 150,
+                        width: '100%',
+                        borderRadius: 8
+                    }} />
+                    <View style={{ flex: 1, marginTop: 5 }}>
+                        <Text style={[styles.articleTitle, globalStyles.fontSemiBold]}>
+                            {item.featuredTitle}
+                        </Text>
+                    </View>
+                </TouchableOpacity>
+            </DashboardCard>
+        </View>
     );
 };
 
 const styles = StyleSheet.create({
     articleCard: {
-        flexDirection: "row",
         marginBottom: 12,
+        flex: 1,
         alignItems: "center",
     },
     articleImage: {
-        width: 60,
-        height: 60,
-        borderRadius: 8,
-        marginRight: 12,
+        // width: '100%',
+        // height: 250,
+        // borderRadius: 8,
+        // objectFit: 'cover'
     },
     articleTitle: {
         fontSize: 13,
