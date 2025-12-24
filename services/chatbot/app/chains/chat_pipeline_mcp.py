@@ -288,14 +288,14 @@ async def chat_once(
     # Add instructions
     prompt_parts.append("=== INSTRUCTIONS ===\n")
     prompt_parts.append(empathetic_prefix)
-    prompt_parts.append("- Use the USER PROFILE and RECOVERY STATUS to personalize your response.\n")
+    prompt_parts.append("- Use the USER PROFILE and RECOVERY STATUS to personalize your response only if the question requires\n")
     prompt_parts.append("- Reference specific details from their check-in when relevant.\n")
     prompt_parts.append("- Do not invent information not provided in the context.\n")
     prompt_parts.append("- Do not provide diagnosis or medication advice.\n")
     prompt_parts.append("- End with: 'Wellness information only; not medical advice.'\n")
     
     final_prompt = "".join(prompt_parts)
-    
+    print(f"[CHAT] Final prompt constructed.", final_prompt)
     # ============================================================
     # GENERATE RESPONSE
     # ============================================================
@@ -341,6 +341,7 @@ async def chat_once(
         "user_context": user_context,  # NEW: Full context metadata
         "escalation_banner": banner,
         "memory_turns": memory.get_last_n(session_id, history_window),
+        "prompt": final_prompt  # For debugging purposes
     }
 
 
@@ -381,3 +382,4 @@ def chat_once_name_detector(
     return {
         "answer": draft_answer
     }
+

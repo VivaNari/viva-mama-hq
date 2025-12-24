@@ -178,7 +178,7 @@ def get_recommendation_history_collection() -> Collection:
     - individualRecommendations: Specific recommendations per category
     """
     db = get_database()
-    return db["recommendation_history"]
+    return db["recommendation_histories"]
 
 
 def get_recommendations_collection() -> Collection:

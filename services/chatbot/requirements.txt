@@ -23,3 +23,7 @@ faiss-cpu
 # MCP SDK (adapter is optional; included for future)
 mcp
 pymongo==4.6.1
+fastapi
+uvicorn
+slowapi
+chardet
