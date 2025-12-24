@@ -18,7 +18,7 @@ export const initScheduledJobs = () => {
     // });
     // Calculate the week and update users due days in one cron job
     cron.schedule("*/30 * * * * *", () => {
-        //console.log("Calculating current week with the previous and upcoming due days for checkin");
-        // currentWeekAndPreviousUpcomingDueDaysCalculator();
+        console.log("Calculating current week with the previous and upcoming due days for checkin");
+        currentWeekAndPreviousUpcomingDueDaysCalculator();
     });
 };

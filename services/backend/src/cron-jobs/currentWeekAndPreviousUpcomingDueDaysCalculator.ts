@@ -1,9 +1,11 @@
+import flowDefintionModel from "../models/flowDefinition.model";
 import flowInstanceModel from "../models/flowInstance.model";
 import UserModel from "../models/user.model";
 import { IUser } from "../types";
 import { IFlowInstance } from "../types/chat.types";
 import { calculateUserCurrentWeek } from "../utils/functions/calculateUserCurrentWeek";
 import logger from "../utils/logger";
+import { sendPushNotification } from "../utils/sendPushNotification";
 
 const getRecentFlowInstances = async ({
     userInstance,
@@ -91,6 +93,7 @@ const updateFlowInstance = async (
     formattedUserWeek: number;
     latestPostpartumWeek: number;
     previousPostpartumWeek: number;
+    latestFlowInstance: IFlowInstance;
 }> => {
     let { latestFlowInstance, previousFlowInstance } = await getRecentFlowInstances({
         userInstance,
@@ -113,7 +116,7 @@ const updateFlowInstance = async (
         latestFlowInstance = newFlowInstance;
     }
 
-    return { formattedUserWeek, latestPostpartumWeek, previousPostpartumWeek };
+    return { formattedUserWeek, latestPostpartumWeek, previousPostpartumWeek, latestFlowInstance };
 };
 
 const calculateUpcomingAndPreviousDueDays = ({
@@ -173,10 +176,36 @@ const updateUserDueDays = async ({
     return updatedUserInstance;
 };
 
-const fireWeeklyCheckinPushNotification = async (userInstance: IUser) => {
-    if (userInstance.current_weekdays.upcoming_checkin_due_days === 0) {
-        console.log(`Firing weekly check-in push notification to user ${userInstance._id}`);
+const fireWeeklyCheckinPushNotification = async (
+    userInstance: IUser,
+    latestFlowInstance: IFlowInstance,
+) => {
+    const flowDefinition = await flowDefintionModel.findById(latestFlowInstance.flowDefId);
+    if (!flowDefinition) {
+        console.log(`Flow definition not found for flow instance ${latestFlowInstance._id}`);
+        return;
+    }
+
+    const notification_template = flowDefinition.notificationTemplates.find(
+        (item) => item.notificationType === "NEW_FLOW_INSTANCE",
+    );
+
+    if (!notification_template) {
+        console.log(`Notification template not found for flow definition ${flowDefinition._id}`);
+        return;
+    }
+
+    if (userInstance.current_weekdays.upcoming_checkin_due_days === 0 && flowDefinition) {
+        console.log(`Firing weekly check-in push notification to user ${userInstance?._id}`);
         // Implement push notification logic here
+        await sendPushNotification({
+            token: userInstance.FCM_token,
+            title: notification_template.title!,
+            body: notification_template.body!,
+            data: {
+                flowSlug: flowDefinition.slug,
+            },
+        });
     }
 };
 
@@ -189,7 +218,7 @@ const processUser = async (userInstance: IUser) => {
 
     const userWeekdays = getUserWeekdays(userInstance);
 
-    const { formattedUserWeek, latestPostpartumWeek, previousPostpartumWeek } =
+    const { formattedUserWeek, latestPostpartumWeek, previousPostpartumWeek, latestFlowInstance } =
         await updateFlowInstance(userInstance, userWeekdays.weeks, userWeekdays.days);
 
     const { previousDays, upcomingDays } = calculateUpcomingAndPreviousDueDays({
@@ -208,7 +237,7 @@ const processUser = async (userInstance: IUser) => {
         days: userWeekdays.days,
     });
 
-    await fireWeeklyCheckinPushNotification(updateUserInstance);
+    await fireWeeklyCheckinPushNotification(updateUserInstance, latestFlowInstance);
 };
 
 export const currentWeekAndPreviousUpcomingDueDaysCalculator = async () => {
