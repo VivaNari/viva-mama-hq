@@ -32,7 +32,7 @@ export default class RecommendationhistoryController {
             );
             sendResponse({
                 data: instance,
-                statusCode: StatusCodes.CREATED,
+                statusCode: StatusCodes.OK,
                 success: true,
                 message: messages.RECOMMENDATION_RETRIEVED_SUCCESS,
                 response,
@@ -61,7 +61,7 @@ export default class RecommendationhistoryController {
             );
             sendResponse({
                 data: instance,
-                statusCode: StatusCodes.CREATED,
+                statusCode: StatusCodes.OK,
                 success: true,
                 message: messages.RECOMMENDATION_RETRIEVED_SUCCESS,
                 response,

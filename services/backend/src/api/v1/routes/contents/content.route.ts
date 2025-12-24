@@ -8,6 +8,7 @@ const contentRouter = Router();
 const getContentController = new ContentController();
 
 contentRouter.get("/contents", authMiddleware("header"), getContentController.getContents);
+contentRouter.get("/contents/:id", authMiddleware("header"), getContentController.getContentById);
 contentRouter.post(
     "/admin/contents",
     requestValidator(createContentValidator),

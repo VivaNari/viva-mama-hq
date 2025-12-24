@@ -12,7 +12,7 @@ export const errorHandler = (
     console.log("Error Middleware called");
     sendErrorResponse({
         error: error,
-        errorMessage: messages.USER_FETCH_FAILED,
+        errorMessage: messages.INTERNAL_SERVER_ERROR,
         response: response,
         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
     });

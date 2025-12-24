@@ -1,5 +1,5 @@
 import { Response } from "express";
-import { Schema } from "mongoose";
+import { Schema, Types } from "mongoose";
 import admin from "../../config/firebase";
 import conversationModel from "../../models/conversation.model";
 import flowDefinitionModel from "../../models/flowDefinition.model";
@@ -273,7 +273,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                 }
 
                 // Guided Flows
-                case FlowTypeEnum.ONBOARDING || FlowTypeEnum.CHECK_IN: {
+                case FlowTypeEnum.CHECK_IN: {
+                    this.processGuidedFlowConnection(userInstance, res, slug, flowType);
+                    break;
+                }
+                case FlowTypeEnum.ONBOARDING: {
                     this.processGuidedFlowConnection(userInstance, res, slug, flowType);
                     break;
                 }
@@ -290,8 +294,8 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         return messageInstance;
     };
 
-    getUserConnection = (userId: string): Response | undefined => {
-        const userSession: Response | undefined = this.activeSessions.get(userId);
+    getUserConnection = (userId: Types.ObjectId): Response | undefined => {
+        const userSession: Response | undefined = this.activeSessions.get(userId.toString());
         return userSession;
     };
 
@@ -318,7 +322,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             await conversationModel.findByIdAndUpdate(conversationId, {
                 lastMessageAt: new Date(),
             });
-            const userSession = this.getUserConnection(userInstance._id as unknown as string);
+            const userSession = this.getUserConnection(userInstance._id as any);
             if (userSession) {
                 const aiLlmResponse: AILLMResponse = {
                     type: "chatbot_message",
@@ -538,8 +542,9 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             flowInstanceId,
             nodeId,
         );
+        console.log("222");
         const { answerData } = this.getAnswerDetails(currentNode, selectedKeys, freeText);
-
+        console.log("333");
         await this.insertAnswer(userInstance, flowInstance, nodeId, answerData, currentNode);
         const specialCaseNode = await this.handleSpecialNodeCase(
             userInstance,
@@ -549,12 +554,15 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             flowType,
             freeText,
         );
+        console.log("444", specialCaseNode);
         if (specialCaseNode?.success === false) {
-            return;
         } else if (specialCaseNode?.success) {
             freeText = specialCaseNode.data as string;
         }
+        console.log("555", flowType);
         if (flowType === "ONBOARDING") {
+            console.log("666", nodeId);
+
             await this.updateOnboardingData(
                 userInstance._id as unknown as string,
                 flowDefinition,
@@ -583,9 +591,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             currentNode.next,
             flowType,
         );
+        console.log("777", nextNodeId);
+
         if (!nextNodeId) {
             await this.completeFlowInstance(flowInstance);
-            const userConnection = this.getUserConnection(userInstance._id as unknown as string);
+            const userConnection = this.getUserConnection(userInstance._id as any);
             if (userConnection) {
                 await this.sendThankYouMessage(
                     userInstance._id as unknown as string,
@@ -616,10 +626,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             flowInstance.cursorNodeId = nextNodeId;
             await (flowInstance as any).save();
             console.log(`Moving cursor to: ${nextNodeId}`);
-
+            console.log("8888", flowInstance.cursorNodeId);
             this.deletePendingQuestion(userInstance);
 
-            const userConnection = this.getUserConnection(userInstance._id as unknown as string);
+            const userConnection = this.getUserConnection(userInstance._id as any);
+            console.log("8888", userConnection, userInstance._id, this.activeSessions.keys());
             if (userConnection) {
                 await this.sendCurrentQuestion(
                     userInstance,
@@ -652,7 +663,8 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         flowType: FlowType,
         freeText?: string,
     ) => {
-        if (flowType !== FlowTypeEnum.ONBOARDING && nodeId !== "name") {
+        console.log(flowType, nodeId, freeText, "2.55555");
+        if (flowType !== FlowTypeEnum.ONBOARDING || nodeId !== "name") {
             return;
         }
         if (!freeText) {
@@ -664,7 +676,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             console.log("LLM could not detect a valid name. Asking question again.");
             this.deletePendingQuestion(userInstance);
             // send same question again
-            const userConnection = this.getUserConnection(userInstance._id as unknown as string);
+            const userConnection = this.getUserConnection(userInstance._id as any);
             console.log(` User connection: ${userConnection}`);
             if (userConnection) {
                 await this.sendCurrentQuestion(
@@ -714,6 +726,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             if (!userInstance) {
                 throw new Error("User not found");
             }
+            console.log("0000", flowType);
             switch (flowType) {
                 case FlowTypeEnum.CHATBOT: {
                     if (!freeText) {
@@ -722,7 +735,20 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     await this.processChatbotResponse(userInstance, freeText);
                     return;
                 }
-                case FlowTypeEnum.CHECK_IN || FlowTypeEnum.ONBOARDING: {
+                case FlowTypeEnum.CHECK_IN: {
+                    console.log("111");
+                    await this.processGuidedResponse(
+                        userInstance,
+                        flowInstanceId,
+                        nodeId,
+                        flowType,
+                        selectedKeys,
+                        freeText,
+                    );
+                    return;
+                }
+                case FlowTypeEnum.ONBOARDING: {
+                    console.log("111");
                     await this.processGuidedResponse(
                         userInstance,
                         flowInstanceId,

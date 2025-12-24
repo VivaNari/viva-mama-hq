@@ -11,7 +11,7 @@ export const messages = {
     TOKEN_INVALID: "Forbidden: Invalid token.",
     AUTH_BAD_REQUEST: "Bad Request: Error processing authorization.",
     RECOMMENDATION_SAVED_SUCCESS: "Recommendation created successfully",
-    RECOMMENDATION_RETRIEVED_SUCCESS: "Recommendation created successfully",
+    RECOMMENDATION_RETRIEVED_SUCCESS: "Recommendation retrieved successfully",
     MISSING_PAYMENT_PARAMETERS: "Missing payment verification parameters",
     MISSING_FREE_PLAN_PARAMETERS: "Plan and Billing Cycle are required to create an order",
     MISSING_CREATE_ORDER_PARAMETERS:

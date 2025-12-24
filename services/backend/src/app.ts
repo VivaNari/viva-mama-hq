@@ -1,12 +1,11 @@
-import express from "express";
 import cors from "cors";
+import express from "express";
 import router from "./api/v1/routes";
-import userRouter from "./api/v1/routes/users/user.route";
 import childRouter from "./api/v1/routes/childs/child.route";
+import userRouter from "./api/v1/routes/users/user.route";
 import { correlationIdMiddleware } from "./middlewares/correlationId.middleware";
-import { requestLoggerMiddleware } from "./middlewares/requestLogger.middleware";
 import errorHandler from "./middlewares/errorHandler.middleware";
-import testRouter from "./api/v1/routes/test.route";
+import { requestLoggerMiddleware } from "./middlewares/requestLogger.middleware";
 
 const app = express();
 
@@ -27,7 +26,6 @@ app.get("/health", (_, res) => {
 app.use("/api/v1", userRouter);
 app.use("/api/v1", childRouter);
 app.use("/api/v1", router);
-app.use("/api/v1", testRouter);
 
 app.use(errorHandler);
 

@@ -6,27 +6,29 @@ import { StatusCodes } from "http-status-codes";
 import { messages } from "../../../../constants/messages";
 import UserModel from "../../../../models/user.model";
 import { IUser } from "../../../../types";
+import { ProductService } from "../../../../services/products/product.service";
+import { IProduct } from "../../../../types/products.types";
 
-export class ContentController {
-    private contentService: ContentService = new ContentService();
+export class ProductController {
+    private productService: ProductService = new ProductService();
     constructor() {
-        this.contentService = new ContentService();
+        this.productService = new ProductService();
     }
 
-    public getContents = async (request: Request, response: Response, next: NextFunction) => {
+    public getProducts = async (request: Request, response: Response, next: NextFunction) => {
         if (!request.user) {
             throw new Error(messages.USER_FETCH_FAILED);
         }
         const user = (await UserModel.findById(request.user._id)) as IUser;
         try {
-            const contents: IContent[] = await this.contentService.find({
+            const products: IProduct[] = await this.productService.find({
                 filter: {
-                    category: user.user_category,
+                    userCategory: user.user_category,
                     validWeeks: { $in: [user.current_weekdays.weeks] },
                 },
             });
             sendResponse({
-                data: contents,
+                data: products,
                 statusCode: StatusCodes.OK,
                 success: true,
                 message: messages.CONTENT_FETCH_SUCCESS,
@@ -37,32 +39,18 @@ export class ContentController {
         }
     };
 
-    createContent = async (request: Request, response: Response, next: NextFunction) => {
+    createProduct = async (request: Request, response: Response, next: NextFunction) => {
         try {
             if (!request.user) {
                 throw new Error(messages.USER_FETCH_FAILED);
             }
 
-            const instance: IContent = await this.contentService.create(request.body);
+            const instance: IProduct = await this.productService.create(request.body);
             sendResponse({
                 data: instance,
                 statusCode: StatusCodes.CREATED,
                 success: true,
                 message: messages.CONTENT_SAVED_SUCCESS,
-                response,
-            });
-        } catch (err) {
-            next(err);
-        }
-    };
-    getContentById = async (request: Request, response: Response, next: NextFunction) => {
-        try {
-            const content = await this.contentService.find({ filter: { _id: request.params.id } });
-            sendResponse({
-                data: content,
-                statusCode: StatusCodes.OK,
-                success: true,
-                message: messages.CONTENT_FETCH_SUCCESS,
                 response,
             });
         } catch (err) {

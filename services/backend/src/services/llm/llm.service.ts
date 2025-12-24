@@ -8,7 +8,11 @@ class LLMService {
 
     sendNameQuery = async (
         freeText: string,
-    ): Promise<{ detected_name: string; has_name: string }> => {
+    ): Promise<{ detected_name: string; has_name: boolean }> => {
+        return {
+            has_name: true,
+            detected_name: "rahul",
+        };
         const llmRes = await axios.get(
             `http://192.168.1.20:8001/chat/username?response=${encodeURIComponent(freeText || "")}`,
         );

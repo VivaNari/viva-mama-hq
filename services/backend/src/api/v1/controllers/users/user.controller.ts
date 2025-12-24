@@ -14,10 +14,9 @@ const recommendationHistoryService = new RecommendationHistoryService(recommenda
 export default class UserController {
     getUserbyAuthToken = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            next(new Error("sdsdsd"));
             await getUserService.getUserbyAuthToken(req, res);
         } catch (err) {
-            console.log("Hello", err);
+            console.log(err);
             next(err);
         }
     };
@@ -41,13 +40,19 @@ export default class UserController {
         try {
             const instance: IRecommendationHistory[] = await recommendationHistoryService.find({
                 filter: { userId: user?._id },
-                sort: { createdAt: -1 },
+                sort: { _id: -1 },
                 limit: 1,
-                selectedKeys: ["zone", "finalScore", "week"],
+                selectedKeys: [
+                    "individualRecommendations",
+                    "zone",
+                    "finalScore",
+                    "week",
+                    "tagline",
+                ],
             });
             sendResponse({
                 data: instance,
-                statusCode: StatusCodes.CREATED,
+                statusCode: StatusCodes.OK,
                 success: true,
                 message: messages.RECOMMENDATION_RETRIEVED_SUCCESS,
                 response,
