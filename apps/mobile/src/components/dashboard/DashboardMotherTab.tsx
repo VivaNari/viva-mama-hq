@@ -35,7 +35,6 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
         (async function () {
             const theRecentcheckinData = await getRecentCheckinData() as ICheckInRecommendationResponse;
             setRecentChekinData(theRecentcheckinData.data)
-            console.log("theRecentcheckinData", theRecentcheckinData.data)
         })();
     }, [])
 
@@ -194,58 +193,59 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                     paddingHorizontal: 20
                                 }}
                             >
-                                <VivaScoreGauge percentage={Math.trunc(score ? score : recentCheckindata[0]?.finalScore)} />
+                                <VivaScoreGauge percentage={Math.trunc(score ? score : userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0]?.finalScore : 0)} />
 
                                 {
 
-                                    score || recentCheckindata.length > 0 ? (<View style={{
-                                        marginTop: -100,
-                                        marginBottom: 5,
-                                        alignItems: "center"
-                                    }}>
-                                        <View
-                                            style={{
-                                                flexDirection: "row",
-                                                alignItems: "center",
-                                                justifyContent: "center"
-                                            }}
-                                        >
-                                            <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
-                                                {
-                                                    score ?
-                                                        `${String(score).split(".")[0]}` :
-                                                        `${String(recentCheckindata[0].finalScore).split(".")[0]}`
-                                                }
-                                            </Text>
-                                            <TouchableOpacity
-                                                onPress={() => open(
-                                                    <RecoveryScoreBriefInfo
-                                                        significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
-                                                        briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
-                                                    />
-                                                )}
+                                    score || recentCheckindata.length > 0 &&
+                                        userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? (<View style={{
+                                            marginTop: -100,
+                                            marginBottom: 5,
+                                            alignItems: "center"
+                                        }}>
+                                            <View
+                                                style={{
+                                                    flexDirection: "row",
+                                                    alignItems: "center",
+                                                    justifyContent: "center"
+                                                }}
                                             >
-                                                <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
-                                            </TouchableOpacity>
-                                        </View>
-                                        <Text
-                                            style={{
-                                                fontSize: 14,
-                                                textAlign: "center",
-                                                ...globalStyles.fontRegular,
-                                                marginTop: 10,
+                                                <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
+                                                    {
+                                                        score ?
+                                                            `${String(score).split(".")[0]}` :
+                                                            `${String(recentCheckindata[0].finalScore).split(".")[0]}`
+                                                    }
+                                                </Text>
+                                                <TouchableOpacity
+                                                    onPress={() => open(
+                                                        <RecoveryScoreBriefInfo
+                                                            significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
+                                                            briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
+                                                        />
+                                                    )}
+                                                >
+                                                    <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
+                                                </TouchableOpacity>
+                                            </View>
+                                            <Text
+                                                style={{
+                                                    fontSize: 14,
+                                                    textAlign: "center",
+                                                    ...globalStyles.fontRegular,
+                                                    marginTop: 10,
 
-                                                backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
+                                                    backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
 
-                                                color: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeText : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeText : colors.greenBadgeText,
+                                                    color: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeText : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeText : colors.greenBadgeText,
 
-                                                paddingVertical: 6,
-                                                paddingHorizontal: 18,
-                                                borderRadius: 20
-                                            }}>
-                                            {recentCheckindata[0].tagline}
-                                        </Text>
-                                    </View>) : (
+                                                    paddingVertical: 6,
+                                                    paddingHorizontal: 18,
+                                                    borderRadius: 20
+                                                }}>
+                                                {recentCheckindata[0].tagline}
+                                            </Text>
+                                        </View>) : (
                                         <Animated.View
                                             style={[
                                                 {
@@ -276,39 +276,43 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                     )
                                 } */}
                                 {/* Weekly Check In */}
-                                <View
-                                    style={{
-                                    }}
-                                >
-
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        onPress={() => {
-                                            navigation.navigate("ChatWithVivaAI", {
-                                                flowSlug: "weekly-check-in-v1",
-                                            });
-                                        }}
-                                        style={{
-                                            borderRadius: 30,
-                                            justifyContent: "center",
-                                            alignItems: "center",
-                                            paddingVertical: 15,
-                                            paddingHorizontal: 10,
-                                            flex: 1,
-                                            marginTop: 10,
-                                            backgroundColor: colors.subscriptionTabInactiveBG
-                                        }}
-                                    >
-                                        <Text
-                                            style={[{
-                                                color: colors.white,
-                                                fontSize: 14,
-                                            }, globalStyles.fontSemiBold]}
+                                {
+                                    userData.user.current_weekdays.upcoming_checkin_due_days === 0 && (
+                                        <View
+                                            style={{
+                                            }}
                                         >
-                                            New weekly check-in available
-                                        </Text>
-                                    </TouchableOpacity>
-                                </View>
+
+                                            <TouchableOpacity
+                                                activeOpacity={0.8}
+                                                onPress={() => {
+                                                    navigation.navigate("ChatWithVivaAI", {
+                                                        flowSlug: "weekly-check-in-v1",
+                                                    });
+                                                }}
+                                                style={{
+                                                    borderRadius: 30,
+                                                    justifyContent: "center",
+                                                    alignItems: "center",
+                                                    paddingVertical: 15,
+                                                    paddingHorizontal: 10,
+                                                    flex: 1,
+                                                    marginTop: 10,
+                                                    backgroundColor: colors.subscriptionTabInactiveBG
+                                                }}
+                                            >
+                                                <Text
+                                                    style={[{
+                                                        color: colors.white,
+                                                        fontSize: 14,
+                                                    }, globalStyles.fontSemiBold]}
+                                                >
+                                                    New weekly check-in available
+                                                </Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    )
+                                }
 
                                 <View
                                     style={{
