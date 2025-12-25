@@ -62,7 +62,7 @@ export const DashboardTabs = () => {
 
             return unsubscribe;
         })();
-    }, [])
+    }, [navigation, increase])
 
     return (
         <Tab.Navigator

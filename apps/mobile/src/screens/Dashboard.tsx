@@ -7,16 +7,17 @@ import LinearGradient from 'react-native-linear-gradient'
 import Toast from 'react-native-toast-message'
 import { getUserContents } from '../api/getUserContents'
 import { getUserProducts } from '../api/getUserProducts'
-import { getUserData } from '../api/userData.api'
 import { ArticleCard } from '../components/ArticleCard'
 import DashboardCard from '../components/dashboard/DashboardCard'
 import DashboardInfantTab from '../components/dashboard/DashboardInfantTab'
 import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
+import { useAuth } from '../context/AuthContext'
+import { chatDB } from '../db/sqlite'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
 import { IUserContent, IUserContentresponse } from '../types/content.types'
-import { IUserAllData, IUserDataResponse } from '../types/dashboard.types'
+import { IUserAllData } from '../types/dashboard.types'
 import { IUserProduct, IUserProductResponse } from '../types/product.types'
 import { FLProductItem } from './Products'
 
@@ -27,11 +28,12 @@ const Dashboard = () => {
     const [userData, setUserdata] = useState<IUserAllData>();
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
     const [productsData, setProductsData] = useState<IUserProduct[]>([]);
+    const { userId } = useAuth();
 
     useEffect(() => {
         (async () => {
-            const theUserData: IUserDataResponse = await getUserData();
-            setUserdata(theUserData.data);
+            const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+            setUserdata(getUserDataFromSQLite.data);
 
             const getContents: IUserContentresponse = await getUserContents();
             setUserContentsData(getContents.data);
@@ -39,7 +41,7 @@ const Dashboard = () => {
             const getProducts: IUserProductResponse = await getUserProducts();
             setProductsData(getProducts.data);
         })()
-    }, [])
+    }, [userId])
 
     useEffect(() => {
         (async function () {

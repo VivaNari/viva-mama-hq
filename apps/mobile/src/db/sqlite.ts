@@ -1,4 +1,6 @@
 import SQLite, { SQLiteDatabase } from 'react-native-sqlite-storage';
+import { IUserDataResponse } from '../types/dashboard.types';
+import { IUser } from '../types/user.types';
 import {
   IDBAiMessage,
   IDBChatMessage,
@@ -63,11 +65,25 @@ class ChatDatabase {
       'CREATE INDEX IF NOT EXISTS idx_timestamp ON chat_messages(timestamp);',
     ];
 
+    const createUserTableQuery = `
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        user_data TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+
     try {
       await this.database.executeSql(createTableQuery);
       console.log('chat_messages table created');
 
       await this.addColumnIfNotExists('chat_messages', 'node_type', 'TEXT');
+      await chatDB.addColumnIfNotExists('chat_messages', 'uuid', 'TEXT');
+
+      await this.database.executeSql(createUserTableQuery);
+      console.log('users table created');
 
       for (const indexQuery of createIndexQueries) {
         await this.database.executeSql(indexQuery);
@@ -140,6 +156,106 @@ class ChatDatabase {
       console.log(`AI message saved: ${message.id}`);
     } catch (error) {
       console.error('Failed to save AI message:', error);
+      throw error;
+    }
+  }
+
+  async saveUserData(userId: string, userData: IUser): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            INSERT INTO users (
+                user_id, user_data, timestamp
+            ) VALUES (?, ?, ?);
+        `;
+
+    const params = [userId, JSON.stringify(userData), Date.now()];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log('User saved to sqlite');
+    } catch (error) {
+      console.error('Failed to save user:', error);
+      throw error;
+    }
+  }
+
+  async getUserData(userId: string): Promise<IUserDataResponse> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT user_data FROM users WHERE user_id = ?;
+        `;
+
+    const params = [userId];
+
+    try {
+      const [result] = await this.database!.executeSql(query, params);
+      const userData = result.rows.item(0);
+      return JSON.parse(userData.user_data);
+    } catch (error) {
+      console.error('Failed to get user data:', error);
+      throw error;
+    }
+  }
+
+  async updateUserData(userId: string, userData: IUser): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            UPDATE users SET user_data = ?, timestamp = ? WHERE user_id = ?;
+        `;
+
+    const params = [JSON.stringify(userData), Date.now(), userId];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log('User data updated');
+    } catch (error) {
+      console.error('Failed to update user data:', error);
+      throw error;
+    }
+  }
+
+  async deleteUserData(userId: string): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            DELETE FROM users WHERE user_id = ?;
+        `;
+
+    try {
+      await this.database!.executeSql(query, [userId]);
+      console.log('User data deleted');
+    } catch (error) {
+      console.error('Failed to delete user data:', error);
+      throw error;
+    }
+  }
+
+  async CheckUserExists(userId: string): Promise<boolean> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT COUNT(*) as count FROM users WHERE user_id = ?;
+        `;
+
+    try {
+      const [result] = await this.database!.executeSql(query, [userId]);
+      const count = result.rows.item(0).count;
+      return count > 0;
+    } catch (error) {
+      console.error('Failed to check user existence:', error);
       throw error;
     }
   }
@@ -363,5 +479,5 @@ class ChatDatabase {
   }
 }
 
-// Export singleton instance
+// Export instance
 export const chatDB = new ChatDatabase();
