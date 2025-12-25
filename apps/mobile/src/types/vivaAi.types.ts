@@ -100,3 +100,9 @@ export enum EFlowType {
   CHECKIN = 'CHECK_IN',
   CHATBOT = 'CHATBOT',
 }
+
+export enum FlowTypeEnum {
+  ONBOARDING = 'ONBOARDING',
+  CHECKIN = 'CHECK_IN',
+  CHATBOT = 'CHATBOT',
+}

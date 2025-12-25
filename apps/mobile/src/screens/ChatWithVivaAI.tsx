@@ -1,6 +1,7 @@
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 import { useNavigation } from '@react-navigation/native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { RefreshControl } from 'react-native';
 import {
     AppState,
     AppStateStatus,
@@ -22,7 +23,8 @@ import { chatDB } from '../db/sqlite';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { styles as chatStyles } from '../public/styles/chatWithVivaAiStyles';
-import { IDBAiMessage, IDBChatMessage, IDBUserMessage, IOption } from "../types/vivaAi.types";
+import { FlowTypeEnum, IDBAiMessage, IDBChatMessage, IDBUserMessage, IOption } from "../types/vivaAi.types";
+import { flowSlugMapping, messageEventTypes, NAME_QUERY } from '../constants/chat';
 
 export enum EFlowType {
     ONBOARDING = 'ONBOARDING',
@@ -39,29 +41,17 @@ const RenderTypingIndicator: React.FC = () => (
 );
 
 export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?: string } } }) {
-    console.log("route.params ---------------->", route.params)
     const [show, setShow] = useState<boolean>(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [selectedMultiOptions, setSelectedMultiOptions] = useState<Set<string>>(new Set());
-
+    const [refreshing, setRefreshing] = useState(false);
+    const [flowType, setFlowType] = useState<FlowTypeEnum | null>();
+    const [flowSlug, setFlowSlug] = useState<string | null>(null);
     const { userToken, userId, isFullyOnboarded, completeQuestionnaire } = useAuth();
-
-    const getFlowType = (): EFlowType => {
-        if (route.params?.flowSlug) {
-            return EFlowType.CHECKIN;
-        }
-
-        if (!isFullyOnboarded()) {
-            return EFlowType.ONBOARDING;
-        }
-
-        return EFlowType.CHATBOT;
-    };
-
-    const flowType = getFlowType();
-
-    const FLOW_SLUG = route.params?.flowSlug ||
-        (flowType === EFlowType.ONBOARDING ? 'onboarding-flow-v2' : 'chatbot-flow');
+    const [eventErrorCount, setEventErrorCount] = useState<number>(0);
+    const [showTextInput, setShowTextInput] = useState<boolean>(false);
+    const [showDatePicker, setShowDatePicker] = useState<boolean>(false);
+    const [showMultiSelect, setShowMultiSelect] = useState<boolean>(false);
 
     const navigation = useNavigation();
     const [inputText, setInputText] = useState('');
@@ -69,11 +59,6 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
     const [animatingMessageId, setAnimatingMessageId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [isFlowComplete, setIsFlowComplete] = useState(false);
-
-    useEffect(() => {
-        console.log(isFlowComplete);
-    }, [isFlowComplete])
-
     const eventSourceRef = useRef<EventSource | null>(null);
     const scrollViewRef = useRef<ScrollView | null>(null);
     const appState = useRef<AppStateStatus>(AppState.currentState);
@@ -125,26 +110,9 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
     // Determine when we should show which type of input
     const lastMessage = chatHistory[chatHistory.length - 1];
 
-    const shouldShowTextInput = flowType === EFlowType.CHATBOT
-        ? !isLoading && !animatingMessageId
-        : isTextInputMessage(lastMessage) && !isLoading && !isFlowComplete && !animatingMessageId;
 
-    const shouldShowDateInput =
-        flowType !== EFlowType.CHATBOT &&
-        isDateInputMessage(lastMessage) &&
-        lastMessage.type == "ai" &&
-        lastMessage?.id !== "delivery_date" &&
-        !shouldShowTextInput &&
-        !isLoading &&
-        !isFlowComplete &&
-        !animatingMessageId;
 
-    const shouldShowMultiSubmit =
-        flowType !== EFlowType.CHATBOT &&
-        isMultiSelectMessage(lastMessage) &&
-        !isLoading &&
-        !isFlowComplete &&
-        !animatingMessageId;
+
 
     // Handle date answer input
     const handleDateSelected = async (date: Date) => {
@@ -152,7 +120,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             return;
         }
 
-        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        const lastAi = await chatDB.getLastAiMessage(userId, flowSlug as string);
         if (!lastAi || !isDateInputMessage(lastAi)) {
             console.error('No valid date input message to respond to');
             return;
@@ -167,7 +135,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             timestamp: Date.now(),
         };
 
-        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+        await chatDB.saveUserMessage(userId, flowSlug as string, userMessage);
 
         // Update chat history
         setChatHistory((prev) =>
@@ -205,7 +173,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             return;
         }
 
-        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        const lastAi = await chatDB.getLastAiMessage(userId, flowSlug as string);
         if (!lastAi) {
             console.error('No AI message found to respond to');
             return;
@@ -217,7 +185,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             timestamp: Date.now(),
         };
 
-        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+        await chatDB.saveUserMessage(userId, flowSlug as string, userMessage);
 
         setChatHistory((prev) =>
             prev.map((msg) =>
@@ -246,33 +214,186 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 position: 'bottom'
             });
             setIsLoading(false);
+
         }
     };
 
-    useEffect(() => {
-        initializeChat();
+    const loadHistory = useCallback(async () => {
+        if (!userId) {
+            console.log('No userId available');
+            return;
+        }
 
-        const subscription = AppState.addEventListener('change', handleAppStateChange);
+        try {
+            const messages = await chatDB.getChatHistory(userId, flowSlug as string);
+            // chatDB.clearChatHistory(userId, FLOW_SLUG); // this is for testing
+            setChatHistory(Object.assign([], messages));
+            console.log('Loaded history from SQLite:', messages.length, 'messages');
+        } catch (error) {
+            console.error('Failed to load history:', error);
+        }
+    }, [flowSlug, userId]);
 
-        return () => {
-            eventSourceRef.current?.close();
-            eventSourceRef.current = null;
-            subscription.remove();
-        };
+    //done
+    const handleEndFlow = useCallback(async (data: any, eventSource: EventSource) => {
+        setIsFlowComplete(true);
+        setIsLoading(false);
+
+        if (data.flowType === "ONBOARDING") {
+            // complete the onboarding Questionnaire process
+            await completeQuestionnaire();
+
+            Toast.show({
+                type: 'success',
+                text1: 'Complete',
+                text2: 'Your onboarding questionnaire is completed! You will be redirected soon',
+                position: 'top',
+                visibilityTime: 2500
+            });
+            // redirect the user to the subscriptions page
+            setTimeout(() => {
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: "Services" as never }],
+                });
+            }, 5000);
+        } else if (data.flowType === FlowTypeEnum.CHECKIN) {
+            Toast.show({
+                type: 'success',
+                text1: 'Complete',
+                text2: 'Weekly Check In Completed!',
+                position: 'bottom'
+            });
+        } else {
+            //EH
+            return;
+        }
+
+        eventSource.close();
+    }, [completeQuestionnaire, navigation]);
+
+    //done
+    //tbh
+    const handleErrorFlow = useCallback((data: any) => {
+        Toast.show({
+            type: 'error',
+            text1: 'Error',
+            text2: data.message || 'An error occurred',
+            position: 'bottom'
+        });
+        setIsLoading(false);
     }, []);
 
-    useEffect(() => {
-        if (chatHistory.length > 0 && userId) {
-            saveChatToDatabase();
-        }
-    }, [chatHistory]);
+    //done
+    //tbh
+    const handleIncomingMessage = useCallback(async (data: any) => {
+        const aiMessage: IDBAiMessage = {
+            type: 'ai',
+            id: data.id,
+            flowInstanceId: data.flowInstanceId,
+            text: data.text,
+            educationalMessage: data.educationalMessage,
+            whyThisMatters: data.whyThisMatters,
+            options: data.options || [],
+            nodeType: data.nodeType,
+            timestamp: Date.now(),
+            uuid: data.uuid,
+        };
+        console.log("Incoming message via SSE:", aiMessage);
+        const exists = await chatDB.messageExists(userId as string, flowSlug as string, aiMessage.id);
+        console.log("exists", exists)
+        if (exists) {
+            console.log('Duplicate question from SSE');
+            setIsLoading(false);
+            return
 
-    // Clear multi-select state when a new question appears
-    useEffect(() => {
-        if (lastMessage && lastMessage.type === 'ai' && isMultiSelectMessage(lastMessage)) {
-            setSelectedMultiOptions(new Set());
+            // If it's a NAME_QUERY retry, allow it to proceed
+            //console.log('NAME_QUERY retry after user response - allowing duplicate');
         }
-    }, [lastMessage && lastMessage.type === 'ai' ? lastMessage.uuid : null]);
+
+        await chatDB.saveAiMessage(userId!, flowSlug as string, aiMessage);
+        console.log('New question via SSE:', data.id);
+
+        setChatHistory((prev) => [...prev, aiMessage]);
+        setAnimatingMessageId(aiMessage.id);
+        setIsLoading(false);
+    }, [flowSlug, userId]);
+
+    //done
+    const closeConnection = useCallback((_eventSourceRef: React.RefObject<EventSource<never> | null>) => {
+        _eventSourceRef.current?.close();
+        _eventSourceRef.current = null;
+    }, []);
+
+    //done
+    const connectToServer = useCallback(() => {
+        closeConnection(eventSourceRef);
+        const es = new EventSource(CHAT_SESSION_URL(flowSlug, userToken as string, flowType as string));
+        eventSourceRef.current = es;
+
+        if (chatHistory.length === 0) {
+            setIsLoading(true);
+        }
+
+        es.addEventListener("open", () => {
+            console.log('SSE Connected');
+        });
+
+        es.addEventListener("message", async (event) => {
+            try {
+                console.log('SSE Message received:', event);
+                if (event.data === null) {
+                    //EH 
+                    return;
+                }
+                const data = JSON.parse(event.data);
+                switch (data.type) {
+                    case messageEventTypes.END_FLOW:
+                        await handleEndFlow(data, es);
+                        return;
+                    case messageEventTypes.ERROR:
+                        handleErrorFlow(data);
+                        return;
+                    case messageEventTypes.AI_MESSAGE:
+                        await handleIncomingMessage(data);
+                        return;
+                    default: //EH123
+                        Toast.show({
+                            type: 'error',
+                            text1: 'Unexpected Response',
+                            text2: 'Please refresh and try again',
+                            position: 'bottom'
+                        });
+                        return;
+                }
+
+            } catch (error) {
+                console.error('Parse error:', error);
+            }
+        });
+
+        es.addEventListener("error", (e: any) => {
+            console.error('SSE error:', e);
+            setIsLoading(false);
+            console.log("eventErrorCount", eventErrorCount)
+            if (eventErrorCount >= 5) {
+                setEventErrorCount(0)
+                //EH
+                return;
+            }
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Connection lost. Retrying...',
+                position: 'bottom'
+            });
+            setTimeout(connectToServer, 5000);
+            setEventErrorCount((prevEventErrorCount) => prevEventErrorCount + 1)
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [closeConnection, flowSlug, userToken, flowType, chatHistory.length, handleEndFlow, handleErrorFlow, handleIncomingMessage]);
+
+
 
     const saveChatToDatabase = async () => {
         try {
@@ -282,18 +403,21 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         }
     };
 
-    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+    const handleAppStateChange = useCallback(async (nextAppState: AppStateStatus) => {
         if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
             console.log('App came to foreground, reloading history from SQLite...');
             await loadHistory();
         }
         appState.current = nextAppState;
-    };
-
-    const initializeChat = async () => {
+    }, [loadHistory]);
+    //done
+    //tbh
+    const initializeChat = useCallback(async () => {
         try {
             await chatDB.init();
-            await loadHistory();
+            if (flowType !== FlowTypeEnum.CHATBOT) {
+                await loadHistory();
+            }
             connectToServer();
         } catch (error) {
             console.error('Failed to initialize chat:', error);
@@ -303,142 +427,16 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 text2: 'Failed to initialize chat database',
                 position: 'bottom'
             });
+            //EH
         }
-    };
+    }, [connectToServer, flowType, loadHistory]);
 
-    const loadHistory = async () => {
-        if (!userId) {
-            console.log('No userId available');
-            return;
-        }
-
-        try {
-            const messages = await chatDB.getChatHistory(userId, FLOW_SLUG);
-            // chatDB.clearChatHistory(userId, FLOW_SLUG); // this is for testing
-            setChatHistory(messages);
-            console.log('Loaded history from SQLite:', messages.length, 'messages');
-        } catch (error) {
-            console.error('Failed to load history:', error);
-        }
-    };
-
-    const connectToServer = () => {
-        if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-        }
-        const es = new EventSource(CHAT_SESSION_URL(FLOW_SLUG, userToken as string, flowType));
-        eventSourceRef.current = es;
-
-        if (chatHistory.length === 0) {
-            setIsLoading(true);
-        }
-
-        es.addEventListener('open', () => {
-            console.log('SSE Connected');
-        });
-
-        es.addEventListener('message', async (event) => {
-            try {
-                const data = JSON.parse(event.data!);
-                console.log(data, "data");
-                if (data.type === 'end_flow') {
-                    console.log(' == Flow completed == ');
-                    setIsFlowComplete(true);
-                    setIsLoading(false);
-
-                    if (data.flowType === "ONBOARDING") {
-                        // complete the onboarding Questionnaire process
-                        await completeQuestionnaire();
-
-                        Toast.show({
-                            type: 'success',
-                            text1: 'Complete',
-                            text2: 'Your onboarding questionnaire is completed! You will be redirected soon',
-                            position: 'top',
-                            visibilityTime: 2500
-                        });
-                        // redirect the user to the subscriptions page
-                        setTimeout(() => {
-                            navigation.reset({
-                                index: 0,
-                                routes: [{ name: "Services" as never }],
-                            });
-                        }, 5000);
-                    } else {
-                        Toast.show({
-                            type: 'success',
-                            text1: 'Complete',
-                            text2: 'Chat Flow Completed!',
-                            position: 'bottom'
-                        });
-                    }
-
-                    es.close();
-                    return;
-                }
-
-                if (data.type === 'error') {
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Error',
-                        text2: data.message || 'An error occurred',
-                        position: 'bottom'
-                    });
-                    setIsLoading(false);
-                    return;
-                }
-
-                const aiMessage: IDBAiMessage = {
-                    type: 'ai',
-                    id: data.id,
-                    flowInstanceId: data.flowInstanceId,
-                    text: data.text,
-                    educationalMessage: data.educationalMessage,
-                    whyThisMatters: data.whyThisMatters,
-                    options: data.options || [],
-                    nodeType: data.nodeType,
-                    timestamp: Date.now(),
-                    uuid: data.uuid,
-                };
-
-                const exists = await chatDB.messageExists(userId as string, FLOW_SLUG, aiMessage.id);
-                console.log("exists", exists)
-                if (exists) {
-                    console.log('Duplicate question from SSE');
-                    setIsLoading(false);
-                    return;
-                }
-
-                await chatDB.saveAiMessage(userId!, FLOW_SLUG, aiMessage);
-                console.log('New question via SSE:', data.id);
-
-                setChatHistory((prev) => [...prev, aiMessage]);
-                setAnimatingMessageId(aiMessage.id);
-                setIsLoading(false);
-            } catch (error) {
-                console.error('Parse error:', error);
-            }
-        });
-
-        es.addEventListener('error', (e: any) => {
-            console.error('SSE error:', e);
-            Toast.show({
-                type: 'error',
-                text1: 'Error',
-                text2: 'Connection lost. Retrying...',
-                position: 'bottom'
-            });
-            setIsLoading(false);
-            setTimeout(connectToServer, 5000);
-        });
-    };
-    console.log("animated", animatingMessageId);
     const handleSendAnswer = async (option: IOption) => {
         if (isLoading || animatingMessageId || isFlowComplete || !userId) {
             return;
         }
 
-        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        const lastAi = await chatDB.getLastAiMessage(userId, flowSlug as string);
         if (!lastAi) {
             console.error('No AI message found to respond to');
             return;
@@ -450,7 +448,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             timestamp: Date.now(),
         };
 
-        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+        await chatDB.saveUserMessage(userId, flowSlug as string, userMessage);
 
         setChatHistory((prev) =>
             prev.map((msg) =>
@@ -536,7 +534,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             return;
         }
 
-        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+        const lastAi = await chatDB.getLastAiMessage(userId, flowSlug as string);
         if (!lastAi) {
             console.error('No AI message found to respond to');
             return;
@@ -556,7 +554,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             timestamp: Date.now(),
         };
 
-        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+        await chatDB.saveUserMessage(userId, flowSlug as string, userMessage);
 
         setChatHistory((prev) =>
             prev.map((msg) =>
@@ -587,57 +585,47 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
         }
     };
 
-    // Handle text input answers
-    const handleSendTextAnswer = async () => {
-        if (!inputText.trim() || !userId) {
-            return;
+    const handleChatbotTextAnswer = useCallback(async () => {
+        const userMessage: IDBUserMessage = {
+            type: 'user',
+            text: inputText.trim(),
+            timestamp: Date.now(),
+        };
+
+        await chatDB.saveUserMessage(userId as string, flowSlug as string, userMessage);
+        setChatHistory((prev) => [...prev, userMessage]);
+
+        const textToSend = inputText.trim();
+        setInputText('');
+        setIsLoading(true);
+
+        try {
+            // For chatbot, we don't need flowInstanceId or nodeId
+            await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+                userId: userId,
+                flowInstanceId: 'chatbot', // Backend will ignore this
+                nodeId: 'chatbot', // Backend will ignore this
+                freeText: textToSend,
+                flowType: FlowTypeEnum.CHATBOT
+            });
+
+            console.log('Chatbot message sent successfully:', textToSend);
+        } catch (error: any) {
+            console.error('Send error:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.response?.data?.message || 'Failed to send message',
+                position: 'bottom'
+            });
+            setIsLoading(false);
         }
+        return;
+    }, [flowSlug, inputText, userId]);
 
-        if (isLoading || animatingMessageId || isFlowComplete) {
-            return;
-        }
-
-        // === CHATBOT FLOW ===
-        if (flowType === EFlowType.CHATBOT) {
-            const userMessage: IDBUserMessage = {
-                type: 'user',
-                text: inputText.trim(),
-                timestamp: Date.now(),
-            };
-
-            await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
-
-            setChatHistory((prev) => [...prev, userMessage]);
-
-            const textToSend = inputText.trim();
-            setInputText('');
-            setIsLoading(true);
-
-            try {
-                // For chatbot, we don't need flowInstanceId or nodeId
-                await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
-                    userId: userId,
-                    flowInstanceId: 'chatbot', // Backend will ignore this
-                    nodeId: 'chatbot', // Backend will ignore this
-                    freeText: textToSend,
-                    flowType: EFlowType.CHATBOT
-                });
-
-                console.log('Chatbot message sent successfully:', textToSend);
-            } catch (error: any) {
-                console.error('Send error:', error);
-                Toast.show({
-                    type: 'error',
-                    text1: 'Error',
-                    text2: error.response?.data?.message || 'Failed to send message',
-                    position: 'bottom'
-                });
-                setIsLoading(false);
-            }
-            return;
-        }
-
-        const lastAi = await chatDB.getLastAiMessage(userId, FLOW_SLUG);
+    const handleGuidedTextAnswer = useCallback(async () => {
+        // EH: Implement guided text answer handling if needed
+        const lastAi = await chatDB.getLastAiMessage(userId as string, flowSlug as string);
         if (!lastAi) {
             console.error('No AI message found to respond to');
             return;
@@ -654,7 +642,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             timestamp: Date.now(),
         };
 
-        await chatDB.saveUserMessage(userId, FLOW_SLUG, userMessage);
+        await chatDB.saveUserMessage(userId as string, flowSlug as string, userMessage);
 
         setChatHistory((prev) =>
             prev.map((msg) =>
@@ -698,15 +686,157 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
             });
             setIsLoading(false);
         }
+    }, [flowSlug, flowType, inputText, userId]);
+
+    // Handle text input answers
+    const handleSendTextAnswer = async () => {
+        if (!inputText.trim() || !userId) {
+            return;
+        }
+
+        if (isLoading || animatingMessageId || isFlowComplete) {
+            return;
+        }
+
+        switch (flowType) {
+            case FlowTypeEnum.CHATBOT: {
+                await handleChatbotTextAnswer();
+                return;
+            }
+            case FlowTypeEnum.ONBOARDING: {
+                await handleGuidedTextAnswer();
+                return;
+            }
+            case FlowTypeEnum.CHECKIN: {
+                await handleGuidedTextAnswer();
+                return;
+            }
+        }
     };
+
+    //done
+    const getFlowType = useCallback(() => {
+        if (route.params?.flowSlug) {
+            setFlowType(FlowTypeEnum.CHECKIN);
+            setFlowSlug(flowSlugMapping[EFlowType.CHECKIN]);
+        } else if (!isFullyOnboarded()) {
+            setFlowType(FlowTypeEnum.ONBOARDING);
+            setFlowSlug(flowSlugMapping[EFlowType.ONBOARDING]);
+        } else {
+            setFlowType(FlowTypeEnum.CHATBOT);
+            setFlowSlug(flowSlugMapping[EFlowType.CHATBOT]);
+        }
+    }, [isFullyOnboarded, route.params?.flowSlug]);
+
+    const onRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            // Close existing connection
+            closeConnection(eventSourceRef);
+
+            // Reload chat history from SQLite
+            await loadHistory();
+
+            // Reconnect to SSE
+            connectToServer();
+
+            Toast.show({
+                type: 'success',
+                text1: 'Refreshed',
+                text2: 'Chat reloaded successfully',
+                position: 'bottom'
+            });
+        } catch (error) {
+            console.error('Refresh failed:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Refresh Failed',
+                text2: 'Please try again',
+                position: 'bottom'
+            });
+        } finally {
+            setRefreshing(false);
+        }
+    }, [closeConnection, connectToServer, loadHistory]);
+
+    //done
     useEffect(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
+        getFlowType()
+    }, [getFlowType]);
+
+    //done
+    useEffect(() => {
+        if (!flowType && !flowSlug) return;
+        initializeChat();
+
+        const subscription = AppState.addEventListener("change", handleAppStateChange);
+
+        return () => {
+            if (eventSourceRef.current) {
+                closeConnection(eventSourceRef);
+                subscription.remove();
+            }
+        };
+    }, [flowType, flowSlug, closeConnection, getFlowType, handleAppStateChange, initializeChat]);
+
+    useEffect(() => {
+        if (chatHistory.length > 0 && userId) {
+            saveChatToDatabase();
+        }
+    }, [chatHistory, userId]);
+
+    // Clear multi-select state when a new question appears
+    useEffect(() => {
+        if (lastMessage && lastMessage.type === 'ai' && isMultiSelectMessage(lastMessage)) {
+            setSelectedMultiOptions(new Set());
+        }
+    }, [lastMessage]);
+
+    //done
+    useEffect(() => {
+        if (scrollViewRef.current) {
+            scrollViewRef.current.scrollToEnd({ animated: true });
+        }
     }, [selectedMultiOptions.size]);
+
+    //done
+    useEffect(() => {
+        if (!lastMessage) {
+            setShowTextInput(false);
+            setShowDatePicker(false);
+            setShowMultiSelect(false);
+            return;
+        }
+
+        setShowTextInput(
+            lastMessage.type === "ai"
+            && lastMessage.nodeType === "QUESTION_FREE_TEXT"
+            && !isLoading
+            && !animatingMessageId);
+        setShowDatePicker(
+            lastMessage.type === "ai"
+            && lastMessage.nodeType === "QUESTION_DATE"
+            && !isLoading
+            && !animatingMessageId
+            && lastMessage.id !== "delivery_date");
+        setShowMultiSelect(
+            lastMessage.type === "ai"
+            && lastMessage.nodeType === "QUESTION_MULTI"
+            && !isLoading
+            && !animatingMessageId
+        )
+
+    }, [lastMessage, isLoading, animatingMessageId]);
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
             <ScrollView
                 ref={scrollViewRef}
+                refreshControl={<RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor={colors.primary} // Spinner color
+                />} z
                 style={globalStyles.chatContainer}
                 onContentSizeChange={() =>
                     scrollViewRef.current?.scrollToEnd({ animated: true })
@@ -719,7 +849,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                     if (shouldAnimate) {
                         return (
                             <AnimatedBubble
-                                key={msg.uuid}
+                                key={i}
                                 message={msg}
                                 onComplete={() => setAnimatingMessageId(null)}
                                 onSelect={handleSendAnswer}
@@ -754,13 +884,13 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 {isLoading && <RenderTypingIndicator />}
             </ScrollView>
 
-            {(shouldShowTextInput || shouldShowDateInput) && (
+            {(showTextInput || showDatePicker) && (
                 <View style={chatStyles.inputContainer}>
                     <TouchableOpacity
                         style={{ flex: 1 }}
                         activeOpacity={1}
                         onPress={() => {
-                            if (shouldShowDateInput) {
+                            if (showDatePicker) {
                                 setShow(true);
                             }
                         }}
@@ -770,13 +900,13 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                             value={inputText}
                             onChangeText={setInputText}
                             placeholder={
-                                shouldShowDateInput
+                                showDatePicker
                                     ? "Select a date"
                                     : "Type your answer"
                             }
                             placeholderTextColor={colors.black}
-                            editable={!shouldShowDateInput}
-                            pointerEvents={shouldShowDateInput ? "none" : "auto"}
+                            editable={!showDatePicker}
+                            pointerEvents={showDatePicker ? "none" : "auto"}
                             onSubmitEditing={handleSendTextAnswer}
                             returnKeyType="send"
                         />
@@ -829,7 +959,7 @@ export default function ChatWithVivaAi({ route }: { route: { params: { flowSlug?
                 // )
             }
 
-            {shouldShowMultiSubmit && selectedMultiOptions.size > 0 && (
+            {showMultiSelect && selectedMultiOptions.size > 0 && (
                 <View style={[chatStyles.inputContainer, { alignItems: 'center' }]}>
                     <Text style={[{ ...globalStyles.fontMedium, color: colors.black, flex: 1 }]}>
                         {selectedMultiOptions.size} selected, click the button to submit.

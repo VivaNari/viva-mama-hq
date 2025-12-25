@@ -311,6 +311,49 @@ class ChatDatabase {
     }
   }
 
+  async getLastMessage(
+    userId: string,
+    flowSlug: string,
+  ): Promise<any | null> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT * FROM chat_messages 
+            WHERE user_id = ? AND flow_slug = ? 
+            ORDER BY timestamp DESC LIMIT 1;
+        `;
+
+    try {
+      const [result] = await this.database!.executeSql(query, [
+        userId,
+        flowSlug,
+      ]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row: IDBChatMessageRow = result.rows.item(0);
+      return {
+        type: row.message_type,
+        id: row.message_id!,
+        flowInstanceId: row.flow_instance_id!,
+        text: row.text,
+        educationalMessage: row.educational_message || undefined,
+        whyThisMatters: row.why_this_matters || undefined,
+        options: row.options ? JSON.parse(row.options) : [],
+        nodeType: row.node_type as any,
+        timestamp: row.timestamp,
+        uuid: row.uuid,
+      };
+    } catch (error) {
+      console.error('Failed to get last AI message:', error);
+      return null;
+    }
+  }
+
   async close(): Promise<void> {
     if (this.database) {
       await this.database.close();

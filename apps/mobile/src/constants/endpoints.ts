@@ -1,14 +1,15 @@
 import { BASE_API_URL as RN_BASE_API_URL, API_VERSION } from '@env';
 
-export const BASE_API_URL = RN_BASE_API_URL;
+export const BASE_API_URL = "http://192.168.1.6:4000";
 export const API_VERSION_URL = `/api/${API_VERSION}`;
 
 export const CHAT_SESSION_URL = (
-  flowSlug: string,
+  flowSlug: string | null,
   token: string,
   flowType: string,
 ) => {
-  return `${API_VERSION_URL}/chat-session/${flowSlug}?token=${token}&flowType=${flowType}`;
+  console.log("Generating CHAT_SESSION_URL with:", `${BASE_API_URL}${API_VERSION_URL}/chat-session/${flowSlug}?token=${token}&flowType=${flowType}`);
+  return `${BASE_API_URL}${API_VERSION_URL}/chat-session/${flowSlug}?token=${token}&flowType=${flowType}`;
 };
 
 export const API_GOOGLE_LOGIN = `${API_VERSION_URL}/auth/google`;
