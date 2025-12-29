@@ -1,5 +1,4 @@
 import { RAZORPAY_API_KEY } from "@env";
-import { useNavigation, useRoute } from "@react-navigation/native";
 import React, { useMemo, useState } from "react";
 import {
     ActivityIndicator,
@@ -21,12 +20,16 @@ import { styles, subscriptionsDetailsStyles } from "../public/styles/subscriptio
 import { IPaymentOrderResponse, IService } from "../types/services.types";
 import { useAuth } from "../context/AuthContext";
 
-const SubscriptionDetails: React.FC = () => {
+const SubscriptionDetails: React.FC<{ plan: string; billing: string }> = ({ billing }: { plan: string; billing: string }) => {
     const { completeOnboarding } = useAuth();
-    const navigation = useNavigation();
-    const route = useRoute<any>();
-    const passedPlan: IService = route.params?.plan;
-    const initialBilling: "monthly" | "yearly" = route.params?.billingCycle || "monthly";
+    const passedPlan: IService = {
+        id: "string",
+        title: "Viva Basic",
+        monthlyPrice: 2000,
+        yearlyPrice: 3000,
+        yearlyLabel: "/year"
+    };
+    const initialBilling: "monthly" | "yearly" = billing as any || "monthly";
 
     const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">(initialBilling);
     const [activePlan, setActivePlan] = useState<IService>(passedPlan);

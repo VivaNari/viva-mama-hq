@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { globalStyles, landingStyles } from '../public/styles'
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { colors } from '../public/assets/colors';
@@ -11,6 +11,10 @@ import Toast from 'react-native-toast-message';
 const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
     const { signInWithGoogle } = useAuth();
     const [getLoading, setLoading] = useState<boolean>(false);
+
+    useEffect(() => {
+    }, []);
+
     return (
         <SafeAreaView>
             <ScrollView style={{

@@ -1,16 +1,45 @@
-import { FlowTypeEnum } from "../types/vivaAi.types";
+import { FlowType } from '../types/chat.types';
 
-export const flowSlugMapping = {
-    [FlowTypeEnum.ONBOARDING]: 'onboarding-flow-v2',
-    [FlowTypeEnum.CHECKIN]: 'weekly-checkin-v1',
-    [FlowTypeEnum.CHATBOT]: "chatbot-flow",
-}
-
-export const messageEventTypes = {
-    AI_MESSAGE: 'ai_message',
-    USER_MESSAGE: 'user_message',
-    END_FLOW: 'end_flow',
-    ERROR: 'error',
+export const FLOW_SLUGS: Record<FlowType, string> = {
+	[FlowType.ONBOARDING]: 'onboarding-flow-v2',
+	[FlowType.CHECKIN]: 'weekly-checkin-v1',
+	[FlowType.CHATBOT]: 'chatbot-flow',
 };
 
-export const NAME_QUERY = "Please provide a valid name so that we can proceed.";
+export const TYPING_SPEED_MS = 30;
+export const SSE_RECONNECT_DELAY_MS = 5000;
+export const MAX_SSE_RETRIES = 5;
+export const NAVIGATION_DELAY_MS = 3000;
+
+// ============================================
+// Special Node IDs
+// ============================================
+
+export const DELIVERY_DATE_NODE_ID = 'delivery_date';
+
+// ============================================
+// Special Values
+// ============================================
+
+export const NOT_PREGNANT_VALUE = 'not_pragnent'; // Note: keeping original spelling for API compatibility
+
+// ============================================
+// None Option Values (for multi-select)
+// ============================================
+
+export const NONE_OPTION_VALUES = ['none', 'history_none', 'meds_none'] as const;
+
+// ============================================
+// Default State
+// ============================================
+
+export const INITIAL_CHAT_STATE = {
+	messages: [],
+	isLoading: false,
+	isFlowComplete: false,
+	animatingMessageId: null,
+	inputText: '',
+	selectedMultiOptions: new Set<string>(),
+	connectionStatus: 'disconnected' as const,
+	errorMessage: null,
+};

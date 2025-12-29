@@ -7,7 +7,7 @@ import {
     TextInput,
     ActivityIndicator,
 } from 'react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { OtpInput } from 'react-native-otp-entry';
 import { globalStyles } from '../public/styles';
 import LinearGradient from 'react-native-linear-gradient';
@@ -24,7 +24,9 @@ const LoginwithPhone = () => {
     const [verificationKey, setVerificationKey] = useState<string>('');
     const [getLoading, setLoading] = useState<boolean>(false);
     const { requestPhoneOTP, verifyPhoneOTP } = useAuth();
-
+    useEffect(() => {
+        console.log('🔥 BEFORE FETCH');
+    }, []);
     return (
         <SafeAreaView>
             <ScrollView>

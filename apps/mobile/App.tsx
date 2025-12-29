@@ -11,6 +11,8 @@ import CounterProvider from './src/context/CounterContext';
 import { chatDB } from './src/db/sqlite';
 import RootNavigator from './src/navigators/RootNavigator';
 import { decodeToken } from './src/utils/decodeJWTToken';
+import axios from 'axios';
+import { BASE_API_URL } from './src/constants/endpoints';
 
 function App() {
 
@@ -19,6 +21,8 @@ function App() {
       try {
         // Initialize database
         await chatDB.init();
+        console.log('BASE_API_URL BASE_API_URL', BASE_API_URL);
+
         console.log('Database initialized');
 
         // Fetch user data if user is logged in

@@ -1,4 +1,7 @@
 export const colors = {
+  lightPurple: "#E3E2F4",
+  purple: '#6F6AC4',
+  darkPurple: "#4B1EAA",
   pageBG: '#f5f5f5',
   // pageBG: '#fffafa',
   primary: '#0A2463',
@@ -15,7 +18,7 @@ export const colors = {
   warning: '#FF9800',
   error: '#F44336',
   offWhite: '#D9D9D9',
-  purple: '#8B80FE',
+  
   subscriptionTabActiveBG: 'rgba(139, 97, 194, 1)',
   subscriptionTabInactiveBG: 'rgba(190, 163, 248, 1)',
   SubscriptionOptionsBG: 'rgba(232, 215, 255, 1)',

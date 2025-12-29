@@ -3,17 +3,17 @@ import { IService } from '../types/services.types';
 export const servicesdata: IService[] = [
   {
     id: '1',
-    title: 'Viva Basic (Free)',
+    title: 'Viva Basic',
     monthlyPrice: 0,
     yearlyPrice: 0,
-    yearlyLabel: 'Free',
+    yearlyLabel: '',
   },
   {
     id: '2',
     title: 'Viva Signature',
     monthlyPrice: 999,
     yearlyPrice: 10999,
-    yearlyLabel: 'Pay for 11 month & use for 1 year',
+    yearlyLabel: 'Pay for 11 months only',
   },
 ];
 

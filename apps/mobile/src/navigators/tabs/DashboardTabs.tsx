@@ -15,7 +15,7 @@ import ArticleContent from '../../screens/ArticleContent';
 import ChatWithVivaAI from '../../screens/ChatWithVivaAI';
 import Dashboard from '../../screens/Dashboard';
 import Experts from '../../screens/Experts';
-import Services from '../../screens/Services';
+import Services from '../../screens/Subscription';
 
 const Tab = createBottomTabNavigator();
 
