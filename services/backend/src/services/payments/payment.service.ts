@@ -163,8 +163,9 @@ class PaymentService extends BaseService<IPaymentOrder> {
         response: Response;
     }) {
         try {
+            console.log("qqqqqqqqqqqqq", plan, billingCycle);
             const user = (await UserModel.findById(userId)) as IUser;
-
+            console.log("userrrrrrrrrrr", user);
             if (!user) {
                 sendResponse({
                     data: {},
@@ -177,6 +178,7 @@ class PaymentService extends BaseService<IPaymentOrder> {
 
             // Check if user already has an active subscription
             if (user.subscription?.status === "active") {
+                console.log("User already has an active subscription");
                 sendResponse({
                     data: {},
                     statusCode: StatusCodes.BAD_REQUEST,
@@ -196,7 +198,7 @@ class PaymentService extends BaseService<IPaymentOrder> {
                     response,
                 });
             }
-
+            console.log("1234567890");
             const expiryDate = null;
 
             // Activate free plan

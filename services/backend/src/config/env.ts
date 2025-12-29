@@ -17,6 +17,8 @@ const env = {
     LOG_TO_FILE: process.env.LOG_TO_FILE === "true",
     RAZORPAY_API_KEY: process.env.RAZORPAY_API_KEY,
     RAZORPAY_SECRET_KEY: process.env.RAZORPAY_SECRET_KEY,
+    LLM_SERVER_URL: process.env.LLM_SERVER_URL as string,
+    LLM_API_KEY: process.env.LLM_API_KEY as string,
     isDevelopment(): boolean {
         return env.NODE_ENV === "development";
     },

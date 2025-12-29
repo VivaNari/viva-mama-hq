@@ -13,6 +13,7 @@ import {
     AnswerTypeEnum,
     EndFlowPayload,
     FlowInstanceStateEnum,
+    FlowNodeEnum,
     FlowType,
     FlowTypeEnum,
     IFlowDefinition,
@@ -22,6 +23,7 @@ import {
     MessageRoleEnum,
     MessageTypeEnum,
     QuestionPayload,
+    QuestionSourceEnum,
 } from "../../types/chat.types";
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
@@ -95,6 +97,8 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                 type: "chatbot_message",
                 text: getAIGreetingMessage(preferred_name || "there"),
                 timestamp: Date.now(),
+                response: {},
+                nodeType: FlowNodeEnum.QUESTION_FREE_TEXT,
             };
             this.writeToSse(res, greeetingMessage);
         } catch (error) {
@@ -326,8 +330,9 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             if (userSession) {
                 const aiLlmResponse: AILLMResponse = {
                     type: "chatbot_message",
-                    text: llmResponse,
+                    text: llmResponse.answer as string,
                     timestamp: Date.now(),
+                    response: llmResponse,
                 };
                 this.writeToSse(userSession, aiLlmResponse);
             }
@@ -553,11 +558,20 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             nodeId,
             flowType,
             freeText,
+            nodeId,
         );
         console.log("444", specialCaseNode);
         if (specialCaseNode?.success === false) {
+            // Invalid input - question already re-sent, just return
+            return {
+                success: false,
+                message: specialCaseNode.message,
+            };
         } else if (specialCaseNode?.success) {
+            // Valid input - use detected name
             freeText = specialCaseNode.data as string;
+            // Update answerData with corrected name
+            answerData.freeText = freeText;
         }
         console.log("555", flowType);
         if (flowType === "ONBOARDING") {
@@ -662,6 +676,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         nodeId: string,
         flowType: FlowType,
         freeText?: string,
+        idOverride?: string,
     ) => {
         console.log(flowType, nodeId, freeText, "2.55555");
         if (flowType !== FlowTypeEnum.ONBOARDING || nodeId !== "name") {
@@ -672,8 +687,13 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         }
         // 1. Call your LLM API to validate name
         const { has_name, detected_name } = await this.llmService.sendNameQuery(freeText);
+        console.log(` LLM response: ${JSON.stringify({ has_name, detected_name })}`);
         if (!has_name) {
-            console.log("LLM could not detect a valid name. Asking question again.");
+            await flowResponseModel.deleteOne({
+                flowInstanceId: flowInstance._id,
+                nodeId: nodeId,
+            });
+            //console.log("LLM could not detect a valid name. Asking question again.");
             this.deletePendingQuestion(userInstance);
             // send same question again
             const userConnection = this.getUserConnection(userInstance._id as any);
@@ -696,6 +716,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     flowType,
                 );
             }
+
             // IMPORTANT: Keep cursor on same node
             // And DO NOT save answer
             return {
@@ -704,9 +725,10 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                 data: null,
             };
         }
+
         // If name is valid, override the freeText with LLM's detected name
         const specialCaseNodeResponse = {
-            success: false,
+            success: true,
             message: "Invalid name. Asking again.",
             data: detected_name,
         };
@@ -1557,8 +1579,9 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             score: opt.score,
         }));
 
-        const payload: QuestionPayload & { askId: any; uuid: any } = {
+        const payload: QuestionPayload = {
             // uuid: questionOvverideId || uuidv4()
+            type: QuestionSourceEnum.AI_Message,
             uuid: questionOvverideId,
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
@@ -1569,6 +1592,8 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             nodeType: currentNode.nodeType,
             askId: Date.now(),
         };
+
+        console.log(`Prepared question payload: ${JSON.stringify(payload)}`, questionTextOverride);
 
         await new messageModel({
             conversationId: flowInstance.conversationId,
@@ -1648,8 +1673,9 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         }
 
         const thankYouMessage = {
-            type: "completion_message",
+            type: "end_flow",
             text: text,
+            flowType: flowType,
             // uuid: uuidv4(),
         };
 
@@ -1667,13 +1693,17 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
 
         res.write(`data: ${JSON.stringify(thankYouMessage)}\n\n`);
         console.log(`Sent thank you message`);
+        res.end();
+
+        this.activeSessions.delete(userId);
+        console.log(`Flow ended for user ${userId}`);
     }
 
     private endFlow(userId: string, res: Response, flowType?: FlowType): void {
-        const endPayload: EndFlowPayload = {
-            type: "end_flow",
-            message: "Flow completed",
-            flowType: flowType!,
+        const endPayload: any = {
+            text: "Flow completed",
+            nodeType: FlowNodeEnum.END,
+            flowType: flowType,
         };
 
         res.write(`data: ${JSON.stringify(endPayload)}\n\n`);
@@ -1734,6 +1764,8 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             }));
 
             const questionPayload: QuestionPayload = {
+                askId: Date.now(),
+                type: QuestionSourceEnum.AI_Message,
                 id: currentNode.id,
                 flowInstanceId: flowInstance._id.toString(),
                 text: currentNode.text || "",

@@ -2,7 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import PaymentService from "../../../../services/payments/payment.service";
 import { AuthenticatedRequest } from "../../../../types/chat.types";
-import { IPaymentOrder } from "../../../../types/payment.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 import { messages } from "../../../../constants/messages";
 
@@ -75,7 +74,7 @@ export default class PaymentController {
             const userId = req.user._id;
 
             const { plan, billingCycle } = req.body;
-
+            console.log(plan, billingCycle);
             if (!plan || !billingCycle) {
                 sendResponse({
                     data: {},

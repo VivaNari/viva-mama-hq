@@ -115,7 +115,8 @@ export type FlowNodeType =
     | FlowNodeEnum.INFO
     | FlowNodeEnum.BRANCH
     | FlowNodeEnum.CALC
-    | FlowNodeEnum.END;
+    | FlowNodeEnum.END
+    | FlowNodeEnum.QUESTION_FREE_TEXT;
 
 export interface IFlowNode {
     id: string;
@@ -232,6 +233,9 @@ export interface IFlowResponse {
 }
 
 export interface QuestionPayload {
+    askId: number;
+    uuid?: string | undefined;
+    type: QuestionSourceEnum;
     id: string;
     flowInstanceId: string;
     text: string;
@@ -267,8 +271,10 @@ export type AIGreetingMessage = AILLMResponse;
 
 export type AILLMResponse = {
     type: "chatbot_message";
-    text: string;
+    text?: string;
     timestamp: number;
+    response: Record<string, unknown>;
+    nodeType?: FlowNodeType;
 };
 
 export type AnswerData = {
@@ -276,3 +282,8 @@ export type AnswerData = {
     freeText: string | null;
     selectedKeys: number[] | null;
 };
+
+export enum QuestionSourceEnum {
+    AI_Message = "ai_message",
+    GUIDED_FLOW = "GUIDED_FLOW",
+}
