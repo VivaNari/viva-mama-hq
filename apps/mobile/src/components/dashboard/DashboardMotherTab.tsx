@@ -28,7 +28,18 @@ import NNWomanPlanningForBaby from '../NNWomanPlanningForBaby'
 import NPWomanBabyArriving from '../NPWomanBabyArriving'
 import VivaScoreGauge from '../VivaScoreGauge'
 import WeekCycle from '../WeekCycle'
-
+const data = {
+    recommendation: {
+        title: "string",
+        goingWell: "string;",
+        needsHelp: "string",
+        celebrate: ["string[]"],
+        tips: ["string[]"],
+        next: ["string[]"],
+    },
+    score: 30,
+    zone: "RED"
+}
 const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUserAllData }) => {
     const [recentCheckindata, setRecentChekinData] = useState<ICheckInRecommendation[]>();
     useEffect(() => {
@@ -136,7 +147,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                 {
                     userData &&
                     userData.user.user_category === UserCategoryEnum.PP &&
-                    recentCheckindata && (
+                    (
                         <View
                             style={{
                                 backgroundColor: 'rgba(255, 250, 250, 1)',
@@ -172,7 +183,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
 
                                         }, globalStyles.fontRegular]}
                                     >
-                                        Week {recentCheckindata[0].week}
+                                        Week 1
                                     </Text>
                                 </View>
                                 <View>
@@ -193,59 +204,64 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                     paddingHorizontal: 20
                                 }}
                             >
-                                <VivaScoreGauge percentage={Math.trunc(score ? score : userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0]?.finalScore : 0)} />
+                                {/* <VivaScoreGauge percentage={Math.trunc(score ? score : userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0]?.finalScore : 0)} /> */}
+                                <VivaScoreGauge percentage={27} />
 
                                 {
 
-                                    score || recentCheckindata.length > 0 &&
-                                        userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? (<View style={{
-                                            marginTop: -100,
-                                            marginBottom: 5,
-                                            alignItems: "center"
-                                        }}>
-                                            <View
-                                                style={{
-                                                    flexDirection: "row",
-                                                    alignItems: "center",
-                                                    justifyContent: "center"
-                                                }}
-                                            >
-                                                <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
-                                                    {
-                                                        score ?
-                                                            `${String(score).split(".")[0]}` :
-                                                            `${String(recentCheckindata[0].finalScore).split(".")[0]}`
-                                                    }
-                                                </Text>
-                                                <TouchableOpacity
-                                                    onPress={() => open(
-                                                        <RecoveryScoreBriefInfo
-                                                            significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
-                                                            briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
-                                                        />
-                                                    )}
-                                                >
-                                                    <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
-                                                </TouchableOpacity>
-                                            </View>
-                                            <Text
-                                                style={{
-                                                    fontSize: 14,
-                                                    textAlign: "center",
-                                                    ...globalStyles.fontRegular,
-                                                    marginTop: 10,
 
-                                                    backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
-
-                                                    color: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeText : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeText : colors.greenBadgeText,
-
-                                                    paddingVertical: 6,
-                                                    paddingHorizontal: 18,
-                                                    borderRadius: 20
-                                                }}>
-                                                {recentCheckindata[0].tagline}
+                                    userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? (<View style={{
+                                        marginTop: -100,
+                                        marginBottom: 5,
+                                        alignItems: "center"
+                                    }}>
+                                        <View
+                                            style={{
+                                                flexDirection: "row",
+                                                alignItems: "center",
+                                                justifyContent: "center"
+                                            }}
+                                        >
+                                            <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
+                                                {
+                                                    3
+                                                }
                                             </Text>
-                                        </View>) : (
+                                            <TouchableOpacity
+                                                onPress={() => open(
+                                                    // <RecoveryScoreBriefInfo
+                                                    //     significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
+                                                    //     briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
+                                                    // />
+                                                    <RecoveryScoreBriefInfo
+                                                        significance={"test"}
+                                                        briefInfo={"tesst"}
+                                                    />
+                                                )}
+                                            >
+                                                <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
+                                            </TouchableOpacity>
+                                        </View>
+                                        <Text
+                                            style={{
+                                                fontSize: 14,
+                                                textAlign: "center",
+                                                ...globalStyles.fontRegular,
+                                                marginTop: 10,
+
+                                                //backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
+                                                backgroundColor: colors.redBadgeBG,
+                                                color: colors.redBadgeText,
+                                                //color: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeText : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeText : colors.greenBadgeText,
+
+                                                paddingVertical: 6,
+                                                paddingHorizontal: 18,
+                                                borderRadius: 20
+                                            }}>
+                                            {/* {recentCheckindata[0].tagline} */}
+                                            tagline
+                                        </Text>
+                                    </View>) : (
                                         <Animated.View
                                             style={[
                                                 {
@@ -341,16 +357,16 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                 {
                     userData &&
                     userData.user.user_category === UserCategoryEnum.PP &&
-                    recentCheckindata && (
+                    (
                         <>
                             {/* Physical Recovery */}
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.PHYSICAL} data={recentCheckindata[0].individualRecommendations.physical} />
+                            <IndividualRecoveryCard type={IndividualRecommendationEnum.PHYSICAL} data={data} />
 
                             {/* Lactation Recovery */}
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.LACTATION} data={recentCheckindata[0].individualRecommendations.lactation} />
+                            <IndividualRecoveryCard type={IndividualRecommendationEnum.LACTATION} data={data} />
                             {/* Emotional Recovery */}
 
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.EMOTIONAL} data={recentCheckindata[0].individualRecommendations.emotional} />
+                            <IndividualRecoveryCard type={IndividualRecommendationEnum.EMOTIONAL} data={data} />
 
                             <WeekCycle />
                         </>

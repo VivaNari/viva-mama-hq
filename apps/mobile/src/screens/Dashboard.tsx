@@ -33,6 +33,7 @@ const Dashboard = () => {
     useEffect(() => {
         (async () => {
             const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+            console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
             setUserdata(getUserDataFromSQLite.data);
 
             const getContents: IUserContentresponse = await getUserContents();
@@ -79,76 +80,15 @@ const Dashboard = () => {
                 <View
                     style={[globalStyles.container, { flex: 1 }]}
                 >
-                    {/* Tabs View */}
-                    <View
-                        style={{
-                            backgroundColor: isMotherTab ? 'rgba(238, 230, 255, 1)' : 'rgba(233, 245, 255, 1)',
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            borderRadius: 30,
-                            padding: 4,
-                            gap: 5,
-                            boxShadow: '0 0 12.8px 0 rgba(0, 0, 0, 0.25)',
-                        }}
-                    >
-                        <TouchableOpacity
-                            activeOpacity={0.7}
-                            onPress={() => setIsMotherTab(true)}
-                            style={{
-                                paddingHorizontal: 15,
-                                flex: 1,
-                                paddingVertical: 5,
-                                backgroundColor: isMotherTab ? colors.subscriptionTabActiveBG : 'transparent',
-                                borderRadius: 30
-
-                            }}
-                        >
-                            <Text
-                                style={[{
-                                    fontSize: 18,
-                                    textAlign: 'center',
-                                    color: isMotherTab ? colors.white : colors.black,
-                                }, isMotherTab ? globalStyles.fontSemiBold : globalStyles.fontRegular]}
-                            >
-                                Mother
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            activeOpacity={0.7}
-                            onPress={() => setIsMotherTab(false)}
-                            style={{
-                                paddingHorizontal: 15,
-                                flex: 1,
-                                paddingVertical: 5,
-                                backgroundColor: !isMotherTab ? colors.primary : 'transparent',
-                                borderRadius: 30
-                            }}
-                        >
-                            <Text
-                                style={[{
-                                    fontSize: 18,
-                                    textAlign: 'center',
-                                    color: !isMotherTab ? colors.white : colors.black
-                                }, !isMotherTab ? globalStyles.fontSemiBold : globalStyles.fontRegular]}
-                            >
-                                Infant
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-
                     {/* Tab Content View */}
                     <View
                         style={{
                             marginTop: 15
                         }}
                     >
-                        {
-                            isMotherTab ? (
-                                <DashboardMotherTab userData={userData as IUserAllData} score={Number(vivaScore)} />
-                            ) : (
-                                <DashboardInfantTab />
-                            )
-                        }
+
+                        <DashboardMotherTab userData={userData as IUserAllData} score={Number(vivaScore)} />
+
                     </View>
 
                     {/* View to show at every tab */}
