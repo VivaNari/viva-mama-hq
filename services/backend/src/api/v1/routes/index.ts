@@ -7,6 +7,8 @@ import paymentrouter from "./payments/payment.route";
 import recommendationHistoryRouter from "./recommendation-history.routes";
 import contentRouter from "./contents/content.route";
 import productRouter from "./products/product.route";
+import weeklyCheckinRouter from "./weeklyCheckin.routes";
+
 const router = Router();
 
 router.use(flowDefinitionRouter);
@@ -17,5 +19,6 @@ router.use(paymentrouter);
 router.use(recommendationHistoryRouter);
 router.use(contentRouter);
 router.use(productRouter);
+router.use(weeklyCheckinRouter);
 
 export default router;

@@ -1,70 +1,45 @@
-import { IUser } from "../../types/user.types";
+import flowInstanceModel from "../../models/flowInstance.model";
+import flowResponseModel from "../../models/flowResponse.model";
+import flowDefinitionModel from "../../models/flowDefinition.model";
+
 import {
-    FlowInstanceStateEnum,
-    IConversation,
     IFlowDefinition,
     IFlowInstance,
     IFlowNode,
-    NodeEligibilityResult,
+    FlowInstanceStateEnum,
 } from "../../types/chat.types";
-import conversationModel from "../../models/conversation.model";
-import flowInstanceModel from "../../models/flowInstance.model";
-import BaseService from "../base.service";
+import { IUser } from "../../types";
 import {
-    BREASTFEEDING_DEPENDENT_INDICATORS,
     ELIMINATION_INDICATORS,
+    BREASTFEEDING_DEPENDENT_INDICATORS,
     WEEKLY_CHECKIN_SLUG,
 } from "../../constants/chat";
-import flowDefinitionModel from "../../models/flowDefinition.model";
-import flowResponseModel from "../../models/flowResponse.model";
 import logger from "../../utils/logger";
 
-export class FlowInstanceService extends BaseService<IFlowInstance> {
-    constructor() {
-        super(flowInstanceModel);
-    }
+/**
+ * Node eligibility result
+ */
+interface NodeEligibilityResult {
+    isEligible: boolean;
+    reason?: string | undefined;
+}
 
-    async createNewFlowForUser(
-        user: IUser,
-        flowDef: IFlowDefinition,
-    ): Promise<IConversation | null> {
-        try {
-            const newConversation = await conversationModel.create({
-                userId: user._id,
-                title: flowDef.name,
-                chatMode: "GUIDED_ONLY",
-                lastMessageAt: new Date(),
-                meta: {
-                    channel: "App",
-                    tags: [flowDef.slug],
-                },
-            });
+/**
+ * FlowService - Single Responsibility: Handle flow navigation and node eligibility
+ *
+ * Features:
+ * - Find next valid node
+ * - Check node eligibility (week, breastfeeding, elimination)
+ * - Get flow definition
+ */
+class FlowService {
+    // ============================================
+    // Flow Definition
+    // ============================================
 
-            await flowInstanceModel.create({
-                userId: user._id,
-                conversationId: newConversation._id,
-                flowDefId: flowDef._id,
-                flowSlug: flowDef.slug,
-                version: flowDef.version,
-                state: FlowInstanceStateEnum.ACTIVE,
-                postpartumWeek: user.current_weekdays.weeks,
-                postpartumDays: user.current_weekdays.days,
-                cursorNodeId: flowDef.startNodeId,
-                variables: {},
-                outcome: null,
-            });
-
-            return newConversation;
-        } catch (error) {
-            console.error(`Error creating new flow for user ${user._id}:`, error);
-            return null;
-        }
-    }
-
-    createFlowInstance = async (payload: Partial<IFlowInstance>): Promise<IFlowInstance> => {
-        return await flowInstanceModel.create(payload);
-    };
-
+    /**
+     * Get published flow definition by slug
+     */
     async getFlowDefinition(slug: string = WEEKLY_CHECKIN_SLUG): Promise<IFlowDefinition | null> {
         return flowDefinitionModel.findOne({
             slug,
@@ -380,3 +355,5 @@ export class FlowInstanceService extends BaseService<IFlowInstance> {
         });
     }
 }
+
+export default FlowService;
