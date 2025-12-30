@@ -1,3 +1,4 @@
+// src/utils/flowTypeResolver.ts
 import { FlowType } from '../types/chat.types';
 import { FLOW_SLUGS } from '../constants/chat';
 
@@ -40,7 +41,16 @@ export const resolveFlowConfig = (
  * Check if the flow type requires saving chat history
  */
 export const shouldSaveHistory = (flowType: FlowType): boolean => {
-	return flowType !== FlowType.CHATBOT;
+	// Only ONBOARDING and CHECKIN save history
+	// CHATBOT has no history interaction
+	return flowType === FlowType.ONBOARDING || flowType === FlowType.CHECKIN;
+};
+
+/**
+ * Check if the flow should clear history after completion
+ */
+export const shouldClearHistoryOnComplete = (flowType: FlowType): boolean => {
+	return flowType === FlowType.CHECKIN;
 };
 
 /**
@@ -53,7 +63,7 @@ export const getCompletionRedirect = (
 		case FlowType.ONBOARDING:
 			return { screen: 'Services', delay: 5000 };
 		case FlowType.CHECKIN:
-			return null; // Just show toast, no redirect
+			return { screen: 'DashboardTabNavigator', delay: 3000 };
 		case FlowType.CHATBOT:
 			return null;
 		default:
@@ -76,7 +86,7 @@ export const getCompletionMessage = (
 		case FlowType.CHECKIN:
 			return {
 				title: 'Complete',
-				message: 'Weekly Check In Completed!',
+				message: 'Weekly Check-In Completed! Redirecting to dashboard...',
 			};
 		default:
 			return {

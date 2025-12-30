@@ -40,6 +40,7 @@ const data = {
     score: 30,
     zone: "RED"
 }
+
 const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUserAllData }) => {
     const [recentCheckindata, setRecentChekinData] = useState<ICheckInRecommendation[]>();
     useEffect(() => {

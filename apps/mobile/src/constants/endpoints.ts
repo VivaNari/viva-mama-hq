@@ -42,6 +42,7 @@ export const API_VERIFY_OTP = `${API_VERSION_URL}/auth/verify-otp`;
 
 // Chat endpoints
 export const CHAT_FLOW_ANSWER = `${API_VERSION_URL}/chat-flow/answer`;
+export const WEEKLY_CHECKIN_ANSWER = `${API_VERSION_URL}/weekly-checkin/answer`;
 export const CHATBOT_MESSAGE_URL = `${API_VERSION_URL}/chatbot/message`;
 
 // Payment endpoints

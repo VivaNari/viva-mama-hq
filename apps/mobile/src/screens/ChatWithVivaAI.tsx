@@ -1,3 +1,4 @@
+// src/screens/ChatWithVivaAI.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ScrollView,
@@ -34,6 +35,8 @@ import {
     resolveFlowConfig,
     getCompletionMessage,
     getCompletionRedirect,
+    shouldClearHistoryOnComplete,
+    shouldSaveHistory,
 } from '../utils/flowTypeResolver';
 import { determineInputMode, isAiMessage } from '../utils/messageHelpers';
 import { chatLogger } from '../utils/logger';
@@ -54,6 +57,7 @@ const ChatWithVivaAI: React.FC = () => {
         state,
         dispatch,
         loadHistory,
+        clearHistory,
         saveAiMessage,
         saveUserMessage,
         getLastAiMessage,
@@ -104,6 +108,12 @@ const ChatWithVivaAI: React.FC = () => {
                 await completeQuestionnaire();
             }
 
+            // Clear history for CHECKIN flow on completion
+            if (shouldClearHistoryOnComplete(completedFlowType)) {
+                chatLogger.debug('Clearing history for completed check-in flow');
+                await clearHistory();
+            }
+
             const redirect = getCompletionRedirect(completedFlowType);
             if (redirect) {
                 navigationTimeoutRef.current = setTimeout(() => {
@@ -114,7 +124,7 @@ const ChatWithVivaAI: React.FC = () => {
                 }, redirect.delay);
             }
         },
-        [completeQuestionnaire, navigation]
+        [completeQuestionnaire, navigation, clearHistory]
     );
 
     const handleMessageReceived = useCallback(
@@ -195,7 +205,12 @@ const ChatWithVivaAI: React.FC = () => {
         setRefreshing(true);
         try {
             disconnect();
-            await loadHistory();
+
+            // Only reload history for flows that save history
+            if (flowType && shouldSaveHistory(flowType)) {
+                await loadHistory();
+            }
+
             connect();
             Toast.show({
                 type: 'success',
@@ -214,13 +229,21 @@ const ChatWithVivaAI: React.FC = () => {
         } finally {
             setRefreshing(false);
         }
-    }, [disconnect, loadHistory, connect]);
+    }, [disconnect, loadHistory, connect, flowType]);
 
     useEffect(() => {
         const initializeChat = async () => {
             try {
                 await chatDB.init();
-                await loadHistory();
+
+                // Only load history for flows that save history (ONBOARDING, CHECKIN)
+                // CHATBOT starts fresh every time
+                if (flowType && shouldSaveHistory(flowType)) {
+                    await loadHistory();
+                } else {
+                    chatLogger.debug('Skipping history load for chatbot flow');
+                }
+
                 connect();
             } catch (error) {
                 chatLogger.error('Failed to initialize chat', error);
@@ -249,8 +272,11 @@ const ChatWithVivaAI: React.FC = () => {
                 appStateRef.current.match(/inactive|background/) &&
                 nextAppState === 'active'
             ) {
-                chatLogger.debug('App came to foreground, reloading history');
-                await loadHistory();
+                // Only reload history for flows that save history
+                if (flowType && shouldSaveHistory(flowType)) {
+                    chatLogger.debug('App came to foreground, reloading history');
+                    await loadHistory();
+                }
             }
             appStateRef.current = nextAppState;
         };
@@ -260,7 +286,7 @@ const ChatWithVivaAI: React.FC = () => {
         return () => {
             subscription.remove();
         };
-    }, [loadHistory]);
+    }, [loadHistory, flowType]);
 
     useFocusEffect(
         useCallback(() => {

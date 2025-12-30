@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import Toast from 'react-native-toast-message';
 
 import apiClientInterceptor from '../api/apiClientInterceptor';
-import { CHAT_FLOW_ANSWER } from '../constants/endpoints';
+import { CHAT_FLOW_ANSWER, WEEKLY_CHECKIN_ANSWER } from '../constants/endpoints';
 import {
 	FlowType,
 	IOption,
@@ -42,14 +42,27 @@ export const useChatActions = ({
 			freeText?: string;
 		}): Promise<boolean> => {
 			try {
-				await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
-					userId,
-					flowInstanceId: payload.flowInstanceId,
-					nodeId: payload.nodeId,
-					selectedKeys: payload.selectedKeys,
-					freeText: payload.freeText,
-					flowType,
-				});
+				if(flowType === FlowType.CHECKIN) {
+					await apiClientInterceptor().post(WEEKLY_CHECKIN_ANSWER, {
+						userId,
+						flowInstanceId: payload.flowInstanceId,
+						nodeId: payload.nodeId,
+						selectedKeys: payload.selectedKeys,
+						freeText: payload.freeText,
+						flowType,
+						week: 1,
+						idempotencyKey: payload.nodeId
+					});
+				} else {
+					await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+						userId,
+						flowInstanceId: payload.flowInstanceId,
+						nodeId: payload.nodeId,
+						selectedKeys: payload.selectedKeys,
+						freeText: payload.freeText,
+						flowType,
+					});
+				}
 				return true;
 			} catch (error: any) {
 				chatLogger.error('Failed to send answer', error);

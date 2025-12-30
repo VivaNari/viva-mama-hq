@@ -1,3 +1,4 @@
+// src/hooks/useChatMessages.ts
 import { useReducer, useCallback } from 'react';
 
 import { chatDB } from '../db/sqlite';
@@ -30,7 +31,7 @@ export const useChatMessages = ({
 			return;
 		}
 
-		// Don't load history for chatbot
+		// Don't load history for chatbot - no SQLite interaction
 		if (!shouldSaveHistory(flowType)) {
 			chatLogger.debug('Skipping history load for chatbot');
 			return;
@@ -45,12 +46,28 @@ export const useChatMessages = ({
 		}
 	}, [userId, flowSlug, flowType]);
 
+	const clearHistory = useCallback(async () => {
+		if (!userId || !flowSlug) {
+			chatLogger.debug('Cannot clear history: missing params');
+			return;
+		}
+
+		try {
+			await chatDB.clearChatHistory(userId, flowSlug);
+			dispatch({ type: 'RESET' });
+			chatLogger.debug('Chat history cleared');
+		} catch (error) {
+			chatLogger.error('Failed to clear history', error);
+		}
+	}, [userId, flowSlug]);
+
 	const saveAiMessage = useCallback(
 		async (message: IAiMessage): Promise<boolean> => {
 			if (!userId || !flowSlug || !flowType) {
 				return false;
 			}
 
+			// For CHATBOT: just add to state, no SQLite
 			if (!shouldSaveHistory(flowType)) {
 				dispatch({ type: 'ADD_MESSAGE', payload: message });
 				dispatch({ type: 'SET_ANIMATING_MESSAGE_ID', payload: message.id });
@@ -58,6 +75,7 @@ export const useChatMessages = ({
 				return true;
 			}
 
+			// For ONBOARDING and CHECKIN: save to SQLite
 			try {
 				// Check for duplicate
 				const exists = await chatDB.messageExists(userId, flowSlug, message.id);
@@ -99,6 +117,7 @@ export const useChatMessages = ({
 
 			dispatch({ type: 'ADD_MESSAGE', payload: userMessage });
 
+			// Only save to SQLite for flows that require history
 			if (flowType && shouldSaveHistory(flowType)) {
 				try {
 					await chatDB.saveUserMessage(userId, flowSlug, userMessage);
@@ -116,6 +135,12 @@ export const useChatMessages = ({
 			return null;
 		}
 
+		// For CHATBOT: get from state instead of SQLite
+		if (flowType && !shouldSaveHistory(flowType)) {
+			const aiMessages = state.messages.filter(m => m.type === 'ai') as IAiMessage[];
+			return aiMessages.length > 0 ? aiMessages[aiMessages.length - 1] : null;
+		}
+
 		try {
 			const message = await chatDB.getLastAiMessage(userId, flowSlug);
 			return message as IAiMessage | null;
@@ -123,12 +148,13 @@ export const useChatMessages = ({
 			chatLogger.error('Failed to get last AI message', error);
 			return null;
 		}
-	}, [userId, flowSlug]);
+	}, [userId, flowSlug, flowType, state.messages]);
 
 	return {
 		state,
 		dispatch,
 		loadHistory,
+		clearHistory,
 		saveAiMessage,
 		saveUserMessage,
 		getLastAiMessage,

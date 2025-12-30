@@ -367,6 +367,23 @@ class ChatDatabase {
     }
   }
 
+  async clearChatHistoryV2(): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query =
+      'DELETE FROM chat_messages;';
+
+    try {
+      await this.database!.executeSql(query);
+      console.log('Chat history cleared');
+    } catch (error) {
+      console.error('Failed to clear chat history:', error);
+      throw error;
+    }
+  }
+
   async clearChatHistory(userId: string, flowSlug: string): Promise<void> {
     if (!this.database) {
       await this.init();
