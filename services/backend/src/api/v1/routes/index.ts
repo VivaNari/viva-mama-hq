@@ -8,6 +8,7 @@ import recommendationHistoryRouter from "./recommendation-history.routes";
 import contentRouter from "./contents/content.route";
 import productRouter from "./products/product.route";
 import weeklyCheckinRouter from "./weeklyCheckin.routes";
+import callbackRequestRouter from "./callback-request/callback-request.routes";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use(recommendationHistoryRouter);
 router.use(contentRouter);
 router.use(productRouter);
 router.use(weeklyCheckinRouter);
+router.use(callbackRequestRouter);
 
 export default router;

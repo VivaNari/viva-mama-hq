@@ -20,5 +20,6 @@ export const initScheduledJobs = () => {
     cron.schedule("*/30 * * * * *", () => {
         // console.log("Calculating current week with the previous and upcoming due days for checkin");
         // currentWeekAndPreviousUpcomingDueDaysCalculator();
+        // startCallbackStatusCron();
     });
 };

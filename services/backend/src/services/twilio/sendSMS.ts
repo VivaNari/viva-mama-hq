@@ -18,3 +18,31 @@ async function sendSMS(to: string, message: string) {
 }
 
 export default sendSMS;
+
+// Twilio Sandbox number
+const WHATSAPP_FROM = "whatsapp:+14155238886";
+
+const sendWhatsAppMessage = async (to: string, message: string) => {
+    // format number properly
+    const formattedTo = to.startsWith("+") ? `whatsapp:${to}` : `whatsapp:+91${to}`;
+
+    console.log("[TWILIO] Sending WhatsApp message");
+    console.log("[TWILIO] FROM:", WHATSAPP_FROM);
+    console.log("[TWILIO] TO:", formattedTo);
+
+    try {
+        const response = await client.messages.create({
+            from: WHATSAPP_FROM, // ✅ Twilio Sandbox number
+            to: formattedTo, // ✅ User / care manager number
+            body: message,
+        });
+
+        console.log("[TWILIO] Message sent:", response.sid);
+        return response;
+    } catch (err) {
+        console.error("[TWILIO] WhatsApp failed:", err);
+        throw err; // let controller handle logging
+    }
+};
+
+export { sendWhatsAppMessage };
