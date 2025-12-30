@@ -7,11 +7,14 @@ import WeeklyCheckinService from "../../../../services/weeklyCheckin/weeklyCheck
 class WeeklyCheckinController {
     private weeklyCheckinService: WeeklyCheckinService;
     constructor() {
+        console.error("121211212121221212121221211");
         this.weeklyCheckinService = new WeeklyCheckinService();
+        console.error("121211212121221212121221211", this.weeklyCheckinService);
     }
 
-    async handleSSEConnection(req: Request, res: Response): Promise<void> {
+    handleSSEConnection = async (req: Request, res: Response): Promise<void> => {
         try {
+            console.warn("1111111111111");
             const userId = req.user?._id?.toString();
 
             if (!userId) {
@@ -37,16 +40,17 @@ class WeeklyCheckinController {
                 week,
                 flowSlug,
             };
-
+            console.log("this.", this);
             await this.weeklyCheckinService.handleSSEConnection(params, res);
         } catch (error) {
+            console.log(error, "111");
             logger.error({ error }, "Error in weekly check-in SSE controller");
 
             if (!res.headersSent) {
                 res.status(500).json({ error: "Internal server error" });
             }
         }
-    }
+    };
 
     /**
      * Process user's answer to a check-in question
@@ -61,7 +65,7 @@ class WeeklyCheckinController {
      * - freeText: string (required for free text questions)
      * - idempotencyKey: string (optional, for retry safety)
      */
-    async processAnswer(req: Request, res: Response): Promise<void> {
+    processAnswer = async (req: Request, res: Response): Promise<void> => {
         try {
             const userId = req.user?._id?.toString();
 
@@ -119,10 +123,11 @@ class WeeklyCheckinController {
                 res.status(400).json(result);
             }
         } catch (error) {
+            console.log(error);
             logger.error({ error }, "Error processing check-in answer");
             res.status(500).json({ error: "Internal server error" });
         }
-    }
+    };
 
     /**
      * Check if a check-in exists for a specific week

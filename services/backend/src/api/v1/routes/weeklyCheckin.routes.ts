@@ -6,8 +6,14 @@ const weeklyCheckinController = new WeeklyCheckinController();
 
 const router = Router();
 
-router.route("/stream").get(authMiddleware("header"), weeklyCheckinController.handleSSEConnection);
-router.route("/answer").post(authMiddleware("header"), weeklyCheckinController.processAnswer);
-router.route("/status").get(authMiddleware("header"), weeklyCheckinController.getCheckinStatus);
+router
+    .route("/weekly-checkin/stream")
+    .get(authMiddleware("query"), weeklyCheckinController.handleSSEConnection);
+router
+    .route("/weekly-checkin/answer")
+    .post(authMiddleware("header"), weeklyCheckinController.processAnswer);
+router
+    .route("/weekly-checkin/status")
+    .get(authMiddleware("header"), weeklyCheckinController.getCheckinStatus);
 
 export default router;

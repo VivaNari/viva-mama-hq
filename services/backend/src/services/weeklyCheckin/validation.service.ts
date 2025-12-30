@@ -17,6 +17,7 @@ import {
     CHECKIN_EXPIRY_DAYS,
 } from "../../constants/chat";
 import logger from "../../utils/logger";
+import conversationModel from "../../models/conversation.model";
 
 /**
  * Idempotency check result
@@ -338,13 +339,81 @@ class ValidationService {
 
         // 6. No existing instance - this is only valid if cron hasn't triggered yet
         // but user's week matches (edge case: manual check-in start)
+
+        const userCurrentWeek = user.current_weekdays?.weeks || 0;
+        if (week > userCurrentWeek) {
+            return {
+                isValid: false,
+                error: {
+                    type: WeeklyCheckinErrorType.WEEK_MISMATCH,
+                    message: WEEKLY_CHECKIN_MESSAGES.NOT_TRIGGERED,
+                },
+            };
+        }
+
+        if (week < userCurrentWeek - this.MAX_RETROACTIVE_WEEKS) {
+            return {
+                isValid: false,
+                error: {
+                    type: WeeklyCheckinErrorType.WEEK_MISMATCH,
+                    message: `Cannot complete check-in for weeks more than ${this.MAX_RETROACTIVE_WEEKS} weeks old`,
+                },
+            };
+        }
+
+        const newInstance = await this.createFlowInstance(user, week, flowDefinition);
+
         return {
-            isValid: false,
-            error: {
-                type: WeeklyCheckinErrorType.INSTANCE_NOT_FOUND,
-                message: WEEKLY_CHECKIN_MESSAGES.NOT_TRIGGERED,
-            },
+            isValid: true,
+            flowInstance: newInstance,
         };
+    }
+
+    private async createFlowInstance(
+        user: IUser,
+        week: number,
+        flowDefinition: IFlowDefinition,
+    ): Promise<IFlowInstance> {
+        // Get or create conversation
+        let conversation = await conversationModel.findOne({
+            userId: user._id,
+            chatMode: "GUIDED_ONLY",
+            "meta.tags": "check-in",
+        });
+
+        if (!conversation) {
+            conversation = await conversationModel.create({
+                userId: user._id,
+                title: "Weekly Check-in",
+                chatMode: "GUIDED_ONLY",
+                lastMessageAt: new Date(),
+                meta: {
+                    channel: "App",
+                    tags: ["check-in"],
+                },
+            });
+        }
+
+        // Create flow instance (ACTIVE since user is starting it now)
+        const newInstance = await flowInstanceModel.create({
+            userId: user._id,
+            conversationId: conversation._id,
+            flowDefId: flowDefinition._id,
+            flowSlug: flowDefinition.slug,
+            version: flowDefinition.version,
+            postpartumWeek: week,
+            state: FlowInstanceStateEnum.ACTIVE, // ACTIVE, not PENDING
+            cursorNodeId: flowDefinition.startNodeId,
+            variables: {},
+            outcome: null,
+        });
+
+        logger.info(
+            { userId: user._id, week, flowInstanceId: newInstance._id },
+            "Created flow instance on-demand",
+        );
+
+        return newInstance;
     }
 
     /**

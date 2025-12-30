@@ -324,7 +324,7 @@ class WeeklyCheckinService {
 
         // Build question payload
         const payload: IWeeklyCheckinQuestion = {
-            type: CHECKIN_SSE_EVENTS.QUESTION,
+            type: "ai_message",
             uuid: getUuid(),
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
