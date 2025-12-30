@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from 'react';
 import EventSource from 'react-native-sse';
 import Toast from 'react-native-toast-message';
 
-import { CHAT_SESSION_URL } from '../constants/endpoints';
+import { CHAT_SESSION_URL, CHECKIN_SESSION_URL } from '../constants/endpoints';
 import {
 	FlowType,
 	IAiMessage,
@@ -149,7 +149,10 @@ export const useChatSession = ({
 			dispatch({ type: 'SET_LOADING', payload: true });
 		}
 
-		const url = CHAT_SESSION_URL(flowSlug, userToken, flowType);
+		let url = CHAT_SESSION_URL(flowSlug, userToken, flowType);
+		if(flowType === FlowType.CHECKIN) {
+			url = CHECKIN_SESSION_URL(userToken, 1, flowSlug);
+		}
 		const eventSource = new EventSource(url);
 		eventSourceRef.current = eventSource;
 
@@ -160,6 +163,7 @@ export const useChatSession = ({
 		});
 
 		eventSource.addEventListener('message', async (event) => {
+			console.log("event.data", event.data)
 			try {
 				if (!event.data) {
 					return;

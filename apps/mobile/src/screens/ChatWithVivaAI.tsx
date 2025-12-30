@@ -119,6 +119,7 @@ const ChatWithVivaAI: React.FC = () => {
 
     const handleMessageReceived = useCallback(
         async (message: IAiMessage) => {
+            console.log("messageeeeeee")
             await saveAiMessage(message);
         },
         [saveAiMessage]

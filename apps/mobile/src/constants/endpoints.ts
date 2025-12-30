@@ -23,6 +23,18 @@ export const CHAT_SESSION_URL = (
   return `${BASE_API_URL}${API_VERSION_URL}/chat-session/${flowSlug}?token=${token}&flowType=${flowType}`;
 };
 
+export const CHECKIN_SESSION_URL = (
+  token: string,
+  week: number,
+  flowSlug: string,
+): string => {
+  // Don't log tokens in production
+  if (__DEV__) {
+    console.log('[Endpoints] Generating chat session URL for weekly-checkin');
+  }
+  return `${BASE_API_URL}${API_VERSION_URL}/weekly-checkin/stream?token=${token}&week=${week}&flowSlug=${flowSlug}`;
+};
+
 // Auth endpoints
 export const API_GOOGLE_LOGIN = `${API_VERSION_URL}/auth/google`;
 export const API_REQUEST_PHONE_OTP = `${API_VERSION_URL}/auth/send-otp`;
