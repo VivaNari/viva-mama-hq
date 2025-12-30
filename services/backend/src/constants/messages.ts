@@ -30,4 +30,5 @@ export const messages = {
     INTERNAL_SERVER_ERROR: "Internal server error",
     CONTENT_SAVED_SUCCESS: "Content saved successfully",
     CONTENT_FETCH_SUCCESS: "Content fetched successfully",
+    CARE_MANAGER_NOT_FOUND: "Care Manager not found",
 };
