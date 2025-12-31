@@ -1,36 +1,55 @@
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import axiosRetry, { IAxiosRetryConfig } from 'axios-retry';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BASE_API_URL } from '../constants/endpoints';
+import axios, { AxiosInstance, AxiosError } from "axios";
+import axiosRetry, { IAxiosRetryConfig } from "axios-retry";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { BASE_API_URL } from "../constants/endpoints";
 
-const getToken = async (): Promise<string | null> => {
-  return await AsyncStorage.getItem('userToken');
+/**
+ * In-memory token cache
+ * (prevents AsyncStorage hit per request)
+ */
+let authToken: string | null = null;
+let tokenInitialized = false;
+
+const initTokenIfNeeded = async () => {
+  if (!tokenInitialized) {
+    authToken = await AsyncStorage.getItem("userToken");
+    tokenInitialized = true;
+  }
 };
 
+/**
+ * SINGLETON INSTANCE
+ */
+let apiInstance: AxiosInstance | null = null;
+
 const apiClientInterceptor = (): AxiosInstance => {
-  const apiInstance = axios.create({
+  // 👉 Return existing instance if already created
+  if (apiInstance) {
+    return apiInstance;
+  }
+
+  apiInstance = axios.create({
     baseURL: BASE_API_URL,
+    timeout: 15000,
     headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
+      Accept: "application/json",
+      "Content-Type": "application/json",
     },
   });
 
-  // retry logic with exponential backoff
+  /**
+   * RETRY CONFIG
+   */
   const retryOptions: IAxiosRetryConfig = {
-    retries: 3,
-    retryCondition: (err: AxiosError<any>) => {
-      return (
-        axiosRetry.isNetworkOrIdempotentRequestError(err) ||
-        err.response?.status === 429
-      );
-    },
-    retryDelay: (retryCount: number, err: AxiosError<any>) => {
-      if (err.response) {
-        const retry_after = err.response.headers['retry-after'];
-        if (retry_after) {
-          return retry_after;
-        }
+    retries: 2,
+    retryCondition: (err: AxiosError) =>
+      axiosRetry.isNetworkOrIdempotentRequestError(err) ||
+      err.response?.status === 429,
+
+    retryDelay: (retryCount, err) => {
+      const retryAfter = err.response?.headers["retry-after"];
+      if (retryAfter) {
+        return Number(retryAfter) * 1000; // seconds → ms
       }
       return axiosRetry.exponentialDelay(retryCount);
     },
@@ -38,35 +57,49 @@ const apiClientInterceptor = (): AxiosInstance => {
 
   axiosRetry(apiInstance as any, retryOptions);
 
-  apiInstance.interceptors.request.use(async config => {
-    const token = await getToken();
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
+  /**
+   * REQUEST INTERCEPTOR
+   */
+  apiInstance.interceptors.request.use(
+    async config => {
+      authToken = await AsyncStorage.getItem("userToken");
+      tokenInitialized = true;
 
-    // log every request
-    console.log(
-      `%c[API Request]`,
-      'color: #4CAF50; font-weight: bold;',
-      `${config.method?.toUpperCase()} ${config.baseURL}${config.url}`,
-      config.data ? `\nBody: ${JSON.stringify(config.data)}` : '',
-    );
+      const isBackendRequest = config.baseURL?.includes(BASE_API_URL);
 
-    return config;
-  });
+      if (authToken && isBackendRequest) {
+        config.headers.Authorization = `Bearer ${authToken}`;
+      }
 
+      if (__DEV__) {
+        console.log(
+          `[API] ${config.method?.toUpperCase()} ${config.baseURL}${
+            config.url
+          }`,
+        );
+      }
+
+      return config;
+    },
+    error => Promise.reject(error),
+  );
+
+  /**
+   * RESPONSE INTERCEPTOR
+   */
   apiInstance.interceptors.response.use(
     response => response,
     async (error: AxiosError) => {
       if (error.response?.status === 401) {
-        // Clear token
-        await AsyncStorage.removeItem('userToken');
-        // Navigate to the landing screen
+        authToken = null;
+        tokenInitialized = true;
+        await AsyncStorage.removeItem("userToken");
+        // navigate to login if needed
       }
-
       return Promise.reject(error);
     },
   );
+
   return apiInstance;
 };
 

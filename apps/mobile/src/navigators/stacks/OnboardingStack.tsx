@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import { colors } from "../../public/assets/colors";
 import { globalStyles } from "../../public/styles";
 import ChatWithVivaAI from "../../screens/ChatWithVivaAI";
-import Services from "../../screens/Services";
+import Services from "../../screens/Subscription";
 import SubscriptionDetails from "../../components/SubscriptionDetails";
 
 const Stack = createNativeStackNavigator();
@@ -23,14 +23,14 @@ const OnboardingStack = () => {
                 headerShadowVisible: false,
                 headerTitleStyle: { ...globalStyles.fontBold, fontSize: 18 },
                 headerStyle: {
-                    backgroundColor: colors.pageBG
+                    backgroundColor: colors.pageBG,
                 }
             }}
         >
 
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: false,
                     title: "Viva AI"
                 }}
                 name="ChatWithVivaAI"
@@ -38,7 +38,7 @@ const OnboardingStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: false,
                     title: "Services"
                 }}
                 name="Services"

@@ -8,6 +8,7 @@ import { API_GOOGLE_LOGIN, API_REQUEST_PHONE_OTP, API_VERIFY_OTP } from '../cons
 import { AuthContextType, AuthProviderProps, AuthResponse, OnboardingStatus } from '../types/authContext.types';
 import { decodeToken } from '../utils/decodeJWTToken';
 import { getFCMToken } from '../utils/getFCMToken';
+import { syncUserData } from '../utils/syncUserData';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -78,6 +79,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         headers: { 'Content-Type': 'application/json' },
       });
 
+      console.log("hellow souvik", {
+        idToken: data.data.idToken,
+        FCM_token: FCMToken,
+      })
       const { token, message, is_onboarded }: AuthResponse = response;
 
       Toast.show({
@@ -88,6 +93,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       });
 
       await AsyncStorage.setItem('userToken', token);
+
+      // Sync user data to SQLite BEFORE changing state to ensure Dashboard finds it
+      await syncUserData(token);
+
       setUserToken(token);
 
       // Set the onboarding status after login
@@ -174,6 +183,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         await AsyncStorage.setItem('userToken', token);
 
         console.log("[AUTHCONTEXT] IS_ONBOARDED after phone login ", is_onboarded);
+
+        // Sync user data to SQLite BEFORE changing state
+        await syncUserData(token);
 
         // Set the onboarding status after login
         await setOnboardingStatusAfterLogin(is_onboarded);

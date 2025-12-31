@@ -1,4 +1,3 @@
-// RootNavigator.tsx
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React, { useEffect, useRef } from "react";
@@ -9,6 +8,7 @@ import { colors } from "../public/assets/colors";
 import AppStack from "./stacks/AppStack";
 import AuthStack from "./stacks/AuthStack";
 import OnboardingStack from "./stacks/OnboardingStack";
+import { BottomSheetProvider } from "../components/bottomSheet/AppBottomSheet";
 
 const Stack = createNativeStackNavigator();
 
@@ -52,7 +52,7 @@ export default function RootNavigator() {
                 isOnboarded: currentIsOnboarded
             };
         }
-    }, [userToken, onboardingStatus.is_questionnaire_completed, onboardingStatus.is_subscription_completed, isLoading]);
+    }, [isFullyOnboarded, userToken, onboardingStatus.is_questionnaire_completed, onboardingStatus.is_subscription_completed, isLoading]);
 
     if (isLoading) {
         return (
@@ -70,17 +70,20 @@ export default function RootNavigator() {
 
     return (
         <NavigationContainer ref={navigationRef}>
-            <Stack.Navigator
-                initialRouteName={initialRouteName}
-                screenOptions={{
-                    headerShown: false,
-                    animation: "fade"
-                }}
-            >
-                <Stack.Screen name="AuthStack" component={AuthStack} />
-                <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
-                <Stack.Screen name="AppStack" component={AppStack} />
-            </Stack.Navigator>
+            <BottomSheetProvider>
+
+                <Stack.Navigator
+                    initialRouteName={initialRouteName}
+                    screenOptions={{
+                        headerShown: false,
+                        animation: "fade"
+                    }}
+                >
+                    <Stack.Screen name="AuthStack" component={AuthStack} />
+                    <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
+                    <Stack.Screen name="AppStack" component={AppStack} />
+                </Stack.Navigator>
+            </BottomSheetProvider>
         </NavigationContainer>
     );
 }

@@ -1,23 +1,37 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { FlatList, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { getExperts } from '../api/getExperts'
 import VivaBuddyRequestCall from '../components/VivaBuddyRequestCall'
-import { expertData } from '../data/expertData'
 import { globalStyles } from '../public/styles'
-import { IExpertCategory } from '../types/expert.types'
-import ExpertCategoryItem from '../components/experts/FLExpertCategoryItem'
+import { IExpert, IExpertResponse } from '../types/expert.types'
+import ExpertItem from '../components/experts/FLExpertItem'
 
 const Experts = ({ navigation }: { navigation: { navigate: any } }) => {
+    const [experts, setExperts] = useState<IExpert[]>([]);
+
+    useEffect(() => {
+        (async () => {
+            const response: IExpertResponse = await getExperts();
+            setExperts(response.data);
+        })();
+    }, []);
+
     return (
         <SafeAreaView
             style={[globalStyles.container,]}
         >
             {/* Experts List */}
             <FlatList
-                keyExtractor={(item: IExpertCategory) => item.id.toString()}
-                data={expertData}
-                renderItem={({ item }) => ExpertCategoryItem({ item, navigation })}
+                keyExtractor={(item: IExpert) => item._id}
+                data={experts}
+                renderItem={({ item }) => ExpertItem({ item, navigation })}
+                columnWrapperStyle={{
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-end',
+                }}
                 // style={{}}
+                numColumns={2}
                 ListHeaderComponent={() => (
                     <View
                         style={{

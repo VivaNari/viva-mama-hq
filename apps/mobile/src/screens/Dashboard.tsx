@@ -1,34 +1,58 @@
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging'
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import { useNavigation } from '@react-navigation/native'
 import React, { useEffect, useState } from 'react'
-import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
+import { FlatList, ScrollView, Text, View } from 'react-native'
+import LinearGradient from 'react-native-linear-gradient'
+import Toast from 'react-native-toast-message'
+import { getUserContents } from '../api/getUserContents'
+import { getUserProducts } from '../api/getUserProducts'
+import { ArticleCard } from '../components/ArticleCard'
+import DashboardCard from '../components/dashboard/DashboardCard'
+import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
+import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
+import { useAuth } from '../context/AuthContext'
+import { chatDB } from '../db/sqlite'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
-import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
-import DashboardInfantTab from '../components/dashboard/DashboardInfantTab'
-import { contentsData } from '../data/contentsData'
-import { ICategory } from '../types/content.types'
-import FLCategoryItem from '../components/community/FLCategoryItem'
-import FLSubCategoryItem from '../components/community/FLSubCategoryItem'
-import DashboardCard from '../components/dashboard/DashboardCard'
-import { ArticleCard } from '../components/ArticleCard'
-import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
-import { productData } from '../data/productsData'
+import { IUserContent, IUserContentresponse } from '../types/content.types'
+import { IUserAllData } from '../types/dashboard.types'
+import { IUserProduct, IUserProductResponse } from '../types/product.types'
 import { FLProductItem } from './Products'
-import { IProduct } from '../types/product.types'
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
-import LinearGradient from 'react-native-linear-gradient'
-import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
-import Toast from 'react-native-toast-message'
 
 const Dashboard = () => {
     const navigation = useNavigation<any>();
-    const [isMotherTab, setIsMotherTab] = useState<boolean>(true)
     const [vivaScore, setVivaScore] = useState<string | null>(null);
+    const [userData, setUserdata] = useState<IUserAllData>();
+    const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
+    const [productsData, setProductsData] = useState<IUserProduct[]>([]);
+    const { userId } = useAuth();
+
+    useEffect(() => {
+        if (!userId) return;
+        (async () => {
+            try {
+                const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+                console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
+                if (getUserDataFromSQLite) {
+                    setUserdata(getUserDataFromSQLite.data);
+                }
+
+                const getContents: IUserContentresponse = await getUserContents();
+                setUserContentsData(getContents.data);
+
+                const getProducts: IUserProductResponse = await getUserProducts();
+                setProductsData(getProducts.data);
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+            }
+        })()
+    }, [userId])
+
     useEffect(() => {
         (async function () {
             // forground message received
-            const unsubscribe = messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+            messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
                 console.log("remoteMessage.data inside Dashboard.tsx ==>> ", remoteMessage.data);
                 setVivaScore(remoteMessage.data?.score as string);
                 Toast.show({
@@ -41,133 +65,72 @@ const Dashboard = () => {
         })()
     }, [])
 
-
-    const username = "Harshaa";
+    const username = userData?.user.onboarding_data.preferred_name ?
+        userData.user.onboarding_data.preferred_name.split(" ")[0] :
+        'User';
     useEffect(() => {
         navigation.setOptions({
             headerTitle: `Hi, ${username}`,
         });
     }, [navigation, username]);
-    const allArticles = contentsData.flatMap(category =>
-        category.subCategories.flatMap(subCategory => subCategory.contents)
-    );
 
     return (
         <View
-            style={{ flex: 1, position: 'relative', backgroundColor: "blue" }}
+            style={{ flex: 1, position: 'relative', backgroundColor: colors.white }}
         >
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                style={{ flex: 1, backgroundColor: "yellow" }}
+                style={{ flex: 1, backgroundColor: colors.white }}
             >
                 <View
-                    style={[globalStyles.container, { flex: 1 }]}
+                    style={[globalStyles.container, { flex: 1, backgroundColor: colors.white }]}
                 >
-                    {/* Tabs View */}
                     <View
-                        style={{
-                            backgroundColor: isMotherTab ? 'rgba(238, 230, 255, 1)' : 'rgba(233, 245, 255, 1)',
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                            borderRadius: 30,
-                            padding: 4,
-                            gap: 5,
-                            boxShadow: '0 0 12.8px 0 rgba(0, 0, 0, 0.25)',
-                        }}
                     >
-                        <TouchableOpacity
-                            activeOpacity={0.7}
-                            onPress={() => setIsMotherTab(true)}
-                            style={{
-                                paddingHorizontal: 15,
-                                flex: 1,
-                                paddingVertical: 5,
-                                backgroundColor: isMotherTab ? colors.subscriptionTabActiveBG : 'transparent',
-                                borderRadius: 30
 
-                            }}
-                        >
-                            <Text
-                                style={[{
-                                    fontSize: 18,
-                                    textAlign: 'center',
-                                    color: isMotherTab ? colors.white : colors.black,
-                                }, isMotherTab ? globalStyles.fontSemiBold : globalStyles.fontRegular]}
-                            >
-                                Mother
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            activeOpacity={0.7}
-                            onPress={() => setIsMotherTab(false)}
-                            style={{
-                                paddingHorizontal: 15,
-                                flex: 1,
-                                paddingVertical: 5,
-                                backgroundColor: !isMotherTab ? colors.primary : 'transparent',
-                                borderRadius: 30
-                            }}
-                        >
-                            <Text
-                                style={[{
-                                    fontSize: 18,
-                                    textAlign: 'center',
-                                    color: !isMotherTab ? colors.white : colors.black
-                                }, !isMotherTab ? globalStyles.fontSemiBold : globalStyles.fontRegular]}
-                            >
-                                Infant
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
+                        <DashboardMotherTab userData={userData as IUserAllData} score={Number(vivaScore)} />
 
-                    {/* Tab Content View */}
-                    <View
-                        style={{
-                            marginTop: 15
-                        }}
-                    >
-                        {
-                            isMotherTab ? (
-                                <DashboardMotherTab score={vivaScore} />
-                            ) : (
-                                <DashboardInfantTab />
-                            )
-                        }
                     </View>
 
                     {/* View to show at every tab */}
-                    <View>
-                        <DashboardCard>
-                            <Text
+                    <View
+                    >
+                        <View>
+                            {/* <Text
                                 style={[{
-                                    fontSize: 20
+                                    fontSize: 20,
                                 }, globalStyles.fontBold]}
                             >
-                                Content section
-                            </Text>
+                                Contents
+                            </Text> */}
                             <FlatList
-                                data={allArticles.slice(0, 3)}
-                                keyExtractor={(item) => item.id.toString()}
+                                data={userContentsData.slice(1, 5)}
+                                keyExtractor={(item) => item._id.toString()}
                                 renderItem={({ item }) => (
                                     <ArticleCard
-                                        key={item.id.toString()}
+                                        key={item._id.toString()}
                                         item={item}
+
                                     />
                                 )}
                                 scrollEnabled={false}
                                 nestedScrollEnabled={false}
+                                columnWrapperStyle={{
+                                    justifyContent: 'space-between',
+                                    alignItems: 'flex-end',
+                                }}
+                                numColumns={2}
                                 ListHeaderComponent={
                                     <FlatList
-                                        keyExtractor={(item: ICategory) => item.id.toString()}
-                                        data={contentsData}
-                                        renderItem={({ item }) => FLCategoryItem({ item, navigation })}
-                                        numColumns={3}
-                                        columnWrapperStyle={{
-                                            justifyContent: 'space-between',
-                                            alignItems: 'flex-end',
-                                            flexWrap: 'wrap',
-                                        }}
-                                        style={{ paddingHorizontal: 30, marginBottom: 20 }}
+                                        data={userContentsData.slice(0, 1)}
+                                        keyExtractor={(item) => item._id.toString()}
+                                        renderItem={({ item }) => (
+                                            <ArticleCard
+                                                key={item._id.toString()}
+                                                item={item}
+                                                width='full'
+                                            />
+                                        )}
                                         scrollEnabled={false}
                                         nestedScrollEnabled={false}
                                     />
@@ -182,9 +145,13 @@ const Dashboard = () => {
                                     onPress={() => navigation.navigate("Community")}
                                 />
                             </View>
-                        </DashboardCard>
+                        </View>
 
-                        <DashboardCard>
+                        <DashboardCard
+                            style={{
+                                marginTop: 30
+                            }}
+                        >
                             <Text
                                 style={[{
                                     fontSize: 20
@@ -193,11 +160,11 @@ const Dashboard = () => {
                                 Suggested Products
                             </Text>
                             <FlatList
-                                data={productData.slice(0, 6)}
+                                data={productsData.slice(0, 6)}
                                 renderItem={FLProductItem}
-                                keyExtractor={(item: IProduct, index: number) => index.toString()}
+                                keyExtractor={(item: IUserProduct) => item._id}
                                 numColumns={2}
-                                columnWrapperStyle={{ gap: 2, marginBottom: 20, justifyContent: 'space-between' }}
+                                columnWrapperStyle={{ gap: 10, marginBottom: 20, justifyContent: 'space-between' }}
                                 nestedScrollEnabled={false}
                                 scrollEnabled={false}
                                 style={{
@@ -247,4 +214,4 @@ const Dashboard = () => {
     )
 }
 
-export default Dashboard
+export default Dashboard;

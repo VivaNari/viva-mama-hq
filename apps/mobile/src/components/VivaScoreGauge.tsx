@@ -1,18 +1,65 @@
-import React, { useEffect, useState } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import React, { JSX, useEffect, useRef, useState } from 'react';
+import { Dimensions, StyleSheet, View, Text, Animated } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
+import { globalStyles } from '../public/styles';
 
-const { width } = Dimensions.get("window");
+const { width } = Dimensions.get('window');
 
+interface VivaScoreGaugeProps {
+    percentage?: number;
+    size?: number;
+    strokeWidth?: number;
+}
 
-export default function VivaScoreGauge({ percentage = 0, size = width, strokeWidth = 50 }) {
-    const [score, setScore] = useState(0);
+interface AnimatedGaugeContentProps {
+    percentage: number;
+    size: number;
+    strokeWidth: number;
+}
+
+export default function VivaScoreGauge({
+    percentage = 0,
+    size = width,
+    strokeWidth = 50
+}: VivaScoreGaugeProps): JSX.Element {
+    return (
+        <AnimatedGaugeContent
+            percentage={percentage}
+            size={size}
+            strokeWidth={strokeWidth}
+        />
+    );
+}
+
+function AnimatedGaugeContent({
+    percentage,
+    size,
+    strokeWidth
+}: AnimatedGaugeContentProps): JSX.Element {
+    const animatedValue = useRef(new Animated.Value(0)).current;
+    const [displayScore, setDisplayScore] = useState<number>(0);
 
     useEffect(() => {
-        setScore(percentage)
-    }, [])
+        // Reset and animate to new value
+        animatedValue.setValue(0);
 
-    const clampedPercentage = Math.max(0, Math.min(100, score));
+        Animated.timing(animatedValue, {
+            toValue: percentage,
+            duration: 800,
+            useNativeDriver: false,
+        }).start();
+
+        // Listen to animation updates
+        const listenerId = animatedValue.addListener(({ value }: { value: number }) => {
+            setDisplayScore(value);
+        });
+
+        return () => {
+            animatedValue.removeListener(listenerId);
+        };
+    }, [percentage, animatedValue]);
+
+    const clampedPercentage = Math.max(0, Math.min(100, displayScore));
 
     const radius = (size - strokeWidth) / 2;
     const cx = size / 2;
@@ -26,10 +73,16 @@ export default function VivaScoreGauge({ percentage = 0, size = width, strokeWid
     // Path for the semi-circle arc
     const arcPath = `M ${cx - radius} ${cy} A ${radius} ${radius} 0 0 1 ${cx + radius} ${cy}`;
 
+    // Labels to display at the bottom
+    const labels: number[] = [0, 25, 50, 75, 100];
 
     return (
         <View style={[styles.gaugeContainer, { width: '100%', padding: 0 }]}>
-            <Svg height={size / 2 + strokeWidth} width={'100%'} viewBox={`0 0 ${size} ${size / 2 + strokeWidth}`}>
+            <Svg
+                height={size / 2 + strokeWidth}
+                width="100%"
+                viewBox={`0 0 ${size} ${size / 2 + strokeWidth}`}
+            >
                 <Defs>
                     <LinearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
                         <Stop offset="0%" stopColor="#F47741" />
@@ -56,7 +109,7 @@ export default function VivaScoreGauge({ percentage = 0, size = width, strokeWid
                     strokeLinecap="round"
                 />
 
-                {/* Indicator Circle */}
+                {/* Animated Indicator Circle */}
                 <Circle
                     cx={indicatorX}
                     cy={indicatorY}
@@ -66,96 +119,54 @@ export default function VivaScoreGauge({ percentage = 0, size = width, strokeWid
                     strokeWidth="2"
                 />
             </Svg>
+
+            {/* Labels positioned at the bottom */}
+            <View
+                pointerEvents="none"
+                style={{
+                    position: 'absolute',
+                    width: size,
+                    height: size / 2 + strokeWidth,
+                    top: 0,
+                }}
+            >
+                {labels.map((label: number) => {
+                    const angle = Math.PI * (1 - label / 100);
+
+                    // Slightly outside the arc
+                    const labelRadius = radius - strokeWidth * 1.6;
+
+                    const x = cx + labelRadius * Math.cos(angle);
+                    const y = cy - labelRadius * Math.sin(angle);
+
+                    return (
+                        <Text
+                            key={label}
+                            style={[
+                                globalStyles.fontSemiBold,
+                                {
+                                    position: 'absolute',
+                                    left: x - 10,
+                                    top: y - strokeWidth * 0.5,
+                                    fontSize: 13,
+                                    fontWeight: '600',
+                                    color: '#6B6B6B',
+                                },
+                            ]}
+                        >
+                            {label}
+                        </Text>
+                    );
+                })}
+            </View>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    appContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#F5F5F5',
-        padding: 20,
-    },
-    gaugeWrapper: {
-        alignItems: 'center',
-    },
     gaugeContainer: {
         position: 'relative',
         alignItems: 'center',
         justifyContent: 'center',
     },
-    textContainer: {
-        position: 'absolute',
-        alignItems: 'center',
-        top: '30%',
-    },
-    title: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    subtitle: {
-        fontSize: 14,
-        color: '#888',
-    },
-    sliderContainer: {
-        width: '90%',
-        maxWidth: 320,
-        alignItems: 'stretch',
-        padding: 20,
-        backgroundColor: '#FFF',
-        borderRadius: 10,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 3.84,
-        elevation: 5,
-        marginBottom: 20,
-    },
-    sliderLabel: {
-        fontSize: 16,
-        marginBottom: 10,
-        color: '#555',
-        textAlign: 'center',
-    },
-    geminiButton: {
-        backgroundColor: '#4A90E2',
-        borderRadius: 8,
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        marginTop: 10,
-        alignItems: 'center',
-    },
-    geminiButtonDisabled: {
-        backgroundColor: '#AECBFA',
-    },
-    geminiButtonText: {
-        color: 'white',
-        fontSize: 16,
-        fontWeight: '600',
-    },
-    insightContainer: {
-        width: '90%',
-        maxWidth: 400,
-        marginTop: 20,
-        padding: 15,
-        backgroundColor: '#E3F2FD',
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: '#BBDEFB',
-    },
-    insightText: {
-        color: '#1E88E5',
-        textAlign: 'left',
-        lineHeight: 22,
-    },
-    errorText: {
-        marginTop: 20,
-        color: '#D32F2F',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    }
 });
-

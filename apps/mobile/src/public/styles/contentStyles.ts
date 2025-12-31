@@ -41,6 +41,16 @@ export const ContentDetailsStyles = StyleSheet.create({
   iconButton: {
     paddingVertical: 2,
   },
+  heading: {
+    marginTop: 8,
+    fontSize: 18,
+    color: '#333',
+  },
+  subHeading: {
+    marginTop: 8,
+    fontSize: 15.5,
+    color: '#333',
+  },
   content: {
     fontSize: 14.5,
     lineHeight: 22,

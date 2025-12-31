@@ -6,16 +6,17 @@ import { globalStyles } from "../public/styles";
 
 interface ISearchInputProps {
     setSearchData: Dispatch<React.SetStateAction<string>>;
+    marginBottom?: number;
 }
 
 
-const SearchInput = ({ setSearchData }: ISearchInputProps) => {
+const SearchInput = ({ setSearchData, marginBottom }: ISearchInputProps) => {
     return (
         <View
             style={{
                 borderColor: colors.purple,
                 borderWidth: 2,
-                marginBottom: 30,
+                marginBottom: marginBottom || 30,
                 borderRadius: 20,
                 flexDirection: 'row',
                 justifyContent: 'space-between',

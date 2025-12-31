@@ -1,11 +1,11 @@
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
+import { Lucide } from '@react-native-vector-icons/lucide';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect } from 'react';
-import { Alert, Image, TouchableOpacity, View } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
+import { Image, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 import { useCounterContext } from '../../context/CounterContext';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
@@ -13,8 +13,7 @@ import ArticleContent from '../../screens/ArticleContent';
 import ChatWithVivaAI from '../../screens/ChatWithVivaAI';
 import Dashboard from '../../screens/Dashboard';
 import Experts from '../../screens/Experts';
-import Services from '../../screens/Services';
-import Toast from 'react-native-toast-message';
+import Products from '../../screens/Products';
 
 const Tab = createBottomTabNavigator();
 
@@ -61,24 +60,24 @@ export const DashboardTabs = () => {
 
             return unsubscribe;
         })();
-    }, [])
+    }, [navigation, increase])
 
     return (
         <Tab.Navigator
             screenOptions={{
                 animation: "shift",
                 tabBarBackground: () => (
-                    <LinearGradient
-                        colors={[colors.primary, colors.secondary]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={{ flex: 1 }}
+                    <View
+                        style={{
+                            backgroundColor: colors.white,
+                            flex: 1
+                        }}
                     />
                 ),
                 tabBarLabelStyle: {
-                    fontSize: 8,
+                    fontSize: 11,
                     marginTop: 2,
-                    ...globalStyles.fontRegular
+                    ...globalStyles.fontBold
                 },
                 tabBarStyle: {
                     height: 65 + insets.bottom,
@@ -86,19 +85,23 @@ export const DashboardTabs = () => {
                     paddingTop: 8,
                     paddingLeft: 8,
                     paddingRight: 8,
+                    elevation: 5,
+                    boxShadow: '0 0 4px 0 rgba(0, 0, 0, 0.25)',
 
                 },
                 tabBarItemStyle: {
                     borderRadius: 10,
                     overflow: 'hidden'
                 },
-                tabBarActiveTintColor: colors.secondary,
-                tabBarInactiveTintColor: colors.white,
+                tabBarActiveTintColor: colors.purple,
+                tabBarInactiveTintColor: colors.gray,
                 tabBarActiveBackgroundColor: colors.white,
                 headerShadowVisible: false,
-                headerTitleStyle: { ...globalStyles.fontBold },
+                headerTitleStyle: { ...globalStyles.fontBold, color: colors.purple, fontSize: 20 },
                 headerStyle: {
-                    backgroundColor: colors.pageBG
+                    backgroundColor: colors.white,
+                    borderBottomWidth: 1,
+                    ...globalStyles.fontRegular
                 },
 
                 headerRight: () => (
@@ -110,23 +113,30 @@ export const DashboardTabs = () => {
                             onPress={() => navigation.navigate("Notifications")}
 
                         >
-                            <MaterialDesignIcons name='bell-outline' size={30} color={colors.primary} />
+                            <Lucide name='bell' size={25} color={colors.darkGray} />
                         </TouchableOpacity>
                         <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => navigation.navigate("MyProfile")}
-                            style={{
-                                borderWidth: 2,
-                                padding: 2,
-                                borderRadius: 8,
-                                borderColor: colors.primary
-                            }}
+
                         >
-                            <Image
-                                source={require('../../public/assets/images/doctors/Dr_Harsha_Tomar.png')}
-                                style={{ height: 40, width: 40, borderRadius: 8 }}
-                            />
+                            <Lucide name='user-round' size={25} color={colors.darkGray} />
                         </TouchableOpacity>
+                    </View>
+                ),
+                headerLeft: () => (
+                    <View style={{
+                        paddingLeft: 15,
+                    }}>
+                        <Image
+                            source={require("../../public/assets/images/viva_logo_icon.png")}
+                            style={{
+                                height: 40,
+                                width: 40,
+                                objectFit: 'contain'
+                            }}
+
+                        />
                     </View>
                 )
             }}
@@ -136,12 +146,13 @@ export const DashboardTabs = () => {
                 component={Dashboard}
                 options={{
                     tabBarIcon: ({ color }) => (
-                        <MaterialDesignIcons
-                            name="view-dashboard-outline"
+                        <Lucide
+                            name="layout-dashboard"
                             size={25}
                             color={color}
                         />
                     ),
+                    title: "Home"
                 }}
             />
             {/* <Tab.Screen
@@ -165,8 +176,8 @@ export const DashboardTabs = () => {
                 options={{
                     title: "Viva AI",
                     tabBarIcon: ({ color }) => (
-                        <MaterialDesignIcons
-                            name="message-badge-outline"
+                        <Lucide
+                            name="message-square-dot"
                             size={25}
                             color={color}
                         />
@@ -185,8 +196,8 @@ export const DashboardTabs = () => {
                 component={Experts}
                 options={{
                     tabBarIcon: ({ color }) => (
-                        <MaterialDesignIcons
-                            name="account-box-outline"
+                        <Lucide
+                            name="users"
                             size={25}
                             color={color}
                         />
@@ -195,11 +206,12 @@ export const DashboardTabs = () => {
             />
             <Tab.Screen
                 name="Community"
-                component={ArticleContent}
+                component={Products}
                 options={{
+                    title: "Products",
                     tabBarIcon: ({ color }) => (
-                        <MaterialDesignIcons
-                            name="book-open-blank-variant-outline"
+                        <Lucide
+                            name="shopping-cart"
                             size={25}
                             color={color}
                         />
@@ -208,11 +220,12 @@ export const DashboardTabs = () => {
             />
             <Tab.Screen
                 name="Services"
-                component={Services}
+                component={ArticleContent}
                 options={{
+                    title: "Contents",
                     tabBarIcon: ({ color }) => (
-                        <MaterialDesignIcons
-                            name="scatter-plot"
+                        <Lucide
+                            name="book-open-text"
                             size={25}
                             color={color}
                         />

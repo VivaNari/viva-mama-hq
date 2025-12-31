@@ -1,98 +1,79 @@
-import React, { useMemo, useState } from 'react'
-import { FlatList, TouchableOpacity, View } from 'react-native'
+import React, { useEffect, useMemo, useState } from 'react'
+import { FlatList, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import FLCategoryItem from '../components/community/FLCategoryItem'
-import FLSubCategoryItem from '../components/community/FLSubCategoryItem'
-import SearchInput from '../components/SearchInput'
-import { contentsData } from '../data/contentsData'
-import { globalStyles } from '../public/styles'
-import { ICategory } from '../types/content.types'
-import { colors } from '../public/assets/colors'
-import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
-import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
-import { vivaClubData } from '../data/vivaClubData'
+import { getUserContents } from '../api/getUserContents'
 import { ArticleCard } from '../components/ArticleCard'
-import DashboardCard from '../components/dashboard/DashboardCard'
+import SearchInput from '../components/SearchInput'
+import { useAuth } from '../context/AuthContext'
+import { globalStyles } from '../public/styles'
+import { IUserContent, IUserContentresponse } from '../types/content.types'
 
-const ArticleContent = ({ navigation }: { navigation: { navigate: any } }) => {
+const ArticleContent = () => {
     const [searchData, setSearchData] = useState<string>("");
+    const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
+    const { userId } = useAuth();
+
+    useEffect(() => {
+        (async () => {
+            const getContents: IUserContentresponse = await getUserContents();
+            setUserContentsData(getContents.data);
+        })()
+    }, [userId])
+    useEffect(() => {
+        console.log("searchData", searchData);
+    }, [searchData])
 
     const filteredData = useMemo(() => {
-        if (!searchData.trim()) return contentsData;
+        if (!searchData.trim()) return userContentsData;
 
-        return contentsData.map(category => ({
-            ...category,
-            subCategories: category.subCategories.filter(sub =>
-                sub.subCategoryName.toLowerCase().includes(searchData.toLowerCase())
-            )
-        })).filter(category => category.subCategories.length > 0); // remove empty categories
-    }, [searchData]);
+        return userContentsData.filter(content => content.featuredTitle.toLowerCase().includes(searchData.toLowerCase()))
+    }, [searchData, userContentsData]);
 
     return (
         <SafeAreaView style={[globalStyles.container]}>
             <FlatList
-                data={filteredData}
-                keyExtractor={(item: ICategory) => item.id.toString()}
+                data={filteredData.slice(1)}
+                keyExtractor={(item) => item._id.toString()}
                 renderItem={({ item }) => (
-                    <FlatList
-                        keyExtractor={(sub) => sub.id.toString()}
-                        data={item.subCategories}
-                        renderItem={({ item }) => FLSubCategoryItem({ item, navigation })}
-                        scrollEnabled={false}
-                        style={{ marginTop: 25 }}
-                        keyboardShouldPersistTaps="handled"
+                    <ArticleCard
+                        key={item._id.toString()}
+                        item={item}
+
                     />
                 )}
+                scrollEnabled={true}
+                nestedScrollEnabled={false}
+                columnWrapperStyle={{
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-end',
+                    paddingBottom: 20
+                }}
+                numColumns={2}
                 ListHeaderComponent={
                     <>
-                        {/* Viva club redirect button */}
-                        <View
-                            style={{
-                                paddingHorizontal: 5
-                            }}
-                        >
-                            <DashboardCard>
-                                <FLVivaClubPostItem
-                                    isFromCommunityScreen={true}
-                                    item={vivaClubData[0]}
-                                />
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        paddingBottom: 20,
 
-                                    }}
-                                >
-
-                                    <GradientButtonWithSlightRadius
-                                        title='Go to Viva Club'
-                                        onPress={() => navigation.navigate("VivaClub")}
-                                    />
-                                </View>
-                            </DashboardCard>
-                        </View>
                         {/* Search */}
-                        <View style={{ marginBottom: 15 }}>
-                            <SearchInput setSearchData={setSearchData} />
+                        <View style={{}}>
+                            <SearchInput setSearchData={setSearchData} marginBottom={5} />
                         </View>
-
-                        {/* Categories */}
                         <FlatList
-                            keyExtractor={(item: ICategory) => item.id.toString()}
-                            data={contentsData}
-                            renderItem={({ item }) => FLCategoryItem({ item, navigation })}
-                            numColumns={3}
-                            columnWrapperStyle={{
-                                justifyContent: 'space-between',
-                                alignItems: 'flex-end',
-                                flexWrap: 'wrap',
-                            }}
-                            style={{ paddingHorizontal: 30, marginBottom: 20 }}
+                            data={filteredData.slice(0, 1)}
+                            keyExtractor={(item) => item._id.toString()}
+                            renderItem={({ item }) => (
+                                <ArticleCard
+                                    key={item._id.toString()}
+                                    item={item}
+                                    width='full'
+                                />
+                            )}
                             scrollEnabled={false}
-                            keyboardShouldPersistTaps="handled"
+                            nestedScrollEnabled={false}
                         />
                     </>
                 }
+                style={{
+                    paddingTop: 20
+                }}
             />
         </SafeAreaView>
     )
