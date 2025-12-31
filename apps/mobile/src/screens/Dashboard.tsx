@@ -180,7 +180,7 @@ const Dashboard = () => {
                         </DashboardCard>
                     </View>
                 </View>
-            </ScrollView >
+            </ScrollView>
             <LinearGradient
                 onTouchEnd={() => navigation.navigate("Experts")}
                 colors={[colors.primary, colors.secondary]}
@@ -210,7 +210,7 @@ const Dashboard = () => {
                     Call an Expert
                 </Text>
             </LinearGradient>
-        </View >
+        </View>
     )
 }
 

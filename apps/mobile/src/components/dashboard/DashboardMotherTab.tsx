@@ -259,7 +259,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                                 marginTop: 10,
                                                 backgroundColor: colors.purple
                                             }}
-                                        >÷÷
+                                        >
                                             <Text
                                                 style={[{
                                                     color: colors.white,
