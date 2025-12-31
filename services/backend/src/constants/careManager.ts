@@ -1,4 +1,3 @@
 export const caremanager = {
-    name: "Umang",
-    contact: "+91123456789",
+    id: "6955119b046a7bc1d00c0d75",
 };

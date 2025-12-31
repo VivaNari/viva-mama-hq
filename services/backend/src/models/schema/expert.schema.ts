@@ -28,6 +28,10 @@ const expertSchema: Schema<IExpert> = new Schema<IExpert>(
             type: String,
             required: true,
         },
+        remuneration: {
+            type: Number,
+            required: true,
+        },
     },
     generalSchemaOptions,
 );

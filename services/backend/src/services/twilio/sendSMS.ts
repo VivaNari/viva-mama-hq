@@ -20,7 +20,7 @@ async function sendSMS(to: string, message: string) {
 export default sendSMS;
 
 // Twilio Sandbox number
-const WHATSAPP_FROM = "whatsapp:+14155238886";
+const WHATSAPP_FROM = `whatsapp:${env.TWILIO_WHATSAPP_PHONE_NUMBER}`;
 
 const sendWhatsAppMessage = async (to: string, message: string) => {
     // format number properly
@@ -32,8 +32,8 @@ const sendWhatsAppMessage = async (to: string, message: string) => {
 
     try {
         const response = await client.messages.create({
-            from: WHATSAPP_FROM, // ✅ Twilio Sandbox number
-            to: formattedTo, // ✅ User / care manager number
+            from: WHATSAPP_FROM,
+            to: formattedTo,
             body: message,
         });
 

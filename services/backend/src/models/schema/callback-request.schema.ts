@@ -1,5 +1,6 @@
 import { Schema } from "mongoose";
 import { ICallbackRequest } from "../../types/callback-request.types";
+import { generalSchemaOptions } from "../../constants/model";
 
 const callbackRequestSchema = new Schema<ICallbackRequest>(
     {
@@ -11,9 +12,7 @@ const callbackRequestSchema = new Schema<ICallbackRequest>(
             default: null,
         },
     },
-    {
-        timestamps: true,
-    },
+    generalSchemaOptions,
 );
 
 export default callbackRequestSchema;

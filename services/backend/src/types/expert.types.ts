@@ -5,4 +5,5 @@ export interface IExpert {
     yearsOfExperience: number;
     bio: string;
     photograph: string;
+    remuneration: number;
 }

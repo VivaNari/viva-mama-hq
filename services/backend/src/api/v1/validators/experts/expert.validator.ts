@@ -8,6 +8,7 @@ const createExpertValidator = Joi.object<IExpert>({
     yearsOfExperience: Joi.number().required(),
     bio: Joi.string().required(),
     photograph: Joi.string().uri().required(),
+    remuneration: Joi.number().required(),
 });
 
 export default createExpertValidator;
