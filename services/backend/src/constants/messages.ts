@@ -27,8 +27,11 @@ export const messages = {
     PLAN_ACTIVATED_SUCCESSFULLY: "plan activated successfully",
     USER_FETCHED_SUCCESSFULLY: "User fetched successfully!",
     USER_FETCH_FAILED: "Failed to fetch user!",
+    EXPERT_FETCH_FAILED: "Failed to fetch expert!",
     INTERNAL_SERVER_ERROR: "Internal server error",
     CONTENT_SAVED_SUCCESS: "Content saved successfully",
     CONTENT_FETCH_SUCCESS: "Content fetched successfully",
     CARE_MANAGER_NOT_FOUND: "Care Manager not found",
+    EXPERT_SAVED_SUCCESS: "Expert saved successfully",
+    EXPERT_FETCH_SUCCESS: "Expert fetched successfully",
 };

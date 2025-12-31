@@ -14,9 +14,13 @@ class LLMService {
         });
     }
 
-    sendUserQuery = async (user: IUser, message: string): Promise<Record<string, unknown>> => {
-        const payload = { userId: user._id, query: message };
-        const llmResponse = await this.axiosInstance.post("/chat", payload);
+    sendUserQuery = async (
+        user: IUser,
+        message: string,
+        sessionId: string,
+    ): Promise<Record<string, unknown>> => {
+        const payload = { userId: user._id, query: message, sessionId };
+        const llmResponse = await this.axiosInstance.post("/v1/chat", payload);
 
         console.log(`LLM response: ${JSON.stringify(llmResponse.data)}`);
         return llmResponse.data;
@@ -25,6 +29,7 @@ class LLMService {
     sendNameQuery = async (
         freeText: string,
     ): Promise<{ detected_name: string; has_name: boolean }> => {
+        console.log("env.LLM_SERVER_URL", env.LLM_SERVER_URL);
         const llmResponse = await this.axiosInstance.post("/v1/chat/username", {
             response: freeText || "",
         });

@@ -1,16 +1,18 @@
-import { Request, Response, NextFunction } from "express";
-import ChatFlowService from "../../../../services/chat-system/chat-flow.service";
-import { IUser } from "../../../../types";
+import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 import { messages } from "../../../../constants/messages";
-import { AuthenticatedRequest, FlowType } from "../../../../types/chat.types";
+import ChatFlowAIService from "../../../../services/chat-system/chat-flow-ai.service";
+import ChatFlowService from "../../../../services/chat-system/chat-flow.service";
+import { AuthenticatedRequest, FlowType, FlowTypeEnum } from "../../../../types/chat.types";
+import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 
 class ChatFlowController {
     private chatFlowService: ChatFlowService;
+    private chatFlowAIService: ChatFlowAIService;
 
     constructor() {
         this.chatFlowService = new ChatFlowService();
+        this.chatFlowAIService = new ChatFlowAIService();
     }
 
     handleSseConnection = (request: Request, response: Response, next: NextFunction) => {
@@ -30,6 +32,17 @@ class ChatFlowController {
                 });
             }
 
+            if (flowType === FlowTypeEnum.CHATBOT) {
+                console.log("Chatbot flow connection");
+                this.chatFlowAIService.handleChatbotSSEConnection(
+                    userId,
+                    slug,
+                    flowType as FlowType,
+                    response,
+                );
+                return;
+            }
+
             this.chatFlowService.handleSseConnection(userId, slug, flowType as FlowType, response);
         } catch (err) {
             next(err);
@@ -40,9 +53,27 @@ class ChatFlowController {
         try {
             const req = request as AuthenticatedRequest;
             const userId = req.user._id;
-            const { flowInstanceId, nodeId, selectedKeys, freeText, flowType } = req.body;
+            const {
+                flowInstanceId,
+                nodeId,
+                selectedKeys,
+                freeText,
+                flowType,
+                sessionId,
+                conversationId,
+            } = req.body;
 
-            // ✅ Validate required fields
+            if (flowType == FlowTypeEnum.CHATBOT) {
+                this.chatFlowAIService.saveResponse(userId, freeText, sessionId, conversationId);
+                return sendResponse({
+                    data: null,
+                    message: messages.ANSWER_SAVED_SUCCESS,
+                    success: true,
+                    statusCode: StatusCodes.OK,
+                    response,
+                });
+            }
+
             if (!flowInstanceId || !nodeId) {
                 return sendResponse({
                     data: null,
@@ -53,7 +84,6 @@ class ChatFlowController {
                 });
             }
 
-            // ✅ Validate that EITHER selectedKeys OR freeText is provided
             if (!selectedKeys && !freeText) {
                 return sendResponse({
                     data: null,
@@ -64,7 +94,6 @@ class ChatFlowController {
                 });
             }
 
-            // ✅ If selectedKeys is provided, validate it's an array
             if (selectedKeys && !Array.isArray(selectedKeys)) {
                 return sendResponse({
                     data: null,
@@ -75,7 +104,6 @@ class ChatFlowController {
                 });
             }
 
-            // ✅ If freeText is provided, validate it's a non-empty string
             if (freeText && (typeof freeText !== "string" || freeText.trim().length === 0)) {
                 return sendResponse({
                     data: null,
