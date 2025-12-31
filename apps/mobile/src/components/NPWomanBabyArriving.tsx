@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import GradientButtonWithSlightRadius from './GradientButtonWithSlightRadius';
@@ -17,21 +17,8 @@ const NPWomanBabyArriving = ({ userData }: {
             }}
         >
             <View
-            >
-                <Image
-                    source={require('../public/assets/images/baby_holding_card.png')}
-                    style={{
-                        width: '100%',
-                        height: 120,
-                        transform: 'translateY(12%)',
-                        zIndex: 2
-                    }}
-                    resizeMode="contain"
-                />
-            </View>
-            <View
                 style={{
-                    backgroundColor: 'rgba(255, 250, 250, 1)',
+                    backgroundColor: colors.white,
                     padding: 10,
                     borderRadius: 10,
                     overflow: 'hidden',
@@ -40,12 +27,6 @@ const NPWomanBabyArriving = ({ userData }: {
                 }}
             >
                 <View>
-                    <View
-                        style={{
-                            ...StyleSheet.absoluteFillObject,
-                            backgroundColor: 'rgba(255, 250, 250, 0.90)',
-                        }}
-                    />
                     <View
                         style={{
                             paddingTop: 20,
@@ -59,12 +40,12 @@ const NPWomanBabyArriving = ({ userData }: {
 
                             }, globalStyles.fontBold]}
                         >
-                            Hey Mama! I am coming in
+                            Hey Mama! Your baby is coming in
                         </Text>
 
                         <Text
                             style={[{
-                                fontSize: 30,
+                                fontSize: 16,
                                 backgroundColor: colors.greenBadgeBG,
                                 color: colors.greenBadgeText,
                                 paddingVertical: 4,
@@ -75,7 +56,7 @@ const NPWomanBabyArriving = ({ userData }: {
 
                             }, globalStyles.fontRegular]}
                         >
-                            {40 - (userData.current_weekdays.weeks!) as number}
+                            {userData.np_weeks}
                             <Text
                                 style={{
                                     fontSize: 13
@@ -100,22 +81,27 @@ const NPWomanBabyArriving = ({ userData }: {
                         </View>
                     </View>
 
-                    <View
-                        style={{
-                            alignItems: 'center',
-                            paddingTop: 20
-                        }}
-                    >
 
-                        <GradientButtonWithSlightRadius
-                            title='Learn More'
-                            fullRounded={true}
-                            fullWidth={false}
-                            onPress={() => { navigation.navigate('AboutRecoveryScore' as never) }}
-                        />
-                    </View>
                 </View>
+                <TouchableOpacity
+                    style={{
+                        alignItems: 'center',
+                        padding: 10,
+                        ...globalStyles.fontSemiBold,
+                        backgroundColor: colors.purple,
+                        width: 120,
+                        justifyContent: "center",
+                        alignContent: "center",
+                        alignSelf: "center",
+                        borderRadius: 20,
+                        marginTop: 20
+                    }}
+                >
+
+                    <Text style={{ color: colors.white, ...globalStyles.fontSemiBold }}>Learn More</Text>
+                </TouchableOpacity>
             </View>
+
         </View>
     );
 };

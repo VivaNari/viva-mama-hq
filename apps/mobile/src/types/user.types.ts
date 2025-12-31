@@ -57,6 +57,7 @@ export interface IUser {
     billingCycle: string | null;
     expiryDate: Date | null;
   };
+  np_weeks: number;
 }
 export interface IChild {
   name: string;

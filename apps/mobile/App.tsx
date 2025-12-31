@@ -31,6 +31,7 @@ function App() {
           try {
             const decodedUserId = decodeToken(userToken);
             const userData = await getUserData();
+            console.log("user data", userData)
             console.log("getUserDataFromSQLite in App.tsx is ", userData);
 
             if (decodedUserId) {

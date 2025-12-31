@@ -69,16 +69,15 @@ const Dashboard = () => {
 
     return (
         <View
-            style={{ flex: 1, position: 'relative' }}
+            style={{ flex: 1, position: 'relative', backgroundColor: colors.white }}
         >
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                style={{ flex: 1 }}
+                style={{ flex: 1, backgroundColor: colors.white }}
             >
                 <View
-                    style={[globalStyles.container, { flex: 1 }]}
+                    style={[globalStyles.container, { flex: 1, backgroundColor: colors.white }]}
                 >
-                    {/* Tab Content View */}
                     <View
                     >
 
@@ -174,7 +173,7 @@ const Dashboard = () => {
                         </DashboardCard>
                     </View>
                 </View>
-            </ScrollView>
+            </ScrollView >
             <LinearGradient
                 onTouchEnd={() => navigation.navigate("Experts")}
                 colors={[colors.primary, colors.secondary]}
@@ -204,7 +203,7 @@ const Dashboard = () => {
                     Call an Expert
                 </Text>
             </LinearGradient>
-        </View>
+        </View >
     )
 }
 

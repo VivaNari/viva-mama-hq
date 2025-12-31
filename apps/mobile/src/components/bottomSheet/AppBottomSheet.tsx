@@ -14,7 +14,7 @@ const BottomSheetContext = createContext<BottomSheetContextType | null>(null)
 export const BottomSheetProvider = ({ children }: { children: React.ReactNode }) => {
     const bottomSheetRef = useRef<BottomSheet>(null)
     const [content, setContent] = useState<React.ReactNode>(null)
-    const snapPoints = useMemo(() => ['50%', '85%'], [])
+    const snapPoints = useMemo(() => ['60%', '85%'], [])
 
     const open = (node: React.ReactNode) => {
         setContent(node)

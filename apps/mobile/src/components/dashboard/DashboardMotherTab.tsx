@@ -1,8 +1,9 @@
 import Lucide from '@react-native-vector-icons/lucide'
+import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import React, { useCallback, useEffect, useState } from 'react'
 import { FlatList, Text, TouchableOpacity, View } from 'react-native'
-import LinearGradient from 'react-native-linear-gradient'
+import LinearGradient from 'react-native-linear-gradient';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -46,6 +47,8 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
     const shake = useSharedValue(0);
     const rotate = useSharedValue(0);
 
+    const upcomingCheckinDays = userData?.user.current_weekdays.upcoming_checkin_due_days;
+
     useFocusEffect(
         useCallback(() => {
             shake.value = withSequence(
@@ -74,72 +77,6 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
     const navigation = useNavigation<any>();
     return (
         <View>
-            {
-                userData && !userData.user.subscription.expiryDate && (
-
-                    <View style={{ flexDirection: 'row' }}>
-                        <LinearGradient
-                            colors={['rgba(190, 163, 248, 1)', 'rgba(94, 141, 255, 1)']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={{
-                                borderRadius: 10,
-                                flexDirection: "row",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                paddingVertical: 7,
-                                paddingHorizontal: 10,
-                                flex: 1,
-                                marginTop: 10,
-                                gap: 15
-                            }}
-                        >
-                            {/* Left Text */}
-                            <Text
-                                style={[
-                                    {
-                                        fontSize: 14,
-                                        flexShrink: 1,
-                                        color: colors.white,
-                                    },
-                                    globalStyles.fontRegular
-                                ]}
-                            >
-                                Subscribe to viva recovery today
-                            </Text>
-
-                            {/* Button Text */}
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate("Services")}
-                                style={{
-                                    paddingHorizontal: 5,
-                                    paddingVertical: 5,
-                                    flexShrink: 1,
-                                    backgroundColor: colors.white,
-                                    borderRadius: 15
-                                }}
-                            >
-                                <Text
-                                    style={[
-                                        {
-                                            fontSize: 14,
-                                            flexShrink: 1,
-                                            textAlign: "center",
-                                            paddingHorizontal: 8,
-                                            paddingVertical: 4,
-                                            borderRadius: 6,
-                                            color: colors.black
-                                        },
-                                        globalStyles.fontMedium
-                                    ]}
-                                >
-                                    Try now
-                                </Text>
-                            </TouchableOpacity>
-                        </LinearGradient>
-                    </View>
-                )
-            }
             <View>
                 {/* gauge */}
                 {
@@ -148,10 +85,9 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                     recentCheckindata && (
                         <View
                             style={{
-                                backgroundColor: 'rgba(255, 250, 250, 1)',
+                                backgroundColor: colors.white,
                                 padding: 10,
-                                borderRadius: 10,
-                                marginTop: 15,
+                                borderRadius: 25,
                                 boxShadow: '0 0 4px 0 rgba(0, 0, 0, 0.25)',
                                 paddingBottom: 20
                             }}
@@ -178,7 +114,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                     <Text
                                         style={[{
                                             fontSize: 16,
-
+                                            color: colors.darkPurple
                                         }, globalStyles.fontRegular]}
                                     >
                                         Week {recentCheckindata.length > 0 ? recentCheckindata[0].week : userData.user.current_weekdays.weeks}
@@ -202,7 +138,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                     paddingHorizontal: 20
                                 }}
                             >
-                                <VivaScoreGauge percentage={Math.trunc(score ? score : userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0].finalScore : 0)} />
+                                <VivaScoreGauge percentage={Math.trunc(score ? score : userData?.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0]?.finalScore : 0)} />
 
                                 {
 
@@ -286,41 +222,52 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                 } */}
                                 {/* Weekly Check In */}
                                 {
-                                    userData.user.current_weekdays.upcoming_checkin_due_days === 0 && (
-                                        <View
-                                            style={{
-                                            }}
-                                        >
 
-                                            <TouchableOpacity
-                                                activeOpacity={0.8}
-                                                onPress={() => {
-                                                    navigation.navigate("ChatWithVivaAI", {
-                                                        flowSlug: "weekly-check-in-v1",
-                                                    });
-                                                }}
-                                                style={{
-                                                    borderRadius: 30,
-                                                    justifyContent: "center",
-                                                    alignItems: "center",
-                                                    paddingVertical: 15,
-                                                    paddingHorizontal: 10,
-                                                    flex: 1,
-                                                    marginTop: 10,
-                                                    backgroundColor: colors.subscriptionTabInactiveBG
-                                                }}
+                                    <View
+                                        style={{
+                                        }}
+                                    >
+
+                                        <TouchableOpacity
+                                            activeOpacity={0.8}
+                                            onPress={() => {
+                                                navigation.navigate("ChatWithVivaAI", {
+                                                    flowSlug: "weekly-check-in-v1",
+                                                });
+                                            }}
+                                            disabled={userData?.user.current_weekdays.upcoming_checkin_due_days !== 0 ? true : false}
+                                            style={{
+                                                flexDirection: "row",
+                                                borderRadius: 30,
+                                                justifyContent: "center",
+                                                alignItems: "center",
+                                                paddingVertical: 15,
+                                                paddingHorizontal: 10,
+                                                flex: 1,
+                                                marginTop: 10,
+                                                backgroundColor: colors.purple
+                                            }}
+                                        >÷÷
+                                            <Text
+                                                style={[{
+                                                    color: colors.white,
+                                                    fontSize: 12,
+                                                }, globalStyles.fontSemiBold]}
                                             >
-                                                <Text
-                                                    style={[{
+                                                {upcomingCheckinDays === 0 ? "Complete your Weekly Check-in" : `${upcomingCheckinDays} days before your Weekly Check-in`}
+                                            </Text>
+                                            {upcomingCheckinDays === 0 ? <View style={{ marginTop: 3, zIndex: 99 }}>
+                                                <MaterialDesignIcons
+                                                    name="arrow-right"
+                                                    style={{
+                                                        fontSize: 18,
                                                         color: colors.white,
-                                                        fontSize: 14,
-                                                    }, globalStyles.fontSemiBold]}
-                                                >
-                                                    New weekly check-in available
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    )
+                                                    }}
+                                                />
+                                            </View> : null}
+                                        </TouchableOpacity>
+                                    </View>
+
                                 }
 
                                 {
