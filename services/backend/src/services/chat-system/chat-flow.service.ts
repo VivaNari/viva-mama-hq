@@ -46,13 +46,11 @@ import {
 } from "../../types";
 import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
 import { FlowInstanceService } from "../flow/flow-instance.service";
-import { getAIGreetingMessage } from "../../utils/commonFunctions/chatbot";
 import BaseService from "../base.service";
 import UserService from "../users/user.service";
 import MessageService from "../message/message.service";
 import LLMService from "../llm/llm.service";
 import FlowResponseService from "./flowResponse.service";
-import axios from "axios";
 import { getUuid } from "../../utils/commonFunctions/uuid";
 import { NAME_QUERY } from "../../constants/chat";
 
@@ -85,31 +83,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
 
     writeToSse = (res: Response, payload: Record<string, unknown>): void => {
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
-    };
-
-    sendInitialGreeting = async (userInstance: IUser, res: Response): Promise<void> => {
-        try {
-            const {
-                onboarding_data: { preferred_name },
-            } = userInstance as IUser;
-
-            const greeetingMessage: AIGreetingMessage = {
-                type: "chatbot_message",
-                text: getAIGreetingMessage(preferred_name || "there"),
-                timestamp: Date.now(),
-                response: {},
-                nodeType: FlowNodeEnum.QUESTION_FREE_TEXT,
-            };
-            this.writeToSse(res, greeetingMessage);
-        } catch (error) {
-            throw error;
-        }
-    };
-
-    processAIFlowConnection = async (userInstance: IUser, res: Response): Promise<boolean> => {
-        await this.getOrCreateChatbotConversation(userInstance);
-        await this.sendInitialGreeting(userInstance, res);
-        return true;
     };
 
     getPendingQuestion = (userInstance: IUser): { questionId: string } | undefined => {
@@ -236,9 +209,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         res.on("close", async () => {
             console.log(`User ${userInstance._id} disconnected`);
             this.activeSessions.delete(userInstance._id as unknown as string);
-            if (flowType === FlowTypeEnum.CHATBOT) {
-                return;
-            }
 
             const pendingQuestion = this.getPendingQuestion(userInstance);
             if (!pendingQuestion) {
@@ -270,12 +240,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             this.activeSessions.set(userId, res);
 
             switch (flowType) {
-                // Chatbot Flow
-                case FlowTypeEnum.CHATBOT: {
-                    this.processAIFlowConnection(userInstance, res);
-                    break;
-                }
-
                 // Guided Flows
                 case FlowTypeEnum.CHECK_IN: {
                     this.processGuidedFlowConnection(userInstance, res, slug, flowType);
@@ -301,49 +265,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
     getUserConnection = (userId: Types.ObjectId): Response | undefined => {
         const userSession: Response | undefined = this.activeSessions.get(userId.toString());
         return userSession;
-    };
-
-    processChatbotResponse = async (
-        userInstance: IUser,
-        message: string,
-    ): Promise<{ success: boolean; message: string }> => {
-        try {
-            console.log(`Processing chatbot message from user ${userInstance._id}`);
-            const conversationId = await this.getOrCreateChatbotConversation(userInstance);
-            await this.createMessage({
-                conversationId: conversationId,
-                userId: userInstance._id as unknown as string,
-                role: MessageRoleEnum.USER,
-                type: MessageTypeEnum.AI,
-                text: message,
-                rich: null,
-                attachments: null,
-                ai: null,
-                guided: null,
-            });
-            console.log(`User chatbot message saved`);
-            const llmResponse = await this.llmService.sendUserQuery(userInstance, message);
-            await conversationModel.findByIdAndUpdate(conversationId, {
-                lastMessageAt: new Date(),
-            });
-            const userSession = this.getUserConnection(userInstance._id as any);
-            if (userSession) {
-                const aiLlmResponse: AILLMResponse = {
-                    type: "chatbot_message",
-                    text: llmResponse.answer as string,
-                    timestamp: Date.now(),
-                    response: llmResponse,
-                };
-                this.writeToSse(userSession, aiLlmResponse);
-            }
-            return {
-                success: true,
-                message: "Chatbot message processed successfully",
-            };
-        } catch (error) {
-            console.error("Error handling chatbot message:", error);
-            throw error;
-        }
     };
 
     validateResponseArgs = (selectedKeys: number[], freeText?: string): boolean => {
@@ -748,17 +669,8 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             if (!userInstance) {
                 throw new Error("User not found");
             }
-            console.log("0000", flowType);
             switch (flowType) {
-                case FlowTypeEnum.CHATBOT: {
-                    if (!freeText) {
-                        throw new Error("Message text is required for chatbot");
-                    }
-                    await this.processChatbotResponse(userInstance, freeText);
-                    return;
-                }
                 case FlowTypeEnum.CHECK_IN: {
-                    console.log("111");
                     await this.processGuidedResponse(
                         userInstance,
                         flowInstanceId,
@@ -770,7 +682,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     return;
                 }
                 case FlowTypeEnum.ONBOARDING: {
-                    console.log("111");
                     await this.processGuidedResponse(
                         userInstance,
                         flowInstanceId,
@@ -797,14 +708,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         freeText?: string,
     ): Promise<{ success: boolean; message: string } | void> {
         try {
-            // ===== CHATBOT FLOW =====
-            if (flowType === "CHATBOT") {
-                if (!freeText) {
-                    throw new Error("Message text is required for chatbot");
-                }
-                return await this.handleChatbotMessage(userId, freeText);
-            }
-
             // ===== GUIDED FLOWS (ONBOARDING/CHECK-IN) =====
             if (!selectedKeys && !freeText) {
                 throw new Error("Either selectedKeys or freeText must be provided");
@@ -1059,117 +962,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             console.error("Error saving answer:", error);
             throw error;
         }
-    }
-
-    // ===== NEW METHOD: Handle Chatbot Messages =====
-    private async handleChatbotMessage(
-        userId: string,
-        message: string,
-    ): Promise<{ success: boolean; message: string }> {
-        try {
-            console.log(`Processing chatbot message from user ${userId}`);
-
-            // Get or create chatbot conversation
-            const conversationId = await this.getOrCreateChatbotConversation({} as any);
-
-            // Save user message
-            await new messageModel({
-                conversationId: conversationId,
-                userId: userId,
-                role: MessageRoleEnum.USER,
-                type: MessageTypeEnum.AI,
-                text: message,
-                rich: null,
-                attachments: null,
-                ai: null,
-                guided: null,
-            }).save();
-
-            console.log(`User chatbot message saved`);
-
-            // Get AI response from your LLM service
-            const aiResponse = await this.getAIResponse(userId, message);
-
-            // Save AI message
-            await new messageModel({
-                conversationId: conversationId,
-                userId: userId,
-                role: MessageRoleEnum.ASSITANT,
-                type: MessageTypeEnum.AI,
-                text: aiResponse,
-                rich: null,
-                attachments: null,
-                ai: null,
-                guided: null,
-            }).save();
-
-            console.log(`AI response saved`);
-
-            // Update conversation timestamp
-            await conversationModel.findByIdAndUpdate(conversationId, {
-                lastMessageAt: new Date(),
-            });
-
-            // Send AI response via SSE
-            const userConnection = this.activeSessions.get(userId);
-            if (userConnection) {
-                const payload = {
-                    type: "chatbot_message",
-                    text: aiResponse,
-                    timestamp: Date.now(),
-                };
-                userConnection.write(`data: ${JSON.stringify(payload)}\n\n`);
-                console.log(`AI response sent via SSE`);
-            }
-
-            return {
-                success: true,
-                message: "Chatbot message processed successfully",
-            };
-        } catch (error: any) {
-            console.error("Error handling chatbot message:", error);
-            throw error;
-        }
-    }
-
-    // ===== NEW METHOD: Get or Create Chatbot Conversation =====
-    private async getOrCreateChatbotConversation(
-        userInstance: IUser,
-    ): Promise<Schema.Types.ObjectId> {
-        let conversation = await conversationModel.findOne({
-            userId: userInstance._id,
-            chatMode: "AI_ONLY",
-            "meta.tags": "chatbot",
-        });
-
-        if (!conversation) {
-            console.log(`Creating new chatbot conversation for user ${userInstance._id}`);
-            conversation = await new conversationModel({
-                userId: userInstance._id,
-                title: "Chat with AI Assistant",
-                chatMode: "AI_ONLY",
-                lastMessageAt: new Date(),
-                meta: {
-                    channel: "App",
-                    tags: ["chatbot"],
-                },
-            }).save();
-        }
-
-        return conversation._id;
-    }
-
-    // Get AI Response
-    private async getAIResponse(userId: string, message: string): Promise<string> {
-        // TODO: Implement  LLM service integration
-        // Example:
-        // const response = await axios.post('YOUR_LLM_ENDPOINT', {
-        //     userId: userId,
-        //     message: message,
-        // });
-        // return response.data.message;
-
-        return `This is a placeholder AI response to: "${message}". Please integrate your LLM service here.`;
     }
 
     private async updateOnboardingData(
@@ -1625,15 +1417,12 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         if (flowType === "ONBOARDING") {
             title = "Onboarding";
             tag = "onboarding";
-        } else if (flowType === "CHATBOT") {
-            title = "Chat with AI Assistant";
-            tag = "chatbot";
         } else {
             title = "Check-in";
             tag = "check-in";
         }
 
-        const chatMode = flowType === "CHATBOT" ? "AI_ONLY" : "GUIDED_ONLY";
+        const chatMode = "GUIDED_ONLY";
 
         let conversation = await conversationModel.findOne({
             userId: userInstance._id,

@@ -1,4 +1,4 @@
-import { Schema } from "mongoose";
+import { ObjectId, Schema } from "mongoose";
 import { IUser } from "./user.types";
 import { Request, Response } from "express";
 
@@ -274,7 +274,10 @@ export type FlowType = FlowTypeEnum.ONBOARDING | FlowTypeEnum.CHECK_IN | FlowTyp
 export type AIGreetingMessage = AILLMResponse;
 
 export type AILLMResponse = {
-    type: "chatbot_message";
+    sessionId?: string;
+    conversationId?: ObjectId;
+    id: string;
+    type: "ai_message";
     text?: string;
     timestamp: number;
     response: Record<string, unknown>;

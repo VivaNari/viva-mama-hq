@@ -9,6 +9,7 @@ import contentRouter from "./contents/content.route";
 import productRouter from "./products/product.route";
 import weeklyCheckinRouter from "./weeklyCheckin.routes";
 import callbackRequestRouter from "./callback-request/callback-request.routes";
+import expertRouter from "./experts/expert.route";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use(contentRouter);
 router.use(productRouter);
 router.use(weeklyCheckinRouter);
 router.use(callbackRequestRouter);
+router.use(expertRouter);
 
 export default router;
