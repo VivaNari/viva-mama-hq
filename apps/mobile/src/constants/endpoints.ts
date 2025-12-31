@@ -1,9 +1,7 @@
 import { API_VERSION } from "@env";
 
 // Use environment variable in production, fallback for development
-export const BASE_API_URL = __DEV__
-  ? "http://192.168.1.11:4000"
-  : process.env.BASE_API_URL || "https://api.vivamama.com";
+export const BASE_API_URL = "https://3724805dfc83.ngrok-free.app";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
 
