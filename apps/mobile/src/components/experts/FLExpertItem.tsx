@@ -1,9 +1,8 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { IExpert } from "../../types/expert.types"
+import LinearGradient from "react-native-linear-gradient";
 import { colors } from "../../public/assets/colors";
 import { globalStyles } from "../../public/styles";
-import GradientButtonWithSlightRadius from "../GradientButtonWithSlightRadius";
-import LinearGradient from "react-native-linear-gradient";
+import { IExpert } from "../../types/expert.types";
 
 const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigate: any } }) => {
     return (
@@ -15,6 +14,7 @@ const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigat
             {/* Expert Photo */}
             <View style={styles.imageContainer}>
                 <Image
+                    // source={require('../../public/assets/images/doctors/Dr_Anuradha_Kumari.png')}
                     source={{ uri: item.photograph }}
                     resizeMode="cover"
                     style={styles.image}
@@ -33,41 +33,11 @@ const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigat
             </View>
 
             {/* Expert Info */}
-            <View style={styles.infoContainer}>
+            <View>
                 {/* Name */}
-                <Text style={[styles.name, globalStyles.fontBold]} numberOfLines={1}>
+                <Text style={[styles.name, globalStyles.fontSemiBold]}>
                     {item.name}
                 </Text>
-
-                {/* Speciality Badge */}
-                <View style={styles.specialityBadge}>
-                    <Text style={[styles.speciality, globalStyles.fontSemiBold]} numberOfLines={1}>
-                        {item.speciality}
-                    </Text>
-                </View>
-
-                {/* Qualification */}
-                <View style={styles.qualificationContainer}>
-                    <Text style={[styles.qualificationLabel, globalStyles.fontMedium]}>
-                        🎓
-                    </Text>
-                    <Text style={[styles.qualification, globalStyles.fontRegular]} numberOfLines={1}>
-                        {item.qualification}
-                    </Text>
-                </View>
-
-                {/* Bio */}
-                <Text style={[styles.bio, globalStyles.fontRegular]} numberOfLines={3}>
-                    {item.bio}
-                </Text>
-
-                {/* Book Now Button */}
-                <View style={styles.buttonContainer}>
-                    <GradientButtonWithSlightRadius
-                        onPress={() => navigation.navigate('ExpertDetails', { expertId: item._id })}
-                        title="Book Consultation"
-                    />
-                </View>
             </View>
         </TouchableOpacity>
     )
@@ -75,26 +45,24 @@ const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigat
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: colors.white,
-        borderRadius: 20,
-        marginHorizontal: 2,
-        marginBottom: 20,
+        borderRadius: 8,
         overflow: 'hidden',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.12,
-        shadowRadius: 8,
+        padding: 5,
+        backgroundColor: colors.white,
+        width: '48%',
+        marginBottom: 10,
     },
     imageContainer: {
         position: 'relative',
         width: '100%',
-        height: 240,
+        height: 180,
+        borderRadius: 8,
         backgroundColor: '#f5f5f5',
     },
     image: {
         width: '100%',
         height: '100%',
+
     },
     experienceBadge: {
         position: 'absolute',
@@ -115,14 +83,12 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         letterSpacing: 0.3,
     },
-    infoContainer: {
-        padding: 18,
-    },
     name: {
-        fontSize: 18,
+        fontSize: 14,
         color: '#1a1a1a',
         marginBottom: 8,
-        ...globalStyles.fontRegular
+        textAlign: 'center',
+        marginTop: 3
     },
     specialityBadge: {
         alignSelf: 'flex-start',

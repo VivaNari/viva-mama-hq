@@ -1,43 +1,43 @@
-import SQLite, { SQLiteDatabase } from 'react-native-sqlite-storage';
-import { IUserDataResponse } from '../types/dashboard.types';
-import { IUser } from '../types/user.types';
+import SQLite, { SQLiteDatabase } from "react-native-sqlite-storage";
+import { IUserDataResponse } from "../types/dashboard.types";
+import { IUser } from "../types/user.types";
 import {
   IDBAiMessage,
   IDBChatMessage,
   IDBChatMessageRow,
   IDBUserMessage,
-} from '../types/vivaAi.types';
+} from "../types/vivaAi.types";
 
 SQLite.DEBUG(false);
 SQLite.enablePromise(true);
 
 class ChatDatabase {
   private database: SQLiteDatabase | null = null;
-  private dbName = 'chat_history.db';
+  private dbName = "chat_history.db";
 
   async init(): Promise<void> {
     try {
       if (this.database) {
-        console.log('Database already initialized');
+        console.log("Database already initialized");
         return;
       }
 
       this.database = await SQLite.openDatabase({
         name: this.dbName,
-        location: 'default',
+        location: "default",
       });
 
-      console.log('Database opened successfully');
+      console.log("Database opened successfully");
       await this.createTables();
     } catch (error) {
-      console.error('Failed to initialize database:', error);
+      console.error("Failed to initialize database:", error);
       throw error;
     }
   }
 
   private async createTables(): Promise<void> {
     if (!this.database) {
-      throw new Error('Database not initialized');
+      throw new Error("Database not initialized");
     }
 
     const createTableQuery = `
@@ -60,9 +60,9 @@ class ChatDatabase {
         `;
 
     const createIndexQueries = [
-      'CREATE INDEX IF NOT EXISTS idx_user_flow ON chat_messages(user_id, flow_slug);',
-      'CREATE INDEX IF NOT EXISTS idx_message_id ON chat_messages(message_id);',
-      'CREATE INDEX IF NOT EXISTS idx_timestamp ON chat_messages(timestamp);',
+      "CREATE INDEX IF NOT EXISTS idx_user_flow ON chat_messages(user_id, flow_slug);",
+      "CREATE INDEX IF NOT EXISTS idx_message_id ON chat_messages(message_id);",
+      "CREATE INDEX IF NOT EXISTS idx_timestamp ON chat_messages(timestamp);",
     ];
 
     const createUserTableQuery = `
@@ -77,20 +77,20 @@ class ChatDatabase {
 
     try {
       await this.database.executeSql(createTableQuery);
-      console.log('chat_messages table created');
+      console.log("chat_messages table created");
 
-      await this.addColumnIfNotExists('chat_messages', 'node_type', 'TEXT');
-      await chatDB.addColumnIfNotExists('chat_messages', 'uuid', 'TEXT');
+      await this.addColumnIfNotExists("chat_messages", "node_type", "TEXT");
+      await chatDB.addColumnIfNotExists("chat_messages", "uuid", "TEXT");
 
       await this.database.executeSql(createUserTableQuery);
-      console.log('users table created');
+      console.log("users table created");
 
       for (const indexQuery of createIndexQueries) {
         await this.database.executeSql(indexQuery);
       }
-      console.log('Indexes created');
+      console.log("Indexes created");
     } catch (error) {
-      console.error('Failed to create tables:', error);
+      console.error("Failed to create tables:", error);
       throw error;
     }
   }
@@ -139,7 +139,7 @@ class ChatDatabase {
     const params = [
       userId,
       flowSlug,
-      'ai',
+      "ai",
       message.id,
       message.flowInstanceId,
       message.uuid,
@@ -155,7 +155,7 @@ class ChatDatabase {
       await this.database!.executeSql(query, params);
       console.log(`AI message saved: ${message.id}`);
     } catch (error) {
-      console.error('Failed to save AI message:', error);
+      console.error("Failed to save AI message:", error);
       throw error;
     }
   }
@@ -175,14 +175,19 @@ class ChatDatabase {
 
     try {
       await this.database!.executeSql(query, params);
-      console.log('User saved to sqlite');
+      console.log("User saved to sqlite");
     } catch (error) {
-      console.error('Failed to save user:', error);
+      console.error("Failed to save user:", error);
       throw error;
     }
   }
 
-  async getUserData(userId: string): Promise<IUserDataResponse> {
+  async getUserData(userId: string): Promise<IUserDataResponse | null> {
+    if (!userId) {
+      console.log("Skipping getUserData: No userId provided");
+      return null;
+    }
+
     if (!this.database) {
       await this.init();
     }
@@ -195,10 +200,14 @@ class ChatDatabase {
 
     try {
       const [result] = await this.database!.executeSql(query, params);
+      if (result.rows.length === 0) {
+        console.log(`No user data found for userId: ${userId}`);
+        return null;
+      }
       const userData = result.rows.item(0);
       return JSON.parse(userData.user_data);
     } catch (error) {
-      console.error('Failed to get user data:', error);
+      console.error("Failed to get user data:", error);
       throw error;
     }
   }
@@ -216,9 +225,9 @@ class ChatDatabase {
 
     try {
       await this.database!.executeSql(query, params);
-      console.log('User data updated');
+      console.log("User data updated");
     } catch (error) {
-      console.error('Failed to update user data:', error);
+      console.error("Failed to update user data:", error);
       throw error;
     }
   }
@@ -234,9 +243,9 @@ class ChatDatabase {
 
     try {
       await this.database!.executeSql(query, [userId]);
-      console.log('User data deleted');
+      console.log("User data deleted");
     } catch (error) {
-      console.error('Failed to delete user data:', error);
+      console.error("Failed to delete user data:", error);
       throw error;
     }
   }
@@ -255,7 +264,7 @@ class ChatDatabase {
       const count = result.rows.item(0).count;
       return count > 0;
     } catch (error) {
-      console.error('Failed to check user existence:', error);
+      console.error("Failed to check user existence:", error);
       throw error;
     }
   }
@@ -275,13 +284,13 @@ class ChatDatabase {
             ) VALUES (?, ?, ?, ?, ?);
         `;
 
-    const params = [userId, flowSlug, 'user', message.text, message.timestamp];
+    const params = [userId, flowSlug, "user", message.text, message.timestamp];
 
     try {
       await this.database!.executeSql(query, params);
-      console.log('User message saved');
+      console.log("User message saved");
     } catch (error) {
-      console.error('Failed to save user message:', error);
+      console.error("Failed to save user message:", error);
       throw error;
     }
   }
@@ -308,7 +317,7 @@ class ChatDatabase {
       const count = result.rows.item(0).count;
       return count > 0;
     } catch (error) {
-      console.error('❌ Failed to check message existence:', error);
+      console.error("❌ Failed to check message existence:", error);
       return false;
     }
   }
@@ -337,9 +346,9 @@ class ChatDatabase {
       for (let i = 0; i < result.rows.length; i++) {
         const row: IDBChatMessageRow = result.rows.item(i);
 
-        if (row.message_type === 'ai') {
+        if (row.message_type === "ai") {
           messages.push({
-            type: 'ai',
+            type: "ai",
             id: row.message_id!,
             flowInstanceId: row.flow_instance_id!,
             text: row.text,
@@ -352,7 +361,7 @@ class ChatDatabase {
           });
         } else {
           messages.push({
-            type: 'user',
+            type: "user",
             text: row.text,
             timestamp: row.timestamp,
           });
@@ -362,7 +371,7 @@ class ChatDatabase {
       console.log(`📚 Loaded ${messages.length} messages`);
       return messages;
     } catch (error) {
-      console.error('❌ Failed to get chat history:', error);
+      console.error("❌ Failed to get chat history:", error);
       return [];
     }
   }
@@ -372,14 +381,13 @@ class ChatDatabase {
       await this.init();
     }
 
-    const query =
-      'DELETE FROM chat_messages;';
+    const query = "DELETE FROM chat_messages;";
 
     try {
       await this.database!.executeSql(query);
-      console.log('Chat history cleared');
+      console.log("Chat history cleared");
     } catch (error) {
-      console.error('Failed to clear chat history:', error);
+      console.error("Failed to clear chat history:", error);
       throw error;
     }
   }
@@ -390,13 +398,13 @@ class ChatDatabase {
     }
 
     const query =
-      'DELETE FROM chat_messages WHERE user_id = ? AND flow_slug = ?;';
+      "DELETE FROM chat_messages WHERE user_id = ? AND flow_slug = ?;";
 
     try {
       await this.database!.executeSql(query, [userId, flowSlug]);
-      console.log('Chat history cleared');
+      console.log("Chat history cleared");
     } catch (error) {
-      console.error('Failed to clear chat history:', error);
+      console.error("Failed to clear chat history:", error);
       throw error;
     }
   }
@@ -427,7 +435,7 @@ class ChatDatabase {
 
       const row: IDBChatMessageRow = result.rows.item(0);
       return {
-        type: 'ai',
+        type: "ai",
         id: row.message_id!,
         flowInstanceId: row.flow_instance_id!,
         text: row.text,
@@ -439,15 +447,12 @@ class ChatDatabase {
         uuid: row.uuid,
       };
     } catch (error) {
-      console.error('Failed to get last AI message:', error);
+      console.error("Failed to get last AI message:", error);
       return null;
     }
   }
 
-  async getLastMessage(
-    userId: string,
-    flowSlug: string,
-  ): Promise<any | null> {
+  async getLastMessage(userId: string, flowSlug: string): Promise<any | null> {
     if (!this.database) {
       await this.init();
     }
@@ -482,7 +487,7 @@ class ChatDatabase {
         uuid: row.uuid,
       };
     } catch (error) {
-      console.error('Failed to get last AI message:', error);
+      console.error("Failed to get last AI message:", error);
       return null;
     }
   }
@@ -491,7 +496,7 @@ class ChatDatabase {
     if (this.database) {
       await this.database.close();
       this.database = null;
-      console.log('Database closed');
+      console.log("Database closed");
     }
   }
 }

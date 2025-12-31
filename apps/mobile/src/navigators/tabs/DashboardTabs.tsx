@@ -1,11 +1,9 @@
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import { Lucide } from '@react-native-vector-icons/lucide';
-import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect } from 'react';
 import { Image, TouchableOpacity, View } from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useCounterContext } from '../../context/CounterContext';
@@ -15,7 +13,7 @@ import ArticleContent from '../../screens/ArticleContent';
 import ChatWithVivaAI from '../../screens/ChatWithVivaAI';
 import Dashboard from '../../screens/Dashboard';
 import Experts from '../../screens/Experts';
-import Services from '../../screens/Subscription';
+import Products from '../../screens/Products';
 
 const Tab = createBottomTabNavigator();
 
@@ -208,7 +206,7 @@ export const DashboardTabs = () => {
             />
             <Tab.Screen
                 name="Community"
-                component={ArticleContent}
+                component={Products}
                 options={{
                     title: "Products",
                     tabBarIcon: ({ color }) => (
@@ -222,7 +220,7 @@ export const DashboardTabs = () => {
             />
             <Tab.Screen
                 name="Services"
-                component={Services}
+                component={ArticleContent}
                 options={{
                     title: "Contents",
                     tabBarIcon: ({ color }) => (

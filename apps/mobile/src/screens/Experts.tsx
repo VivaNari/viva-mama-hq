@@ -17,9 +17,6 @@ const Experts = ({ navigation }: { navigation: { navigate: any } }) => {
         })();
     }, []);
 
-    useEffect(() => {
-        console.log("experts are =??", experts);
-    }, [experts]);
     return (
         <SafeAreaView
             style={[globalStyles.container,]}
@@ -29,7 +26,12 @@ const Experts = ({ navigation }: { navigation: { navigate: any } }) => {
                 keyExtractor={(item: IExpert) => item._id}
                 data={experts}
                 renderItem={({ item }) => ExpertItem({ item, navigation })}
+                columnWrapperStyle={{
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-end',
+                }}
                 // style={{}}
+                numColumns={2}
                 ListHeaderComponent={() => (
                     <View
                         style={{

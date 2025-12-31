@@ -29,16 +29,23 @@ const Dashboard = () => {
     const { userId } = useAuth();
 
     useEffect(() => {
+        if (!userId) return;
         (async () => {
-            const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
-            console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
-            setUserdata(getUserDataFromSQLite.data);
+            try {
+                const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+                console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
+                if (getUserDataFromSQLite) {
+                    setUserdata(getUserDataFromSQLite.data);
+                }
 
-            const getContents: IUserContentresponse = await getUserContents();
-            setUserContentsData(getContents.data);
+                const getContents: IUserContentresponse = await getUserContents();
+                setUserContentsData(getContents.data);
 
-            const getProducts: IUserProductResponse = await getUserProducts();
-            setProductsData(getProducts.data);
+                const getProducts: IUserProductResponse = await getUserProducts();
+                setProductsData(getProducts.data);
+            } catch (error) {
+                console.error("Error loading dashboard data:", error);
+            }
         })()
     }, [userId])
 

@@ -1,43 +1,55 @@
-import Lucide from '@react-native-vector-icons/lucide'
+import Lucide from '@react-native-vector-icons/lucide';
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import React, { useCallback, useEffect, useState } from 'react'
-import { FlatList, Text, TouchableOpacity, View } from 'react-native'
-import LinearGradient from 'react-native-linear-gradient';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
     withSequence,
     withTiming,
-} from 'react-native-reanimated'
-import { getRecentCheckinData } from '../../api/recentCheckIn.api'
-import { expertData } from '../../data/expertData'
-import { colors } from '../../public/assets/colors'
-import { globalStyles } from '../../public/styles'
-import { ICheckInRecommendation, ICheckInRecommendationResponse, IndividualRecommendationEnum, IndividualRecommendationZoneEnum, IUserAllData } from '../../types/dashboard.types'
-import { IExpertCategory } from '../../types/expert.types'
-import { UserCategoryEnum } from '../../types/user.types'
-import { useBottomSheet } from '../bottomSheet/AppBottomSheet'
-import HowToGenerateVivaScoreGuide from '../bottomSheet/HowToGenerateVivaScoreGuide'
-import RecoveryProgressGraph from '../bottomSheet/RecoveryProgressGraph'
-import RecoveryScoreBriefInfo from '../bottomSheet/RecoveryScoreBriefInfo'
-import CareManagerCard from '../CareManagerCard'
-import ExpertCategoryItem from '../experts/FLExpertCategoryItem'
-import GradientButtonWithSlightRadius from '../GradientButtonWithSlightRadius'
-import IndividualRecoveryCard from '../IndividualRecoveryCard'
-import NNWomanPlanningForBaby from '../NNWomanPlanningForBaby'
-import NPWomanBabyArriving from '../NPWomanBabyArriving'
-import VivaScoreGauge from '../VivaScoreGauge'
-import WeekCycle from '../WeekCycle'
+} from 'react-native-reanimated';
+import { getExperts } from '../../api/getExperts';
+import { getRecentCheckinData } from '../../api/recentCheckIn.api';
+import { colors } from '../../public/assets/colors';
+import { globalStyles } from '../../public/styles';
+import { ICheckInRecommendation, ICheckInRecommendationResponse, IndividualRecommendationEnum, IndividualRecommendationZoneEnum, IUserAllData } from '../../types/dashboard.types';
+import { IExpert, IExpertResponse } from '../../types/expert.types';
+import { UserCategoryEnum } from '../../types/user.types';
+import { useBottomSheet } from '../bottomSheet/AppBottomSheet';
+import HowToGenerateVivaScoreGuide from '../bottomSheet/HowToGenerateVivaScoreGuide';
+import RecoveryProgressGraph from '../bottomSheet/RecoveryProgressGraph';
+import RecoveryScoreBriefInfo from '../bottomSheet/RecoveryScoreBriefInfo';
+import CareManagerCard from '../CareManagerCard';
+import GradientButtonWithSlightRadius from '../GradientButtonWithSlightRadius';
+import IndividualRecoveryCard from '../IndividualRecoveryCard';
+import NNWomanPlanningForBaby from '../NNWomanPlanningForBaby';
+import NPWomanBabyArriving from '../NPWomanBabyArriving';
+import VivaScoreGauge from '../VivaScoreGauge';
+import WeekCycle from '../WeekCycle';
+import ExpertItem from '../experts/FLExpertItem';
 
 const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUserAllData }) => {
     const [recentCheckindata, setRecentChekinData] = useState<ICheckInRecommendation[]>();
+    const [experts, setExperts] = useState<IExpert[]>([]);
+
     useEffect(() => {
-        (async function () {
-            const theRecentcheckinData = await getRecentCheckinData() as ICheckInRecommendationResponse;
-            setRecentChekinData(theRecentcheckinData.data)
+        (async () => {
+            const response: IExpertResponse = await getExperts();
+            setExperts(response.data);
         })();
-    }, [])
+    }, []);
+
+    const fetchRecentCheckIn = useCallback(async () => {
+        const theRecentcheckinData = await getRecentCheckinData() as ICheckInRecommendationResponse;
+        setRecentChekinData(theRecentcheckinData.data);
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchRecentCheckIn();
+        }, [fetchRecentCheckIn])
+    );
 
     useEffect(() => {
         console.log("[recentCheckindata] =>>>>", recentCheckindata)
@@ -142,7 +154,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
 
                                 {
 
-                                    score || recentCheckindata.length > 0 &&
+                                    recentCheckindata.length > 0 &&
                                         userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? (<View style={{
                                             marginTop: -100,
                                             marginBottom: 5,
@@ -336,11 +348,16 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                 <CareManagerCard />
 
                 {/* Consult an Expert */}
+
                 <FlatList
-                    keyExtractor={(item: IExpertCategory) => item.id.toString()}
-                    data={expertData.slice(0, 2)}
-                    renderItem={({ item }) => ExpertCategoryItem({ item, navigation })}
-                    // style={{}}
+                    keyExtractor={(item: IExpert) => item._id}
+                    data={experts.slice(0, 4)}
+                    renderItem={({ item }) => ExpertItem({ item, navigation })}
+                    columnWrapperStyle={{
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-end',
+                    }}
+                    numColumns={2}
                     scrollEnabled={false}
                     nestedScrollEnabled={false}
                     ListHeaderComponent={() => (

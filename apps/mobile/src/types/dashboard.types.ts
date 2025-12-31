@@ -1,4 +1,4 @@
-import { IUser } from './user.types';
+import { IUser } from "./user.types";
 
 export interface ICheckInRecommendationResponse {
   data: ICheckInRecommendation[];
@@ -20,7 +20,7 @@ export interface ICheckInRecommendation {
         next?: string[];
       };
       score: number;
-      zone: 'RED' | 'YELLOW' | 'GREEN';
+      zone: "RED" | "YELLOW" | "GREEN";
     };
     lactation: {
       recommendation: {
@@ -32,7 +32,7 @@ export interface ICheckInRecommendation {
         next?: string[];
       };
       score: number;
-      zone: 'RED' | 'YELLOW' | 'GREEN';
+      zone: "RED" | "YELLOW" | "GREEN";
     };
     emotional: {
       recommendation: {
@@ -44,7 +44,7 @@ export interface ICheckInRecommendation {
         next?: string[];
       };
       score: number;
-      zone: 'RED' | 'YELLOW' | 'GREEN';
+      zone: "RED" | "YELLOW" | "GREEN";
     };
   };
   tagline: string;
@@ -53,14 +53,14 @@ export interface ICheckInRecommendation {
 }
 
 export enum IndividualRecommendationEnum {
-  PHYSICAL = 'physical',
-  LACTATION = 'lactation',
-  EMOTIONAL = 'emotional',
+  PHYSICAL = "physical",
+  LACTATION = "lactation",
+  EMOTIONAL = "emotional",
 }
 export enum IndividualRecommendationZoneEnum {
-  RED = 'RED',
-  YELLOW = 'YELLOW',
-  GREEN = 'GREEN',
+  RED = "RED",
+  YELLOW = "YELLOW",
+  GREEN = "GREEN",
 }
 
 export interface IUserDataResponse {
@@ -76,8 +76,7 @@ export interface IUserAllData {
     title: string;
   };
   caremanager: {
-    contact: string;
-    name: string;
+    id: string;
   };
   recoveryScoreBriefInfo: {
     green: string;

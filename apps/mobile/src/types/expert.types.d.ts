@@ -6,6 +6,7 @@ export interface IExpert {
   yearsOfExperience: number;
   bio: string;
   photograph: string;
+  remuneration: number;
   createdAt: string;
   updatedAt: string;
   __v: number;
@@ -28,4 +29,9 @@ export interface IExpertCategory {
   id: number;
   category: string;
   experts: Expert[];
+}
+
+export interface IExpertLoadingState {
+  uiLoading: boolean;
+  paymentLoading: boolean;
 }

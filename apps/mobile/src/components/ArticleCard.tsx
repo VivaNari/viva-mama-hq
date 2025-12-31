@@ -10,7 +10,7 @@ export const ArticleCard = ({ item, width }: { item: IUserContent, width?: strin
         <View
             style={{
                 paddingHorizontal: 1,
-                width: width === 'full' ? 'auto' : '48%'
+                width: width === 'full' ? 'auto' : '48%',
             }}
         >
 
@@ -28,7 +28,7 @@ export const ArticleCard = ({ item, width }: { item: IUserContent, width?: strin
                         borderRadius: 8
                     }} />
                     <View style={{ flex: 1, marginTop: 5 }}>
-                        <Text style={[styles.articleTitle, globalStyles.fontSemiBold]}>
+                        <Text style={[styles.articleTitle, globalStyles.fontSemiBold]} numberOfLines={3}>
                             {item.featuredTitle}
                         </Text>
                     </View>

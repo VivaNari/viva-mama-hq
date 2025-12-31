@@ -1,3 +1,4 @@
+import Lucide from "@react-native-vector-icons/lucide";
 import { useRoute } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import {
@@ -9,37 +10,131 @@ import {
     Text,
     View
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 import LinearGradient from "react-native-linear-gradient";
-import GradientButtonWithSlightRadius from "../components/GradientButtonWithSlightRadius";
-import { globalStyles } from "../public/styles";
-import { colors } from "../public/assets/colors";
-import { IExpert, IExpertByIdResponse } from "../types/expert.types";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { getExpertById } from "../api/getExpertsById";
-import Lucide from "@react-native-vector-icons/lucide";
+import GradientButtonWithSlightRadius from "../components/GradientButtonWithSlightRadius";
+import { colors } from "../public/assets/colors";
+import { globalStyles } from "../public/styles";
+import { IExpert, IExpertByIdResponse, IExpertLoadingState } from "../types/expert.types";
+import apiClientInterceptor from "../api/apiClientInterceptor";
+import { RAZORPAY_BOOK_CONSULTATION_CREATE_ORDER, RAZORPAY_BOOK_CONSULTATION_VERIFY_ORDER } from "../constants/endpoints";
+import { IPaymentOrderResponse } from "../types/subscription.types";
+import { RAZORPAY_API_KEY } from "@env";
+import RazorpayCheckout from "react-native-razorpay";
+import Toast from "react-native-toast-message";
 
-const { width, height } = Dimensions.get("window");
+const { height } = Dimensions.get("window");
 
 const ExpertDetails = () => {
     const route = useRoute<any>();
     const { expertId } = route.params;
     const [expert, setExpert] = useState<IExpert | undefined>();
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState<IExpertLoadingState>({
+        uiLoading: false,
+        paymentLoading: false
+    });
+
+    const bookConsultation = async () => {
+        try {
+            setLoading({
+                ...loading,
+                paymentLoading: true
+            });
+            const { data } = await apiClientInterceptor().post(RAZORPAY_BOOK_CONSULTATION_CREATE_ORDER, {
+                amount: expert?.remuneration,
+                expertId
+            }) as { data: IPaymentOrderResponse };
+
+            const options: any = {
+                description: `Expert Consultation with ${expert?.name}`,
+                image: require("../public/assets/images/viva_logo.png"),
+                currency: data.data.currency,
+                key: RAZORPAY_API_KEY,
+                amount: data.data.amount,
+                order_id: data.data.order_id,
+                name: `Expert Consultation with ${expert?.name}`,
+                prefill: {
+                },
+                theme: { color: colors.primary }
+            }
+            RazorpayCheckout.open(options).then(async (data) => {
+                try {
+                    await apiClientInterceptor().post(RAZORPAY_BOOK_CONSULTATION_VERIFY_ORDER, {
+                        razorpay_order_id: data.razorpay_order_id,
+                        razorpay_payment_id: data.razorpay_payment_id,
+                        razorpay_signature: data.razorpay_signature
+                    });
+
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Success',
+                        text2: 'Consultation Booked Sucessfully!',
+                        position: 'bottom'
+                    });
+
+                } catch (verifyError) {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Verification Failed',
+                        text2: 'Payment successful but verification failed. Contact support.',
+                        position: 'bottom'
+                    });
+                }
+            }).catch((error) => {
+                setLoading({
+                    ...loading,
+                    paymentLoading: false
+                });
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error',
+                    text2: `Error: ${error.code} | ${error.description}`,
+                    position: 'bottom'
+                });
+                console.error(`Error: ${error.code} | ${error.description}`);
+            }).finally(() => {
+                setLoading({
+                    ...loading,
+                    paymentLoading: false
+                });
+            })
+        } catch (error: any) {
+            setLoading({
+                ...loading,
+                paymentLoading: false
+            });
+            console.error('Payment Error:', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Something went wrong! Please try again.',
+                position: 'bottom'
+            });
+        }
+    }
 
     useEffect(() => {
         (async () => {
             try {
+                setLoading((prev) => ({
+                    ...prev,
+                    uiLoading: true
+                }));
                 const response: IExpertByIdResponse = await getExpertById(expertId);
                 setExpert(response.data);
             } catch (error) {
                 console.error("Error fetching expert:", error);
             } finally {
-                setLoading(false);
+                setLoading((prev) => ({
+                    ...prev,
+                    uiLoading: false
+                }));
             }
         })();
     }, [expertId]);
 
-    if (loading) {
+    if (loading.uiLoading) {
         return (
             <SafeAreaView style={[globalStyles.container, styles.centerContainer]}>
                 <ActivityIndicator size="large" color={colors.primary || colors.purple} />
@@ -119,7 +214,7 @@ const ExpertDetails = () => {
                     {/* Qualification Card */}
                     <View style={styles.infoCard}>
                         <View style={styles.cardHeader}>
-                            <Lucide name="school" size={24} color={colors.purple} />
+                            <Lucide name="school" size={20} color={colors.purple} />
                             <Text style={[styles.cardTitle, globalStyles.fontBold]}>
                                 Qualification
                             </Text>
@@ -132,7 +227,7 @@ const ExpertDetails = () => {
                     {/* About / Bio Card */}
                     <View style={styles.infoCard}>
                         <View style={styles.cardHeader}>
-                            <Lucide name="info" size={24} color={colors.purple} />
+                            <Lucide name="info" size={20} color={colors.purple} />
                             <Text style={[styles.cardTitle, globalStyles.fontBold]}>
                                 About
                             </Text>
@@ -145,13 +240,26 @@ const ExpertDetails = () => {
                     {/* Speciality Details Card */}
                     <View style={styles.infoCard}>
                         <View style={styles.cardHeader}>
-                            <Lucide name="briefcase-medical" size={24} color={colors.purple} />
+                            <Lucide name="briefcase-medical" size={20} color={colors.purple} />
                             <Text style={[styles.cardTitle, globalStyles.fontBold]}>
                                 Speciality
                             </Text>
                         </View>
                         <Text style={[styles.cardContent, globalStyles.fontRegular]}>
                             {expert.speciality}
+                        </Text>
+                    </View>
+
+                    {/* Remuneration Card */}
+                    <View style={styles.infoCard}>
+                        <View style={styles.cardHeader}>
+                            <Lucide name="wallet" size={20} color={colors.purple} />
+                            <Text style={[styles.cardTitle, globalStyles.fontBold]}>
+                                Remuneration
+                            </Text>
+                        </View>
+                        <Text style={[styles.cardContent, globalStyles.fontRegular]}>
+                            Rs. {expert.remuneration}/-
                         </Text>
                     </View>
                 </View>
@@ -163,11 +271,9 @@ const ExpertDetails = () => {
                 <View style={styles.buttonRow}>
                     <View style={styles.buttonWrapper}>
                         <GradientButtonWithSlightRadius
-                            onPress={() => {
-                                // Navigate to booking or schedule screen
-                                console.log("Book consultation with", expert.name);
-                            }}
-                            title="Book Consultation"
+                            onPress={bookConsultation}
+                            title={loading.paymentLoading ? "Processing, Please wait..." : 'Book Consultation'}
+                            disabled={loading.paymentLoading}
                         />
                     </View>
                 </View>
@@ -208,8 +314,9 @@ const styles = StyleSheet.create({
     },
     heroContainer: {
         position: 'relative',
-        width: width,
+        width: '100%',
         height: height * 0.45,
+        // padding: 20,
     },
     heroImage: {
         width: '100%',
@@ -283,7 +390,7 @@ const styles = StyleSheet.create({
     },
     infoCard: {
         backgroundColor: colors.white,
-        borderRadius: 16,
+        borderRadius: 8,
         padding: 18,
         marginBottom: 16,
         elevation: 2,
@@ -303,14 +410,14 @@ const styles = StyleSheet.create({
         color: '#1a1a1a',
     },
     cardContent: {
-        fontSize: 15,
+        fontSize: 14,
         color: '#555',
-        lineHeight: 22,
+        lineHeight: 20,
     },
     bioText: {
-        fontSize: 15,
+        fontSize: 14,
         color: '#555',
-        lineHeight: 24,
+        lineHeight: 20,
     },
     bottomPadding: {
         height: 100,
@@ -323,6 +430,7 @@ const styles = StyleSheet.create({
     },
     buttonWrapper: {
         width: '100%',
+        flexDirection: 'row',
     },
 });
 

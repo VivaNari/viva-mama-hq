@@ -2,7 +2,7 @@ import { API_VERSION } from "@env";
 
 // Use environment variable in production, fallback for development
 export const BASE_API_URL = __DEV__
-  ? "http://192.168.1.7:4000"
+  ? "http://192.168.1.11:4000"
   : process.env.BASE_API_URL || "https://api.vivamama.com";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
@@ -50,6 +50,10 @@ export const RAZORPAY_CREATE_ORDER = `${API_VERSION_URL}/orders/create`;
 export const RAZORPAY_VERIFY_ORDER = `${API_VERSION_URL}/orders/verify`;
 export const SUBSCRIBE_FREE_PLAN = `${API_VERSION_URL}/subscribe/select-free-plan`;
 
+// book consultation
+export const RAZORPAY_BOOK_CONSULTATION_CREATE_ORDER = `${API_VERSION_URL}/consultation-orders/create`;
+export const RAZORPAY_BOOK_CONSULTATION_VERIFY_ORDER = `${API_VERSION_URL}/consultation-orders/verify`;
+
 // Dashboard endpoints
 export const RECENT_CHECKIN_DATA = `${API_VERSION_URL}/dashboard/viva-score`;
 export const CHEKIN_HISTORY = `${API_VERSION_URL}/user/recommendations-formatted`;
@@ -59,6 +63,7 @@ export const USER_DATA = `${API_VERSION_URL}/user`;
 export const USER_CONTENTS = `${API_VERSION_URL}/contents`;
 export const EXPERTS = `${API_VERSION_URL}/experts`;
 export const USER_PRODUCTS = `${API_VERSION_URL}/products`;
+export const USER_REQUEST_CALLBACK = `${API_VERSION_URL}/callback-request`;
 
 export const USER_CONTENT_URL = (articleId: string): string => {
   return `${API_VERSION_URL}/contents/${articleId}`;
