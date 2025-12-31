@@ -331,6 +331,7 @@ const calculateUpcomingAndPreviousDueDays = ({
             : formattedUserWeek - previousPostpartumWeek
         ).toFixed(1),
     );
+    console.log("previousDats", previousDays);
 
     const upcomingDays = Number(
         (latestPostpartumWeek - formattedUserWeek - 0.3 < 0
@@ -614,6 +615,7 @@ export const currentWeekAndPreviousUpcomingDueDaysCalculator = async (): Promise
         // Get all users with FCM tokens
         const userInstances = await UserModel.find({
             FCM_token: { $exists: true, $ne: null },
+            user_category: { $ne: "NP" },
         });
 
         logger.info({ userCount: userInstances.length }, "Processing users for weekly check-in");

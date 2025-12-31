@@ -519,7 +519,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         if (!updatedUserInstance) {
             throw new Error("User not found");
         }
-        this.flowInstanceService.createNewFlowForUser(updatedUserInstance, flowDeninition);
+        //this.flowInstanceService.createNewFlowForUser(updatedUserInstance, flowDeninition);
 
         await this.userService.findByIdAndUpdate({
             _id: updatedUserInstance._id as unknown as string,

@@ -289,11 +289,25 @@ class ValidationService {
             };
         }
 
+        function getPostpartumWeek(deliveryDate: string | Date): number {
+            const delivery = new Date(deliveryDate);
+            const now = new Date();
+
+            const diffMs = now.getTime() - delivery.getTime();
+
+            // If delivery is in the future → not postpartum yet
+            if (diffMs < 0) return 0;
+
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+            return Math.floor(diffDays / 7);
+        }
+
         // 4. Check for existing flow instance
         const existingInstance = await flowInstanceModel.findOne({
             userId: user._id,
             flowDefId: flowDefinition._id,
-            postpartumWeek: week,
+            postpartumWeek: getPostpartumWeek(user.onboarding_data.delivery_date as Date),
         });
 
         // 5. Handle different states

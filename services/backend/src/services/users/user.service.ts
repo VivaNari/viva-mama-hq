@@ -31,10 +31,22 @@ export default class UserService extends BaseService<IUser> {
             if (!req.user) {
                 throw new Error(messages.USER_FETCH_FAILED);
             }
-            const user = await UserModel.findById(req.user._id);
+            const user = await UserModel.findById(req.user._id).lean();
+            let np_weeks;
+            if (user?.user_category === "NP") {
+                const now = new Date();
+                const due = new Date(user.onboarding_data.delivery_date as Date);
+
+                const diffMs = due.getTime() - now.getTime();
+
+                if (diffMs <= 0) return 0; // already delivered or due today
+
+                const weeks = diffMs / (1000 * 60 * 60 * 24 * 7);
+                np_weeks = Math.ceil(weeks); // round up (medical-friendly)
+            }
             sendResponse({
                 data: {
-                    user,
+                    user: { ...user, np_weeks },
                     significance,
                     recoveryScoreBriefInfo,
                     NNWomanRecoveryScoreText,

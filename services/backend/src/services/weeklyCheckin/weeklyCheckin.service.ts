@@ -442,6 +442,13 @@ class WeeklyCheckinService {
         // Send and close
         sessionManager.writeToSession(userId, thankYouPayload);
         sessionManager.closeSession(userId);
+
+        const weekly = await UserModel.findByIdAndUpdate(userId, {
+            $set: {
+                "current_weekdays.upcoming_checkin_due_days": 7,
+            },
+        });
+        console.log("weekly", weekly);
     }
 
     /**
