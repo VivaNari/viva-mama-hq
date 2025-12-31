@@ -1,9 +1,9 @@
-import { API_VERSION } from '@env';
+import { API_VERSION } from "@env";
 
 // Use environment variable in production, fallback for development
-export const BASE_API_URL = __DEV__ 
-  ? 'http://192.168.1.7:4000' 
-  : process.env.BASE_API_URL || 'https://api.vivamama.com';
+export const BASE_API_URL = __DEV__
+  ? "http://192.168.1.11:4000"
+  : process.env.BASE_API_URL || "https://api.vivamama.com";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
 
@@ -18,7 +18,7 @@ export const CHAT_SESSION_URL = (
 ): string => {
   // Don't log tokens in production
   if (__DEV__) {
-    console.log('[Endpoints] Generating chat session URL for flow:', flowSlug);
+    console.log("[Endpoints] Generating chat session URL for flow:", flowSlug);
   }
   return `${BASE_API_URL}${API_VERSION_URL}/chat-session/${flowSlug}?token=${token}&flowType=${flowType}`;
 };
@@ -30,7 +30,7 @@ export const CHECKIN_SESSION_URL = (
 ): string => {
   // Don't log tokens in production
   if (__DEV__) {
-    console.log('[Endpoints] Generating chat session URL for weekly-checkin');
+    console.log("[Endpoints] Generating chat session URL for weekly-checkin");
   }
   return `${BASE_API_URL}${API_VERSION_URL}/weekly-checkin/stream?token=${token}&week=${week}&flowSlug=${flowSlug}`;
 };
@@ -57,8 +57,12 @@ export const CHEKIN_HISTORY = `${API_VERSION_URL}/user/recommendations-formatted
 // User endpoints
 export const USER_DATA = `${API_VERSION_URL}/user`;
 export const USER_CONTENTS = `${API_VERSION_URL}/contents`;
+export const EXPERTS = `${API_VERSION_URL}/experts`;
 export const USER_PRODUCTS = `${API_VERSION_URL}/products`;
 
 export const USER_CONTENT_URL = (articleId: string): string => {
   return `${API_VERSION_URL}/contents/${articleId}`;
+};
+export const USER_EXPERT_URL = (expertId: string): string => {
+  return `${API_VERSION_URL}/expert/${expertId}`;
 };

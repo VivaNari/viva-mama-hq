@@ -28,18 +28,6 @@ import NNWomanPlanningForBaby from '../NNWomanPlanningForBaby'
 import NPWomanBabyArriving from '../NPWomanBabyArriving'
 import VivaScoreGauge from '../VivaScoreGauge'
 import WeekCycle from '../WeekCycle'
-const data = {
-    recommendation: {
-        title: "string",
-        goingWell: "string;",
-        needsHelp: "string",
-        celebrate: ["string[]"],
-        tips: ["string[]"],
-        next: ["string[]"],
-    },
-    score: 30,
-    zone: "RED"
-}
 
 const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUserAllData }) => {
     const [recentCheckindata, setRecentChekinData] = useState<ICheckInRecommendation[]>();
@@ -49,6 +37,10 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
             setRecentChekinData(theRecentcheckinData.data)
         })();
     }, [])
+
+    useEffect(() => {
+        console.log("[recentCheckindata] =>>>>", recentCheckindata)
+    }, [recentCheckindata])
 
     const { open } = useBottomSheet();
     const shake = useSharedValue(0);
@@ -82,73 +74,78 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
     const navigation = useNavigation<any>();
     return (
         <View>
-            <View style={{ flexDirection: 'row' }}>
-                <LinearGradient
-                    colors={['rgba(190, 163, 248, 1)', 'rgba(94, 141, 255, 1)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={{
-                        borderRadius: 10,
-                        flexDirection: "row",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        paddingVertical: 7,
-                        paddingHorizontal: 10,
-                        flex: 1,
-                        marginTop: 10,
-                        gap: 15
-                    }}
-                >
-                    {/* Left Text */}
-                    <Text
-                        style={[
-                            {
-                                fontSize: 14,
-                                flexShrink: 1,
-                                color: colors.white,
-                            },
-                            globalStyles.fontRegular
-                        ]}
-                    >
-                        Subscribe to viva recovery today
-                    </Text>
+            {
+                userData && !userData.user.subscription.expiryDate && (
 
-                    {/* Button Text */}
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate("Services")}
-                        style={{
-                            paddingHorizontal: 5,
-                            paddingVertical: 5,
-                            flexShrink: 1,
-                            backgroundColor: colors.white,
-                            borderRadius: 15
-                        }}
-                    >
-                        <Text
-                            style={[
-                                {
-                                    fontSize: 14,
-                                    flexShrink: 1,
-                                    textAlign: "center",
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 4,
-                                    borderRadius: 6,
-                                    color: colors.black
-                                },
-                                globalStyles.fontMedium
-                            ]}
+                    <View style={{ flexDirection: 'row' }}>
+                        <LinearGradient
+                            colors={['rgba(190, 163, 248, 1)', 'rgba(94, 141, 255, 1)']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={{
+                                borderRadius: 10,
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                paddingVertical: 7,
+                                paddingHorizontal: 10,
+                                flex: 1,
+                                marginTop: 10,
+                                gap: 15
+                            }}
                         >
-                            Try now
-                        </Text>
-                    </TouchableOpacity>
-                </LinearGradient>
-            </View>
+                            {/* Left Text */}
+                            <Text
+                                style={[
+                                    {
+                                        fontSize: 14,
+                                        flexShrink: 1,
+                                        color: colors.white,
+                                    },
+                                    globalStyles.fontRegular
+                                ]}
+                            >
+                                Subscribe to viva recovery today
+                            </Text>
+
+                            {/* Button Text */}
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate("Services")}
+                                style={{
+                                    paddingHorizontal: 5,
+                                    paddingVertical: 5,
+                                    flexShrink: 1,
+                                    backgroundColor: colors.white,
+                                    borderRadius: 15
+                                }}
+                            >
+                                <Text
+                                    style={[
+                                        {
+                                            fontSize: 14,
+                                            flexShrink: 1,
+                                            textAlign: "center",
+                                            paddingHorizontal: 8,
+                                            paddingVertical: 4,
+                                            borderRadius: 6,
+                                            color: colors.black
+                                        },
+                                        globalStyles.fontMedium
+                                    ]}
+                                >
+                                    Try now
+                                </Text>
+                            </TouchableOpacity>
+                        </LinearGradient>
+                    </View>
+                )
+            }
             <View>
                 {/* gauge */}
                 {
                     userData &&
                     userData.user.user_category === UserCategoryEnum.PP &&
-                    (
+                    recentCheckindata && (
                         <View
                             style={{
                                 backgroundColor: 'rgba(255, 250, 250, 1)',
@@ -184,7 +181,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
 
                                         }, globalStyles.fontRegular]}
                                     >
-                                        Week 1
+                                        Week {recentCheckindata.length > 0 ? recentCheckindata[0].week : userData.user.current_weekdays.weeks}
                                     </Text>
                                 </View>
                                 <View>
@@ -205,64 +202,59 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                     paddingHorizontal: 20
                                 }}
                             >
-                                {/* <VivaScoreGauge percentage={Math.trunc(score ? score : userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0]?.finalScore : 0)} /> */}
-                                <VivaScoreGauge percentage={27} />
+                                <VivaScoreGauge percentage={Math.trunc(score ? score : userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0].finalScore : 0)} />
 
                                 {
 
-
-                                    userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? (<View style={{
-                                        marginTop: -100,
-                                        marginBottom: 5,
-                                        alignItems: "center"
-                                    }}>
-                                        <View
-                                            style={{
-                                                flexDirection: "row",
-                                                alignItems: "center",
-                                                justifyContent: "center"
-                                            }}
-                                        >
-                                            <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
-                                                {
-                                                    3
-                                                }
-                                            </Text>
-                                            <TouchableOpacity
-                                                onPress={() => open(
-                                                    // <RecoveryScoreBriefInfo
-                                                    //     significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
-                                                    //     briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
-                                                    // />
-                                                    <RecoveryScoreBriefInfo
-                                                        significance={"test"}
-                                                        briefInfo={"tesst"}
-                                                    />
-                                                )}
+                                    score || recentCheckindata.length > 0 &&
+                                        userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? (<View style={{
+                                            marginTop: -100,
+                                            marginBottom: 5,
+                                            alignItems: "center"
+                                        }}>
+                                            <View
+                                                style={{
+                                                    flexDirection: "row",
+                                                    alignItems: "center",
+                                                    justifyContent: "center"
+                                                }}
                                             >
-                                                <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
-                                            </TouchableOpacity>
-                                        </View>
-                                        <Text
-                                            style={{
-                                                fontSize: 14,
-                                                textAlign: "center",
-                                                ...globalStyles.fontRegular,
-                                                marginTop: 10,
+                                                <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
+                                                    {
+                                                        score ?
+                                                            `${String(score).split(".")[0]}` :
+                                                            `${String(recentCheckindata[0].finalScore).split(".")[0]}`
+                                                    }
+                                                </Text>
+                                                <TouchableOpacity
+                                                    onPress={() => open(
+                                                        <RecoveryScoreBriefInfo
+                                                            significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
+                                                            briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
+                                                        />
+                                                    )}
+                                                >
+                                                    <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
+                                                </TouchableOpacity>
+                                            </View>
+                                            <Text
+                                                style={{
+                                                    fontSize: 14,
+                                                    textAlign: "center",
+                                                    ...globalStyles.fontRegular,
+                                                    marginTop: 10,
 
-                                                //backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
-                                                backgroundColor: colors.redBadgeBG,
-                                                color: colors.redBadgeText,
-                                                //color: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeText : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeText : colors.greenBadgeText,
+                                                    backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
 
-                                                paddingVertical: 6,
-                                                paddingHorizontal: 18,
-                                                borderRadius: 20
-                                            }}>
-                                            {/* {recentCheckindata[0].tagline} */}
-                                            tagline
-                                        </Text>
-                                    </View>) : (
+                                                    color: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeText : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeText : colors.greenBadgeText,
+
+                                                    paddingVertical: 6,
+                                                    paddingHorizontal: 18,
+                                                    borderRadius: 20
+                                                }}>
+                                                {recentCheckindata[0].tagline}
+                                            </Text>
+                                        </View>) : (
                                         <Animated.View
                                             style={[
                                                 {
@@ -331,22 +323,26 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                     )
                                 }
 
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
+                                {
+                                    recentCheckindata.length > 0 && (
+                                        <View
+                                            style={{
+                                                flexDirection: 'row',
 
-                                    }}
-                                >
-                                    <GradientButtonWithSlightRadius
-                                        title='See Progress'
-                                        fullRounded={true}
-                                        onPress={() => open(
-                                            <View style={{ flex: 1 }}>
-                                                <RecoveryProgressGraph />
-                                            </View>
-                                        )}
-                                    />
-                                </View>
+                                            }}
+                                        >
+                                            <GradientButtonWithSlightRadius
+                                                title='See Progress'
+                                                fullRounded={true}
+                                                onPress={() => open(
+                                                    <View style={{ flex: 1 }}>
+                                                        <RecoveryProgressGraph />
+                                                    </View>
+                                                )}
+                                            />
+                                        </View>
+                                    )
+                                }
 
                             </View>
                         </View>
@@ -358,276 +354,21 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                 {
                     userData &&
                     userData.user.user_category === UserCategoryEnum.PP &&
-                    (
+                    recentCheckindata && recentCheckindata.length > 0 && (
                         <>
                             {/* Physical Recovery */}
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.PHYSICAL} data={data} />
+                            <IndividualRecoveryCard type={IndividualRecommendationEnum.PHYSICAL} data={recentCheckindata[0].individualRecommendations.physical} />
 
                             {/* Lactation Recovery */}
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.LACTATION} data={data} />
+                            <IndividualRecoveryCard type={IndividualRecommendationEnum.LACTATION} data={recentCheckindata[0].individualRecommendations.lactation} />
                             {/* Emotional Recovery */}
 
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.EMOTIONAL} data={data} />
+                            <IndividualRecoveryCard type={IndividualRecommendationEnum.EMOTIONAL} data={recentCheckindata[0].individualRecommendations.emotional} />
 
                             <WeekCycle />
                         </>
                     )
                 }
-
-
-                {/* <View
-                    style={{
-                        backgroundColor: 'rgba(255, 250, 250, 1)',
-                        marginTop: 20,
-                    }}
-                >
-                    <ImageBackground
-                        source={require('../../public/assets/images/lactation.png')}
-                        resizeMode="cover"
-                        style={{
-                            width: '100%',
-                            padding: 10,
-                            borderRadius: 10,
-                            overflow: 'hidden',
-                            boxShadow: '0 0 4px 0 rgba(0, 0, 0, 0.25)',
-                            paddingBottom: 20
-
-                        }}>
-                        <View
-                            style={{
-                                ...StyleSheet.absoluteFillObject,
-                                backgroundColor: 'rgba(255, 250, 250, 0.90)',
-                            }}
-                        />
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                            }}
-                        >
-                            <View
-                                style={{
-                                    alignItems: 'flex-start',
-                                }}
-                            >
-
-                                <Text
-                                    style={[{
-                                        fontSize: 16,
-
-                                    }, globalStyles.fontBold]}
-                                >
-                                    Lactation Wellness
-                                </Text>
-                                <Text
-                                    style={[{
-                                        fontSize: 12,
-                                        backgroundColor: colors.yellowBadgeBG,
-                                        color: colors.yellowBadgeText,
-                                        paddingVertical: 4,
-                                        paddingHorizontal: 10,
-                                        borderRadius: 20,
-                                        marginTop: 6,
-
-                                    }, globalStyles.fontRegular]}
-                                >
-                                    Steady Progress
-                                </Text>
-                            </View>
-                            <Lucide name='chart-no-axes-combined' size={20} color={colors.yellowBadgeText} />
-                        </View>
-
-                        <View style={{ marginTop: 20 }}>
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    marginVertical: 6
-                                }}
-                            >
-                                <Lucide
-                                    name="lightbulb"
-                                    size={18}
-                                    color={colors.yellowBadgeText}
-                                    style={{ marginRight: 6 }}
-                                />
-
-                                <Text style={[globalStyles.fontRegular, { color: colors.darkGray }]}>
-                                    <Text style={globalStyles.fontBold}>Tips: </Text>
-                                    Remember to stay hydrated and take short walks to boost your recovery.
-                                </Text>
-                            </View>
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    marginVertical: 6
-                                }}
-                            >
-                                <Lucide
-                                    name="lightbulb"
-                                    size={18}
-                                    color={colors.yellowBadgeText}
-                                    style={{ marginRight: 6 }}
-                                />
-
-                                <Text style={[globalStyles.fontRegular, { color: colors.darkGray }]}>
-                                    <Text style={globalStyles.fontBold}>Going well: </Text>
-                                    Your energy levels are steadily increasing.
-                                </Text>
-                            </View>
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    marginVertical: 6
-                                }}
-                            >
-                                <Lucide
-                                    name="lightbulb"
-                                    size={18}
-                                    color={colors.yellowBadgeText}
-                                    style={{ marginRight: 6 }}
-                                />
-
-                                <Text style={[globalStyles.fontRegular, { color: colors.darkGray }]}>
-                                    <Text style={globalStyles.fontBold}>Next: </Text>
-                                    Schedule a follow-up appointment with your healthcare provider in two weeks.
-                                </Text>
-                            </View>
-                        </View>
-
-
-                    </ImageBackground>
-                </View>
-
-                <View
-                    style={{
-                        backgroundColor: 'rgba(255, 250, 250, 1)',
-                        marginTop: 20,
-                    }}
-                >
-                    <ImageBackground
-                        source={require('../../public/assets/images/emotional.png')}
-                        resizeMode="cover"
-                        style={{
-                            width: '100%',
-                            padding: 10,
-                            borderRadius: 10,
-                            overflow: 'hidden',
-                            boxShadow: '0 0 4px 0 rgba(0, 0, 0, 0.25)',
-                            paddingBottom: 20
-
-                        }}>
-                        <View
-                            style={{
-                                ...StyleSheet.absoluteFillObject,
-                                backgroundColor: 'rgba(255, 250, 250, 0.90)',
-                            }}
-                        />
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                            }}
-                        >
-                            <View
-                                style={{
-                                    alignItems: 'flex-start',
-                                }}
-                            >
-
-                                <Text
-                                    style={[{
-                                        fontSize: 16,
-
-                                    }, globalStyles.fontBold]}
-                                >
-                                    Emotional Wellness
-                                </Text>
-                                <Text
-                                    style={[{
-                                        fontSize: 12,
-                                        backgroundColor: colors.redBadgeBG,
-                                        color: colors.redBadgeText,
-                                        paddingVertical: 4,
-                                        paddingHorizontal: 10,
-                                        borderRadius: 20,
-                                        marginTop: 6,
-
-                                    }, globalStyles.fontRegular]}
-                                >
-                                    Decreasing
-                                </Text>
-                            </View>
-                            <Lucide name='chart-no-axes-combined' size={20} color={colors.redBadgeText} style={{
-                                transform: 'scaleX(-1)'
-                            }} />
-                        </View>
-
-                        <View style={{ marginTop: 20 }}>
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    marginVertical: 6
-                                }}
-                            >
-                                <Lucide
-                                    name="lightbulb"
-                                    size={18}
-                                    color={colors.redBadgeText}
-                                    style={{ marginRight: 6 }}
-                                />
-
-                                <Text style={[globalStyles.fontRegular, { color: colors.darkGray }]}>
-                                    <Text style={globalStyles.fontBold}>Tips: </Text>
-                                    Remember to stay hydrated and take short walks to boost your recovery.
-                                </Text>
-                            </View>
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    marginVertical: 6
-                                }}
-                            >
-                                <Lucide
-                                    name="lightbulb"
-                                    size={18}
-                                    color={colors.redBadgeText}
-                                    style={{ marginRight: 6 }}
-                                />
-
-                                <Text style={[globalStyles.fontRegular, { color: colors.darkGray }]}>
-                                    <Text style={globalStyles.fontBold}>Going well: </Text>
-                                    Your energy levels are steadily increasing.
-                                </Text>
-                            </View>
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    marginVertical: 6
-                                }}
-                            >
-                                <Lucide
-                                    name="lightbulb"
-                                    size={18}
-                                    color={colors.redBadgeText}
-                                    style={{ marginRight: 6 }}
-                                />
-
-                                <Text style={[globalStyles.fontRegular, { color: colors.darkGray }]}>
-                                    <Text style={globalStyles.fontBold}>Next: </Text>
-                                    Schedule a follow-up appointment with your healthcare provider in two weeks.
-                                </Text>
-                            </View>
-                        </View>
-
-
-                    </ImageBackground>
-                </View> */}
 
 
                 {

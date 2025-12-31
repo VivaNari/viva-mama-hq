@@ -2,14 +2,13 @@ import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messag
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import { useNavigation } from '@react-navigation/native'
 import React, { useEffect, useState } from 'react'
-import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { FlatList, ScrollView, Text, View } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
 import Toast from 'react-native-toast-message'
 import { getUserContents } from '../api/getUserContents'
 import { getUserProducts } from '../api/getUserProducts'
 import { ArticleCard } from '../components/ArticleCard'
 import DashboardCard from '../components/dashboard/DashboardCard'
-import DashboardInfantTab from '../components/dashboard/DashboardInfantTab'
 import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
 import { useAuth } from '../context/AuthContext'
@@ -23,7 +22,6 @@ import { FLProductItem } from './Products'
 
 const Dashboard = () => {
     const navigation = useNavigation<any>();
-    const [isMotherTab, setIsMotherTab] = useState<boolean>(true)
     const [vivaScore, setVivaScore] = useState<string | null>(null);
     const [userData, setUserdata] = useState<IUserAllData>();
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
@@ -71,20 +69,17 @@ const Dashboard = () => {
 
     return (
         <View
-            style={{ flex: 1, position: 'relative', backgroundColor: "blue" }}
+            style={{ flex: 1, position: 'relative' }}
         >
             <ScrollView
                 showsVerticalScrollIndicator={false}
-                style={{ flex: 1, backgroundColor: "yellow" }}
+                style={{ flex: 1 }}
             >
                 <View
                     style={[globalStyles.container, { flex: 1 }]}
                 >
                     {/* Tab Content View */}
                     <View
-                        style={{
-                            marginTop: 15
-                        }}
                     >
 
                         <DashboardMotherTab userData={userData as IUserAllData} score={Number(vivaScore)} />

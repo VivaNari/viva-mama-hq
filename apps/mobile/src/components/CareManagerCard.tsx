@@ -9,7 +9,7 @@ const CareManagerCard = () => {
     return (
         <View
             style={{
-                marginBottom: 10,
+                marginVertical: 10,
             }}
         >
             <View

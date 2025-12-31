@@ -78,6 +78,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         headers: { 'Content-Type': 'application/json' },
       });
 
+      console.log("hellow souvik", {
+        idToken: data.data.idToken,
+        FCM_token: FCMToken,
+      })
       const { token, message, is_onboarded }: AuthResponse = response;
 
       Toast.show({

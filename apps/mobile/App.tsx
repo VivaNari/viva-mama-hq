@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { StatusBar, useColorScheme } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -11,17 +11,15 @@ import CounterProvider from './src/context/CounterContext';
 import { chatDB } from './src/db/sqlite';
 import RootNavigator from './src/navigators/RootNavigator';
 import { decodeToken } from './src/utils/decodeJWTToken';
-import axios from 'axios';
-import { BASE_API_URL } from './src/constants/endpoints';
 
 function App() {
+  const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
     const initializeApp = async () => {
       try {
         // Initialize database
         await chatDB.init();
-        console.log('BASE_API_URL BASE_API_URL', BASE_API_URL);
 
         console.log('Database initialized');
 
@@ -33,6 +31,7 @@ function App() {
           try {
             const decodedUserId = decodeToken(userToken);
             const userData = await getUserData();
+            console.log("getUserDataFromSQLite in App.tsx is ", userData);
 
             if (decodedUserId) {
               const userExists = await chatDB.CheckUserExists(decodedUserId);
@@ -51,6 +50,7 @@ function App() {
       } catch (error) {
         console.error('Error initializing app:', error);
       } finally {
+        setAppReady(true);
         SplashScreen.hide();
       }
     };
@@ -60,6 +60,8 @@ function App() {
 
 
   const isDarkMode = useColorScheme() === 'dark';
+  if (!appReady) return null; // or loader
+
 
   return (
     <SafeAreaProvider>

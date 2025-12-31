@@ -1,4 +1,3 @@
-// src/screens/ChatWithVivaAI.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ScrollView,
@@ -66,6 +65,10 @@ const ChatWithVivaAI: React.FC = () => {
         flowSlug,
         flowType,
     });
+
+    useEffect(() => {
+        console.log("current state message is ", state.messages)
+    }, [state.messages])
 
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
@@ -152,6 +155,7 @@ const ChatWithVivaAI: React.FC = () => {
         handleDateSelect,
         handleNotPregnantSelect,
     } = useChatActions({
+        state,
         userId,
         flowType,
         dispatch,
