@@ -1,8 +1,15 @@
-import BottomSheet, {
-    BottomSheetBackdrop,
-    BottomSheetView,
+import React, {
+    createContext,
+    useContext,
+    useMemo,
+    useRef,
+    useState,
+} from 'react'
+import { View } from 'react-native'
+import {
+    BottomSheetModal,
+    BottomSheetModalProvider,
 } from '@gorhom/bottom-sheet'
-import React, { createContext, useContext, useMemo, useRef, useState } from 'react'
 
 type BottomSheetContextType = {
     open: (content: React.ReactNode) => void
@@ -11,51 +18,55 @@ type BottomSheetContextType = {
 
 const BottomSheetContext = createContext<BottomSheetContextType | null>(null)
 
-export const BottomSheetProvider = ({ children }: { children: React.ReactNode }) => {
-    const bottomSheetRef = useRef<BottomSheet>(null)
+export const BottomSheetProvider = ({
+    children,
+}: {
+    children: React.ReactNode
+}) => {
+    const bottomSheetRef = useRef<BottomSheetModal>(null)
     const [content, setContent] = useState<React.ReactNode>(null)
+
     const snapPoints = useMemo(() => ['60%', '85%'], [])
 
     const open = (node: React.ReactNode) => {
         setContent(node)
+        // present on next frame to avoid race conditions
         requestAnimationFrame(() => {
-            bottomSheetRef.current?.snapToIndex(0)
+            bottomSheetRef.current?.present()
         })
     }
 
-    const close = () => bottomSheetRef.current?.close()
+    const close = () => {
+        bottomSheetRef.current?.dismiss()
+    }
 
     return (
         <BottomSheetContext.Provider value={{ open, close }}>
             {children}
 
-            <BottomSheet
+            <BottomSheetModal
                 ref={bottomSheetRef}
-                index={-1}
                 snapPoints={snapPoints}
-
                 enablePanDownToClose
-                enableContentPanningGesture={false}
-                enableHandlePanningGesture={true}
-
-                backdropComponent={(props) => (
-                    <BottomSheetBackdrop
-                        {...props}
-                        appearsOnIndex={0}
-                        disappearsOnIndex={-1}
-                    />
-                )}
+                keyboardBehavior="interactive"
+                keyboardBlurBehavior="restore"
+                onDismiss={() => setContent(null)}
             >
-                <BottomSheetView style={{ padding: 20 }}>
+                <View style={{ padding: 20 }}>
                     {content}
-                </BottomSheetView>
-            </BottomSheet>
+                </View>
+            </BottomSheetModal>
         </BottomSheetContext.Provider>
     )
 }
 
 export const useBottomSheet = () => {
     const ctx = useContext(BottomSheetContext)
-    if (!ctx) throw new Error('useBottomSheet must be used inside BottomSheetProvider')
+    if (!ctx) {
+        throw new Error('useBottomSheet must be used inside BottomSheetProvider')
+    }
     return ctx
 }
+
+// BottomSheetModalProvider must wrap the app
+export { BottomSheetModalProvider }

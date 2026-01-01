@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "assemble-release": "cd android && ./gradlew assembleRelease -PsplitApks"
+    "assemble-release": "cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.8",

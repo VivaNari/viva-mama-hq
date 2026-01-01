@@ -16,13 +16,12 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
     }, []);
 
     return (
-        <SafeAreaView>
-            <ScrollView style={{
-            }}>
+        <SafeAreaView style={{
+            flex: 1
+        }}>
+            <ScrollView>
                 {/* pattern */}
-                <View style={{
-
-                }}>
+                <View>
                     <Image
                         source={require('../public/assets/images/Landing.png')}
                         style={{ width: '100%', objectFit: 'cover' }}
@@ -33,7 +32,6 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
 
                     {/* Logo */}
                     <View style={{
-                        transform: 'translateY(-50%)',
                         alignItems: 'center',
                     }}>
                         <Image
@@ -138,6 +136,22 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                 </Text>
                             </LinearGradient>
                         </TouchableOpacity>
+                    </View>
+                    <View
+                        style={{
+                            marginTop: 10
+                        }}
+                    >
+                        <Text
+                            style={{
+                                textAlign: 'center',
+                                fontSize: 12,
+                                color: colors.gray,
+                                ...globalStyles.fontRegular
+                            }}
+                        >
+                            Build Number: 065001012026
+                        </Text>
                     </View>
                 </View>
 

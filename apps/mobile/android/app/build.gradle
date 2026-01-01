@@ -98,9 +98,9 @@ android {
         }
         release {
             storeFile file('viva_nari.keystore')
-            storePassword System.getenv("KEYSTORE_PASSWORD")
-            keyAlias System.getenv("KEY_ALIAS")
-            keyPassword System.getenv("KEY_PASSWORD")
+            storePassword 'viva_nari'
+            keyAlias 'viva_nari'
+            keyPassword 'viva_nari'
         }
     }
     buildTypes {

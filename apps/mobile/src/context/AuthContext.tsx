@@ -66,11 +66,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signInWithGoogle = async () => {
     try {
+      console.log("1111")
       await GoogleSignin.hasPlayServices();
+      console.log("2222")
       await GoogleSignin.signOut(); // Ensure fresh sign-in each time
+      console.log("3333")
 
       const data = await GoogleSignin.signIn() as { data: { idToken: string } };
-      console.log("[AUTHCONTEXT] Google Sign-In Data:", API_GOOGLE_LOGIN);
+      console.log("5555", data)
+      console.log("[AUTHCONTEXT] Google Sign-In Data:", data.data.idToken);
 
       const { data: response } = await apiClientInterceptor().post(API_GOOGLE_LOGIN, {
         idToken: data.data.idToken,

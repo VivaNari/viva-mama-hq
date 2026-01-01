@@ -8,7 +8,7 @@ import { colors } from "../public/assets/colors";
 import AppStack from "./stacks/AppStack";
 import AuthStack from "./stacks/AuthStack";
 import OnboardingStack from "./stacks/OnboardingStack";
-import { BottomSheetProvider } from "../components/bottomSheet/AppBottomSheet";
+import { BottomSheetProvider, BottomSheetModalProvider } from "../components/bottomSheet/AppBottomSheet";
 
 const Stack = createNativeStackNavigator();
 
@@ -70,20 +70,23 @@ export default function RootNavigator() {
 
     return (
         <NavigationContainer ref={navigationRef}>
-            <BottomSheetProvider>
-
-                <Stack.Navigator
-                    initialRouteName={initialRouteName}
-                    screenOptions={{
-                        headerShown: false,
-                        animation: "fade"
-                    }}
-                >
-                    <Stack.Screen name="AuthStack" component={AuthStack} />
-                    <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
-                    <Stack.Screen name="AppStack" component={AppStack} />
-                </Stack.Navigator>
-            </BottomSheetProvider>
+            {/* REQUIRED for BottomSheetModal */}
+            <BottomSheetModalProvider>
+                {/* Your custom context wrapper */}
+                <BottomSheetProvider>
+                    <Stack.Navigator
+                        initialRouteName={initialRouteName}
+                        screenOptions={{
+                            headerShown: false,
+                            animation: "fade"
+                        }}
+                    >
+                        <Stack.Screen name="AuthStack" component={AuthStack} />
+                        <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
+                        <Stack.Screen name="AppStack" component={AppStack} />
+                    </Stack.Navigator>
+                </BottomSheetProvider>
+            </BottomSheetModalProvider>
         </NavigationContainer>
     );
 }
