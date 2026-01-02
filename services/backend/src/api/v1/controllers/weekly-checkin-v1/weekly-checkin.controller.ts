@@ -59,7 +59,7 @@ class WeeklyCheckinController {
             };
 
             const result = await this.weeklyCheckinService.startCheckin(params);
-
+            console.log("v1", result);
             if (result.success) {
                 res.status(200).json(result);
             } else {
@@ -67,6 +67,7 @@ class WeeklyCheckinController {
                 res.status(statusCode).json(result);
             }
         } catch (error) {
+            console.log("error", error);
             logger.error({ error }, "Error starting weekly check-in");
             res.status(500).json({ error: "Internal server error" });
         }

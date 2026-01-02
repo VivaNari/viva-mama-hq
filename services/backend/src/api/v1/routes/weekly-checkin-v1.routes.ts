@@ -77,7 +77,11 @@ router
  *   - currentQuestion: QuestionPayload | null
  *   - progress: { answered: number, total: number } | null
  */
-router.get("/current", authMiddleware, weeklyCheckinController.getCurrentState);
+router.get(
+    "/chat/checkin/answer/current",
+    authMiddleware("header"),
+    weeklyCheckinController.getCurrentState,
+);
 
 /**
  * GET /api/v1/chat/checkin/status

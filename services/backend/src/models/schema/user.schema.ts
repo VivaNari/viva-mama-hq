@@ -91,7 +91,7 @@ const userSchema = new Schema<IUser>(
         current_weekdays: {
             weeks: {
                 type: Number,
-                default: null,
+                default: 1,
             },
             days: {
                 type: Number,

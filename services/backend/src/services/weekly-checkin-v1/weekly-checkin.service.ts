@@ -214,6 +214,7 @@ class WeeklyCheckinService {
                 },
             };
         } catch (error: any) {
+            console.error("errr", error);
             logger.error({ error, userId, week }, "Error starting check-in");
             return {
                 success: false,
@@ -531,7 +532,7 @@ class WeeklyCheckinService {
             text: WEEKLY_CHECKIN_MESSAGES.THANK_YOU,
             guided: null,
         });
-        if (flowInstance.flowSlug === "weekly-checkin-v2") {
+        if (flowInstance.flowSlug === "weekly-checkin-v1") {
             // 3. Update user's upcoming checkin due days
             await UserModel.findByIdAndUpdate(userId, {
                 $set: {
