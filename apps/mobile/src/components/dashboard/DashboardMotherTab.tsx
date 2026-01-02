@@ -154,55 +154,54 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
 
                                 {
 
-                                    recentCheckindata.length > 0 &&
-                                        userData.user.current_weekdays.upcoming_checkin_due_days !== 0 ? (<View style={{
-                                            marginTop: -100,
-                                            marginBottom: 5,
-                                            alignItems: "center"
-                                        }}>
-                                            <View
-                                                style={{
-                                                    flexDirection: "row",
-                                                    alignItems: "center",
-                                                    justifyContent: "center"
-                                                }}
-                                            >
-                                                <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
-                                                    {
-                                                        score ?
-                                                            `${String(score).split(".")[0]}` :
-                                                            `${String(recentCheckindata[0].finalScore).split(".")[0]}`
-                                                    }
-                                                </Text>
-                                                <TouchableOpacity
-                                                    onPress={() => open(
-                                                        <RecoveryScoreBriefInfo
-                                                            significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
-                                                            briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
-                                                        />
-                                                    )}
-                                                >
-                                                    <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
-                                                </TouchableOpacity>
-                                            </View>
-                                            <Text
-                                                style={{
-                                                    fontSize: 14,
-                                                    textAlign: "center",
-                                                    ...globalStyles.fontRegular,
-                                                    marginTop: 10,
-
-                                                    backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
-
-                                                    color: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeText : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeText : colors.greenBadgeText,
-
-                                                    paddingVertical: 6,
-                                                    paddingHorizontal: 18,
-                                                    borderRadius: 20
-                                                }}>
-                                                {recentCheckindata[0].tagline}
+                                    recentCheckindata.length > 0 ? (<View style={{
+                                        marginTop: -100,
+                                        marginBottom: 5,
+                                        alignItems: "center"
+                                    }}>
+                                        <View
+                                            style={{
+                                                flexDirection: "row",
+                                                alignItems: "center",
+                                                justifyContent: "center"
+                                            }}
+                                        >
+                                            <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
+                                                {
+                                                    score ?
+                                                        `${String(score).split(".")[0]}` :
+                                                        `${String(recentCheckindata[0].finalScore).split(".")[0]}`
+                                                }
                                             </Text>
-                                        </View>) : (
+                                            <TouchableOpacity
+                                                onPress={() => open(
+                                                    <RecoveryScoreBriefInfo
+                                                        significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
+                                                        briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
+                                                    />
+                                                )}
+                                            >
+                                                <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
+                                            </TouchableOpacity>
+                                        </View>
+                                        <Text
+                                            style={{
+                                                fontSize: 14,
+                                                textAlign: "center",
+                                                ...globalStyles.fontRegular,
+                                                marginTop: 10,
+
+                                                backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
+
+                                                color: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeText : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeText : colors.greenBadgeText,
+
+                                                paddingVertical: 6,
+                                                paddingHorizontal: 18,
+                                                borderRadius: 20
+                                            }}>
+                                            {recentCheckindata[0].tagline}
+                                        </Text>
+                                    </View>) : (
                                         <Animated.View
                                             style={[
                                                 {
