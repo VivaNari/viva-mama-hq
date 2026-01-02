@@ -26,7 +26,7 @@ const renderContentBody = (article: IUserContent) => {
                 return (
                     <Text
                         key={item._id}
-                        style={[ContentDetailsStyles.heading, globalStyles.fontSemiBold]}
+                        style={[ContentDetailsStyles.heading, globalStyles.fontBold]}
                     >
                         {item.body}
                     </Text>
@@ -94,14 +94,14 @@ const ArticleDetails = () => {
     }
 
     return (
-        <SafeAreaView style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
             <ScrollView contentContainerStyle={ContentDetailsStyles.scrollContent}>
                 {/* Banner Image */}
                 <Image source={{ uri: article.featuredImage }} style={ContentDetailsStyles.image} />
 
                 {/* Title + Author */}
                 <View style={globalStyles.container}>
-                    <Text style={[ContentDetailsStyles.title, globalStyles.fontSemiBold]}>{article.featuredTitle}</Text>
+                    <Text style={[ContentDetailsStyles.title, globalStyles.fontBold]}>{article.featuredTitle}</Text>
                     <Text style={[ContentDetailsStyles.author, globalStyles.fontRegular]}>Written by Dr. Harsha Tomar</Text>
 
                     {/* Action Buttons */}
