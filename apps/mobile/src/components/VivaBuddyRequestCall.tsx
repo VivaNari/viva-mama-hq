@@ -1,6 +1,6 @@
+import Lucide from '@react-native-vector-icons/lucide'
 import React, { useEffect, useState } from 'react'
 import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native'
-import LinearGradient from 'react-native-linear-gradient'
 import Toast from 'react-native-toast-message'
 import { requestCallback } from '../api/requestCallback'
 import { useAuth } from '../context/AuthContext'
@@ -46,7 +46,7 @@ const VivaBuddyRequestCall = () => {
                     style={[{
                         fontSize: 16,
                         textAlign: 'center'
-                    }, globalStyles.fontRegular]}
+                    }, globalStyles.fontSemiBold]}
                 >
                     Request a call with your Care Manager
                 </Text>
@@ -64,7 +64,14 @@ const VivaBuddyRequestCall = () => {
                 style={{ width: '35%' }}
             >
                 <TouchableOpacity
-                    style={{ marginVertical: 20, opacity: loading ? 0.5 : 1 }}
+                    style={{
+                        marginVertical: 0,
+                        opacity: loading ? 0.5 : 1, borderRadius: 10,
+                        paddingVertical: 10,
+                        backgroundColor: colors.darkPurple,
+                        flex: 1,
+                        justifyContent: 'center'
+                    }}
                     disabled={loading}
                     activeOpacity={1}
                     onPress={async () => {
@@ -104,31 +111,28 @@ const VivaBuddyRequestCall = () => {
                         }
                     }}
                 >
-                    <LinearGradient
-                        colors={[colors.primary, colors.secondary]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={{
-                            borderRadius: 10,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            paddingVertical: 10
-                        }}
-                    >
-                        {
-                            loading ? (
-                                <ActivityIndicator size="small" color={colors.white} />
-                            ) : (
+                    {
+                        loading ? (
+                            <ActivityIndicator size="small" color={colors.white} />
+                        ) : (
+                            <View
+                                style={{
+                                    alignItems: 'center'
+                                }}
+                            >
+
+                                <Lucide name="phone-incoming" color={colors.white} size={17} />
                                 <Text
                                     style={[{
-                                        color: colors.white
-                                    }, globalStyles.fontRegular]}
+                                        color: colors.white,
+                                        fontSize: 14
+                                    }, globalStyles.fontSemiBold]}
                                 >
                                     Request
                                 </Text>
-                            )
-                        }
-                    </LinearGradient>
+                            </View>
+                        )
+                    }
                 </TouchableOpacity>
             </View>
         </View >

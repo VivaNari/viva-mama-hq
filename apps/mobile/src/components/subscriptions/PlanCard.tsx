@@ -49,7 +49,7 @@ export const PlanCard: React.FC<PlanCardProps> = ({
 				)}
 			</View>
 
-			<Text style={[styles.price, globalStyles.fontRegular]}>
+			<Text style={[styles.price, globalStyles.fontSemiBold]}>
 				{priceText}
 			</Text>
 		</TouchableOpacity>

@@ -36,7 +36,7 @@ const MyProfile = () => {
                     <>
                         {/* Profile Card */}
                         <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
+                            colors={[colors.darkPurple, colors.purple]}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 0 }}
                             style={{ padding: 1, borderRadius: 10 }}
@@ -86,7 +86,7 @@ const MyProfile = () => {
                                             {myProfileData.isPremium && (
                                                 <TouchableOpacity
                                                     style={{
-                                                        backgroundColor: colors.primary,
+                                                        backgroundColor: colors.darkPurple,
                                                         paddingVertical: 6,
                                                         borderRadius: 15
                                                     }}
@@ -134,7 +134,7 @@ const MyProfile = () => {
                                                 onPress={() => navigation.navigate("EditProfile")}
                                                 activeOpacity={0.7}
                                                 style={{
-                                                    backgroundColor: colors.secondary,
+                                                    backgroundColor: colors.purple,
                                                     paddingVertical: 6,
                                                     borderRadius: 15,
                                                     marginTop: 10,
@@ -174,7 +174,7 @@ const MyProfile = () => {
                                 onPress={() => navigation.navigate("AddPartner")}
                                 activeOpacity={0.7}
                                 style={{
-                                    backgroundColor: colors.primary,
+                                    backgroundColor: colors.darkPurple,
                                     paddingVertical: 10,
                                     paddingHorizontal: 20,
                                     borderRadius: 15
@@ -248,7 +248,7 @@ const MyProfile = () => {
                                 onPress={() => navigation.navigate('TermsOfUse' as any)}
                                 style={[{
                                     fontSize: 12,
-                                    color: colors.primary,
+                                    color: colors.darkPurple,
                                     fontWeight: 600
                                 }, globalStyles.fontRegular]}
                             >
@@ -258,7 +258,7 @@ const MyProfile = () => {
                                 onPress={() => navigation.navigate('PrivacyPolicy' as any)}
                                 style={[{
                                     fontSize: 12,
-                                    color: colors.primary,
+                                    color: colors.darkPurple,
                                     fontWeight: 600
                                 }, globalStyles.fontRegular]}
                             >

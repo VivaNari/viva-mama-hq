@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
     },
     supportText: {
         fontSize: 12,
-        color: colors.primary,
+        color: colors.darkPurple,
         textAlign: 'center',
         marginTop: 12,
     },
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     retryButton: {
-        backgroundColor: colors.primary,
+        backgroundColor: colors.darkPurple,
     },
     dismissButton: {
         backgroundColor: colors.lightGray,

@@ -19,7 +19,7 @@ const PHQInputRenderer: React.FC<Props> = ({ question, onChange }) => {
             return (
                 <TextInput
                     inputMode="text"
-                    selectionColor={colors.primary}
+                    selectionColor={colors.darkPurple}
                     placeholderTextColor={colors.white}
                     cursorColor={colors.white}
                     placeholder={question.placeholder}
@@ -35,7 +35,7 @@ const PHQInputRenderer: React.FC<Props> = ({ question, onChange }) => {
             return (
                 <TextInput
                     inputMode="numeric"
-                    selectionColor={colors.primary}
+                    selectionColor={colors.darkPurple}
                     placeholderTextColor={colors.white}
                     placeholder={question.placeholder}
                     style={[globalStyles.input, globalStyles.fontRegular]}

@@ -1,12 +1,11 @@
-import { View, Text, ScrollView, Image, TouchableOpacity, ActivityIndicator } from 'react-native'
-import React, { useEffect, useState } from 'react'
-import { globalStyles, landingStyles } from '../public/styles'
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import { colors } from '../public/assets/colors';
-import LinearGradient from 'react-native-linear-gradient';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../context/AuthContext';
 import Toast from 'react-native-toast-message';
+import { useAuth } from '../context/AuthContext';
+import { colors } from '../public/assets/colors';
+import { globalStyles, landingStyles } from '../public/styles';
 
 const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
     const { signInWithGoogle } = useAuth();
@@ -42,7 +41,7 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                 {/* Login Options */}
                 <View style={{ paddingTop: 90, gap: 10 }}>
                     <TouchableOpacity
-                        style={{ flex: 1, backgroundColor: colors.purple, borderRadius: 40 }}
+                        style={{ flex: 1, backgroundColor: colors.darkPurple, borderRadius: 40 }}
                         activeOpacity={0.8}
                         onPress={async () => {
                             try {
@@ -65,8 +64,6 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                     >
                         <View
                             style={{
-                                height: "100%",
-                                width: "100%",
                                 borderRadius: 40,
                                 justifyContent: "center",
                                 alignItems: "center",
@@ -85,14 +82,14 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                 style={[{
                                     color: colors.white,
                                     fontSize: 18
-                                }, globalStyles.fontRegular]}
+                                }, globalStyles.fontSemiBold]}
                             >
                                 Continue with Google
                             </Text>
                         </View>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={{ flex: 1, borderRadius: 40, backgroundColor: colors.lightPurple, borderWidth: 1, borderColor: colors.darkPurple }}
+                        style={{ flex: 1, borderRadius: 40, borderWidth: 1.5, backgroundColor: colors.lightPurple, borderColor: colors.darkPurple }}
                         activeOpacity={0.8}
                         onPress={() => {
                             navigation.navigate("LoginWithPhone")
@@ -114,9 +111,9 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                             <MaterialDesignIcons name="phone" color={colors.purple} size={20} />
                             <Text
                                 style={[{
-                                    color: colors.purple,
+                                    color: colors.darkPurple,
                                     fontSize: 18
-                                }, globalStyles.fontRegular]}
+                                }, globalStyles.fontSemiBold]}
                             >
                                 Continue with Phone
                             </Text>

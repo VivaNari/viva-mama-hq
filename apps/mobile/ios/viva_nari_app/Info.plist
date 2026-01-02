@@ -55,6 +55,12 @@
 		<string>LexendRegular.ttf</string>
 		<string>LexendLight.ttf</string>
 		<string>LexendSemiBold.ttf</string>
+		<string>YsabeauInfantRegular.ttf</string>
+		<string>YsabeauInfantLight.ttf</string>
+		<string>YsabeauInfantMedium.ttf</string>
+		<string>YsabeauInfantBold.ttf</string>
+		<string>YsabeauInfantExtraBold.ttf</string>
+		<string>YsabeauInfantSemiBold.ttf</string>
 	</array>
 </dict>
 </plist>

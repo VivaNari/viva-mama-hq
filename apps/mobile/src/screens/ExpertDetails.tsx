@@ -56,7 +56,7 @@ const ExpertDetails = () => {
                 name: `Expert Consultation with ${expert?.name}`,
                 prefill: {
                 },
-                theme: { color: colors.primary }
+                theme: { color: colors.darkPurple }
             }
             RazorpayCheckout.open(options).then(async (data) => {
                 try {
@@ -137,7 +137,7 @@ const ExpertDetails = () => {
     if (loading.uiLoading) {
         return (
             <SafeAreaView style={[globalStyles.container, styles.centerContainer]}>
-                <ActivityIndicator size="large" color={colors.primary || colors.purple} />
+                <ActivityIndicator size="large" color={colors.darkPurple || colors.purple} />
                 <Text style={[styles.loadingText, globalStyles.fontRegular]}>
                     Loading expert details...
                 </Text>
@@ -282,6 +282,7 @@ const ExpertDetails = () => {
                     <View style={styles.buttonWrapper}>
                         <GradientButtonWithSlightRadius
                             onPress={bookConsultation}
+                            fullRounded
                             title={loading.paymentLoading ? "Processing, Please wait..." : 'Book Consultation'}
                             disabled={loading.paymentLoading}
                         />
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
     },
     notFoundSubtext: {
         marginTop: 8,
-        fontSize: 14,
+        fontSize: 16,
         color: '#666',
         textAlign: 'center',
     },
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         overflow: 'hidden',
         elevation: 4,
-        shadowColor: '#6B4CE6',
+        shadowColor: colors.purple,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -395,7 +396,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     experienceLabel: {
-        fontSize: 14,
+        fontSize: 16,
         color: 'rgba(255, 255, 255, 0.9)',
     },
     infoCard: {
@@ -420,12 +421,12 @@ const styles = StyleSheet.create({
         color: '#1a1a1a',
     },
     cardContent: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#555',
         lineHeight: 20,
     },
     bioText: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#555',
         lineHeight: 20,
     },

@@ -24,9 +24,6 @@ const LoginwithPhone = () => {
     const [verificationKey, setVerificationKey] = useState<string>('');
     const [getLoading, setLoading] = useState<boolean>(false);
     const { requestPhoneOTP, verifyPhoneOTP } = useAuth();
-    useEffect(() => {
-        console.log('🔥 BEFORE FETCH');
-    }, []);
     return (
         <SafeAreaView style={{ flex: 1 }}>
             <ScrollView style={{ backgroundColor: "white" }}>
@@ -49,10 +46,10 @@ const LoginwithPhone = () => {
                             <View>
                                 <TextInput
                                     inputMode="tel"
-                                    selectionColor={colors.primary}
+                                    selectionColor={colors.darkPurple}
                                     placeholderTextColor={colors.black}
                                     placeholder={'Enter Phone Number'}
-                                    style={[globalStyles.input, globalStyles.fontRegular, { backgroundColor: colors.lightGray, borderWidth: 1, borderColor: colors.darkPurple, fontSize: 18, color: colors.purple }]}
+                                    style={[globalStyles.input, globalStyles.fontSemiBold, { backgroundColor: colors.lightGray, borderWidth: 1, borderColor: colors.darkPurple, color: colors.purple }]}
                                     onChangeText={setPhoneNumber}
                                     value={phoneNumber}
                                 />
@@ -72,7 +69,7 @@ const LoginwithPhone = () => {
                                             setLoading(false);
                                         }
                                     }}
-                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.lightPurple, borderRadius: 40, borderWidth: 1, borderColor: colors.darkPurple }}
+                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.darkPurple, borderRadius: 40 }}
                                     activeOpacity={0.8}
                                     disabled={getLoading}
                                 >
@@ -97,15 +94,15 @@ const LoginwithPhone = () => {
                                                 /> :
                                                 <MaterialDesignIcons
                                                     name="phone-settings"
-                                                    color={colors.purple}
+                                                    color={colors.white}
                                                     size={20}
                                                 />
                                         }
                                         <Text
                                             style={[{
-                                                color: colors.purple,
+                                                color: colors.white,
                                                 fontSize: 18,
-                                            }, globalStyles.fontRegular]}
+                                            }, globalStyles.fontSemiBold]}
                                         >
 
                                             Send OTP
@@ -121,7 +118,7 @@ const LoginwithPhone = () => {
                                         pinCodeTextStyle: globalStyles.fontRegular
                                     }}
                                     numberOfDigits={6}
-                                    focusColor={colors.secondary}
+                                    focusColor={colors.purple}
                                     autoFocus={false}
                                     hideStick={true}
                                     placeholder="******"
@@ -150,7 +147,7 @@ const LoginwithPhone = () => {
                                         await verifyPhoneOTP(phoneNumber, otp, verificationKey);
                                         setLoading(false);
                                     }}
-                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.lightPurple, borderRadius: 40, borderWidth: 1, borderColor: colors.darkPurple }}
+                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.darkPurple, borderRadius: 40, borderWidth: 1, borderColor: colors.darkPurple }}
                                     activeOpacity={0.8}
                                     disabled={getLoading}
                                 >
@@ -164,6 +161,7 @@ const LoginwithPhone = () => {
                                             flexDirection: 'row',
                                             padding: 14,
                                             gap: 10,
+
                                         }}
                                     >
                                         {
@@ -174,9 +172,9 @@ const LoginwithPhone = () => {
                                         }
                                         <Text
                                             style={[{
-                                                color: colors.purple,
-                                                fontSize: 18,
-                                            }, globalStyles.fontRegular]}
+                                                color: colors.white,
+                                                fontSize: 18
+                                            }, globalStyles.fontSemiBold]}
                                         >
                                             Submit
                                         </Text>

@@ -73,7 +73,7 @@ const RecoveryProgressGraph = () => {
 
                                 color={'#ef86a3'}
                                 thickness={4}
-                                dataPointsColor={colors.primary}
+                                dataPointsColor={colors.darkPurple}
                                 yAxisColor={colors.gray}
                                 xAxisColor={colors.gray}
 

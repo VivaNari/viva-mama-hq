@@ -1,6 +1,6 @@
 import Lucide from '@react-native-vector-icons/lucide'
 import React from 'react'
-import { ImageBackground, StyleSheet, Text, View } from 'react-native'
+import { ImageBackground, Text, View } from 'react-native'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
 import { ICheckInRecommendation, IndividualRecommendationEnum, IndividualRecommendationZoneEnum } from '../types/dashboard.types'
@@ -15,12 +15,11 @@ const IndividualRecoveryCard = ({
     return (
         <View
             style={{
-                backgroundColor: 'rgba(255, 250, 250, 1)',
+                backgroundColor: 'white',
                 marginTop: 20,
             }}
         >
             <ImageBackground
-                source={type === IndividualRecommendationEnum.PHYSICAL ? require('../public/assets/images/physical.png') : type === IndividualRecommendationEnum.LACTATION ? require('../public/assets/images/lactation.png') : require('../public/assets/images/emotional.png')}
                 resizeMode="cover"
                 style={{
                     width: '100%',
@@ -31,12 +30,6 @@ const IndividualRecoveryCard = ({
                     paddingBottom: 20,
 
                 }}>
-                <View
-                    style={{
-                        ...StyleSheet.absoluteFillObject,
-                        backgroundColor: 'rgba(255, 250, 250, 0.90)',
-                    }}
-                />
                 <View
                     style={{
                         flexDirection: 'row',
@@ -51,7 +44,7 @@ const IndividualRecoveryCard = ({
 
                         <Text
                             style={[{
-                                fontSize: 16,
+                                fontSize: 18,
 
                             }, globalStyles.fontBold]}
                         >
@@ -67,7 +60,7 @@ const IndividualRecoveryCard = ({
                                 borderRadius: 20,
                                 marginTop: 6,
 
-                            }, globalStyles.fontRegular]}
+                            }, globalStyles.fontSemiBold]}
                         >
                             {data.recommendation.title}
                         </Text>
@@ -107,6 +100,7 @@ const IndividualRecoveryCard = ({
                                     color: colors.darkGray,
                                     flex: 1,
                                     flexShrink: 1,
+                                    fontSize: 16
                                 }]}>
                                     <Text style={globalStyles.fontBold}>Tips: </Text>
                                     {data.recommendation.tips.join(', ')}
@@ -135,6 +129,7 @@ const IndividualRecoveryCard = ({
                                     color: colors.darkGray,
                                     flex: 1,
                                     flexShrink: 1,
+                                    fontSize: 16
                                 }]}>
                                     <Text style={globalStyles.fontBold}>Going well: </Text>
                                     {data.recommendation.goingWell}
@@ -162,7 +157,8 @@ const IndividualRecoveryCard = ({
                                 <Text style={[globalStyles.fontRegular, {
                                     color: colors.darkGray,
                                     flex: 1,
-                                    flexShrink: 1
+                                    flexShrink: 1,
+                                    fontSize: 16
                                 }]}>
                                     <Text style={globalStyles.fontBold}>Next: </Text>
                                     {data.recommendation.next.join(', ')}
@@ -190,7 +186,8 @@ const IndividualRecoveryCard = ({
                                 <Text style={[globalStyles.fontRegular, {
                                     color: colors.darkGray,
                                     flex: 1,
-                                    flexShrink: 1
+                                    flexShrink: 1,
+                                    fontSize: 16
                                 }]}>
                                     <Text style={globalStyles.fontBold}>Needs Help: </Text>
                                     {data.recommendation.needsHelp}
@@ -218,7 +215,8 @@ const IndividualRecoveryCard = ({
                                 <Text style={[globalStyles.fontRegular, {
                                     color: colors.darkGray,
                                     flex: 1,
-                                    flexShrink: 1
+                                    flexShrink: 1,
+                                    fontSize: 16
                                 }]}>
                                     <Text style={globalStyles.fontBold}>Celebrate: </Text>
                                     {data.recommendation.celebrate.join(', ')}

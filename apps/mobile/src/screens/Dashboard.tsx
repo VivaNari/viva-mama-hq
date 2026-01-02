@@ -153,8 +153,8 @@ const Dashboard = () => {
                                     />
                                     <View>
                                         <GradientButtonWithSlightRadius
-                                            title='See More'
-                                            onPress={() => navigation.navigate("Community")}
+                                            title='See all Contents'
+                                            onPress={() => navigation.navigate("Content")}
                                         />
                                     </View>
                                 </View>
@@ -212,9 +212,9 @@ const Dashboard = () => {
                     position: "absolute",
                     bottom: 5,
                     right: 10,
-                    backgroundColor: colors.purple,
-                    borderWidth: 2,
-                    borderColor: colors.darkPurple
+                    backgroundColor: colors.darkPurple,
+                    borderWidth: 3,
+                    borderColor: colors.lightPurple
                 }}
             >
                 <Lucide name='phone-call' color={colors.white} size={22} />

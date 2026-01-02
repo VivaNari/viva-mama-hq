@@ -99,7 +99,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                             style={{
                                 backgroundColor: colors.white,
                                 padding: 10,
-                                borderRadius: 25,
+                                borderRadius: 10,
                                 boxShadow: '0 0 4px 0 rgba(0, 0, 0, 0.25)',
                                 paddingBottom: 20
                             }}
@@ -127,7 +127,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                         style={[{
                                             fontSize: 16,
                                             color: colors.darkPurple
-                                        }, globalStyles.fontRegular]}
+                                        }, globalStyles.fontSemiBold]}
                                     >
                                         Week {recentCheckindata.length > 0 ? recentCheckindata[0].week : userData.user.current_weekdays.weeks}
                                     </Text>
@@ -166,7 +166,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                                 justifyContent: "center"
                                             }}
                                         >
-                                            <Text style={{ color: colors.black, fontSize: 40, textAlign: "center", ...globalStyles.fontSemiBold, marginTop: 10 }}>
+                                            <Text style={{ color: colors.black, fontSize: 45, textAlign: "center", ...globalStyles.fontBold, marginTop: 10 }}>
                                                 {
                                                     score ?
                                                         `${String(score).split(".")[0]}` :
@@ -181,14 +181,14 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                                     />
                                                 )}
                                             >
-                                                <Lucide name='info' size={15} color={colors.primary} style={{ alignSelf: "center", marginTop: -10 }} />
+                                                <Lucide name='info' size={15} color={colors.darkPurple} style={{ alignSelf: "center", marginTop: -10 }} />
                                             </TouchableOpacity>
                                         </View>
                                         <Text
                                             style={{
                                                 fontSize: 14,
                                                 textAlign: "center",
-                                                ...globalStyles.fontRegular,
+                                                ...globalStyles.fontSemiBold,
                                                 marginTop: 10,
 
                                                 backgroundColor: recentCheckindata[0].zone === IndividualRecommendationZoneEnum.RED ? colors.redBadgeBG : recentCheckindata[0].zone === IndividualRecommendationZoneEnum.YELLOW ? colors.yellowBadgeBG : colors.greenBadgeBG,
@@ -212,7 +212,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                                 animatedStyle,
                                             ]}
                                         >
-                                            <Lucide name='hourglass' size={30} color={colors.primary} style={{ alignSelf: "center", marginTop: 20 }} />
+                                            <Lucide name='hourglass' size={30} color={colors.darkPurple} style={{ alignSelf: "center", marginTop: 20 }} />
                                         </Animated.View>
                                     )
                                 }
@@ -256,22 +256,23 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                                 paddingHorizontal: 10,
                                                 flex: 1,
                                                 marginTop: 10,
-                                                backgroundColor: colors.purple
+                                                borderWidth: 2,
+                                                borderColor: colors.purple
                                             }}
                                         >
                                             <Text
                                                 style={[{
-                                                    color: colors.white,
-                                                    fontSize: 12,
-                                                }, globalStyles.fontSemiBold]}
+                                                    color: colors.darkPurple,
+                                                    fontSize: 16,
+                                                }, globalStyles.fontBold]}
                                             >
                                                 {upcomingCheckinDays === 0 ? "Complete your Weekly Check-in" : `${upcomingCheckinDays} days before your Weekly Check-in`}
                                             </Text>
-                                            {upcomingCheckinDays === 0 ? <View style={{ marginTop: 3, zIndex: 99 }}>
+                                            {upcomingCheckinDays === 0 ? <View style={{ marginTop: 3, marginLeft: 5, zIndex: 99 }}>
                                                 <MaterialDesignIcons
                                                     name="arrow-right"
                                                     style={{
-                                                        fontSize: 18,
+                                                        fontSize: 16,
                                                         color: colors.white,
                                                     }}
                                                 />
@@ -315,13 +316,25 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                     recentCheckindata && recentCheckindata.length > 0 && (
                         <>
                             {/* Physical Recovery */}
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.PHYSICAL} data={recentCheckindata[0].individualRecommendations.physical} />
+                            {
+                                recentCheckindata[0].individualRecommendations.physical.recommendation.title && (
+                                    <IndividualRecoveryCard type={IndividualRecommendationEnum.PHYSICAL} data={recentCheckindata[0].individualRecommendations.physical} />
+                                )
+                            }
 
                             {/* Lactation Recovery */}
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.LACTATION} data={recentCheckindata[0].individualRecommendations.lactation} />
-                            {/* Emotional Recovery */}
+                            {
+                                recentCheckindata[0].individualRecommendations.lactation.recommendation.title && (
+                                    <IndividualRecoveryCard type={IndividualRecommendationEnum.LACTATION} data={recentCheckindata[0].individualRecommendations.lactation} />
+                                )
+                            }
 
-                            <IndividualRecoveryCard type={IndividualRecommendationEnum.EMOTIONAL} data={recentCheckindata[0].individualRecommendations.emotional} />
+                            {/* Emotional Recovery */}
+                            {
+                                recentCheckindata[0].individualRecommendations.emotional && (
+                                    <IndividualRecoveryCard type={IndividualRecommendationEnum.EMOTIONAL} data={recentCheckindata[0].individualRecommendations.emotional} />
+                                )
+                            }
 
                             <WeekCycle />
                         </>

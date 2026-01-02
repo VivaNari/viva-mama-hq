@@ -65,7 +65,7 @@ const NNWomanPlanningForBaby = () => {
 
                         >
 
-                            <Text style={[globalStyles.fontRegular, { color: colors.darkGray, textAlign: 'center' }]}>
+                            <Text style={[globalStyles.fontSemiBold, { fontSize: 16, color: colors.darkGray, textAlign: 'center' }]}>
                                 Are you looking to get pregnant? Once pregnancy begins, the journey continues beyond delivery.
                                 VivaMama supports you through postpartum,
                                 tracking recovery and wellbeing every step of the way.

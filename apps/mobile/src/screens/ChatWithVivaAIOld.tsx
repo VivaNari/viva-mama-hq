@@ -66,7 +66,7 @@ const RenderMessage: React.FC<RenderMessageProps> = ({ item, onOnboardingOptionS
                 {item.options.map((option) => (
                     <TouchableOpacity
                         key={option.id}
-                        style={[chatStyles.optionButton, option.isSelected && { backgroundColor: colors.primary }]}
+                        style={[chatStyles.optionButton, option.isSelected && { backgroundColor: colors.darkPurple }]}
                         disabled={!isLatestMessage}
                         onPress={() => {
                             if (item.id.toString().startsWith('onboarding')) {

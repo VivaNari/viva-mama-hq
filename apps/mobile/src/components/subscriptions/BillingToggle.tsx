@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     buttonTextActive: {
-        color: colors.primary,
+        color: colors.darkPurple,
         letterSpacing: 0.5,
     },
 });

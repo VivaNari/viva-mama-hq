@@ -75,7 +75,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
                 onPress={isDateMode ? onDatePickerOpen : undefined}
             >
                 <TextInput
-                    style={[styles.input, globalStyles.fontRegular]}
+                    style={[styles.input, globalStyles.fontSemiBold]}
                     value={inputText}
                     onChangeText={onInputChange}
                     placeholder={placeholder}
@@ -89,7 +89,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled, { backgroundColor: colors.purple }]}
+                style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled, { backgroundColor: colors.darkPurple }]}
                 onPress={onSend}
                 disabled={isSendDisabled}
                 accessibilityRole="button"
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
         borderRadius: 20,
         paddingHorizontal: 16,
         paddingVertical: 10,
-        fontSize: 15,
+        fontSize: 16,
         color: colors.black,
         minHeight: 44,
     },
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
         width: 44,
         height: 44,
         borderRadius: 22,
-        backgroundColor: colors.primary,
+        backgroundColor: colors.darkPurple,
         justifyContent: 'center',
         alignItems: 'center',
     },

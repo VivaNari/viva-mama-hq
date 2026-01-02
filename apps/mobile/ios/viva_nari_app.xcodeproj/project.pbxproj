@@ -17,6 +17,12 @@
 		3A46576682404E5A9C230446 /* LexendRegular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 49E84C0F670448E08C0839AB /* LexendRegular.ttf */; };
 		CBDC8FA8343C41CCA440D6F0 /* LexendLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3059451A4BE440E481AA07D2 /* LexendLight.ttf */; };
 		FCDA62CFF5704309A630CC4E /* LexendSemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = E4AB9FB9DB18410EA6EDEDB2 /* LexendSemiBold.ttf */; };
+		1EE0792FBBBD4031A72C9969 /* YsabeauInfantRegular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 55328656601F44E98FCADB26 /* YsabeauInfantRegular.ttf */; };
+		DFF261D4D5F64F5AB610F8DD /* YsabeauInfantLight.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 3D8D0D7F07A9464AAEC2E385 /* YsabeauInfantLight.ttf */; };
+		D7CA7ABA7684473DAFEE17FE /* YsabeauInfantMedium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C4178D202B1B43F7A858804D /* YsabeauInfantMedium.ttf */; };
+		E7A7D3D9414048AAB6DD37ED /* YsabeauInfantBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 6F7C8359E2A84967AC65D023 /* YsabeauInfantBold.ttf */; };
+		5418851713894FEA86967396 /* YsabeauInfantExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 0293927F1AFA4969B97623BB /* YsabeauInfantExtraBold.ttf */; };
+		2245717A8D9344B9B3F6AFAF /* YsabeauInfantSemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 8C3D6605188E40359C8B415B /* YsabeauInfantSemiBold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -36,6 +42,12 @@
 		49E84C0F670448E08C0839AB /* LexendRegular.ttf */ = {isa = PBXFileReference; name = "LexendRegular.ttf"; path = "../src/public/assets/fonts/LexendRegular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		3059451A4BE440E481AA07D2 /* LexendLight.ttf */ = {isa = PBXFileReference; name = "LexendLight.ttf"; path = "../src/public/assets/fonts/LexendLight.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		E4AB9FB9DB18410EA6EDEDB2 /* LexendSemiBold.ttf */ = {isa = PBXFileReference; name = "LexendSemiBold.ttf"; path = "../src/public/assets/fonts/LexendSemiBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		55328656601F44E98FCADB26 /* YsabeauInfantRegular.ttf */ = {isa = PBXFileReference; name = "YsabeauInfantRegular.ttf"; path = "../src/public/assets/fonts/YsabeauInfantRegular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		3D8D0D7F07A9464AAEC2E385 /* YsabeauInfantLight.ttf */ = {isa = PBXFileReference; name = "YsabeauInfantLight.ttf"; path = "../src/public/assets/fonts/YsabeauInfantLight.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		C4178D202B1B43F7A858804D /* YsabeauInfantMedium.ttf */ = {isa = PBXFileReference; name = "YsabeauInfantMedium.ttf"; path = "../src/public/assets/fonts/YsabeauInfantMedium.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		6F7C8359E2A84967AC65D023 /* YsabeauInfantBold.ttf */ = {isa = PBXFileReference; name = "YsabeauInfantBold.ttf"; path = "../src/public/assets/fonts/YsabeauInfantBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		0293927F1AFA4969B97623BB /* YsabeauInfantExtraBold.ttf */ = {isa = PBXFileReference; name = "YsabeauInfantExtraBold.ttf"; path = "../src/public/assets/fonts/YsabeauInfantExtraBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		8C3D6605188E40359C8B415B /* YsabeauInfantSemiBold.ttf */ = {isa = PBXFileReference; name = "YsabeauInfantSemiBold.ttf"; path = "../src/public/assets/fonts/YsabeauInfantSemiBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -119,6 +131,12 @@
 				49E84C0F670448E08C0839AB /* LexendRegular.ttf */,
 				3059451A4BE440E481AA07D2 /* LexendLight.ttf */,
 				E4AB9FB9DB18410EA6EDEDB2 /* LexendSemiBold.ttf */,
+				55328656601F44E98FCADB26 /* YsabeauInfantRegular.ttf */,
+				3D8D0D7F07A9464AAEC2E385 /* YsabeauInfantLight.ttf */,
+				C4178D202B1B43F7A858804D /* YsabeauInfantMedium.ttf */,
+				6F7C8359E2A84967AC65D023 /* YsabeauInfantBold.ttf */,
+				0293927F1AFA4969B97623BB /* YsabeauInfantExtraBold.ttf */,
+				8C3D6605188E40359C8B415B /* YsabeauInfantSemiBold.ttf */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -192,6 +210,12 @@
 				3A46576682404E5A9C230446 /* LexendRegular.ttf in Resources */,
 				CBDC8FA8343C41CCA440D6F0 /* LexendLight.ttf in Resources */,
 				FCDA62CFF5704309A630CC4E /* LexendSemiBold.ttf in Resources */,
+				1EE0792FBBBD4031A72C9969 /* YsabeauInfantRegular.ttf in Resources */,
+				DFF261D4D5F64F5AB610F8DD /* YsabeauInfantLight.ttf in Resources */,
+				D7CA7ABA7684473DAFEE17FE /* YsabeauInfantMedium.ttf in Resources */,
+				E7A7D3D9414048AAB6DD37ED /* YsabeauInfantBold.ttf in Resources */,
+				5418851713894FEA86967396 /* YsabeauInfantExtraBold.ttf in Resources */,
+				2245717A8D9344B9B3F6AFAF /* YsabeauInfantSemiBold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

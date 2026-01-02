@@ -81,7 +81,7 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel="Select delivery date"
             >
-                <Text style={[bubbleStyles.optionButtonText, bubbleStyles.specialOptionText, globalStyles.fontRegular]}>
+                <Text style={[bubbleStyles.optionButtonText, bubbleStyles.specialOptionText, globalStyles.fontSemiBold]}>
                     Select Delivery Date
                 </Text>
             </TouchableOpacity>
@@ -92,7 +92,7 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel="I'm not pregnant yet"
             >
-                <Text style={[bubbleStyles.optionButtonText, globalStyles.fontRegular]}>
+                <Text style={[bubbleStyles.optionButtonText, globalStyles.fontSemiBold]}>
                     I'm Not Pregnant Yet
                 </Text>
             </TouchableOpacity>
@@ -126,7 +126,7 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
                             <Text
                                 style={[
                                     bubbleStyles.optionButtonText,
-                                    globalStyles.fontRegular,
+                                    globalStyles.fontSemiBold,
                                     isMultiSelect && isSelected && bubbleStyles.optionButtonTextSelected,
                                 ]}
                             >
@@ -169,7 +169,7 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
                     <Text
                         style={[
                             bubbleStyles.messageText,
-                            globalStyles.fontRegular,
+                            globalStyles.fontSemiBold,
                             isAi ? bubbleStyles.aiText : bubbleStyles.userText,
                         ]}
                     >

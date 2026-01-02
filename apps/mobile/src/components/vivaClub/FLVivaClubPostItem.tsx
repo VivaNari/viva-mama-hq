@@ -81,7 +81,7 @@ const FLVivaClubPostItem = ({
                 <Text
                     style={[{
                         fontSize: 12,
-                        color: colors.primary
+                        color: colors.darkPurple
                     }, globalStyles.fontRegular]}
                     numberOfLines={isFromCommunityScreen ? 2 : undefined}
                 >

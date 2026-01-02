@@ -1,40 +1,40 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet } from "react-native";
 
 export const ContentDetailsStyles = StyleSheet.create({
   center: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   scrollContent: {
     paddingBottom: 30,
   },
   image: {
-    width: '100%',
+    width: "100%",
     height: 220,
-    resizeMode: 'cover',
+    resizeMode: "cover",
   },
   textBlock: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: "#eee",
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     marginBottom: 6,
-    color: '#000',
+    color: "#000",
   },
   author: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginBottom: 10,
   },
   actions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
     marginTop: 4,
     borderBottomWidth: 1,
-    borderBlockColor: '#bdbdbd',
+    borderBlockColor: "#bdbdbd",
     paddingBottom: 5,
     marginBottom: 15,
   },
@@ -44,25 +44,25 @@ export const ContentDetailsStyles = StyleSheet.create({
   heading: {
     marginTop: 8,
     fontSize: 18,
-    color: '#333',
+    color: "#333",
   },
   subHeading: {
     marginTop: 8,
     fontSize: 15.5,
-    color: '#333',
+    color: "#333",
   },
   content: {
     fontSize: 14.5,
     lineHeight: 22,
-    color: '#333',
+    color: "#333",
   },
 });
 
 export const styles = StyleSheet.create({
   headerImage: {
-    width: '100%',
+    width: "100%",
     height: 180,
-    resizeMode: 'cover',
+    resizeMode: "cover",
   },
   headerTitle: {
     fontSize: 16,
@@ -76,7 +76,7 @@ export const styles = StyleSheet.create({
 export const SubCategoryStyles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     paddingBottom: 12,
   },
   subCategoryBlock: {

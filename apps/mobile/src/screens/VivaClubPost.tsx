@@ -25,7 +25,7 @@ const VivaClubPost = () => {
 
             <LinearGradient
                 onTouchEnd={() => navigation.navigate("CreatePost")}
-                colors={[colors.primary, colors.secondary]}
+                colors={[colors.darkPurple, colors.purple]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 onMagicTap={() => { }}

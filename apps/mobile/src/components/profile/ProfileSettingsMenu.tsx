@@ -23,7 +23,7 @@ const ProfileSettingsMenu = ({ item, navigation, isFirst, isLast }: { item: ISet
                 borderBottomRightRadius: isLast ? 8 : 0,
             }}
         >
-            <MaterialDesignIcons name={item.icon as any} size={20} color={colors.primary} />
+            <MaterialDesignIcons name={item.icon as any} size={20} color={colors.darkPurple} />
             <Text
                 style={[{
                     fontSize: 16,
