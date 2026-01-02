@@ -12,7 +12,7 @@ export const WEEKLY_CHECKIN_FLOW_TYPE = "CHECK_IN";
 // ============================================
 
 export const CHECKIN_EXPIRY_DAYS = 7; // Days after which uncompleted check-in expires
-export const MAX_RETROACTIVE_WEEKS = 4; // Can complete check-ins up to 4 weeks old
+export const MAX_RETROACTIVE_WEEKS = 40; // Can complete check-ins up to 4 weeks old
 
 export const CHECKIN_REMINDER_INTERVALS = [1, 3, 5]; // Days after trigger to send reminders
 

@@ -8,6 +8,7 @@ import { StatusCodes } from "http-status-codes";
 
 const authMiddleware = (tokenSource: TTokenSource = "header") => {
     return async (req: Request, res: Response, next: NextFunction) => {
+        console.log("auth", authMiddleware);
         try {
             let token: string | undefined;
 

@@ -234,6 +234,7 @@ export interface IFlowResponse {
     computed: Record<string, any> | null;
     createdAt: Date;
     updatedAt: Date;
+    idempotencyKey: string;
 }
 
 export interface QuestionPayload {

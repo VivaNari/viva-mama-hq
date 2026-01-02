@@ -12,6 +12,7 @@ import callbackRequestRouter from "./callback-request/callback-request.routes";
 import expertRouter from "./experts/expert.route";
 import careManagerRouter from "./care-managers/care-manager.route";
 import bookConsultationRouter from "./book-consultation/book-consultation.route";
+import weeklyCheckinV1Router from "./weekly-checkin-v1.routes";
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use(callbackRequestRouter);
 router.use(expertRouter);
 router.use(careManagerRouter);
 router.use(bookConsultationRouter);
+router.use(weeklyCheckinV1Router);
 
 export default router;

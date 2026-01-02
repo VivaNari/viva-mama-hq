@@ -19,9 +19,6 @@ import {
 import logger from "../../utils/logger";
 import conversationModel from "../../models/conversation.model";
 
-/**
- * Idempotency check result
- */
 interface IdempotencyCheckResult {
     isDuplicate: boolean;
     existingResponse?: any;
@@ -33,12 +30,12 @@ interface IdempotencyCheckResult {
  * Features:
  * - Week validation
  * - Expiration logic
- * - Idempotency checks
+ * - Idempotency checks (checked FIRST for retry safety)
  * - Flow instance state validation
  */
 class ValidationService {
     // Configuration
-    private readonly MAX_RETROACTIVE_WEEKS = 40; // Can complete check-ins up to 4 weeks old
+    private readonly MAX_RETROACTIVE_WEEKS = 4; // Can complete check-ins up to 4 weeks old
     private readonly MIN_WEEK = 1;
     private readonly MAX_WEEK = 52;
 
@@ -168,7 +165,7 @@ class ValidationService {
         }
 
         // Also check if answer already exists for this node
-        // This prevents re-answering the same question
+        // This handles retries even without idempotency key
         const existingAnswer = await flowResponseModel.findOne({
             flowInstanceId,
             nodeId,
@@ -242,7 +239,7 @@ class ValidationService {
     // ============================================
 
     /**
-     * Validate and get flow instance for SSE connection
+     * Validate and get flow instance for starting check-in
      */
     async validateSSERequest(
         user: IUser,
@@ -432,6 +429,16 @@ class ValidationService {
 
     /**
      * Validate answer submission request
+     *
+     * IMPORTANT: Idempotency check happens BEFORE cursor validation
+     * to properly handle frontend retries after timeout.
+     *
+     * Flow:
+     * 1. Check flow instance exists
+     * 2. Check idempotency (FIRST - handles retries)
+     * 3. Validate state (only for new answers)
+     * 4. Check expiration (only for new answers)
+     * 5. Validate cursor (only for new answers)
      */
     async validateAnswerRequest(
         userId: string,
@@ -453,7 +460,38 @@ class ValidationService {
             postpartumWeek: week,
         });
 
-        // 2. Validate flow instance state
+        // 2. Validate flow instance exists
+        if (!flowInstance) {
+            return {
+                isValid: false,
+                error: "Flow instance not found",
+                errorType: WeeklyCheckinErrorType.INSTANCE_NOT_FOUND,
+            };
+        }
+
+        // 3. Check idempotency FIRST (before other validations)
+        // This ensures retries work correctly even if:
+        // - Cursor has already moved to next question
+        // - Original request succeeded but client didn't receive response
+        const idempotencyCheck = await this.checkIdempotency(
+            flowInstanceId,
+            nodeId,
+            idempotencyKey,
+        );
+
+        if (idempotencyCheck.isDuplicate) {
+            logger.info(
+                { flowInstanceId, nodeId, idempotencyKey, userId },
+                "Duplicate answer detected - returning success for retry safety",
+            );
+            return {
+                isValid: true, // Not an error, already processed successfully
+                isDuplicate: true,
+                flowInstance: flowInstance,
+            };
+        }
+
+        // 4. Validate flow instance state (only for new answers)
         const stateValidation = this.validateFlowInstanceState(flowInstance);
         if (!stateValidation.isValid) {
             return {
@@ -463,9 +501,9 @@ class ValidationService {
             };
         }
 
-        // 3. Check expiration
-        if (this.isExpired(flowInstance!)) {
-            await this.markAsExpired(flowInstance!);
+        // 5. Check expiration (only for new answers)
+        if (this.isExpired(flowInstance)) {
+            await this.markAsExpired(flowInstance);
             return {
                 isValid: false,
                 error: WEEKLY_CHECKIN_MESSAGES.EXPIRED,
@@ -473,8 +511,8 @@ class ValidationService {
             };
         }
 
-        // 4. Validate cursor position
-        const cursorValidation = this.validateCursorPosition(flowInstance!, nodeId);
+        // 6. Validate cursor position (only for new answers)
+        const cursorValidation = this.validateCursorPosition(flowInstance, nodeId);
         if (!cursorValidation.isValid) {
             return {
                 isValid: false,
@@ -483,25 +521,10 @@ class ValidationService {
             };
         }
 
-        // 5. Check idempotency
-        const idempotencyCheck = await this.checkIdempotency(
-            flowInstanceId,
-            nodeId,
-            idempotencyKey,
-        );
-
-        if (idempotencyCheck.isDuplicate) {
-            return {
-                isValid: true, // Not an error, just already processed
-                isDuplicate: true,
-                flowInstance: flowInstance!,
-            };
-        }
-
         return {
             isValid: true,
             isDuplicate: false,
-            flowInstance: flowInstance!,
+            flowInstance: flowInstance,
         };
     }
 }
