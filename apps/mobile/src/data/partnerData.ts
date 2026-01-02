@@ -1,25 +1,28 @@
-import { IPartnerData } from '../types/addPartner.types';
+import { IPartnerData } from "../types/addPartner.types";
 
 export const partnerData: IPartnerData = {
-  title: 'Vivanari for partners',
+  title: "Vivanari for partners",
   benefits: [
-    { id: 1, text: 'Lorem ipsum dolor sit amet' },
-    { id: 2, text: 'Lorem ipsum dolor sit amet' },
-    { id: 3, text: 'Lorem ipsum dolor sit amet' },
+    { id: 1, text: "Expand your reach and connect with more clients" },
+    { id: 2, text: "Access professional tools to manage your partnerships" },
+    {
+      id: 3,
+      text: "Earn competitive commissions on every successful referral",
+    },
   ],
-  code: '738H645',
+  code: "738H645",
   steps: [
     {
       id: 1,
-      title: 'Step 1 - Invite',
+      title: "Step 1 - Invite",
       description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+        "Share your unique partner code with your network via email, social media, or direct messaging.",
     },
     {
       id: 2,
-      title: 'Step 2 - Pair',
+      title: "Step 2 - Pair",
       description:
-        'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.',
+        "When your referrals sign up using your code, they are automatically linked to your partner account.",
     },
   ],
 };

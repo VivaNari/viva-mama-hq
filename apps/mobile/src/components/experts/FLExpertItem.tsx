@@ -101,9 +101,8 @@ const styles = StyleSheet.create({
     name: {
         fontSize: 14,
         color: '#1a1a1a',
-        marginBottom: 8,
+        marginVertical: 10,
         textAlign: 'center',
-        marginTop: 3
     },
     specialityBadge: {
         alignSelf: 'flex-start',

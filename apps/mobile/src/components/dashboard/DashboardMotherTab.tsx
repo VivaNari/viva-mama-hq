@@ -356,6 +356,8 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                     columnWrapperStyle={{
                         justifyContent: 'space-between',
                         alignItems: 'flex-end',
+                        gap: 10,
+                        marginBottom: 10
                     }}
                     numColumns={2}
                     scrollEnabled={false}
