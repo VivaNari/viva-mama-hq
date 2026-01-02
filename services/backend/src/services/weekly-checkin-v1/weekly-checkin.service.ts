@@ -233,6 +233,7 @@ class WeeklyCheckinService {
     async processAnswer(params: WeeklyCheckinAnswerParams): Promise<WeeklyCheckinResponse> {
         const { userId, flowInstanceId, nodeId, week, selectedKeys, freeText, idempotencyKey } =
             params;
+        console.log("process", params);
 
         try {
             // 1. Validate inputs
@@ -559,7 +560,10 @@ class WeeklyCheckinService {
 
         return {
             success: true,
-            message: WEEKLY_CHECKIN_MESSAGES.THANK_YOU,
+            message:
+                flowInstance.flowSlug === "weekly-checkin-v1"
+                    ? WEEKLY_CHECKIN_MESSAGES.THANK_YOU
+                    : "Thank you! That gives me a clear picture of your health, support, and daily life. I will now build your personalised recovery plan",
             data: {
                 flowInstanceId: flowInstance._id.toString(),
                 week,

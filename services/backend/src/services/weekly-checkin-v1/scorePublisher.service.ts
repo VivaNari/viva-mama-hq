@@ -1,6 +1,7 @@
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
 import logger from "../../utils/logger";
+import redisSubscriberService from "../redis/redis-subscriber.service";
 
 /**
  * Dead letter entry for failed jobs
@@ -94,6 +95,16 @@ class ScorePublisherService {
                     fcmToken,
                     flowInstanceId,
                 );
+
+                const message = JSON.stringify({
+                    userId,
+                    indicators,
+                    FCM_token: fcmToken,
+                    flowInstanceId,
+                    timestamp: new Date().toISOString(),
+                });
+
+                await redisSubscriberService.handleScoreProcess(message);
 
                 logger.info(
                     { userId, flowInstanceId, attempt: attempt + 1 },

@@ -28,6 +28,12 @@ export class ProductController {
                     validWeekEnd: { $gte: user.current_weekdays.weeks },
                 },
             });
+            console.log("products", products);
+            response.set({
+                "Cache-Control": "no-store, no-cache, must-revalidate",
+                Pragma: "no-cache",
+                Expires: "0",
+            });
             sendResponse({
                 data: products,
                 statusCode: StatusCodes.OK,

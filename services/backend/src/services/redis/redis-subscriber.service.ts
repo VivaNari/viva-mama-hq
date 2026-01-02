@@ -37,7 +37,7 @@ class RedisSubscriberService {
     }
 
     // Process score calculation
-    private async handleScoreProcess(message: string) {
+    public async handleScoreProcess(message: string) {
         let userId: string;
 
         try {
