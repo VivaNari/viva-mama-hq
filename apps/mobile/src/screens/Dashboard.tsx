@@ -1,8 +1,9 @@
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging'
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
+import Lucide from '@react-native-vector-icons/lucide'
 import { useNavigation } from '@react-navigation/native'
 import React, { useEffect, useState } from 'react'
-import { FlatList, ScrollView, Text, View } from 'react-native'
+import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import LinearGradient from 'react-native-linear-gradient'
 import Toast from 'react-native-toast-message'
 import { getUserContents } from '../api/getUserContents'
@@ -181,12 +182,8 @@ const Dashboard = () => {
                     </View>
                 </View>
             </ScrollView>
-            <LinearGradient
-                onTouchEnd={() => navigation.navigate("Experts")}
-                colors={[colors.primary, colors.secondary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                onMagicTap={() => { }}
+            <TouchableOpacity
+                onPress={() => navigation.navigate("Experts")}
                 style={{
                     borderRadius: 40,
                     height: 70,
@@ -197,19 +194,23 @@ const Dashboard = () => {
                     position: "absolute",
                     bottom: 5,
                     right: 10,
+                    backgroundColor: colors.purple,
+                    borderWidth: 2,
+                    borderColor: colors.darkPurple
                 }}
             >
-                <MaterialDesignIcons name='account-box-plus-outline' color={colors.white} size={22} />
+                <Lucide name='phone-call' color={colors.white} size={22} />
                 <Text
                     style={[{
-                        fontSize: 10,
+                        fontSize: 12,
                         textAlign: 'center',
                         color: colors.white,
-                    }, globalStyles.fontRegular]}
+                        letterSpacing: 0.5
+                    }, globalStyles.fontSemiBold]}
                 >
-                    Call an Expert
+                    Expert
                 </Text>
-            </LinearGradient>
+            </TouchableOpacity>
         </View>
     )
 }

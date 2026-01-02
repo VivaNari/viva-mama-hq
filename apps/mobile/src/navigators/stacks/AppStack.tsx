@@ -43,7 +43,7 @@ const AppStack = () => {
 
             }}
         >
-            
+
             <Stack.Screen
                 name="DashboardTabNavigator"
                 component={DashboardTabs}
@@ -92,7 +92,7 @@ const AppStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: false,
                     title: "Viva AI"
                 }}
                 name="ChatWithVivaAI"

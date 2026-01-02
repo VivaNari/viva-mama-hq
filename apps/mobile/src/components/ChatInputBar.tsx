@@ -89,7 +89,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled]}
+                style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled, { backgroundColor: colors.purple }]}
                 onPress={onSend}
                 disabled={isSendDisabled}
                 accessibilityRole="button"

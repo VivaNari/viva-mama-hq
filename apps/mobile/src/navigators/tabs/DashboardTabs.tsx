@@ -182,6 +182,7 @@ export const DashboardTabs = () => {
                             color={color}
                         />
                     ),
+                    headerShown: false,
                     tabBarBadge: counter > 0 ? counter : undefined,
                 }}
                 listeners={({ navigation }) => ({

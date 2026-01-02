@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
@@ -13,19 +13,8 @@ const CareManagerCard = () => {
             }}
         >
             <View
-            >
-                <Image
-                    source={require('../public/assets/images/care_manager.png')}
-                    style={{
-                        width: '100%',
-                        height: 200,
-                    }}
-                    resizeMode="contain"
-                />
-            </View>
-            <View
                 style={{
-                    backgroundColor: 'rgba(255, 250, 250, 1)',
+                    backgroundColor: colors.white,
                     padding: 10,
                     borderRadius: 10,
                     overflow: 'hidden',
@@ -37,7 +26,7 @@ const CareManagerCard = () => {
                     <View
                         style={{
                             ...StyleSheet.absoluteFillObject,
-                            backgroundColor: 'rgba(255, 250, 250, 0.90)',
+                            backgroundColor: colors.white,
                         }}
                     />
                     <View
@@ -71,10 +60,8 @@ const CareManagerCard = () => {
                     <View
                     >
 
-                        <GradientButtonWithSlightRadius
-                            title='Request a call now'
-                            fullRounded={true}
-                            fullWidth={true}
+                        <TouchableOpacity
+                            style={{ backgroundColor: colors.purple, padding: 10, borderRadius: 40, marginTop: 20, width: 180, alignContent: "center", alignSelf: "center" }}
                             onPress={() => {
                                 Toast.show({
                                     type: 'success',
@@ -84,7 +71,9 @@ const CareManagerCard = () => {
 
                                 });
                             }}
-                        />
+                        >
+                            <Text style={{ textAlign: "center", color: colors.white, ...globalStyles.fontSemiBold }}>Request a Call back</Text>
+                        </TouchableOpacity>
                     </View>
                 </View>
             </View>
