@@ -9,7 +9,12 @@ const createProductvalidator = Joi.object<IProduct>({
     userCategory: Joi.string()
         .valid(...Object.values(EUserCategory))
         .required(),
-    validWeeks: Joi.array().items(Joi.number().required().min(1).max(52)).required(),
+    validWeekStart: Joi.number().min(1).max(52).required(),
+    validWeekEnd: Joi.number().min(1).max(52).required(),
+    productCategory: Joi.string().required(),
+    productDescription: Joi.string().required(),
+    productPriceRange: Joi.string().required(),
+    safetyFlag: Joi.string().required(),
 });
 
 export default createProductvalidator;

@@ -8,6 +8,7 @@ const productRouter = Router();
 const getProductController = new ProductController();
 
 productRouter.get("/products", authMiddleware("header"), getProductController.getProducts);
+productRouter.get("/products/:id", authMiddleware("header"), getProductController.getProductById);
 productRouter.post(
     "/admin/products",
     requestValidator(createProductvalidator),

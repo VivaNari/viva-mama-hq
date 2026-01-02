@@ -34,6 +34,8 @@ export const messages = {
     CONTENT_SAVED_SUCCESS: "Content saved successfully",
     CALLBACK_REQUEST_SAVED_SUCCESS: "Callback request saved successfully",
     CONTENT_FETCH_SUCCESS: "Content fetched successfully",
+    PRODUCT_FETCH_SUCCESS: "Product fetched successfully",
+    PRODUCT_SAVED_SUCCESS: "Product saved successfully",
     CARE_MANAGER_FETCH_SUCCESS: "Care Managers fetched successfully",
     CARE_MANAGER_SAVED_SUCCESS: "Care Managers saved successfully",
     CARE_MANAGER_NOT_FOUND: "Care Manager not found",
