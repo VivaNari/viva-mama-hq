@@ -28,9 +28,9 @@ const LoginwithPhone = () => {
         console.log('🔥 BEFORE FETCH');
     }, []);
     return (
-        <SafeAreaView>
-            <ScrollView>
-                <View style={globalStyles.container}>
+        <SafeAreaView style={{ flex: 1 }}>
+            <ScrollView style={{ backgroundColor: "white" }}>
+                <View style={[globalStyles.container, { backgroundColor: colors.white }]}>
                     {/* Logo */}
                     <View
                         style={{
@@ -50,9 +50,9 @@ const LoginwithPhone = () => {
                                 <TextInput
                                     inputMode="tel"
                                     selectionColor={colors.primary}
-                                    placeholderTextColor={colors.white}
+                                    placeholderTextColor={colors.black}
                                     placeholder={'Enter Phone Number'}
-                                    style={[globalStyles.input, globalStyles.fontRegular]}
+                                    style={[globalStyles.input, globalStyles.fontRegular, { backgroundColor: colors.lightGray, borderWidth: 1, borderColor: colors.darkPurple, fontSize: 18, color: colors.purple }]}
                                     onChangeText={setPhoneNumber}
                                     value={phoneNumber}
                                 />
@@ -72,14 +72,12 @@ const LoginwithPhone = () => {
                                             setLoading(false);
                                         }
                                     }}
-                                    style={{ flex: 1, marginTop: 30 }}
+                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.lightPurple, borderRadius: 40, borderWidth: 1, borderColor: colors.darkPurple }}
                                     activeOpacity={0.8}
                                     disabled={getLoading}
                                 >
-                                    <LinearGradient
-                                        colors={[colors.primary, colors.secondary]}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
+                                    <View
+
                                         style={{
                                             height: '100%',
                                             width: '100%',
@@ -89,6 +87,7 @@ const LoginwithPhone = () => {
                                             flexDirection: 'row',
                                             padding: 14,
                                             gap: 20,
+
                                         }}
                                     >
                                         {
@@ -98,20 +97,20 @@ const LoginwithPhone = () => {
                                                 /> :
                                                 <MaterialDesignIcons
                                                     name="phone-settings"
-                                                    color={colors.white}
+                                                    color={colors.purple}
                                                     size={20}
                                                 />
                                         }
                                         <Text
                                             style={[{
-                                                color: colors.white,
+                                                color: colors.purple,
                                                 fontSize: 18,
                                             }, globalStyles.fontRegular]}
                                         >
 
                                             Send OTP
                                         </Text>
-                                    </LinearGradient>
+                                    </View>
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -151,14 +150,11 @@ const LoginwithPhone = () => {
                                         await verifyPhoneOTP(phoneNumber, otp, verificationKey);
                                         setLoading(false);
                                     }}
-                                    style={{ flex: 1, marginTop: 30 }}
+                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.lightPurple, borderRadius: 40, borderWidth: 1, borderColor: colors.darkPurple }}
                                     activeOpacity={0.8}
                                     disabled={getLoading}
                                 >
-                                    <LinearGradient
-                                        colors={[colors.primary, colors.secondary]}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
+                                    <View
                                         style={{
                                             height: '100%',
                                             width: '100%',
@@ -178,20 +174,20 @@ const LoginwithPhone = () => {
                                         }
                                         <Text
                                             style={[{
-                                                color: colors.white,
+                                                color: colors.purple,
                                                 fontSize: 18,
                                             }, globalStyles.fontRegular]}
                                         >
                                             Submit
                                         </Text>
-                                    </LinearGradient>
+                                    </View>
                                 </TouchableOpacity>
                             </View>
                         )}
                     </View>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 

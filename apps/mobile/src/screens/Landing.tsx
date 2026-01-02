@@ -19,124 +19,109 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
         <SafeAreaView style={{
             flex: 1
         }}>
-            <ScrollView>
-                {/* pattern */}
-                <View>
+            <ScrollView style={{ flex: 1, paddingBottom: 20, paddingHorizontal: 20 }} contentContainerStyle={{ justifyContent: "space-between", flexGrow: 1 }}>
+                {/* Logo */}
+                <View style={{
+                    alignItems: 'center',
+                    paddingTop: 20
+                }}>
                     <Image
-                        source={require('../public/assets/images/Landing.png')}
-                        style={{ width: '100%', objectFit: 'cover' }}
+                        source={require('../public/assets/images/viva_logo.png')}
+                        style={{
+
+                        }}
                     />
                 </View>
 
-                <View style={globalStyles.container}>
+                {/* Welcome Text */}
+                <View>
+                    <Text style={[landingStyles.welcomeText, globalStyles.fontBold]}>Welcome, Mama</Text>
+                    <Text style={[landingStyles.welcomeCaption, globalStyles.fontRegular]}>Your complete companion for postpartum care and recovery.</Text>
+                </View>
 
-                    {/* Logo */}
-                    <View style={{
-                        alignItems: 'center',
-                    }}>
-                        <Image
-                            source={require('../public/assets/images/viva_logo.png')}
+                {/* Login Options */}
+                <View style={{ paddingTop: 90, gap: 10 }}>
+                    <TouchableOpacity
+                        style={{ flex: 1, backgroundColor: colors.purple, borderRadius: 40 }}
+                        activeOpacity={0.8}
+                        onPress={async () => {
+                            try {
+                                setLoading(true);
+                                await signInWithGoogle();
+                            } catch (e) {
+                                console.error("Google sign-in cancelled or failed", e);
+                                Toast.show({
+                                    type: 'error',
+                                    text1: 'Error',
+                                    text2: "Google sign-in cancelled or failed!",
+                                    position: 'top'
+                                });
+                            } finally {
+                                setLoading(false);
+                            }
+                        }}
+                        disabled={getLoading}
+
+                    >
+                        <View
                             style={{
+                                height: "100%",
+                                width: "100%",
+                                borderRadius: 40,
+                                justifyContent: "center",
+                                alignItems: "center",
+                                flexDirection: "row",
+                                padding: 14,
+                                gap: 20
 
-                            }}
-                        />
-                    </View>
-
-                    {/* Welcome Text */}
-                    <View>
-                        <Text style={[landingStyles.welcomeText, globalStyles.fontBold]}>Welcome, Mama</Text>
-                        <Text style={[landingStyles.welcomeCaption, globalStyles.fontRegular]}>Your complete companion for postpartum care and recovery.</Text>
-                    </View>
-
-                    {/* Login Options */}
-                    <View style={{ paddingTop: 90, gap: 10 }}>
-                        <TouchableOpacity
-                            style={{ flex: 1 }}
-                            activeOpacity={0.8}
-                            onPress={async () => {
-                                try {
-                                    setLoading(true);
-                                    await signInWithGoogle();
-                                } catch (e) {
-                                    console.error("Google sign-in cancelled or failed", e);
-                                    Toast.show({
-                                        type: 'error',
-                                        text1: 'Error',
-                                        text2: "Google sign-in cancelled or failed!",
-                                        position: 'top'
-                                    });
-                                } finally {
-                                    setLoading(false);
-                                }
-                            }}
-                            disabled={getLoading}
-                        >
-                            <LinearGradient
-                                colors={[colors.primary, colors.secondary]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={{
-                                    height: "100%",
-                                    width: "100%",
-                                    borderRadius: 40,
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    flexDirection: "row",
-                                    padding: 14,
-                                    gap: 20
-
-                                }}
-                            >
-                                {
-                                    getLoading ?
-                                        <ActivityIndicator size="small" color={colors.white} /> :
-                                        <MaterialDesignIcons name="google" color={colors.white} size={20} />
-                                }
-                                <Text
-                                    style={[{
-                                        color: colors.white,
-                                        fontSize: 18
-                                    }, globalStyles.fontRegular]}
-                                >
-                                    Continue with Google
-                                </Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            style={{ flex: 1 }}
-                            activeOpacity={0.8}
-                            onPress={() => {
-                                navigation.navigate("LoginWithPhone")
                             }}
                         >
-                            <LinearGradient
-                                colors={[colors.primary, colors.secondary]}
-                                start={{ x: 0, y: 0 }}
-                                end={{ x: 1, y: 0 }}
-                                style={{
-                                    height: "100%",
-                                    width: "100%",
-                                    borderRadius: 40,
-                                    justifyContent: "center",
-                                    alignItems: "center",
-                                    flexDirection: "row",
-                                    padding: 14,
-                                    gap: 20
-
-                                }}
+                            {
+                                getLoading ?
+                                    <ActivityIndicator size="small" color={colors.white} /> :
+                                    <MaterialDesignIcons name="google" color={colors.white} size={20} />
+                            }
+                            <Text
+                                style={[{
+                                    color: colors.white,
+                                    fontSize: 18
+                                }, globalStyles.fontRegular]}
                             >
-                                <MaterialDesignIcons name="phone" color={colors.white} size={20} />
-                                <Text
-                                    style={[{
-                                        color: colors.white,
-                                        fontSize: 18
-                                    }, globalStyles.fontRegular]}
-                                >
-                                    Continue with Phone
-                                </Text>
-                            </LinearGradient>
-                        </TouchableOpacity>
-                    </View>
+                                Continue with Google
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={{ flex: 1, borderRadius: 40, backgroundColor: colors.lightPurple, borderWidth: 1, borderColor: colors.darkPurple }}
+                        activeOpacity={0.8}
+                        onPress={() => {
+                            navigation.navigate("LoginWithPhone")
+                        }}
+                    >
+                        <View
+                            style={{
+                                height: "100%",
+                                width: "100%",
+                                borderRadius: 40,
+                                justifyContent: "center",
+                                alignItems: "center",
+                                flexDirection: "row",
+                                padding: 14,
+                                gap: 20
+
+                            }}
+                        >
+                            <MaterialDesignIcons name="phone" color={colors.purple} size={20} />
+                            <Text
+                                style={[{
+                                    color: colors.purple,
+                                    fontSize: 18
+                                }, globalStyles.fontRegular]}
+                            >
+                                Continue with Phone
+                            </Text>
+                        </View>
+                    </TouchableOpacity>
                     <View
                         style={{
                             marginTop: 10
@@ -154,8 +139,6 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                         </Text>
                     </View>
                 </View>
-
-
             </ScrollView>
         </SafeAreaView>
     )
