@@ -50,6 +50,7 @@ export const useChatActions = ({
       conversationId?: string;
     }): Promise<boolean> => {
       try {
+        console.log("sdsadasdasdsadasd");
         if (flowType === FlowType.CHECKIN) {
           await apiClientInterceptor().post(WEEKLY_CHECKIN_ANSWER, {
             userId,
@@ -62,6 +63,7 @@ export const useChatActions = ({
             idempotencyKey: payload.nodeId,
           });
         } else {
+          console.log("23232322");
           await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
             userId,
             flowInstanceId: payload.flowInstanceId,
