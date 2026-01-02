@@ -12,6 +12,7 @@ import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlig
 import ItemProduct from '../components/products/ItemProduct'
 import { useAuth } from '../context/AuthContext'
 import { chatDB } from '../db/sqlite'
+import { syncUserData } from '../utils/syncUserData'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
 import { IUserContent, IUserContentresponse } from '../types/content.types'
@@ -24,13 +25,21 @@ const Dashboard = () => {
     const [userData, setUserdata] = useState<IUserAllData>();
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
     const [productsData, setProductsData] = useState<IUserProduct[]>([]);
-    const { userId } = useAuth();
+    const { userId, userToken } = useAuth();
 
     useEffect(() => {
         if (!userId) return;
         (async () => {
             try {
-                const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+                let getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+
+                // Fallback: If no data in SQLite, try to sync from API
+                if (!getUserDataFromSQLite && userToken) {
+                    console.log("[DASHBOARD] No local data, attempting fallback sync...");
+                    await syncUserData(userToken);
+                    getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+                }
+
                 console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
                 if (getUserDataFromSQLite) {
                     setUserdata(getUserDataFromSQLite.data);
@@ -45,7 +54,7 @@ const Dashboard = () => {
                 console.error("Error loading dashboard data:", error);
             }
         })()
-    }, [userId])
+    }, [userId, userToken])
 
     useEffect(() => {
         (async function () {
@@ -149,38 +158,42 @@ const Dashboard = () => {
                             )
                         }
 
+                        {
+                            productsData.length > 0 && (
 
-                        <View
-                            style={{
-                                marginTop: 30
-                            }}
-                        >
-                            <Text
-                                style={[{
-                                    fontSize: 20
-                                }, globalStyles.fontBold]}
-                            >
-                                Suggested Products
-                            </Text>
-                            <FlatList
-                                data={productsData.slice(0, 6)}
-                                renderItem={({ item }) => <ItemProduct item={item} navigation={navigation} />}
-                                keyExtractor={(item: IUserProduct) => item._id}
-                                numColumns={2}
-                                columnWrapperStyle={{ gap: 10, marginBottom: 20, justifyContent: 'space-between' }}
-                                nestedScrollEnabled={false}
-                                scrollEnabled={false}
-                                style={{
-                                    paddingTop: 20
-                                }}
-                            />
-                            <View>
-                                <GradientButtonWithSlightRadius
-                                    title='See More'
-                                    onPress={() => navigation.navigate("Products")}
-                                />
-                            </View>
-                        </View>
+                                <View
+                                    style={{
+                                        marginTop: 30
+                                    }}
+                                >
+                                    <Text
+                                        style={[{
+                                            fontSize: 20
+                                        }, globalStyles.fontBold]}
+                                    >
+                                        Suggested Products
+                                    </Text>
+                                    <FlatList
+                                        data={productsData.slice(0, 6)}
+                                        renderItem={({ item }) => <ItemProduct item={item} navigation={navigation} />}
+                                        keyExtractor={(item: IUserProduct) => item._id}
+                                        numColumns={2}
+                                        columnWrapperStyle={{ gap: 10, marginBottom: 20, justifyContent: 'space-between' }}
+                                        nestedScrollEnabled={false}
+                                        scrollEnabled={false}
+                                        style={{
+                                            paddingTop: 20
+                                        }}
+                                    />
+                                    <View>
+                                        <GradientButtonWithSlightRadius
+                                            title='See More'
+                                            onPress={() => navigation.navigate("Products")}
+                                        />
+                                    </View>
+                                </View>
+                            )
+                        }
                     </View>
                 </View>
             </ScrollView>
