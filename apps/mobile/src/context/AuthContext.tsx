@@ -229,6 +229,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const completeQuestionnaire = async () => {
     try {
+      if (userToken) {
+        await syncUserData(userToken);
+      }
       const updatedStatus = {
         ...onboardingStatus,
         is_questionnaire_completed: true,
@@ -242,6 +245,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const completeSubscription = async () => {
     try {
+      if (userToken) {
+        await syncUserData(userToken);
+      }
       const updatedStatus = {
         ...onboardingStatus,
         is_subscription_completed: true,
@@ -255,6 +261,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const completeOnboarding = async () => {
     try {
+      if (userToken) {
+        await syncUserData(userToken);
+      }
       const updatedStatus = {
         is_questionnaire_completed: true,
         is_subscription_completed: true,
