@@ -14,7 +14,8 @@ const expertSchema: Schema<IExpert> = new Schema<IExpert>(
         },
         qualification: {
             type: String,
-            required: true,
+            required: false,
+            default: null,
         },
         yearsOfExperience: {
             type: Number,
@@ -22,7 +23,8 @@ const expertSchema: Schema<IExpert> = new Schema<IExpert>(
         },
         bio: {
             type: String,
-            required: true,
+            required: false,
+            default: null,
         },
         photograph: {
             type: String,

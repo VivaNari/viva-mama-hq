@@ -24,14 +24,15 @@ export class ProductController {
             const products: IProduct[] = await this.productService.find({
                 filter: {
                     userCategory: user.user_category,
-                    validWeeks: { $in: [user.current_weekdays.weeks] },
+                    validWeekStart: { $lte: user.current_weekdays.weeks },
+                    validWeekEnd: { $gte: user.current_weekdays.weeks },
                 },
             });
             sendResponse({
                 data: products,
                 statusCode: StatusCodes.OK,
                 success: true,
-                message: messages.CONTENT_FETCH_SUCCESS,
+                message: messages.PRODUCT_FETCH_SUCCESS,
                 response,
             });
         } catch (err) {
@@ -50,7 +51,22 @@ export class ProductController {
                 data: instance,
                 statusCode: StatusCodes.CREATED,
                 success: true,
-                message: messages.CONTENT_SAVED_SUCCESS,
+                message: messages.PRODUCT_SAVED_SUCCESS,
+                response,
+            });
+        } catch (err) {
+            next(err);
+        }
+    };
+
+    getProductById = async (request: Request, response: Response, next: NextFunction) => {
+        try {
+            const content = await this.productService.find({ filter: { _id: request.params.id } });
+            sendResponse({
+                data: content,
+                statusCode: StatusCodes.OK,
+                success: true,
+                message: messages.PRODUCT_FETCH_SUCCESS,
                 response,
             });
         } catch (err) {

@@ -1,7 +1,8 @@
 import { Schema } from "mongoose";
 import { EUserCategory } from "../../types";
+import { IProduct } from "../../types/products.types";
 
-export const productSchema = new Schema({
+export const productSchema = new Schema<IProduct>({
     productImageURL: { type: String, required: true },
     productName: { type: String, required: true },
     productAffiliateLink: { type: String, required: true },
@@ -10,5 +11,10 @@ export const productSchema = new Schema({
         required: true,
         enum: Object.values(EUserCategory),
     },
-    validWeeks: { type: [Number], required: true },
+    validWeekStart: { type: Number, required: true },
+    validWeekEnd: { type: Number, required: true },
+    productCategory: { type: String, required: true },
+    productDescription: { type: String, required: true },
+    productPriceRange: { type: String, required: true },
+    safetyFlag: { type: String, required: true },
 });

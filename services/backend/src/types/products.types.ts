@@ -6,5 +6,10 @@ export interface IProduct {
     productName: string;
     productAffiliateLink: string;
     userCategory: string;
-    validWeeks: number[];
+    validWeekStart: number;
+    validWeekEnd: number;
+    productCategory: string;
+    productDescription: string;
+    productPriceRange: string;
+    safetyFlag: string;
 }
