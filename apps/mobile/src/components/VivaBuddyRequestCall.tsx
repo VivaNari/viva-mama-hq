@@ -48,7 +48,7 @@ const VivaBuddyRequestCall = () => {
                         textAlign: 'center'
                     }, globalStyles.fontRegular]}
                 >
-                    Request a call with Viva buddy
+                    Request a call with your Care Manager
                 </Text>
                 <Text
                     style={[{

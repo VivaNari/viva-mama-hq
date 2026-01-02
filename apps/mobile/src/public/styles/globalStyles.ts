@@ -1,12 +1,12 @@
-import { StyleSheet } from 'react-native';
-import { colors } from '../assets/colors';
-import { EFontWeight, getFontFamily } from '../../utils/fontFamily';
+import { StyleSheet } from "react-native";
+import { colors } from "../assets/colors";
+import { EFontWeight, getFontFamily } from "../../utils/fontFamily";
 
 export const globalStyles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: colors.pageBG,
+    backgroundColor: colors.white,
   },
   chatContainer: {
     flex: 1,
@@ -15,9 +15,9 @@ export const globalStyles = StyleSheet.create({
     marginBottom: 10,
   },
   headingxl: {
-    fontStyle: 'normal',
+    fontStyle: "normal",
     fontSize: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   input: {
     padding: 10,
@@ -27,8 +27,8 @@ export const globalStyles = StyleSheet.create({
     marginVertical: 8,
     color: colors.white,
     height: 52,
-    backgroundColor: '#9C9C9C',
-    justifyContent: 'center',
+    backgroundColor: "#9C9C9C",
+    justifyContent: "center",
   },
   inputHovered: {
     padding: 10,
@@ -39,7 +39,7 @@ export const globalStyles = StyleSheet.create({
     color: colors.primary,
     backgroundColor: colors.offWhite,
     height: 52,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   inputSelected: {
     padding: 10,
@@ -50,11 +50,11 @@ export const globalStyles = StyleSheet.create({
     color: colors.primary,
     backgroundColor: colors.primary,
     height: 52,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   card: {
     borderWidth: 2,
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    borderColor: "rgba(0, 0, 0, 0.1)",
     padding: 20,
     marginVertical: 10,
     borderRadius: 10,

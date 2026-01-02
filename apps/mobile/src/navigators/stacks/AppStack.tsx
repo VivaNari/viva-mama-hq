@@ -26,6 +26,7 @@ import VivaClubPost from '../../screens/VivaClubPost';
 import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
 import { DashboardTabs } from '../tabs/DashboardTabs';
 import ChatWithVivaAi from '../../screens/ChatWithVivaAI';
+import ProductDetails from '../../screens/ProductDetails';
 
 const Stack = createNativeStackNavigator();
 
@@ -81,6 +82,15 @@ const AppStack = () => {
                 }}
                 name="Products"
                 component={Products}
+            />
+
+            <Stack.Screen
+                options={{
+                    headerShown: false,
+                    title: 'Product',
+                }}
+                name="ProductDetails"
+                component={ProductDetails}
             />
             <Stack.Screen
                 options={{

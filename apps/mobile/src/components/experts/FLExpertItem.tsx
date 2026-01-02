@@ -6,40 +6,55 @@ import { IExpert } from "../../types/expert.types";
 
 const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigate: any } }) => {
     return (
-        <TouchableOpacity
-            activeOpacity={0.85}
-            style={styles.card}
-            onPress={() => navigation.navigate('ExpertDetails', { expertId: item._id })}
+        <View
+            style={{
+                padding: 2,
+                width: '50%',
+                flexShrink: 1
+            }}
         >
-            {/* Expert Photo */}
-            <View style={styles.imageContainer}>
-                <Image
-                    // source={require('../../public/assets/images/doctors/Dr_Anuradha_Kumari.png')}
-                    source={{ uri: item.photograph }}
-                    resizeMode="cover"
-                    style={styles.image}
-                />
-                {/* Experience Badge */}
-                <LinearGradient
-                    colors={[colors.purple, colors.darkPurple]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.experienceBadge}
-                >
-                    <Text style={[styles.experienceText, globalStyles.fontBold]}>
-                        {item.yearsOfExperience}+ Years
-                    </Text>
-                </LinearGradient>
-            </View>
+            <TouchableOpacity
+                activeOpacity={0.85}
+                style={{
+                    justifyContent: 'flex-start',
+                    flex: 1,
+                    width: '100%',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    boxShadow: '0 0 4px 0 rgba(0, 0, 0, 0.25)',
+                }}
+                onPress={() => navigation.navigate('ExpertDetails', { expertId: item._id })}
+            >
+                {/* Expert Photo */}
+                <View style={styles.imageContainer}>
+                    <Image
+                        // source={require('../../public/assets/images/doctors/Dr_Anuradha_Kumari.png')}
+                        source={{ uri: item.photograph }}
+                        resizeMode="cover"
+                        style={styles.image}
+                    />
+                    {/* Experience Badge */}
+                    <LinearGradient
+                        colors={[colors.purple, colors.darkPurple]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.experienceBadge}
+                    >
+                        <Text style={[styles.experienceText, globalStyles.fontBold]}>
+                            {item.yearsOfExperience}+ Years
+                        </Text>
+                    </LinearGradient>
+                </View>
 
-            {/* Expert Info */}
-            <View>
-                {/* Name */}
-                <Text style={[styles.name, globalStyles.fontSemiBold]}>
-                    {item.name}
-                </Text>
-            </View>
-        </TouchableOpacity>
+                {/* Expert Info */}
+                <View>
+                    {/* Name */}
+                    <Text style={[styles.name, globalStyles.fontSemiBold]}>
+                        {item.name}
+                    </Text>
+                </View>
+            </TouchableOpacity>
+        </View>
     )
 }
 

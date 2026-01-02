@@ -19,9 +19,10 @@ import { globalStyles } from "../public/styles";
 import { styles, subscriptionsDetailsStyles } from "../public/styles/subscriptionStyles";
 import { IPaymentOrderResponse, IService } from "../types/services.types";
 import { useAuth } from "../context/AuthContext";
+import { syncUserData } from "../utils/syncUserData";
 
 const SubscriptionDetails: React.FC<{ plan: string; billing: string }> = ({ billing }: { plan: string; billing: string }) => {
-    const { completeOnboarding } = useAuth();
+    const { completeOnboarding, userToken } = useAuth();
     const passedPlan: IService = {
         id: "string",
         title: "Viva Basic",
@@ -135,6 +136,9 @@ const SubscriptionDetails: React.FC<{ plan: string; billing: string }> = ({ bill
 
             // Update local state - both completed
             await completeOnboarding();
+
+            // Sync user data to SQLite BEFORE changing state to ensure Dashboard finds it
+            await syncUserData(userToken as string);
 
             // Navigate to dashboard [automatically handled by the navigator setup]
 

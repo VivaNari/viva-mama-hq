@@ -1,17 +1,15 @@
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging'
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import Lucide from '@react-native-vector-icons/lucide'
 import { useNavigation } from '@react-navigation/native'
 import React, { useEffect, useState } from 'react'
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
-import LinearGradient from 'react-native-linear-gradient'
 import Toast from 'react-native-toast-message'
 import { getUserContents } from '../api/getUserContents'
 import { getUserProducts } from '../api/getUserProducts'
 import { ArticleCard } from '../components/ArticleCard'
-import DashboardCard from '../components/dashboard/DashboardCard'
 import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
+import ItemProduct from '../components/products/ItemProduct'
 import { useAuth } from '../context/AuthContext'
 import { chatDB } from '../db/sqlite'
 import { colors } from '../public/assets/colors'
@@ -19,7 +17,6 @@ import { globalStyles } from '../public/styles'
 import { IUserContent, IUserContentresponse } from '../types/content.types'
 import { IUserAllData } from '../types/dashboard.types'
 import { IUserProduct, IUserProductResponse } from '../types/product.types'
-import { FLProductItem } from './Products'
 
 const Dashboard = () => {
     const navigation = useNavigation<any>();
@@ -96,59 +93,64 @@ const Dashboard = () => {
                     {/* View to show at every tab */}
                     <View
                     >
-                        <View>
-                            {/* <Text
+                        {
+                            userContentsData.length > 0 && (
+                                <View>
+                                    {/* <Text
                                 style={[{
                                     fontSize: 20,
                                 }, globalStyles.fontBold]}
                             >
                                 Contents
                             </Text> */}
-                            <FlatList
-                                data={userContentsData.slice(1, 5)}
-                                keyExtractor={(item) => item._id.toString()}
-                                renderItem={({ item }) => (
-                                    <ArticleCard
-                                        key={item._id.toString()}
-                                        item={item}
-
-                                    />
-                                )}
-                                scrollEnabled={false}
-                                nestedScrollEnabled={false}
-                                columnWrapperStyle={{
-                                    justifyContent: 'space-between',
-                                    alignItems: 'flex-end',
-                                }}
-                                numColumns={2}
-                                ListHeaderComponent={
                                     <FlatList
-                                        data={userContentsData.slice(0, 1)}
+                                        data={userContentsData.slice(1, 5)}
                                         keyExtractor={(item) => item._id.toString()}
                                         renderItem={({ item }) => (
                                             <ArticleCard
                                                 key={item._id.toString()}
                                                 item={item}
-                                                width='full'
+
                                             />
                                         )}
                                         scrollEnabled={false}
                                         nestedScrollEnabled={false}
+                                        columnWrapperStyle={{
+                                            justifyContent: 'space-between',
+                                            alignItems: 'flex-end',
+                                        }}
+                                        numColumns={2}
+                                        ListHeaderComponent={
+                                            <FlatList
+                                                data={userContentsData.slice(0, 1)}
+                                                keyExtractor={(item) => item._id.toString()}
+                                                renderItem={({ item }) => (
+                                                    <ArticleCard
+                                                        key={item._id.toString()}
+                                                        item={item}
+                                                        width='full'
+                                                    />
+                                                )}
+                                                scrollEnabled={false}
+                                                nestedScrollEnabled={false}
+                                            />
+                                        }
+                                        style={{
+                                            paddingTop: 20
+                                        }}
                                     />
-                                }
-                                style={{
-                                    paddingTop: 20
-                                }}
-                            />
-                            <View>
-                                <GradientButtonWithSlightRadius
-                                    title='See More'
-                                    onPress={() => navigation.navigate("Community")}
-                                />
-                            </View>
-                        </View>
+                                    <View>
+                                        <GradientButtonWithSlightRadius
+                                            title='See More'
+                                            onPress={() => navigation.navigate("Community")}
+                                        />
+                                    </View>
+                                </View>
+                            )
+                        }
 
-                        <DashboardCard
+
+                        <View
                             style={{
                                 marginTop: 30
                             }}
@@ -162,7 +164,7 @@ const Dashboard = () => {
                             </Text>
                             <FlatList
                                 data={productsData.slice(0, 6)}
-                                renderItem={FLProductItem}
+                                renderItem={({ item }) => <ItemProduct item={item} navigation={navigation} />}
                                 keyExtractor={(item: IUserProduct) => item._id}
                                 numColumns={2}
                                 columnWrapperStyle={{ gap: 10, marginBottom: 20, justifyContent: 'space-between' }}
@@ -178,7 +180,7 @@ const Dashboard = () => {
                                     onPress={() => navigation.navigate("Products")}
                                 />
                             </View>
-                        </DashboardCard>
+                        </View>
                     </View>
                 </View>
             </ScrollView>

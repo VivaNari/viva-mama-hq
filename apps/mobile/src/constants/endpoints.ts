@@ -1,7 +1,7 @@
 import { API_VERSION, BASE_API_URL as RN_BASE_API_URL } from "@env";
 
 // Use environment variable in production, fallback for development
-export const BASE_API_URL = "https://3724805dfc83.ngrok-free.app";
+export const BASE_API_URL = RN_BASE_API_URL;
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
 
@@ -65,6 +65,9 @@ export const USER_REQUEST_CALLBACK = `${API_VERSION_URL}/callback-request`;
 
 export const USER_CONTENT_URL = (articleId: string): string => {
   return `${API_VERSION_URL}/contents/${articleId}`;
+};
+export const USER_PRODUCT_URL = (productId: string): string => {
+  return `${API_VERSION_URL}/products/${productId}`;
 };
 export const USER_EXPERT_URL = (expertId: string): string => {
   return `${API_VERSION_URL}/expert/${expertId}`;

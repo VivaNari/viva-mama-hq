@@ -212,30 +212,40 @@ const ExpertDetails = () => {
                     </View>
 
                     {/* Qualification Card */}
-                    <View style={styles.infoCard}>
-                        <View style={styles.cardHeader}>
-                            <Lucide name="school" size={20} color={colors.purple} />
-                            <Text style={[styles.cardTitle, globalStyles.fontBold]}>
-                                Qualification
-                            </Text>
-                        </View>
-                        <Text style={[styles.cardContent, globalStyles.fontRegular]}>
-                            {expert.qualification}
-                        </Text>
-                    </View>
+                    {
+                        expert.qualification && (
+
+                            <View style={styles.infoCard}>
+                                <View style={styles.cardHeader}>
+                                    <Lucide name="school" size={20} color={colors.purple} />
+                                    <Text style={[styles.cardTitle, globalStyles.fontBold]}>
+                                        Qualification
+                                    </Text>
+                                </View>
+                                <Text style={[styles.cardContent, globalStyles.fontRegular]}>
+                                    {expert.qualification}
+                                </Text>
+                            </View>
+                        )
+                    }
 
                     {/* About / Bio Card */}
-                    <View style={styles.infoCard}>
-                        <View style={styles.cardHeader}>
-                            <Lucide name="info" size={20} color={colors.purple} />
-                            <Text style={[styles.cardTitle, globalStyles.fontBold]}>
-                                About
-                            </Text>
-                        </View>
-                        <Text style={[styles.bioText, globalStyles.fontRegular]}>
-                            {expert.bio}
-                        </Text>
-                    </View>
+                    {
+                        expert.bio && (
+
+                            <View style={styles.infoCard}>
+                                <View style={styles.cardHeader}>
+                                    <Lucide name="info" size={20} color={colors.purple} />
+                                    <Text style={[styles.cardTitle, globalStyles.fontBold]}>
+                                        About
+                                    </Text>
+                                </View>
+                                <Text style={[styles.bioText, globalStyles.fontRegular]}>
+                                    {expert.bio}
+                                </Text>
+                            </View>
+                        )
+                    }
 
                     {/* Speciality Details Card */}
                     <View style={styles.infoCard}>

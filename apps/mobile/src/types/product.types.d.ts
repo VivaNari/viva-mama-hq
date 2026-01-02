@@ -1,4 +1,4 @@
-import { UserCategoryEnum } from './user.types';
+import { UserCategoryEnum } from "./user.types";
 
 export interface IProduct {
   productImage: number; // because require() returns a number
@@ -18,5 +18,10 @@ export interface IUserProduct {
   productName: string;
   productAffiliateLink: string;
   userCategory: UserCategoryEnum;
-  validWeeks: number[];
+  validWeekStart: number;
+  validWeekEnd: number;
+  productCategory: string;
+  productDescription: string;
+  productPriceRange: string;
+  safetyFlag: string;
 }

@@ -1,5 +1,6 @@
+import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState } from 'react';
-import { FlatList, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getUserProducts } from '../api/getUserProducts';
 import ItemProduct from '../components/products/ItemProduct';
@@ -8,19 +9,24 @@ import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { IUserProduct, IUserProductResponse } from '../types/product.types';
 
-export const FLProductItem = ({ item }: { item: IUserProduct }) => {
-    return <ItemProduct item={item} />;
-};
-
 const Products = () => {
+    const navigation = useNavigation();
     const [searchData, setSearchData] = useState('');
     const [products, setProducts] = useState<IUserProduct[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
 
     // Fetch once
     useEffect(() => {
         (async () => {
-            const response: IUserProductResponse = await getUserProducts();
-            setProducts(response.data);
+            try {
+                setLoading(true);
+                const response: IUserProductResponse = await getUserProducts();
+                setProducts(response.data);
+            } catch (error) {
+                console.error("Error fetching products:", error);
+            } finally {
+                setLoading(false);
+            }
         })();
     }, []);
 
@@ -43,12 +49,12 @@ const Products = () => {
 
             <FlatList
                 data={filteredProducts}
-                renderItem={FLProductItem}
+                renderItem={({ item }) => <ItemProduct item={item} navigation={navigation} />}
                 keyExtractor={(item) => item._id}
                 numColumns={2}
                 columnWrapperStyle={{
-                    gap: 12,
-                    marginBottom: 20,
+                    gap: 15,
+                    marginBottom: 15,
                     justifyContent: 'space-between',
                 }}
                 ListEmptyComponent={() => (
@@ -60,9 +66,13 @@ const Products = () => {
                             marginTop: 40,
                         }}
                     >
-                        <Text style={[{ color: colors.black }, globalStyles.fontRegular]}>
-                            No Products Found!
-                        </Text>
+                        {loading ? (
+                            <ActivityIndicator size="large" color={colors.purple} />
+                        ) : (
+                            <Text style={[{ color: colors.black }, globalStyles.fontRegular]}>
+                                No Products Found!
+                            </Text>
+                        )}
                     </View>
                 )}
             />
