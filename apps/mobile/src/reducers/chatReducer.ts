@@ -11,6 +11,15 @@ export const chatReducer = (state: ChatState, action: ChatAction): ChatState => 
 			};
 
 		case 'ADD_MESSAGE':
+			if (action.payload.type === 'ai') {
+				const exists = state.messages.some(
+					m => m.type === 'ai' && m.id === (action.payload as IAiMessage).id
+				);
+				if (exists) {
+					return state; // Skip duplicate
+				}
+			}
+
 			return {
 				...state,
 				messages: [...state.messages, action.payload],

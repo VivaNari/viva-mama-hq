@@ -41,7 +41,7 @@ const apiClientInterceptor = (): AxiosInstance => {
    * RETRY CONFIG
    */
   const retryOptions: IAxiosRetryConfig = {
-    retries: 3,
+    retries: 5,
     retryCondition: (err: AxiosError) =>
       err.response?.status !== 200,
 

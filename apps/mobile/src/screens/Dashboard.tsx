@@ -1,7 +1,7 @@
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging'
 import Lucide from '@react-native-vector-icons/lucide'
-import { useNavigation } from '@react-navigation/native'
-import React, { useEffect, useState } from 'react'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react'
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { getUserContents } from '../api/getUserContents'
@@ -27,34 +27,37 @@ const Dashboard = () => {
     const [productsData, setProductsData] = useState<IUserProduct[]>([]);
     const { userId, userToken } = useAuth();
 
-    useEffect(() => {
-        if (!userId) return;
-        (async () => {
-            try {
-                let getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+    useFocusEffect(
+        useCallback(() => {
+            if (!userId) return;
+            (async () => {
+                try {
+                    console.log("test21")
 
-                // Fallback: If no data in SQLite, try to sync from API
-                if (!getUserDataFromSQLite && userToken) {
-                    console.log("[DASHBOARD] No local data, attempting fallback sync...");
-                    await syncUserData(userToken);
-                    getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+                    let getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+
+                    // Fallback: If no data in SQLite, try to sync from API
+                    if (!getUserDataFromSQLite && userToken) {
+                        console.log("[DASHBOARD] No local data, attempting fallback sync...");
+                        await syncUserData(userToken);
+                        getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+                    }
+
+                    console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
+                    if (getUserDataFromSQLite) {
+                        setUserdata(getUserDataFromSQLite.data);
+                    }
+
+                    const getContents: IUserContentresponse = await getUserContents();
+                    setUserContentsData(getContents.data);
+
+                    const getProducts: IUserProductResponse = await getUserProducts();
+                    setProductsData(getProducts.data);
+                } catch (error) {
+                    console.error("Error loading dashboard data:", error);
                 }
-
-                console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
-                if (getUserDataFromSQLite) {
-                    setUserdata(getUserDataFromSQLite.data);
-                }
-
-                const getContents: IUserContentresponse = await getUserContents();
-                setUserContentsData(getContents.data);
-
-                const getProducts: IUserProductResponse = await getUserProducts();
-                setProductsData(getProducts.data);
-            } catch (error) {
-                console.error("Error loading dashboard data:", error);
-            }
-        })()
-    }, [userId, userToken])
+            })()
+        }, [userId, userToken]))
 
     useEffect(() => {
         (async function () {

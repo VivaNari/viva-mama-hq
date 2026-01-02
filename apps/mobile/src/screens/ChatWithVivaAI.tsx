@@ -44,6 +44,7 @@ import {
 import { determineInputMode, isAiMessage } from '../utils/messageHelpers';
 import { chatLogger } from '../utils/logger';
 import { globalStyles } from '../public/styles';
+import { syncUserData } from '../utils/syncUserData';
 
 const ChatWithVivaAI: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -117,10 +118,13 @@ const ChatWithVivaAI: React.FC = () => {
             // Clear history for CHECKIN flow on completion
             if (shouldClearHistoryOnComplete(completedFlowType)) {
                 chatLogger.debug('Clearing history for completed check-in flow');
-                await clearHistory();
+                await chatDB.clearChatHistoryV2();
             }
 
             const redirect = getCompletionRedirect(completedFlowType);
+            if (userToken) {
+                await syncUserData(userToken);
+            }
             if (redirect) {
                 navigationTimeoutRef.current = setTimeout(() => {
                     navigation.reset({
@@ -130,7 +134,7 @@ const ChatWithVivaAI: React.FC = () => {
                 }, redirect.delay);
             }
         },
-        [completeQuestionnaire, navigation, clearHistory]
+        [completeQuestionnaire, navigation, userToken]
     );
 
     const handleMessageReceived = useCallback(
@@ -273,7 +277,7 @@ const ChatWithVivaAI: React.FC = () => {
                 await chatDB.init();
 
                 // Load history for flows that save it
-                if (flowType && shouldSaveHistory(flowType)) {
+                if (flowType === FlowType.CHECKIN && shouldSaveHistory(flowType)) {
                     await loadHistory();
                 }
 

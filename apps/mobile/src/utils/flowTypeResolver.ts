@@ -43,7 +43,7 @@ export const resolveFlowConfig = (
 export const shouldSaveHistory = (flowType: FlowType): boolean => {
 	// Only ONBOARDING and CHECKIN save history
 	// CHATBOT has no history interaction
-	return flowType === FlowType.ONBOARDING || flowType === FlowType.CHECKIN;
+	return flowType === FlowType.CHECKIN;
 };
 
 /**

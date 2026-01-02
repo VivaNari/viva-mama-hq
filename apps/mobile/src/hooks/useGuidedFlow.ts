@@ -1,10 +1,13 @@
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Toast from "react-native-toast-message";
 
 import apiClientInterceptor from "../api/apiClientInterceptor";
 import { GUIDED_FLOW_START, GUIDED_FLOW_ANSWER } from "../constants/endpoints";
 import { FlowType, IAiMessage, ChatAction } from "../types/chat.types";
 import { chatLogger } from "../utils/logger";
+import { useAuth } from "../context/AuthContext";
+import { IUser } from "../types/user.types";
+import { chatDB } from "../db/sqlite";
 
 interface UseGuidedFlowProps {
     flowType: FlowType | null;
@@ -26,8 +29,9 @@ export const useGuidedFlow = ({
     onFlowComplete,
 }: UseGuidedFlowProps) => {
     const flowInstanceIdRef = useRef<string | null>(null);
-    const weekRef = useRef<number>(1);
-
+    const { userId } = useAuth();
+    const [user, setUser] = useState<IUser | null>(null);
+    const weekRef = useRef(1);
     /**
      * Convert API question to IAiMessage format
      */
@@ -65,13 +69,25 @@ export const useGuidedFlow = ({
                 return false;
             }
 
+            if(!userId) {
+                chatLogger.warn("Cannot start flow: missing userId");
+                return false;
+            }
+
+            const dbUser = await chatDB.getUserData(userId);
+            if(!dbUser) {
+                chatLogger.warn("Cannot start flow: missing dbUser");
+                return false;
+            }
+            const week = dbUser?.data.user.current_weekdays.weeks;
+
             dispatch({ type: "SET_LOADING", payload: true });
 
             try {
                 const { data } = await apiClientInterceptor().post(GUIDED_FLOW_ANSWER, {
                     flowInstanceId: flowInstanceIdRef.current,
                     nodeId: payload.nodeId,
-                    week: weekRef.current,
+                    week: week,
                     selectedKeys: payload.selectedKeys,
                     freeText: payload.freeText,
                     idempotencyKey: `${flowInstanceIdRef.current}-${payload.nodeId}-${Date.now()}`,
@@ -121,7 +137,7 @@ export const useGuidedFlow = ({
                 return false;
             }
         },
-        [flowType, dispatch, onMessageReceived, onFlowComplete, toAiMessage]
+        [userId, dispatch, flowType, onMessageReceived, onFlowComplete, toAiMessage]
     );
 
     /**
@@ -134,12 +150,25 @@ export const useGuidedFlow = ({
             return;
         }
 
+        if(!userId) {
+            chatLogger.warn("Cannot start flow: missing userId");
+            return;
+        }
+
+        const dbUser = await chatDB.getUserData(userId);
+        if(!dbUser) {
+            chatLogger.warn("Cannot start flow: missing dbUser");
+            return;
+        }
+        const week = dbUser?.data.user.current_weekdays.weeks;
+
+
         dispatch({ type: "SET_LOADING", payload: true });
 
         try {
             const { data } = await apiClientInterceptor().post(GUIDED_FLOW_START, {
                 flowSlug,
-                week: weekRef.current,
+                week: week,
             });
 
             if (!data.success) {
@@ -171,7 +200,18 @@ export const useGuidedFlow = ({
             });
             dispatch({ type: "SET_LOADING", payload: false });
         }
-    }, [flowSlug, flowType, dispatch, onMessageReceived, onFlowComplete, toAiMessage]);
+    }, [flowSlug, userId, dispatch, flowType, onFlowComplete, toAiMessage, onMessageReceived]);
+
+    const getDBUser = useCallback(async () => {
+        if(!userId) return;
+        const dbUser = await chatDB.getUserData(userId);
+        if(!dbUser) return;
+        setUser(Object.assign({}, dbUser.data.user));
+    }, [userId]);
+
+    useEffect(() => {
+        getDBUser();
+    }, [getDBUser]);
 
     return {
         initialize,
