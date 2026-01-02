@@ -14,7 +14,7 @@ const SearchInput = ({ setSearchData, marginBottom }: ISearchInputProps) => {
     return (
         <View
             style={{
-                borderColor: colors.purple,
+                borderColor: colors.darkPurple,
                 borderWidth: 2,
                 marginBottom: marginBottom || 30,
                 borderRadius: 20,
@@ -38,7 +38,7 @@ const SearchInput = ({ setSearchData, marginBottom }: ISearchInputProps) => {
                 }, globalStyles.fontRegular]}
                 onChangeText={(text) => setSearchData(text)}
             />
-            <MaterialDesignIcons name="magnify" color={colors.black} size={24} />
+            <MaterialDesignIcons name="magnify" color={colors.darkPurple} size={24} />
         </View>
     )
 }

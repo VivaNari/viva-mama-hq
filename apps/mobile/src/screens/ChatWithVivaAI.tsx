@@ -380,7 +380,7 @@ const ChatWithVivaAI: React.FC = () => {
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={handleRefresh}
-                            tintColor={colors.primary}
+                            tintColor={colors.darkPurple}
                         />
                     }
                     onContentSizeChange={() => {
@@ -452,16 +452,16 @@ const styles = StyleSheet.create({
     vivaIntroContainer: {
         marginTop: 30,
         marginBottom: 10,
-        backgroundColor: "#E3E2F4",
+        backgroundColor: colors.lightPurple,
         padding: 10,
         marginHorizontal: 40,
         borderRadius: 10,
         alignItems: "center",
-        borderColor: "#6F6AC4",
+        borderColor: colors.darkPurple,
         borderWidth: 1
     },
     vivaIntroText: {
-        color: "#6F6AC4",
+        color: colors.darkPurple,
         fontWeight: "600",
         fontSize: 15,
         lineHeight: 20

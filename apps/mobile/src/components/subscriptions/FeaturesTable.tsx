@@ -43,7 +43,7 @@ export const FeaturesTable: React.FC<FeaturesTableProps> = ({
 				{featureRows.map((feature: string, featureIndex: number) => (
 					<View key={feature} style={styles.row}>
 						<View style={[styles.cell, styles.featureCell, styles.dataCell]}>
-							<Text style={[globalStyles.fontRegular, styles.featureText]}>
+							<Text style={[globalStyles.fontSemiBold, styles.featureText]}>
 								{feature}
 							</Text>
 						</View>
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
 		marginVertical: 20,
 	},
 	table: {
-		borderWidth: 1,
+		borderWidth: 0.8,
 		borderColor: colors.darkPurple,
 		borderRadius: 8,
 		overflow: 'hidden',
@@ -102,7 +102,7 @@ const styles = StyleSheet.create({
 		textAlign: 'center',
 	},
 	featureText: {
-		fontSize: 15,
+		fontSize: 14,
 		color: colors.black,
 	},
 	checkmark: {

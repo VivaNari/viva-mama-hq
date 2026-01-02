@@ -37,7 +37,7 @@ export const SubscribeButton: React.FC<SubscribeButtonProps> = ({
 					style={styles.loader}
 				/>
 			)}
-			<Text style={[styles.text, globalStyles.fontRegular]}>
+			<Text style={[styles.text, globalStyles.fontBold]}>
 				{formatSubscribeButtonText(price)}
 			</Text>
 		</TouchableOpacity>

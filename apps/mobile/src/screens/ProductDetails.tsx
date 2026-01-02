@@ -117,18 +117,18 @@ const ProductDetails = () => {
                     <View style={styles.priceCard}>
                         <View>
                             <Text style={[styles.sectionLabel, globalStyles.fontMedium]}>Price Range</Text>
-                            <Text style={[styles.priceText, globalStyles.fontBold]}>{product.productPriceRange}</Text>
+                            <Text style={[styles.priceText, globalStyles.fontBold]}>Rs. {product.productPriceRange}</Text>
                         </View>
-                        <View style={[styles.safetyBadge, { backgroundColor: colors.yellowBadgeBG }]}>
+                        <View style={[styles.safetyBadge, { backgroundColor: colors.greenBadgeBG }]}>
                             <Lucide
                                 name="shield-check"
                                 size={18}
-                                color={colors.yellowBadgeText}
+                                color={colors.greenBadgeText}
                             />
                             <Text style={[
                                 styles.safetyText,
                                 globalStyles.fontSemiBold,
-                                { color: colors.yellowBadgeText }
+                                { color: colors.greenBadgeText }
                             ]}>
                                 {product.safetyFlag}
                             </Text>
@@ -174,6 +174,7 @@ const ProductDetails = () => {
                 <GradientButtonWithSlightRadius
                     onPress={() => Linking.openURL(product.productAffiliateLink)}
                     title="Buy Now"
+                    fullRounded
                 />
             </View>
         </SafeAreaView>

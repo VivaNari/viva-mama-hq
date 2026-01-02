@@ -43,7 +43,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                 }}
             >
                 <LinearGradient
-                    colors={[colors.primary, colors.secondary]}
+                    colors={[colors.darkPurple, colors.purple]}
                     style={{
                         height: 10,
                         borderRadius: 10,
@@ -96,7 +96,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                         style={{ marginVertical: 20, height: 45, width: 45 }}
                     >
                         <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
+                            colors={[colors.darkPurple, colors.purple]}
                             style={{
                                 height: "100%",
                                 width: "100%",
@@ -118,7 +118,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                         style={{ marginVertical: 20, height: 45, width: 45 }}
                     >
                         <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
+                            colors={[colors.darkPurple, colors.purple]}
                             style={{
                                 height: "100%",
                                 width: "100%",
@@ -137,7 +137,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                         style={{ marginVertical: 20, height: 45, width: 45 }}
                     >
                         <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
+                            colors={[colors.darkPurple, colors.purple]}
                             style={{
                                 height: "100%",
                                 width: "100%",

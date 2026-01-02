@@ -27,7 +27,7 @@ export const ArticleCard = ({ item, width }: { item: IUserContent, width?: strin
                         width: '100%',
                         borderRadius: 8
                     }} />
-                    <View style={{ flex: 1, marginTop: 5 }}>
+                    <View style={{ flex: 1, marginTop: 5, marginHorizontal: 8 }}>
                         <Text style={[styles.articleTitle, globalStyles.fontSemiBold]} numberOfLines={3}>
                             {item.featuredTitle}
                         </Text>
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
         // objectFit: 'cover'
     },
     articleTitle: {
-        fontSize: 13,
+        fontSize: 16,
     },
     articleDesc: {
         fontSize: 10,

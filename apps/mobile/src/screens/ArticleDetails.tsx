@@ -77,7 +77,7 @@ const ArticleDetails = () => {
     if (loading) {
         return (
             <SafeAreaView style={ContentDetailsStyles.center}>
-                <ActivityIndicator size="large" color={colors.secondary} />
+                <ActivityIndicator size="large" color={colors.purple} />
             </SafeAreaView>
         );
     }

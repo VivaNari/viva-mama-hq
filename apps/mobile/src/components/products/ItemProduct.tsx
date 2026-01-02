@@ -34,7 +34,8 @@ const ItemProduct = ({ item, navigation }: { item: IUserProduct, navigation: any
                     style={[{
                         marginVertical: 8,
                         marginHorizontal: 5,
-                        textAlign: "center"
+                        textAlign: "center",
+                        fontSize: 16
                     }, globalStyles.fontRegular]}
                 >{item.productName}</Text>
             </TouchableOpacity>

@@ -1,15 +1,12 @@
 import React from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
-import GradientButtonWithSlightRadius from './GradientButtonWithSlightRadius';
-import { useNavigation } from '@react-navigation/native';
 import { IUser } from '../types/user.types';
 
 const NPWomanBabyArriving = ({ userData }: {
     userData: IUser
 }) => {
-    const navigation = useNavigation();
     return (
         <View
             style={{
@@ -72,7 +69,7 @@ const NPWomanBabyArriving = ({ userData }: {
 
                         >
 
-                            <Text style={[globalStyles.fontRegular, { color: colors.darkGray, textAlign: 'center' }]}>
+                            <Text style={[globalStyles.fontSemiBold, {fontSize: 16, color: colors.darkGray, textAlign: 'center' }]}>
                                 After delivery, VivaMama tracks your recovery.
                                 Your physical, emotional, and lactation health
                                 are monitored across each postpartum week

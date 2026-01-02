@@ -1,82 +1,82 @@
-import { StyleSheet } from 'react-native';
-import { colors } from '../assets/colors';
-import { globalStyles } from './globalStyles';
+import { StyleSheet } from "react-native";
+import { colors } from "../assets/colors";
+import { globalStyles } from "./globalStyles";
 
 export const styles = StyleSheet.create({
   headerContainer: {
-    backgroundColor: 'red',
+    backgroundColor: "red",
   },
   headerTitle: {
-    color: 'green',
+    color: "green",
   },
   headerText: {
-    color: 'blue',
+    color: "blue",
   },
   hyperlink: {
-    color: colors.primary,
-    textDecorationLine: 'underline',
+    color: colors.darkPurple,
+    textDecorationLine: "underline",
   },
   messageContainer: {
-    maxWidth: '80%',
+    maxWidth: "80%",
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 20,
     marginBottom: 12,
   },
   userMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: colors.secondary,
+    alignSelf: "flex-end",
+    backgroundColor: colors.darkPurple,
     borderBottomRightRadius: 0,
   },
   aiMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: colors.primary,
+    alignSelf: "flex-start",
+    backgroundColor: colors.darkPurple,
     borderBottomLeftRadius: 0,
   },
   messageText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 14,
     ...globalStyles.fontRegular,
   },
   inputContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 10,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderTopWidth: 1,
-    borderColor: '#ccc',
+    borderColor: "#ccc",
   },
   textInput: {
     flex: 1,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     borderRadius: 20,
     paddingHorizontal: 15,
     marginRight: 10,
   },
   sendButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.darkPurple,
     borderRadius: 25,
     height: 50,
     width: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   sendButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
+    color: "#fff",
+    fontWeight: "bold",
   },
   initialViewContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   initialHelpText: { fontSize: 24, ...globalStyles.fontRegular },
   initialPromptsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 10,
     padding: 30,
-    justifyContent: 'center',
-    flexWrap: 'wrap',
+    justifyContent: "center",
+    flexWrap: "wrap",
   },
   promptButton: {
     borderWidth: 1,
@@ -87,11 +87,11 @@ export const styles = StyleSheet.create({
   },
   promptText: { fontSize: 14, ...globalStyles.fontRegular },
   optionsInMessageContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
-    justifyContent: 'flex-start',
-    width: '80%',
+    justifyContent: "flex-start",
+    width: "80%",
   },
   optionButton: {
     backgroundColor: colors.white,
@@ -99,21 +99,21 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: '#bdbdbd',
+    borderColor: "#bdbdbd",
   },
   optionButtonText: {
-    color: colors.primary,
+    color: colors.darkPurple,
     ...globalStyles.fontRegular,
     fontSize: 14,
   },
   bubble: {
     padding: 12,
     borderRadius: 20,
-    maxWidth: '80%',
+    maxWidth: "80%",
     marginBottom: 10,
   },
   loader: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     marginLeft: 15,
   },
 });

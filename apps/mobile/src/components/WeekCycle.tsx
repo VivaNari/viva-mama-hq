@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
 
     todayCapsule: {
         backgroundColor: colors.SubscriptionOptionsBG,
-        borderColor: colors.secondary,
+        borderColor: colors.purple,
         borderWidth: 3,
     },
 
@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
     bottomText: {
         marginTop: 14,
         fontSize: 13,
-        color: colors.secondary,
+        color: colors.purple,
         ...globalStyles.fontBold
     },
 });

@@ -1,5 +1,4 @@
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import LinearGradient from "react-native-linear-gradient";
 import { colors } from "../../public/assets/colors";
 import { globalStyles } from "../../public/styles";
 import { IExpert } from "../../types/expert.types";
@@ -28,7 +27,6 @@ const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigat
                 {/* Expert Photo */}
                 <View style={styles.imageContainer}>
                     <Image
-                        // source={require('../../public/assets/images/doctors/Dr_Anuradha_Kumari.png')}
                         source={{ uri: item.photograph }}
                         resizeMode="cover"
                         style={styles.image}
@@ -98,7 +96,7 @@ const styles = StyleSheet.create({
         fontSize: 12
     },
     name: {
-        fontSize: 13,
+        fontSize: 16,
         color: '#1a1a1a',
         marginTop: 5,
         marginLeft: 10

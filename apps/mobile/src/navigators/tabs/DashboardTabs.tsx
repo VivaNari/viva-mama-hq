@@ -33,7 +33,7 @@ export const DashboardTabs = () => {
             const unsubscribe = messaging().onMessage(async remoteMessage => {
 
                 if (remoteMessage.data && remoteMessage.data.uiElements) {
-                    const uiElements = JSON.parse(remoteMessage.data.uiElements as string);
+                    JSON.parse(remoteMessage.data.uiElements as string);
                     // @TODO: Now do anything with the ui elements 
                 }
 
@@ -97,7 +97,7 @@ export const DashboardTabs = () => {
                 tabBarInactiveTintColor: colors.gray,
                 tabBarActiveBackgroundColor: colors.white,
                 headerShadowVisible: false,
-                headerTitleStyle: { ...globalStyles.fontBold, color: colors.purple, fontSize: 20 },
+                headerTitleStyle: { ...globalStyles.fontBold, color: colors.darkPurple, fontSize: 20 },
                 headerStyle: {
                     backgroundColor: colors.white,
                     borderBottomWidth: 1,
@@ -117,7 +117,7 @@ export const DashboardTabs = () => {
                         </TouchableOpacity>
                         <TouchableOpacity
                             activeOpacity={0.8}
-                            onPress={() => navigation.navigate("MyProfile")}
+                        // onPress={() => navigation.navigate("MyProfile")}
 
                         >
                             <Lucide name='user-round' size={25} color={colors.darkGray} />
@@ -206,7 +206,7 @@ export const DashboardTabs = () => {
                 }}
             />
             <Tab.Screen
-                name="Community"
+                name="Products"
                 component={Products}
                 options={{
                     title: "Products",

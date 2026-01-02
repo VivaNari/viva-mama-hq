@@ -3,7 +3,7 @@ import { Text, TouchableOpacity } from 'react-native'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
 
-const GradientButtonWithSlightRadius = ({ title, onPress, fullRounded = false, fullWidth = true, disabled = false }: { title: string, onPress: any, fullRounded?: boolean, fullWidth?: boolean, disabled?: boolean }) => {
+const GradientButtonWithSlightRadius = ({ title, onPress, fullRounded = false, fullWidth = true, disabled = false, style }: { title: string, onPress: any, fullRounded?: boolean, fullWidth?: boolean, disabled?: boolean, style?: any }) => {
     return (
         <TouchableOpacity
             activeOpacity={0.8}
@@ -14,19 +14,20 @@ const GradientButtonWithSlightRadius = ({ title, onPress, fullRounded = false, f
                 alignItems: 'center',
                 borderRadius: !fullRounded ? 10 : 30,
                 justifyContent: "center",
-                paddingVertical: fullWidth ? 15 : 8,
+                paddingVertical: fullWidth ? 16 : 8,
                 paddingHorizontal: fullWidth ? 10 : 20,
                 flex: fullWidth ? 1 : 0.15,
                 marginTop: fullWidth ? 10 : 0,
                 opacity: disabled ? 0.9 : 1,
-                backgroundColor: colors.purple
+                backgroundColor: colors.darkPurple,
+                ...style
             }}
         >
             <Text
                 style={[{
                     color: colors.white,
-                    fontSize: 14
-                }, globalStyles.fontRegular]}
+                    fontSize: 16
+                }, globalStyles.fontSemiBold]}
             >
                 {title}
             </Text>

@@ -72,8 +72,10 @@ export default function RootNavigator() {
         <NavigationContainer ref={navigationRef}>
             {/* REQUIRED for BottomSheetModal */}
             <BottomSheetModalProvider>
+
                 {/* Your custom context wrapper */}
                 <BottomSheetProvider>
+
                     <Stack.Navigator
                         initialRouteName={initialRouteName}
                         screenOptions={{
@@ -85,6 +87,7 @@ export default function RootNavigator() {
                         <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
                         <Stack.Screen name="AppStack" component={AppStack} />
                     </Stack.Navigator>
+                    {/* </BottomSheetProvider> */}
                 </BottomSheetProvider>
             </BottomSheetModalProvider>
         </NavigationContainer>

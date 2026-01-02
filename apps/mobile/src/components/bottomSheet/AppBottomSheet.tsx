@@ -1,15 +1,15 @@
+import {
+    BottomSheetModal,
+    BottomSheetModalProvider,
+} from '@gorhom/bottom-sheet'
 import React, {
     createContext,
     useContext,
     useMemo,
     useRef,
-    useState,
+    useState
 } from 'react'
 import { View } from 'react-native'
-import {
-    BottomSheetModal,
-    BottomSheetModalProvider,
-} from '@gorhom/bottom-sheet'
 
 type BottomSheetContextType = {
     open: (content: React.ReactNode) => void
