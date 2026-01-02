@@ -1,7 +1,7 @@
 import { API_VERSION, BASE_API_URL as RN_BASE_API_URL } from "@env";
 
 // Use environment variable in production, fallback for development
-export const BASE_API_URL = RN_BASE_API_URL;
+export const BASE_API_URL = "https://3724805dfc83.ngrok-free.app";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
 

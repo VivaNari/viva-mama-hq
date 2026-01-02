@@ -34,23 +34,23 @@ const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigat
                         style={styles.image}
                     />
                     {/* Experience Badge */}
-                    <LinearGradient
-                        colors={[colors.purple, colors.darkPurple]}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.experienceBadge}
-                    >
-                        <Text style={[styles.experienceText, globalStyles.fontBold]}>
-                            {item.yearsOfExperience}+ Years
-                        </Text>
-                    </LinearGradient>
                 </View>
 
                 {/* Expert Info */}
-                <View>
+                <View style={{ paddingVertical: 0 }}>
                     {/* Name */}
                     <Text style={[styles.name, globalStyles.fontSemiBold]}>
                         {item.name}
+                    </Text>
+                    <Text style={[styles.speciality, globalStyles.fontSemiBold]}>
+                        {item.speciality}
+                    </Text>
+                </View>
+                <View
+                    style={styles.experienceBadge}
+                >
+                    <Text style={[styles.experienceText, globalStyles.fontBold]}>
+                        {item.yearsOfExperience}+ Years
                     </Text>
                 </View>
             </TouchableOpacity>
@@ -80,42 +80,45 @@ const styles = StyleSheet.create({
 
     },
     experienceBadge: {
-        position: 'absolute',
-        top: 15,
-        right: 15,
-        paddingHorizontal: 12,
-        paddingVertical: 6,
+        paddingHorizontal: 6,
+        paddingVertical: 4,
         borderRadius: 20,
-        elevation: 3,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 4,
+        color: colors.lightPurple,
+        borderWidth: 1,
+        borderColor: colors.darkPurple,
+        alignContent: "center",
+        backgroundColor: colors.lightPurple,
+        width: 75,
+        marginLeft: 10,
+        marginTop: 10,
+        marginBottom: 10
     },
     experienceText: {
-        color: colors.white,
-        fontSize: 11,
-        fontWeight: '700',
-        letterSpacing: 0.3,
+        color: colors.purple,
+        fontSize: 12
     },
     name: {
-        fontSize: 14,
+        fontSize: 13,
         color: '#1a1a1a',
-        marginVertical: 10,
-        textAlign: 'center',
+        marginTop: 5,
+        marginLeft: 10
     },
     specialityBadge: {
-        alignSelf: 'flex-start',
+        alignSelf: 'center',
+        alignContent: "center",
         backgroundColor: colors.lightPurple,
         paddingHorizontal: 12,
         paddingVertical: 6,
         borderRadius: 12,
         marginBottom: 12,
+        marginTop: 10,
     },
     speciality: {
         fontSize: 13,
+        marginTop: 0,
         fontWeight: '600',
         color: colors.purple,
+        marginLeft: 10,
     },
     qualificationContainer: {
         flexDirection: 'row',
