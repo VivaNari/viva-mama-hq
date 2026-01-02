@@ -78,12 +78,12 @@ export const useChatMessages = ({
 			// For ONBOARDING and CHECKIN: save to SQLite
 			try {
 				// Check for duplicate
-				const exists = await chatDB.messageExists(userId, flowSlug, message.id);
-				if (exists) {
-					chatLogger.debug('Duplicate message, skipping');
-					dispatch({ type: 'SET_LOADING', payload: false });
-					return false;
-				}
+				// const exists = await chatDB.messageExists(userId, flowSlug, message.id);
+				// if (exists) {
+				// 	chatLogger.debug('Duplicate message, skipping');
+				// 	dispatch({ type: 'SET_LOADING', payload: false });
+				// 	return false;
+				// }
 
 				await chatDB.saveAiMessage(userId, flowSlug, message);
 				dispatch({ type: 'ADD_MESSAGE', payload: message });

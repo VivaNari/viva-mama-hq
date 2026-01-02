@@ -10,6 +10,7 @@ import {
     View,
     Text,
     KeyboardAvoidingView,
+    TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
@@ -28,6 +29,7 @@ import {
 } from '../types/chat.types';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useChatSession } from '../hooks/useChatSession';
+import { useGuidedFlow } from '../hooks/useGuidedFlow';
 import { useChatActions } from '../hooks/useChatActions';
 import { ChatInputBar } from '../components/ChatInputBar';
 import { ChatBubble } from '../components/chatBubble';
@@ -53,6 +55,9 @@ const ChatWithVivaAI: React.FC = () => {
     }, [route.params?.flowSlug, isFullyOnboarded]);
 
     const { flowType, flowSlug } = flowConfig;
+
+    // Determine if this is a guided flow (request-response) or chatbot (SSE)
+    const isGuidedFlow = flowType === FlowType.ONBOARDING || flowType === FlowType.CHECKIN;
 
     const {
         state,
@@ -135,9 +140,23 @@ const ChatWithVivaAI: React.FC = () => {
         [saveAiMessage]
     );
 
+    // ============================================
+    // Guided Flow Hook (for Onboarding + Checkin)
+    // ============================================
+    const { initialize: initializeGuidedFlow, submitAnswer: submitGuidedAnswer } = useGuidedFlow({
+        flowType: isGuidedFlow ? flowType : null,
+        flowSlug: isGuidedFlow ? flowSlug : null,
+        dispatch,
+        onMessageReceived: handleMessageReceived,
+        onFlowComplete: handleFlowComplete,
+    });
+
+    // ============================================
+    // SSE Session Hook (for Chatbot only)
+    // ============================================
     const { connect, disconnect } = useChatSession({
-        flowType,
-        flowSlug,
+        flowType: !isGuidedFlow ? flowType : null,
+        flowSlug: !isGuidedFlow ? flowSlug : null,
         userToken,
         dispatch,
         onMessageReceived: handleMessageReceived,
@@ -145,6 +164,9 @@ const ChatWithVivaAI: React.FC = () => {
         hasExistingMessages: state.messages.length > 0,
     });
 
+    // ============================================
+    // Chat Actions (works with both patterns)
+    // ============================================
     const {
         handleOptionSelect,
         handleMultiSelectSubmit,
@@ -158,6 +180,7 @@ const ChatWithVivaAI: React.FC = () => {
         dispatch,
         getLastAiMessage,
         saveUserMessage,
+        submitGuidedAnswer: isGuidedFlow ? submitGuidedAnswer : undefined,
     });
 
     const handleAnimationComplete = useCallback(() => {
@@ -202,17 +225,26 @@ const ChatWithVivaAI: React.FC = () => {
         handleMultiSelectSubmit(state.selectedMultiOptions, lastAiMessageOptions);
     }, [handleMultiSelectSubmit, state.selectedMultiOptions, lastAiMessageOptions]);
 
+    const handleErrorRetry = useCallback(() => {
+        dispatch({ type: 'SET_LOADING', payload: false })
+        //retry /answer api call
+    }, [dispatch]);
+
     const handleRefresh = useCallback(async () => {
         setRefreshing(true);
         try {
-            disconnect();
-
-            // Only reload history for flows that save history
-            if (flowType && shouldSaveHistory(flowType)) {
-                await loadHistory();
+            if (isGuidedFlow) {
+                // For guided flows, re-initialize
+                if (flowType && shouldSaveHistory(flowType)) {
+                    await loadHistory();
+                }
+                await initializeGuidedFlow();
+            } else {
+                // For chatbot, reconnect SSE
+                disconnect();
+                connect();
             }
 
-            connect();
             Toast.show({
                 type: 'success',
                 text1: 'Refreshed',
@@ -230,22 +262,28 @@ const ChatWithVivaAI: React.FC = () => {
         } finally {
             setRefreshing(false);
         }
-    }, [disconnect, loadHistory, connect, flowType]);
+    }, [isGuidedFlow, flowType, loadHistory, initializeGuidedFlow, disconnect, connect]);
 
+    // ============================================
+    // Initialization
+    // ============================================
     useEffect(() => {
         const initializeChat = async () => {
             try {
                 await chatDB.init();
 
-                // Only load history for flows that save history (ONBOARDING, CHECKIN)
-                // CHATBOT starts fresh every time
+                // Load history for flows that save it
                 if (flowType && shouldSaveHistory(flowType)) {
                     await loadHistory();
-                } else {
-                    chatLogger.debug('Skipping history load for chatbot flow');
                 }
 
-                connect();
+                if (isGuidedFlow) {
+                    // Use request-response API for guided flows
+                    await initializeGuidedFlow();
+                } else {
+                    // Use SSE for chatbot
+                    connect();
+                }
             } catch (error) {
                 chatLogger.error('Failed to initialize chat', error);
                 Toast.show({
@@ -260,7 +298,9 @@ const ChatWithVivaAI: React.FC = () => {
         initializeChat();
 
         return () => {
-            disconnect();
+            if (!isGuidedFlow) {
+                disconnect();
+            }
             if (navigationTimeoutRef.current) {
                 clearTimeout(navigationTimeoutRef.current);
             }
@@ -372,6 +412,7 @@ const ChatWithVivaAI: React.FC = () => {
                     })}
 
                     {state.isLoading && <TypingIndicator />}
+                    {state.errorMessage && <TouchableOpacity onPress={handleErrorRetry}><Text>Retry</Text></TouchableOpacity>}
                 </ScrollView>
 
                 <ChatInputBar

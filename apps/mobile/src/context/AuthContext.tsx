@@ -9,6 +9,7 @@ import { AuthContextType, AuthProviderProps, AuthResponse, OnboardingStatus } fr
 import { decodeToken } from '../utils/decodeJWTToken';
 import { getFCMToken } from '../utils/getFCMToken';
 import { syncUserData } from '../utils/syncUserData';
+import { chatDB } from '../db/sqlite';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -279,6 +280,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     try {
       await AsyncStorage.removeItem('userToken');
       await AsyncStorage.removeItem('onboardingStatus');
+      await chatDB.clearChatHistoryV2();
       setUserToken(null);
       setUserId(null);
       setOnboardingStatus({

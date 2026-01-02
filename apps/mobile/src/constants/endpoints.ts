@@ -4,7 +4,8 @@ import { API_VERSION, BASE_API_URL as RN_BASE_API_URL } from "@env";
 export const BASE_API_URL = "https://3724805dfc83.ngrok-free.app";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
-
+export const GUIDED_FLOW_START = "/api/v1/chat/checkin/start";
+export const GUIDED_FLOW_ANSWER = "/api/v1/chat/checkin/answer";
 /**
  * Generates the SSE chat session URL
  * Note: Token is passed as query param for SSE authentication

@@ -112,7 +112,8 @@ export type ChatAction =
   | { type: "CLEAR_MULTI_OPTIONS" }
   | { type: "SET_CONNECTION_STATUS"; payload: ChatState["connectionStatus"] }
   | { type: "SET_ERROR"; payload: string | null }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | { type: "RESET_ERROR" };
 
 // ============================================
 // Navigation Types

@@ -89,6 +89,12 @@ export const chatReducer = (state: ChatState, action: ChatAction): ChatState => 
 				isLoading: false,
 			};
 
+		case 'RESET_ERROR':
+			return {
+				...state,
+				errorMessage: null
+			};
+
 		case 'RESET':
 			return INITIAL_CHAT_STATE;
 
