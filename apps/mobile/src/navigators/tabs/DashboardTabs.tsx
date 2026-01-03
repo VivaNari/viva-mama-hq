@@ -25,7 +25,7 @@ interface NotificationData {
 export const DashboardTabs = () => {
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets();
-    const { counter, increase } = useCounterContext();
+    const { increase } = useCounterContext();
 
     useEffect(() => {
         (async function () {
@@ -117,7 +117,7 @@ export const DashboardTabs = () => {
                         </TouchableOpacity>
                         <TouchableOpacity
                             activeOpacity={0.8}
-                        // onPress={() => navigation.navigate("MyProfile")}
+                            onPress={() => navigation.navigate("MyProfile")}
 
                         >
                             <Lucide name='user-round' size={25} color={colors.darkGray} />
@@ -183,7 +183,6 @@ export const DashboardTabs = () => {
                         />
                     ),
                     headerShown: false,
-                    tabBarBadge: counter > 0 ? counter : undefined,
                 }}
                 listeners={({ navigation }) => ({
                     tabPress: e => {

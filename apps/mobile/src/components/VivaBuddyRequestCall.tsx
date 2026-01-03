@@ -89,7 +89,7 @@ const VivaBuddyRequestCall = () => {
                                     });
                                 } else {
                                     Toast.show({
-                                        type: 'success',
+                                        type: 'error',
                                         text1: 'Error!',
                                         text2: 'Something went wrong!',
                                         position: 'bottom',
@@ -99,7 +99,7 @@ const VivaBuddyRequestCall = () => {
                             } catch (error) {
                                 console.log(error);
                                 Toast.show({
-                                    type: 'success',
+                                    type: 'error',
                                     text1: 'Error!',
                                     text2: 'Something went wrong!' + error,
                                     position: 'bottom',

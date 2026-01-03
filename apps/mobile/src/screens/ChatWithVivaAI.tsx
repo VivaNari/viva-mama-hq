@@ -1,43 +1,44 @@
-// src/screens/ChatWithVivaAI.tsx
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ScrollView,
-    RefreshControl,
-    BackHandler,
     AppState,
     AppStateStatus,
-    StyleSheet,
-    View,
-    Text,
+    BackHandler,
     KeyboardAvoidingView,
+    Platform,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Text,
     TouchableOpacity,
+    View,
+    Keyboard
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation, useRoute, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
+import CustomDatePicker from '../components/CustomDatePicker';
 import { useAuth } from '../context/AuthContext';
 import { chatDB } from '../db/sqlite';
 import { colors } from '../public/assets/colors';
-import CustomDatePicker from '../components/CustomDatePicker';
 
-import {
-    FlowType,
-    IAiMessage,
-    IOption,
-    ChatScreenRouteProp,
-} from '../types/chat.types';
+import { ChatBubble } from '../components/chatBubble';
+import { ChatInputBar } from '../components/ChatInputBar';
+import { TypingIndicator } from '../components/TypingIndicator';
+import { useChatActions } from '../hooks/useChatActions';
 import { useChatMessages } from '../hooks/useChatMessages';
 import { useChatSession } from '../hooks/useChatSession';
 import { useGuidedFlow } from '../hooks/useGuidedFlow';
-import { useChatActions } from '../hooks/useChatActions';
-import { ChatInputBar } from '../components/ChatInputBar';
-import { ChatBubble } from '../components/chatBubble';
-import { TypingIndicator } from '../components/TypingIndicator';
 import {
-    resolveFlowConfig,
+    ChatScreenRouteProp,
+    FlowType,
+    IAiMessage,
+    IOption,
+} from '../types/chat.types';
+import {
     getCompletionMessage,
     getCompletionRedirect,
+    resolveFlowConfig,
     shouldClearHistoryOnComplete,
     shouldSaveHistory,
 } from '../utils/flowTypeResolver';
@@ -64,7 +65,6 @@ const ChatWithVivaAI: React.FC = () => {
         state,
         dispatch,
         loadHistory,
-        clearHistory,
         saveAiMessage,
         saveUserMessage,
         getLastAiMessage,
@@ -77,6 +77,7 @@ const ChatWithVivaAI: React.FC = () => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
     const scrollViewRef = useRef<ScrollView>(null);
     const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -368,67 +369,90 @@ const ChatWithVivaAI: React.FC = () => {
         }
     }, [lastMessage, dispatch]);
 
+    useEffect(() => {
+        const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+            setKeyboardVisible(true);
+        });
+        const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardVisible(false);
+        });
+
+        return () => {
+            showSubscription.remove();
+            hideSubscription.remove();
+        };
+    }, []);
+
+    const insets = useSafeAreaInsets();
+
     return (
-        <KeyboardAvoidingView
-            style={{ flex: 1 }}
-        >
-            <SafeAreaView style={styles.container}>
-                <View style={styles.vivaIntroContainer}>
-                    <Text style={[styles.vivaIntroText, globalStyles.fontBold]}>Viva, your personal assistant</Text>
-                </View>
-                <ScrollView
-                    ref={scrollViewRef}
-                    style={styles.scrollView}
-                    contentContainerStyle={styles.scrollContent}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={handleRefresh}
-                            tintColor={colors.darkPurple}
-                        />
-                    }
-                    onContentSizeChange={() => {
-                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                    }}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {state.messages.map((msg, index) => {
-                        const isLast = index === state.messages.length - 1;
-                        const shouldAnimate =
-                            isAiMessage(msg) && msg.id === state.animatingMessageId;
-
-                        return (
-                            <ChatBubble
-                                key={`${msg.type}-${msg.timestamp}-${index}`}
-                                message={msg}
-                                isLast={isLast}
-                                isAnimating={!!state.animatingMessageId}
-                                isFlowComplete={state.isFlowComplete}
-                                shouldAnimate={shouldAnimate}
-                                onOptionSelect={handleOptionSelect}
-                                onMultiOptionToggle={handleMultiOptionToggle}
-                                selectedMultiOptions={state.selectedMultiOptions}
-                                onDatePickerOpen={handleDatePickerOpen}
-                                onNotPregnantSelect={handleNotPregnantSelect}
-                                onAnimationComplete={handleAnimationComplete}
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+            <KeyboardAvoidingView
+                behavior="padding"
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                enabled={true}
+            >
+                <View style={{ flex: 1 }}>
+                    <View style={styles.vivaIntroContainer}>
+                        <Text style={[styles.vivaIntroText, globalStyles.fontBold]}>Viva, your personal assistant</Text>
+                    </View>
+                    <ScrollView
+                        ref={scrollViewRef}
+                        style={styles.scrollView}
+                        contentContainerStyle={styles.scrollContent}
+                        refreshControl={
+                            <RefreshControl
+                                refreshing={refreshing}
+                                onRefresh={handleRefresh}
+                                tintColor={colors.darkPurple}
                             />
-                        );
-                    })}
+                        }
+                        onContentSizeChange={() => {
+                            scrollViewRef.current?.scrollToEnd({ animated: true });
+                        }}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {state.messages.map((msg, index) => {
+                            const isLast = index === state.messages.length - 1;
+                            const shouldAnimate =
+                                isAiMessage(msg) && msg.id === state.animatingMessageId;
 
-                    {state.isLoading && <TypingIndicator />}
-                    {state.errorMessage && <TouchableOpacity onPress={handleErrorRetry}><Text>Retry</Text></TouchableOpacity>}
-                </ScrollView>
+                            return (
+                                <ChatBubble
+                                    key={`${msg.type}-${msg.timestamp}-${index}`}
+                                    message={msg}
+                                    isLast={isLast}
+                                    isAnimating={!!state.animatingMessageId}
+                                    isFlowComplete={state.isFlowComplete}
+                                    shouldAnimate={shouldAnimate}
+                                    onOptionSelect={handleOptionSelect}
+                                    onMultiOptionToggle={handleMultiOptionToggle}
+                                    selectedMultiOptions={state.selectedMultiOptions}
+                                    onDatePickerOpen={handleDatePickerOpen}
+                                    onNotPregnantSelect={handleNotPregnantSelect}
+                                    onAnimationComplete={handleAnimationComplete}
+                                />
+                            );
+                        })}
 
-                <ChatInputBar
-                    inputMode={inputMode}
-                    inputText={state.inputText}
-                    isLoading={state.isLoading}
-                    selectedOptionsCount={state.selectedMultiOptions.size}
-                    onInputChange={handleInputChange}
-                    onSend={handleSend}
-                    onDatePickerOpen={handleDatePickerOpen}
-                    onMultiSelectSubmit={handleMultiSubmit}
-                />
+                        {state.isLoading && <TypingIndicator />}
+                        {state.errorMessage && <TouchableOpacity onPress={handleErrorRetry}><Text>Retry</Text></TouchableOpacity>}
+                    </ScrollView>
+                </View>
+
+                <View style={{ paddingBottom: isKeyboardVisible ? 0 : insets.bottom, backgroundColor: colors.white }}>
+                    <ChatInputBar
+                        inputMode={inputMode}
+                        inputText={state.inputText}
+                        isLoading={state.isLoading}
+                        selectedOptionsCount={state.selectedMultiOptions.size}
+                        onInputChange={handleInputChange}
+                        onSend={handleSend}
+                        onDatePickerOpen={handleDatePickerOpen}
+                        onMultiSelectSubmit={handleMultiSubmit}
+                    />
+                </View>
 
                 <CustomDatePicker
                     show={showDatePicker}
@@ -436,8 +460,8 @@ const ChatWithVivaAI: React.FC = () => {
                     selectedDate={selectedDate}
                     onSelect={handleDateSelected}
                 />
-            </SafeAreaView>
-        </KeyboardAvoidingView>
+            </KeyboardAvoidingView>
+        </View>
     );
 };
 

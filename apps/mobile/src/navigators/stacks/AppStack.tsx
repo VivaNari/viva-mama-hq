@@ -150,7 +150,7 @@ const AppStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: false,
                     title: 'Article Details',
                 }}
                 name="ArticleDetails"

@@ -1,14 +1,18 @@
+import Lucide from "@react-native-vector-icons/lucide";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
-import { useRoute } from "@react-navigation/native";
+import { useRoute, useNavigation } from "@react-navigation/native";
 import React, { useEffect } from "react";
 import {
     ActivityIndicator,
+    Dimensions,
     Image,
     ScrollView,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View
 } from "react-native";
+import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Share from 'react-native-share';
 import { getUserContentById } from "../api/getUserContentById";
@@ -59,8 +63,11 @@ const renderContentBody = (article: IUserContent) => {
 };
 
 
+const { height } = Dimensions.get("window");
+
 const ArticleDetails = () => {
     const route = useRoute<any>();
+    const navigation = useNavigation();
     const { articleId } = route.params;
     const [article, setArticle] = React.useState<IUserContent | null>(null);
     const [loading, setLoading] = React.useState<boolean>(false);
@@ -94,24 +101,55 @@ const ArticleDetails = () => {
     }
 
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
-            <ScrollView contentContainerStyle={ContentDetailsStyles.scrollContent}>
-                {/* Banner Image */}
-                <Image source={{ uri: article.featuredImage }} style={ContentDetailsStyles.image} />
+        <SafeAreaView style={styles.safeArea}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+            >
+                {/* Hero Section */}
+                <View style={styles.heroContainer}>
+                    <Image
+                        source={{ uri: article.featuredImage }}
+                        style={styles.heroImage}
+                        resizeMode="cover"
+                    />
+                    <LinearGradient
+                        colors={['rgba(0,0,0,0.4)', 'transparent', 'rgba(0,0,0,0.8)']}
+                        style={styles.imageOverlay}
+                    >
+                        {/* Header Actions */}
+                        <View style={styles.headerRow}>
+                            <TouchableOpacity
+                                onPress={() => navigation.goBack()}
+                                style={styles.iconCircle}
+                            >
+                                <Lucide name="chevron-left" size={24} color="#fff" />
+                            </TouchableOpacity>
+                        </View>
+                    </LinearGradient>
+                </View>
 
-                {/* Title + Author */}
-                <View style={globalStyles.container}>
-                    <Text style={[ContentDetailsStyles.title, globalStyles.fontBold]}>{article.featuredTitle}</Text>
-                    <Text style={[ContentDetailsStyles.author, globalStyles.fontRegular]}>Written by Dr. Harsha Tomar</Text>
+                {/* Content Container */}
+                <View style={styles.contentWrapper}>
+                    <Text style={[ContentDetailsStyles.title, globalStyles.fontBold, { marginBottom: 8 }]}>
+                        {article.featuredTitle}
+                    </Text>
+                    <Text style={[ContentDetailsStyles.author, globalStyles.fontRegular, { marginBottom: 15 }]}>
+                        Written by Dr. Harsha Tomar
+                    </Text>
 
                     {/* Action Buttons */}
                     <View style={ContentDetailsStyles.actions}>
                         <TouchableOpacity
                             style={ContentDetailsStyles.iconButton}
                             onPress={() => {
+                                const shareMessage = article.contentBody
+                                    .filter(item => item.contentType !== ContentBodyTypeEnum.IMAGE)
+                                    .map(item => item.body)
+                                    .join('\n\n');
                                 Share.open({
                                     title: article.featuredTitle,
-                                    message: `${article.featuredTitle} \n\n ${article.contentBody}`,
+                                    message: `${article.featuredTitle} \n\n ${shareMessage}`,
                                 })
                                     .then((res) => {
                                         console.log(res);
@@ -137,6 +175,80 @@ const ArticleDetails = () => {
         </SafeAreaView>
     );
 };
+
+const styles = StyleSheet.create({
+    safeArea: {
+        flex: 1,
+        backgroundColor: '#FFFFFF',
+    },
+    scrollContent: {
+        paddingBottom: 40,
+    },
+    heroContainer: {
+        width: '100%',
+        height: height * 0.4,
+        backgroundColor: '#f0f0f0',
+    },
+    heroImage: {
+        width: '100%',
+        height: '100%',
+    },
+    imageOverlay: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: 'space-between',
+        padding: 20,
+    },
+    headerRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
+    iconCircle: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: 'rgba(0,0,0,0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    heroInfo: {
+        marginBottom: 10,
+    },
+    badgeRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 2,
+    },
+    badge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 15,
+    },
+    badgeText: {
+        color: '#fff',
+        fontSize: 10,
+        textTransform: 'uppercase',
+    },
+    articleTitle: {
+        fontSize: 26,
+        color: '#fff',
+        textShadowColor: 'rgba(0,0,0,0.5)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 4,
+    },
+    contentWrapper: {
+        padding: 20,
+        marginTop: -30,
+        backgroundColor: '#fff',
+        borderTopLeftRadius: 30,
+        borderTopRightRadius: 30,
+        flex: 1,
+    },
+});
 
 export default ArticleDetails;
 

@@ -17,17 +17,14 @@ import { ICheckInRecommendation, ICheckInRecommendationResponse, IndividualRecom
 import { IExpert, IExpertResponse } from '../../types/expert.types';
 import { UserCategoryEnum } from '../../types/user.types';
 import { useBottomSheet } from '../bottomSheet/AppBottomSheet';
-import HowToGenerateVivaScoreGuide from '../bottomSheet/HowToGenerateVivaScoreGuide';
 import RecoveryProgressGraph from '../bottomSheet/RecoveryProgressGraph';
-import RecoveryScoreBriefInfo from '../bottomSheet/RecoveryScoreBriefInfo';
 import CareManagerCard from '../CareManagerCard';
+import ExpertItem from '../experts/FLExpertItem';
 import GradientButtonWithSlightRadius from '../GradientButtonWithSlightRadius';
 import IndividualRecoveryCard from '../IndividualRecoveryCard';
 import NNWomanPlanningForBaby from '../NNWomanPlanningForBaby';
 import NPWomanBabyArriving from '../NPWomanBabyArriving';
 import VivaScoreGauge from '../VivaScoreGauge';
-import WeekCycle from '../WeekCycle';
-import ExpertItem from '../experts/FLExpertItem';
 
 const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUserAllData }) => {
     const [recentCheckindata, setRecentChekinData] = useState<ICheckInRecommendation[]>();
@@ -132,7 +129,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                         Week {recentCheckindata.length > 0 ? recentCheckindata[0].week : userData.user.current_weekdays.weeks}
                                     </Text>
                                 </View>
-                                <View>
+                                {/* <View>
                                     <TouchableOpacity
                                         activeOpacity={0.1}
                                         onPress={() =>
@@ -141,7 +138,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                     >
                                         <Lucide name='info' size={20} color={colors.darkGray} />
                                     </TouchableOpacity>
-                                </View>
+                                </View> */}
 
                             </View>
 
@@ -173,7 +170,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                                         `${String(recentCheckindata[0].finalScore).split(".")[0]}`
                                                 }
                                             </Text>
-                                            <TouchableOpacity
+                                            {/* <TouchableOpacity
                                                 onPress={() => open(
                                                     <RecoveryScoreBriefInfo
                                                         significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
@@ -182,7 +179,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                                 )}
                                             >
                                                 <Lucide name='info' size={15} color={colors.darkPurple} style={{ alignSelf: "center", marginTop: -10 }} />
-                                            </TouchableOpacity>
+                                            </TouchableOpacity> */}
                                         </View>
                                         <Text
                                             style={{
@@ -273,7 +270,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                                     name="arrow-right"
                                                     style={{
                                                         fontSize: 16,
-                                                        color: colors.white,
+                                                        color: colors.darkPurple,
                                                     }}
                                                 />
                                             </View> : null}
@@ -336,7 +333,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                 )
                             }
 
-                            <WeekCycle />
+                            {/* <WeekCycle /> */}
                         </>
                     )
                 }

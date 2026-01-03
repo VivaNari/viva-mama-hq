@@ -132,7 +132,7 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                 ...globalStyles.fontRegular
                             }}
                         >
-                            Build Number: 065001012026
+                            Build Number: 051003012026
                         </Text>
                     </View>
                 </View>

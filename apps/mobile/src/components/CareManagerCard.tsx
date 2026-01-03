@@ -108,7 +108,7 @@ const CareManagerCard = () => {
                                             });
                                         } else {
                                             Toast.show({
-                                                type: 'success',
+                                                type: 'error',
                                                 text1: 'Error!',
                                                 text2: 'Something went wrong!',
                                                 position: 'bottom',
@@ -118,9 +118,9 @@ const CareManagerCard = () => {
                                     } catch (error) {
                                         console.log(error);
                                         Toast.show({
-                                            type: 'success',
+                                            type: 'error',
                                             text1: 'Error!',
-                                            text2: 'Something went wrong!' + error,
+                                            text2: 'Something went wrong! ' + error,
                                             position: 'bottom',
 
                                         });
