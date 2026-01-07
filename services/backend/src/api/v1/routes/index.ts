@@ -13,6 +13,7 @@ import careManagerRouter from "./care-managers/care-manager.route";
 import bookConsultationRouter from "./book-consultation/book-consultation.route";
 import consultationRouter from "./consultations/consultation.routes";
 import consultationReviewRouter from "./consultation-reviews/consultation-review.route";
+import weeklyCheckinV1Router from "./weekly-checkin-v1.routes";
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use(expertRouter);
 router.use(careManagerRouter);
 router.use(bookConsultationRouter);
 router.use(consultationReviewRouter);
+router.use(weeklyCheckinV1Router);
 
 export default router;

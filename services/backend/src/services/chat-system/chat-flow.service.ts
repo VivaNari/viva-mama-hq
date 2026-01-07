@@ -964,7 +964,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         }
     }
 
-    private async updateOnboardingData(
+    public async updateOnboardingData(
         userId: string,
         flowDefinition: any,
         nodeId: string,

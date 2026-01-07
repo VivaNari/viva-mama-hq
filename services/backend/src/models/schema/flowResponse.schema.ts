@@ -22,6 +22,10 @@ const flowResponseSchema: Schema<IFlowResponse> = new Schema<IFlowResponse>(
                 default: null,
             },
         },
+        idempotencyKey: {
+            type: String,
+            default: null,
+        },
         computed: {
             type: Object,
             default: null,

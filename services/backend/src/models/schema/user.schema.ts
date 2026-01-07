@@ -37,7 +37,6 @@ const userSchema = new Schema<IUser>(
         },
         email: {
             type: String,
-            unique: true,
             lowercase: true,
             trim: true,
             default: null,
@@ -92,7 +91,7 @@ const userSchema = new Schema<IUser>(
         current_weekdays: {
             weeks: {
                 type: Number,
-                default: null,
+                default: 1,
             },
             days: {
                 type: Number,
