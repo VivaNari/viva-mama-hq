@@ -2,6 +2,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import React, { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
+import Toast from 'react-native-toast-message';
 import { useAuth } from "../context/AuthContext";
 import { colors } from "../public/assets/colors";
 
@@ -12,9 +14,15 @@ import { BottomSheetProvider, BottomSheetModalProvider } from "../components/bot
 
 const Stack = createNativeStackNavigator();
 
+interface NotificationData {
+    flowSlug: string;
+    consultationId: string;
+}
+
 export default function RootNavigator() {
     const { userToken, isLoading, isFullyOnboarded, onboardingStatus } = useAuth();
     const navigationRef = useRef<any>(null);
+    const isFirstLoad = useRef(true);
 
     // Track previous auth state to detect changes
     const prevAuthState = useRef({
@@ -23,20 +31,114 @@ export default function RootNavigator() {
     });
 
     useEffect(() => {
-        // Only reset navigation if auth state actually changed
+        const handleNotification = (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+            console.log('[ROOT_NAVIGATOR] Handling notification:', remoteMessage);
+            const { flowSlug, consultationId } = remoteMessage.data as unknown as NotificationData;
+
+            if (userToken && isFullyOnboarded()) {
+                if (flowSlug) {
+                    navigationRef.current?.navigate("AppStack", {
+                        screen: "ChatWithVivaAI",
+                        params: { flowSlug }
+                    });
+                } else if (consultationId) {
+                    navigationRef.current?.navigate("AppStack", {
+                        screen: "ConsultationRating",
+                        params: { consultationId }
+                    });
+                }
+            } else {
+                console.log('[ROOT_NAVIGATOR] Skipping notification redirect: User not fully onboarded');
+            }
+        };
+
+        const setupNotifications = async () => {
+            // Cold start notification
+            const initialNotification = await messaging().getInitialNotification();
+            if (initialNotification) {
+                console.log('[ROOT_NAVIGATOR] Initial notification found:', initialNotification);
+                // Wait for navigator to be ready
+                setTimeout(() => handleNotification(initialNotification), 500);
+            }
+
+            // Background notification
+            const unsubscribeOnOpened = messaging().onNotificationOpenedApp((remoteMessage) => {
+                console.log('[ROOT_NAVIGATOR] App opened from background via notification');
+                handleNotification(remoteMessage);
+            });
+
+            // Foreground notification
+            const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
+                console.log('[ROOT_NAVIGATOR] Foreground message received:', remoteMessage);
+
+                Toast.show({
+                    type: 'success',
+                    text1: remoteMessage.notification?.title || 'New Notification',
+                    text2: remoteMessage.notification?.body || 'Tap to view details',
+                    position: 'top',
+                    autoHide: false,
+                    onPress: () => {
+                        handleNotification(remoteMessage);
+                        Toast.hide();
+                    }
+                });
+            });
+
+            return () => {
+                unsubscribeOnOpened();
+                unsubscribeOnMessage();
+            };
+        };
+
+        let unsubscribeNotifications: (() => void) | undefined;
+
+        if (!isLoading) {
+            setupNotifications().then(unsub => {
+                unsubscribeNotifications = unsub;
+            });
+        }
+
+        return () => {
+            if (unsubscribeNotifications) unsubscribeNotifications();
+        };
+    }, [isLoading, userToken, isFullyOnboarded]);
+
+    useEffect(() => {
         const currentIsOnboarded = isFullyOnboarded();
+
+        if (isLoading) {
+            prevAuthState.current = {
+                userToken,
+                isOnboarded: currentIsOnboarded
+            };
+            return;
+        }
+
+        // Detect if auth state actually changed
         const authStateChanged =
             prevAuthState.current.userToken !== userToken ||
             prevAuthState.current.isOnboarded !== currentIsOnboarded;
 
-        if (!isLoading && authStateChanged && navigationRef.current) {
+        // SKIP RESET ON FIRST LOAD after isLoading becomes false
+        // This is crucial to prevent wiping out notification redirects on cold start
+        if (isFirstLoad.current) {
+            console.log("[ROOT_NAVIGATOR] First load complete, skipping initial reset");
+            isFirstLoad.current = false;
+            prevAuthState.current = {
+                userToken,
+                isOnboarded: currentIsOnboarded
+            };
+            return;
+        }
+
+        if (authStateChanged && navigationRef.current) {
             // Determine target stack
             let targetStack = "AuthStack";
             if (userToken) {
                 targetStack = currentIsOnboarded ? "AppStack" : "OnboardingStack";
             }
 
-            console.log("[ROOT_NAVIGATOR] Auth state changed, navigating to:", targetStack);
+            console.log("[ROOT_NAVIGATOR] Auth state changed, resetting to:", targetStack);
 
             // Reset navigation to the appropriate stack
             setTimeout(() => {
@@ -52,7 +154,7 @@ export default function RootNavigator() {
                 isOnboarded: currentIsOnboarded
             };
         }
-    }, [isFullyOnboarded, userToken, onboardingStatus.is_questionnaire_completed, onboardingStatus.is_subscription_completed, isLoading]);
+    }, [isFullyOnboarded, userToken, onboardingStatus, isLoading]);
 
     if (isLoading) {
         return (
@@ -70,12 +172,8 @@ export default function RootNavigator() {
 
     return (
         <NavigationContainer ref={navigationRef}>
-            {/* REQUIRED for BottomSheetModal */}
             <BottomSheetModalProvider>
-
-                {/* Your custom context wrapper */}
                 <BottomSheetProvider>
-
                     <Stack.Navigator
                         initialRouteName={initialRouteName}
                         screenOptions={{
@@ -87,7 +185,6 @@ export default function RootNavigator() {
                         <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
                         <Stack.Screen name="AppStack" component={AppStack} />
                     </Stack.Navigator>
-                    {/* </BottomSheetProvider> */}
                 </BottomSheetProvider>
             </BottomSheetModalProvider>
         </NavigationContainer>

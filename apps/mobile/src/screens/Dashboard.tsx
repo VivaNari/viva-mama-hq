@@ -1,9 +1,10 @@
 import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging'
 import Lucide from '@react-native-vector-icons/lucide'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
 import Toast from 'react-native-toast-message'
+import { getActiveConsultations } from '../api/getActiveConsultatons'
 import { getUserContents } from '../api/getUserContents'
 import { getUserProducts } from '../api/getUserProducts'
 import { ArticleCard } from '../components/ArticleCard'
@@ -12,12 +13,13 @@ import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlig
 import ItemProduct from '../components/products/ItemProduct'
 import { useAuth } from '../context/AuthContext'
 import { chatDB } from '../db/sqlite'
-import { syncUserData } from '../utils/syncUserData'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
+import { IUserActiveConsultations, IUserActiveConsultationsResponse } from '../types/consultation.types'
 import { IUserContent, IUserContentresponse } from '../types/content.types'
 import { IUserAllData } from '../types/dashboard.types'
 import { IUserProduct, IUserProductResponse } from '../types/product.types'
+import { syncUserData } from '../utils/syncUserData'
 
 const Dashboard = () => {
     const navigation = useNavigation<any>();
@@ -25,6 +27,7 @@ const Dashboard = () => {
     const [userData, setUserdata] = useState<IUserAllData>();
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
     const [productsData, setProductsData] = useState<IUserProduct[]>([]);
+    const [userActiveConsultationsData, setUserActiveConsultationsData] = useState<IUserActiveConsultations[]>([]);
     const { userId, userToken } = useAuth();
 
     useFocusEffect(
@@ -32,7 +35,6 @@ const Dashboard = () => {
             if (!userId) return;
             (async () => {
                 try {
-                    console.log("test21")
 
                     let getUserDataFromSQLite = await chatDB.getUserData(userId as string);
 
@@ -43,7 +45,6 @@ const Dashboard = () => {
                         getUserDataFromSQLite = await chatDB.getUserData(userId as string);
                     }
 
-                    console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
                     if (getUserDataFromSQLite) {
                         setUserdata(getUserDataFromSQLite.data);
                     }
@@ -53,11 +54,18 @@ const Dashboard = () => {
 
                     const getProducts: IUserProductResponse = await getUserProducts();
                     setProductsData(getProducts.data);
+
+                    const getuserActiveConsultations: IUserActiveConsultationsResponse = await getActiveConsultations();
+                    setUserActiveConsultationsData(getuserActiveConsultations.data);
                 } catch (error) {
                     console.error("Error loading dashboard data:", error);
                 }
             })()
         }, [userId, userToken]))
+
+    useEffect(() => {
+        console.log("userActiveConsultationsData ", userActiveConsultationsData)
+    }, [userActiveConsultationsData])
 
     useEffect(() => {
         (async function () {
@@ -98,7 +106,7 @@ const Dashboard = () => {
                     <View
                     >
 
-                        <DashboardMotherTab userData={userData as IUserAllData} score={Number(vivaScore)} />
+                        <DashboardMotherTab userData={userData as IUserAllData} userActiveConsultationsData={userActiveConsultationsData} score={Number(vivaScore)} />
 
                     </View>
 

@@ -13,6 +13,7 @@ import { getExperts } from '../../api/getExperts';
 import { getRecentCheckinData } from '../../api/recentCheckIn.api';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
+import { IUserActiveConsultations } from '../../types/consultation.types';
 import { ICheckInRecommendation, ICheckInRecommendationResponse, IndividualRecommendationEnum, IndividualRecommendationZoneEnum, IUserAllData } from '../../types/dashboard.types';
 import { IExpert, IExpertResponse } from '../../types/expert.types';
 import { UserCategoryEnum } from '../../types/user.types';
@@ -25,8 +26,9 @@ import IndividualRecoveryCard from '../IndividualRecoveryCard';
 import NNWomanPlanningForBaby from '../NNWomanPlanningForBaby';
 import NPWomanBabyArriving from '../NPWomanBabyArriving';
 import VivaScoreGauge from '../VivaScoreGauge';
+import ActiveConsultation from '../ActiveConsultation';
 
-const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUserAllData }) => {
+const DashboardMotherTab = ({ score, userData, userActiveConsultationsData }: { score: number, userData: IUserAllData, userActiveConsultationsData: IUserActiveConsultations[] }) => {
     const [recentCheckindata, setRecentChekinData] = useState<ICheckInRecommendation[]>();
     const [experts, setExperts] = useState<IExpert[]>([]);
 
@@ -86,7 +88,87 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
     const navigation = useNavigation<any>();
     return (
         <View>
+            {/* {
+                userData && !userData.user.subscription.expiryDate && (
+
+                    <View style={{ flexDirection: 'row' }}>
+                        <LinearGradient
+                            colors={[colors.purple, colors.darkPurple]}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={{
+                                borderRadius: 10,
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                paddingVertical: 7,
+                                paddingHorizontal: 10,
+                                flex: 1,
+                                marginBottom: 20,
+                                gap: 15
+                            }}
+                        >
+                            <Text
+                                style={[
+                                    {
+                                        fontSize: 16,
+                                        flexShrink: 1,
+                                        color: colors.white,
+                                    },
+                                    globalStyles.fontSemiBold
+                                ]}
+                            >
+                                Subscribe to viva recovery today
+                            </Text>
+
+                            <TouchableOpacity
+                                onPress={() => navigation.navigate("Services")}
+                                style={{
+                                    paddingHorizontal: 5,
+                                    paddingVertical: 5,
+                                    flexShrink: 1,
+                                    backgroundColor: colors.white,
+                                    borderRadius: 15
+                                }}
+                            >
+                                <Text
+                                    style={[
+                                        {
+                                            fontSize: 14,
+                                            flexShrink: 1,
+                                            textAlign: "center",
+                                            paddingHorizontal: 8,
+                                            paddingVertical: 4,
+                                            borderRadius: 6,
+                                            color: colors.black
+                                        },
+                                        globalStyles.fontMedium
+                                    ]}
+                                >
+                                    Try now
+                                </Text>
+                            </TouchableOpacity>
+                        </LinearGradient>
+                    </View>
+                )
+            } */}
+
+            <View
+                style={{
+                    marginBottom: 12
+                }}
+            >
+                <FlatList
+                    keyExtractor={(item: IUserActiveConsultations) => item._id}
+                    data={userActiveConsultationsData}
+                    renderItem={({ item }) => <ActiveConsultation item={item} />}
+                    scrollEnabled={false}
+                    nestedScrollEnabled={false}
+                />
+
+            </View>
             <View>
+
                 {/* gauge */}
                 {
                     userData &&
@@ -98,7 +180,7 @@ const DashboardMotherTab = ({ score, userData }: { score: number, userData: IUse
                                 padding: 10,
                                 borderRadius: 10,
                                 boxShadow: '0 0 4px 0 rgba(0, 0, 0, 0.25)',
-                                paddingBottom: 20
+                                paddingBottom: 20,
                             }}
                         >
                             <View

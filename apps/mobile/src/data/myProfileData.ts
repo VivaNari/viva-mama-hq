@@ -7,41 +7,53 @@ export const myProfileData: IMyProfileData = {
   age: 29,
   isPremium: true,
 };
-
 export const settingsMenu: ISettingsMenu[] = [
   {
+    title: "Add Partner",
+    icon: "user-round-plus",
+    componentName: "AddPartner",
+    description: "Invite your partner to share your journey.",
+  },
+  {
     title: "Settings",
-    icon: "cog-outline",
+    icon: "cog",
     componentName: "Settings",
+    description: "Manage your account and app preferences.",
   },
   {
     title: "Hide content",
-    icon: "eye-off-outline",
+    icon: "eye-closed",
     componentName: "HideContent",
+    description: "Customize what information is visible.",
   },
   {
     title: "Notifications",
-    icon: "bell-outline",
+    icon: "bell-ring",
     componentName: "Notifications",
+    description: "Stay updated with alerts and reminders.",
   },
   {
     title: "Support",
-    icon: "heart-plus-outline",
+    icon: "heart-handshake",
     componentName: "Support",
+    description: "Get help and reach out to our team.",
   },
   {
     title: "Legal",
-    icon: "book-open-outline",
+    icon: "book-open-text",
     componentName: "Legal",
+    description: "View terms of service and privacy policies.",
   },
   {
     title: "Medical",
     icon: "stethoscope",
     componentName: "Medical",
+    description: "Access your health records and medical info.",
   },
   {
     title: "About VivaMama",
-    icon: "alert-circle-outline",
+    icon: "info",
     componentName: "AboutVivaNari",
+    description: "Learn more about our mission and the app.",
   },
 ];

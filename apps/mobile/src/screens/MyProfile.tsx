@@ -1,20 +1,20 @@
 import { useNavigation } from '@react-navigation/native'
 import React, { useState } from 'react'
-import { FlatList, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native'
-import LinearGradient from 'react-native-linear-gradient'
+import { ActivityIndicator, FlatList, Image, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import ProfileSettingsMenu from '../components/profile/ProfileSettingsMenu'
+import { useAuth } from '../context/AuthContext'
 import { myProfileData, settingsMenu } from '../data/myProfileData'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
-import ProfileSettingsMenu from '../components/profile/ProfileSettingsMenu'
-import { useAuth } from '../context/AuthContext'
+import Lucide from '@react-native-vector-icons/lucide'
 
 const MyProfile = () => {
     const navigation = useNavigation<any>();
     const { signOut } = useAuth();
     const [getLoading, setLoading] = useState<boolean>(false);
     return (
-        <SafeAreaView style={[globalStyles.container, { flex: 1 }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
             <FlatList
                 data={settingsMenu}
                 renderItem={({ item, index }) => {
@@ -22,183 +22,123 @@ const MyProfile = () => {
                     const isLast = index === settingsMenu.length - 1
 
                     return (
-                        <ProfileSettingsMenu
-                            item={item}
-                            navigation={navigation}
-                            isFirst={isFirst}
-                            isLast={isLast}
-                        />
+                        <View
+                            style={{
+                                marginHorizontal: 20,
+
+                            }}
+                        >
+                            <ProfileSettingsMenu
+                                item={item}
+                                navigation={navigation}
+                                isFirst={isFirst}
+                                isLast={isLast}
+                            />
+                        </View>
                     )
                 }}
                 keyExtractor={(_, index) => index.toString()}
                 showsVerticalScrollIndicator={false}
+
                 ListHeaderComponent={() => (
                     <>
                         {/* Profile Card */}
-                        <LinearGradient
-                            colors={[colors.darkPurple, colors.purple]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={{ padding: 1, borderRadius: 10 }}
+
+                        <View
+                            style={[globalStyles.container, {
+                                backgroundColor: colors.pageBG,
+                                borderRadius: 10,
+                                paddingVertical: 30,
+                                marginBottom: 20,
+
+                            }]}
                         >
                             <View
                                 style={{
-                                    backgroundColor: colors.white,
-                                    borderRadius: 10
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    gap: 20,
                                 }}
                             >
-                                <ImageBackground
-                                    source={require("../public/assets/images/Wave.png")}
-                                    resizeMode="cover"
+                                <View>
+                                    <Image
+                                        source={myProfileData.avatar}
+                                        style={{
+                                            height: 70,
+                                            width: 70,
+                                            borderRadius: 75,
+                                            borderWidth: 2,
+                                            borderColor: colors.purple,
+                                        }}
+                                    />
+
+                                </View>
+
+                                <View
                                     style={{
-                                        height: 180,
-                                        width: '100%',
-                                        justifyContent: "flex-end",
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
                                     }}
                                 >
-                                    <View style={{
-                                        ...StyleSheet.absoluteFillObject,
-                                        backgroundColor: "rgba(244, 244, 244, 0.4)",
-                                        borderRadius: 10
-                                    }} />
-                                    <View
+                                    <View>
+
+                                        <Text
+                                            style={[{
+                                                fontSize: 18,
+                                                marginBottom: 5
+                                            }, globalStyles.fontSemiBold]}
+                                        >
+                                            {myProfileData.name}
+                                        </Text>
+                                        <TouchableOpacity
+                                            style={{
+                                                backgroundColor: colors.darkPurple,
+                                                paddingVertical: 6,
+                                                paddingHorizontal: 5,
+                                                borderRadius: 15
+                                            }}
+                                        >
+                                            <Text
+                                                style={[{
+                                                    color: colors.white,
+                                                    textAlign: 'center',
+                                                    fontSize: 10
+                                                }, globalStyles.fontRegular]}
+                                            >
+                                                Get Premium Today
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate("EditProfile")}
+                                        activeOpacity={0.7}
                                         style={{
-                                            padding: 10,
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-start',
-                                            gap: 30,
-                                            alignItems: 'center'
+                                            padding: 6,
+                                            borderRadius: 15,
+                                            marginTop: 10,
                                         }}
                                     >
-                                        <View>
-                                            <Image
-                                                source={myProfileData.avatar}
-                                                style={{
-                                                    height: 110,
-                                                    width: 110,
-                                                    borderRadius: 75,
-                                                    marginBottom: 10,
-                                                    borderWidth: 2,
-                                                    borderColor: colors.purple
-                                                }}
-                                            />
-                                            {myProfileData.isPremium && (
-                                                <TouchableOpacity
-                                                    style={{
-                                                        backgroundColor: colors.darkPurple,
-                                                        paddingVertical: 6,
-                                                        borderRadius: 15
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={[{
-                                                            color: colors.white,
-                                                            textAlign: 'center',
-                                                            fontSize: 10
-                                                        }, globalStyles.fontRegular]}
-                                                    >
-                                                        Viva Premium
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
+                                        <Lucide
+                                            name='chevron-right'
+                                            color={colors.darkPurple}
+                                            size={20}
+                                        />
+                                    </TouchableOpacity>
 
-                                        <View>
-                                            <Text
-                                                style={[{
-                                                    fontSize: 16,
-                                                    marginBottom: 5
-                                                }, globalStyles.fontSemiBold]}
-                                            >
-                                                {myProfileData.name}
-                                            </Text>
-                                            <Text
-                                                style={[{
-                                                    color: 'rgba(0, 0, 0, 0.6)',
-                                                    fontSize: 12,
-                                                }, globalStyles.fontRegular]}
-                                            >
-                                                {myProfileData.email}
-                                            </Text>
-                                            <Text
-                                                style={[{
-                                                    color: 'rgba(0, 0, 0, 0.6)',
-                                                    fontSize: 12,
-                                                }, globalStyles.fontRegular]}
-                                            >
-                                                Age - {myProfileData.age}
-                                            </Text>
-
-                                            <TouchableOpacity
-                                                onPress={() => navigation.navigate("EditProfile")}
-                                                activeOpacity={0.7}
-                                                style={{
-                                                    backgroundColor: colors.purple,
-                                                    paddingVertical: 6,
-                                                    borderRadius: 15,
-                                                    marginTop: 10,
-                                                }}
-                                            >
-                                                <Text style={[{
-                                                    textAlign: "center",
-                                                    color: colors.white,
-                                                    fontSize: 10
-                                                }, globalStyles.fontRegular]}>
-                                                    Edit Profile
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    </View>
-                                </ImageBackground>
+                                </View>
                             </View>
-                        </LinearGradient>
-
-                        {/* Link Your Partner */}
-                        <View
-                            style={{
-                                backgroundColor: colors.profileOptionsBG,
-                                paddingVertical: 15,
-                                paddingHorizontal: 20,
-                                borderRadius: 10,
-                                marginVertical: 25,
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <Text
-                                style={[globalStyles.fontRegular]}
-                            >Add Your partner</Text>
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate("AddPartner")}
-                                activeOpacity={0.7}
-                                style={{
-                                    backgroundColor: colors.darkPurple,
-                                    paddingVertical: 10,
-                                    paddingHorizontal: 20,
-                                    borderRadius: 15
-                                }}
-                            >
-                                <Text
-                                    style={[{
-                                        color: colors.white,
-                                        textAlign: 'center',
-                                        fontSize: 12
-                                    }, globalStyles.fontRegular]}
-                                >
-                                    Link Your Partner
-                                </Text>
-                            </TouchableOpacity>
                         </View>
                     </>
                 )}
+
                 // Footer
                 ListFooterComponent={() => (
                     <View
-                        style={{
-                            marginTop: 30,
-                        }}
+                        style={[{
+                            marginTop: 20,
+                        }, globalStyles.container]}
                     >
                         <TouchableOpacity
                             activeOpacity={0.7}
@@ -238,9 +178,8 @@ const MyProfile = () => {
                         <View
                             style={{
                                 flexDirection: 'row',
-                                justifyContent: 'center',
+                                justifyContent: 'space-evenly',
                                 alignItems: 'center',
-                                gap: 20,
                                 marginTop: 30
                             }}
                         >
@@ -250,21 +189,34 @@ const MyProfile = () => {
                                     fontSize: 12,
                                     color: colors.darkPurple,
                                     fontWeight: 600
-                                }, globalStyles.fontRegular]}
+                                }, globalStyles.fontSemiBold]}
                             >
                                 Terms of use
                             </Text>
+
+                            <Text
+                                onPress={() => navigation.navigate('TermsOfUse' as any)}
+                                style={[{
+                                    fontSize: 12,
+                                    color: colors.darkGray,
+                                    fontWeight: 600
+                                }, globalStyles.fontRegular]}
+                            >
+                                App Version: 1.0.0
+                            </Text>
+
                             <Text
                                 onPress={() => navigation.navigate('PrivacyPolicy' as any)}
                                 style={[{
                                     fontSize: 12,
                                     color: colors.darkPurple,
                                     fontWeight: 600
-                                }, globalStyles.fontRegular]}
+                                }, globalStyles.fontSemiBold]}
                             >
                                 Privacy Policy
                             </Text>
                         </View>
+
 
                         <View
                             style={{

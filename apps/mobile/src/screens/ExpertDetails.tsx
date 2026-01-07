@@ -37,6 +37,8 @@ const ExpertDetails = () => {
 
     const bookConsultation = async () => {
         try {
+            console.log("RAZORPAY_API_KEY is ", RAZORPAY_API_KEY);
+            console.warn("RAZORPAY_API_KEY is ", RAZORPAY_API_KEY);
             setLoading({
                 ...loading,
                 paymentLoading: true

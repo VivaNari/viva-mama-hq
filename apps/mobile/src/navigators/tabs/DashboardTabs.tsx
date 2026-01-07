@@ -1,12 +1,8 @@
-import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import { Lucide } from '@react-native-vector-icons/lucide';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
-import { useEffect } from 'react';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Toast from 'react-native-toast-message';
-import { useCounterContext } from '../../context/CounterContext';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
 import ArticleContent from '../../screens/ArticleContent';
@@ -17,50 +13,9 @@ import Products from '../../screens/Products';
 
 const Tab = createBottomTabNavigator();
 
-interface NotificationData {
-    flowSlug: string;
-    conversationId: string;
-}
-
 export const DashboardTabs = () => {
     const navigation = useNavigation<any>();
-    const insets = useSafeAreaInsets();
-    const { increase } = useCounterContext();
-
-    useEffect(() => {
-        (async function () {
-            // forground message received
-            const unsubscribe = messaging().onMessage(async remoteMessage => {
-
-                if (remoteMessage.data && remoteMessage.data.uiElements) {
-                    JSON.parse(remoteMessage.data.uiElements as string);
-                    // @TODO: Now do anything with the ui elements 
-                }
-
-                Toast.show({
-                    type: 'success',
-                    text1: remoteMessage.notification?.title,
-                    text2: remoteMessage.notification?.body,
-                    position: 'top'
-                });
-                increase();
-            });
-
-            messaging().onNotificationOpenedApp((remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
-                console.log('App opened from notification:', remoteMessage);
-
-                const { flowSlug } = remoteMessage.data as unknown as NotificationData;
-
-                if (true) {
-                    navigation.navigate("ChatWithVivaAI" as never, {
-                        flowSlug
-                    });
-                }
-            });
-
-            return unsubscribe;
-        })();
-    }, [navigation, increase])
+    const insets = useSafeAreaInsets()
 
     return (
         <Tab.Navigator

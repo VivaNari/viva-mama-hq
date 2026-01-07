@@ -4,12 +4,13 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import Toast from 'react-native-toast-message';
 import apiClientInterceptor from '../api/apiClientInterceptor';
-import { API_GOOGLE_LOGIN, API_REQUEST_PHONE_OTP, API_VERIFY_OTP } from '../constants/endpoints';
+import { API_GOOGLE_LOGIN, API_REQUEST_PHONE_OTP, API_UPDATE_FCM_TOKEN, API_VERIFY_OTP } from '../constants/endpoints';
 import { AuthContextType, AuthProviderProps, AuthResponse, OnboardingStatus } from '../types/authContext.types';
 import { decodeToken } from '../utils/decodeJWTToken';
 import { getFCMToken } from '../utils/getFCMToken';
 import { syncUserData } from '../utils/syncUserData';
 import { chatDB } from '../db/sqlite';
+import { getMessaging } from '@react-native-firebase/messaging';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -22,6 +23,47 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     is_subscription_completed: false,
   });
   const [FCMToken, setFCMToken] = useState<string | null>(null);
+
+  // Refresh FCM token handler
+  useEffect(() => {
+    const unsubscribe = getMessaging().onTokenRefresh(async (newToken) => {
+      console.log('[FCM] Token refreshed:', newToken);
+
+      // Update local state
+      setFCMToken(newToken);
+
+      // If user is logged in, sync with backend
+      if (userToken) {
+        try {
+          await apiClientInterceptor().put(API_UPDATE_FCM_TOKEN, {
+            FCM_token: newToken
+          });
+          console.log('[FCM] Token updated on backend');
+        } catch (err) {
+          console.error('[FCM] Failed to update token', err);
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [userToken]);
+
+  useEffect(() => {
+    if (!userToken || !FCMToken) return;
+
+    console.log('[FCM] Syncing token to backend:', FCMToken);
+    (async function () {
+      try {
+        await apiClientInterceptor().put(API_UPDATE_FCM_TOKEN, {
+          FCM_token: FCMToken
+        });
+        console.log('[FCM] Token updated on backend');
+      } catch (err) {
+        console.error('[FCM] Failed to update token', err);
+      }
+    })();
+
+  }, [userToken, FCMToken]);
 
   useEffect(() => {
     GoogleSignin.configure({ webClientId: GOOGLE_CLIENT_ID });
@@ -67,14 +109,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const signInWithGoogle = async () => {
     try {
-      console.log("1111")
       await GoogleSignin.hasPlayServices();
-      console.log("2222")
       await GoogleSignin.signOut(); // Ensure fresh sign-in each time
-      console.log("3333")
 
       const data = await GoogleSignin.signIn() as { data: { idToken: string } };
-      console.log("5555", data)
       console.log("[AUTHCONTEXT] Google Sign-In Data:", data.data.idToken);
 
       const { data: response } = await apiClientInterceptor().post(API_GOOGLE_LOGIN, {
@@ -84,7 +122,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      console.log("hellow souvik", {
+      console.log("idToken & FCM_token", {
         idToken: data.data.idToken,
         FCM_token: FCMToken,
       })

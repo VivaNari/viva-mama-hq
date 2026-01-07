@@ -135,7 +135,15 @@ const ArticleDetails = () => {
                         {article.featuredTitle}
                     </Text>
                     <Text style={[ContentDetailsStyles.author, globalStyles.fontRegular, { marginBottom: 15 }]}>
-                        Written by Dr. Harsha Tomar
+                        {
+                            article.reviewers.length > 0 && (
+                                <>
+                                    Reviewed by {article.reviewers.map((author) => author.name).join(", ")}
+                                    {" "} | {" "}
+                                </>
+                            )
+                        }
+                        Written by {article.authors.map((author) => author.name).join(", ")}
                     </Text>
 
                     {/* Action Buttons */}

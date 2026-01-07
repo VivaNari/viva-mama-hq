@@ -338,11 +338,11 @@ const SubscriptionDetails: React.FC<{ plan: string; billing: string }> = ({ bill
                     <Text
                         style={[
                             { color: colors.white, fontSize: 16, textAlign: "center" },
-                            globalStyles.fontRegular,
+                            globalStyles.fontSemiBold,
                         ]}
                     >
                         {
-                            finalPriceNumber === 0 ? "Continue for free" : `Continue to pay22 ₹${finalPriceNumber}`
+                            finalPriceNumber === 0 ? "Continue for free" : `Continue to pay ₹${finalPriceNumber}`
                         }
                     </Text>
                 </TouchableOpacity>

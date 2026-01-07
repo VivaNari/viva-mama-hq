@@ -204,6 +204,7 @@ const ChatWithVivaAI: React.FC = () => {
     }, [handleTextSubmit, state.inputText]);
 
     const handleDatePickerOpen = useCallback(() => {
+        setSelectedDate(null);
         setShowDatePicker(true);
     }, []);
 

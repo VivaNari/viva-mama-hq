@@ -1,4 +1,5 @@
-import { UserCategoryEnum } from './user.types';
+import { IExpert } from "./expert.types";
+import { UserCategoryEnum } from "./user.types";
 
 export interface IContent {
   id: number;
@@ -36,15 +37,16 @@ export interface IUserContent {
   featuredImage: string;
   featuredTitle: string;
   category: UserCategoryEnum;
-  validWeeks: number[];
+  authors: IExpert[];
+  reviewers: IExpert[];
   contentBody: IContentBody[];
 }
 
 export enum ContentBodyTypeEnum {
-  IMAGE = 'IMAGE',
-  HEADING = 'HEADING',
-  SUBHEADING = 'SUBHEADING',
-  PARAGRAPH = 'PARAGRAPH',
+  IMAGE = "IMAGE",
+  HEADING = "HEADING",
+  SUBHEADING = "SUBHEADING",
+  PARAGRAPH = "PARAGRAPH",
 }
 
 export interface IContentBody {

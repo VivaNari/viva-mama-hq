@@ -83,7 +83,7 @@ const VivaBuddyRequestCall = () => {
                                     Toast.show({
                                         type: 'success',
                                         text1: 'Success!',
-                                        text2: 'Callback requested successfully!',
+                                        text2: 'Your request has been registered and you will receive a call back within 24 hours!',
                                         position: 'bottom',
 
                                     });

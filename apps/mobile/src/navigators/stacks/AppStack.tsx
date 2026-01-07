@@ -27,6 +27,8 @@ import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
 import { DashboardTabs } from '../tabs/DashboardTabs';
 import ChatWithVivaAi from '../../screens/ChatWithVivaAI';
 import ProductDetails from '../../screens/ProductDetails';
+import Services from '../../screens/Services copy';
+import ConsultationRating from '../../screens/ConsultationRating';
 
 const Stack = createNativeStackNavigator();
 
@@ -41,7 +43,6 @@ const AppStack = () => {
                 headerStyle: {
                     backgroundColor: colors.pageBG
                 }
-
             }}
         >
 
@@ -174,7 +175,15 @@ const AppStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: false,
+                    title: "Services"
+                }}
+                name="Services"
+                component={Services as any}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: false,
                     title: 'My Profile',
                 }}
                 name="MyProfile"
@@ -236,6 +245,14 @@ const AppStack = () => {
                 }}
                 name="VaccinationLog"
                 component={VaccinationLog}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Consultation Rating',
+                }}
+                name="ConsultationRating"
+                component={ConsultationRating}
             />
         </Stack.Navigator>
     );
