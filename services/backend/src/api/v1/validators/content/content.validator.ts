@@ -8,7 +8,10 @@ const createContentValidator = Joi.object<IContent>({
     category: Joi.string()
         .valid(...Object.values(EUserCategory))
         .required(),
-    validWeeks: Joi.array().items(Joi.number().required().min(1).max(52)).required(),
+    validWeekStart: Joi.number().required().min(1).max(52),
+    validWeekEnd: Joi.number().required().min(1).max(52),
+    authors: Joi.array().items(Joi.string().optional()).optional(),
+    reviewers: Joi.array().items(Joi.string().optional()).optional(),
     contentBody: Joi.array()
         .items(
             Joi.object({

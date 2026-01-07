@@ -19,12 +19,26 @@ const contentSchema = new Schema<IContent>({
         required: true,
         default: null,
     },
-    validWeeks: [
-        {
-            type: Number,
-            required: true,
-        },
-    ],
+    validWeekStart: {
+        type: Number,
+        required: true,
+    },
+    validWeekEnd: {
+        type: Number,
+        required: true,
+    },
+    authors: {
+        type: [Schema.Types.ObjectId],
+        ref: "experts",
+        required: false,
+        default: [],
+    },
+    reviewers: {
+        type: [Schema.Types.ObjectId],
+        ref: "experts",
+        required: false,
+        default: [],
+    },
     contentBody: [
         {
             contentType: {

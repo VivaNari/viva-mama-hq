@@ -20,6 +20,31 @@ export default class UserController {
             next(err);
         }
     };
+
+    updateFCMToken = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            if (!req.user) {
+                throw new Error(messages.USER_FETCH_FAILED);
+            }
+            const updatedUser = await getUserService.findByIdAndUpdate({
+                _id: req.user._id,
+                payload: {
+                    FCM_token: req.body.FCM_token,
+                },
+            });
+            sendResponse({
+                data: updatedUser,
+                statusCode: StatusCodes.OK,
+                success: true,
+                message: messages.FCM_TOKEN_UPDATED_SUCCESS,
+                response: res,
+            });
+        } catch (err) {
+            console.log(err);
+            next(err);
+        }
+    };
+
     sendOTPToPhone = async (req: Request, res: Response) => {
         await getUserService.sendOTPToPhone(req, res);
     };

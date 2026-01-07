@@ -79,7 +79,13 @@ class BaseService<T> {
         return query.exec();
     };
 
-    findByIdAndUpdate = async ({ _id, payload }: { _id: string; payload: Partial<T> }) => {
+    findByIdAndUpdate = async ({
+        _id,
+        payload,
+    }: {
+        _id: string | Schema.Types.ObjectId;
+        payload: Partial<T>;
+    }) => {
         const result = await this.model.findByIdAndUpdate(_id, payload);
         return result;
     };

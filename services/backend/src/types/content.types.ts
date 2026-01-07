@@ -6,7 +6,10 @@ export interface IContent {
     featuredImage: string;
     featuredTitle: string;
     category: EUserCategory;
-    validWeeks: number[];
+    validWeekStart: number;
+    validWeekEnd: number;
+    authors: Schema.Types.ObjectId[];
+    reviewers: Schema.Types.ObjectId[];
     contentBody: IContentBody[];
 }
 

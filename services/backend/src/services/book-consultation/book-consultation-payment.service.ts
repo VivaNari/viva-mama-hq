@@ -4,7 +4,7 @@ import { StatusCodes } from "http-status-codes";
 import Razorpay from "razorpay";
 import env from "../../config/env";
 import { messages } from "../../constants/messages";
-// eslint-disable-next-line import/no-unresolved
+
 import bookConsultationOrderModel from "../../models/book-consultation.model";
 import {
     IBookConsultationOrder,
@@ -16,15 +16,19 @@ import expertModel from "../../models/expert.model";
 import UserModel from "../../models/user.model";
 import { expert } from "../../constants/expert";
 import { sendWhatsAppMessage } from "../twilio/sendSMS";
+import { ConsultationTypeEnum } from "../../types/consultation.types";
+import { ConsultationService } from "../consultations/consultation.service";
 
 class BookConsultationPaymentService extends BaseService<IBookConsultationOrder> {
     private razorpayInstance;
+    private callbackRequestService: ConsultationService = new ConsultationService();
     constructor() {
         super(bookConsultationOrderModel);
         this.razorpayInstance = new Razorpay({
             key_id: env.RAZORPAY_API_KEY as string,
             key_secret: env.RAZORPAY_SECRET_KEY as string,
         });
+        this.callbackRequestService = new ConsultationService();
     }
 
     public async createOrder({
@@ -127,13 +131,21 @@ class BookConsultationPaymentService extends BaseService<IBookConsultationOrder>
                 });
             }
 
-            // TODO: send whatsapp message here
+            // Create callback request for expert
+            await this.callbackRequestService.create({
+                userId: updatedOrder.user_id,
+                consultatorId: updatedOrder.expert_id,
+                consultationType: ConsultationTypeEnum.EXPERT,
+                requestStatus: "PENDING",
+            } as any);
+
+            // send whatsapp message here
             const message = `📞 *New Expert Consultation Booking*
 
             *Expert ID:* ${expertInstance?.id}
             *Expert:* ${expertInstance?.name}
             *User ID:* ${userInstance?.id}
-            *User:* ${userInstance?.email || userInstance?.mobile_number}
+            *User Email/Phone Number:* ${userInstance?.email || userInstance?.mobile_number}
 
             Please take actions as soon as possible.`;
 

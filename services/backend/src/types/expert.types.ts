@@ -1,4 +1,6 @@
-export interface IExpert {
+import { Document } from "mongoose";
+
+export interface IExpert extends Document {
     name: string;
     speciality: string;
     qualification: string;

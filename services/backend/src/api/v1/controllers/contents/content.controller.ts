@@ -14,6 +14,7 @@ export class ContentController {
     }
 
     public getContents = async (request: Request, response: Response, next: NextFunction) => {
+        console.log("1111");
         if (!request.user) {
             throw new Error(messages.USER_FETCH_FAILED);
         }
@@ -22,7 +23,8 @@ export class ContentController {
             const contents: IContent[] = await this.contentService.find({
                 filter: {
                     category: user.user_category,
-                    validWeeks: { $in: [user.current_weekdays.weeks] },
+                    validWeekStart: { $lte: user.current_weekdays.weeks },
+                    validWeekEnd: { $gte: user.current_weekdays.weeks },
                 },
             });
             sendResponse({
@@ -55,9 +57,13 @@ export class ContentController {
             next(err);
         }
     };
+
     getContentById = async (request: Request, response: Response, next: NextFunction) => {
         try {
-            const content = await this.contentService.find({ filter: { _id: request.params.id } });
+            const content = await this.contentService.find({
+                filter: { _id: request.params.id },
+                populate: ["authors", "reviewers"],
+            });
             sendResponse({
                 data: content,
                 statusCode: StatusCodes.OK,

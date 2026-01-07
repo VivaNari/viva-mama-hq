@@ -1,23 +1,20 @@
-import { NextFunction, Request, Response } from "express";
-import sendSMS from "../twilio/sendSMS";
-import { addMinutesToDate } from "../date/date.service";
-import { decode, encode } from "../crypto/crypto.service";
-import OTPModel from "../../models/opt.model";
-import UserModel from "../../models/user.model";
-import { generateJWT } from "../../utils/functions/generateJWT";
+import { Request, Response } from "express";
 import { OAuth2Client } from "google-auth-library";
-import { IGoogleLoginPayload, IUser } from "../../types";
-import env from "../../config/env";
-import sendResponse from "../../utils/commonFunctions/sendResponse";
 import { StatusCodes } from "http-status-codes";
-import recommendationHistoryModel from "../../models/recommendation-history.model";
-import { messages } from "../../constants/messages";
-import { IRecommendationHistory } from "../../types/recommendation-history.types";
-import { significance } from "../../constants/significance";
-import { recoveryScoreBriefInfo } from "../../constants/recoveryScoreBriefInfo";
+import env from "../../config/env";
 import { NNWomanRecoveryScoreText } from "../../constants/NNWomenRecoveryScoreText";
 import { caremanager } from "../../constants/careManager";
+import { messages } from "../../constants/messages";
+import { recoveryScoreBriefInfo } from "../../constants/recoveryScoreBriefInfo";
+import { significance } from "../../constants/significance";
+import OTPModel from "../../models/opt.model";
+import UserModel from "../../models/user.model";
+import { IGoogleLoginPayload, IUser } from "../../types";
+import sendResponse from "../../utils/commonFunctions/sendResponse";
+import { generateJWT } from "../../utils/functions/generateJWT";
 import BaseService from "../base.service";
+import { decode, encode } from "../crypto/crypto.service";
+import { addMinutesToDate } from "../date/date.service";
 
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
 

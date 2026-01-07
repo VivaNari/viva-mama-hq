@@ -8,10 +8,11 @@ import recommendationHistoryRouter from "./recommendation-history.routes";
 import contentRouter from "./contents/content.route";
 import productRouter from "./products/product.route";
 import weeklyCheckinRouter from "./weeklyCheckin.routes";
-import callbackRequestRouter from "./callback-request/callback-request.routes";
 import expertRouter from "./experts/expert.route";
 import careManagerRouter from "./care-managers/care-manager.route";
 import bookConsultationRouter from "./book-consultation/book-consultation.route";
+import consultationRouter from "./consultations/consultation.routes";
+import consultationReviewRouter from "./consultation-reviews/consultation-review.route";
 
 const router = Router();
 
@@ -24,9 +25,10 @@ router.use(recommendationHistoryRouter);
 router.use(contentRouter);
 router.use(productRouter);
 router.use(weeklyCheckinRouter);
-router.use(callbackRequestRouter);
+router.use(consultationRouter);
 router.use(expertRouter);
 router.use(careManagerRouter);
 router.use(bookConsultationRouter);
+router.use(consultationReviewRouter);
 
 export default router;

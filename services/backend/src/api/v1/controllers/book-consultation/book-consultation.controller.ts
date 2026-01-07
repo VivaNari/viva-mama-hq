@@ -1,10 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import PaymentService from "../../../../services/payments/payment.service";
-import { AuthenticatedRequest } from "../../../../types/chat.types";
-import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 import { messages } from "../../../../constants/messages";
 import BookConsultationPaymentService from "../../../../services/book-consultation/book-consultation-payment.service";
+import { AuthenticatedRequest } from "../../../../types/chat.types";
+import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 
 export default class BookConsultationController {
     private bookConsultationService: BookConsultationPaymentService;
