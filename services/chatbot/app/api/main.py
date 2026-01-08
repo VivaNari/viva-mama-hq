@@ -202,25 +202,25 @@ async def chat_endpoint(
         )
         
         elapsed = time.time() - start
-        
+        print(result)
         logger.info(
             f"[{request_id}] Success: "
-            f"intent={result.get('intent')}, "
-            f"used_rag={result.get('used_rag')}, "
+            f"intent={result.intent}, "
+            f"used_rag={result.used_rag}, "
             f"latency={elapsed:.3f}s"
         )
         
         resp = ChatResponse(
-            session_id=result["session_id"],
-            answer=result["answer"],
-            intent=result["intent"],
-            used_rag=result["used_rag"],
-            rag_best_score=result["rag_best_score"],
-            products=result.get("products", []),
-            escalation_banner=result.get("escalation_banner") or None,
+            session_id=result.session_id,
+            answer=result.answer,
+            intent=result.intent,
+            used_rag=result.used_rag,
+            rag_best_score=result.rag_best_score,
+            products=getattr(result, "products", []),
+            escalation_banner=result.escalation_banner or None,
             latency_seconds=round(elapsed, 3),
             request_id=request_id,
-            final_prompt=result.get("prompt") or None,
+            final_prompt=getattr(result, "final_prompt", None),
         )
 
         return resp
