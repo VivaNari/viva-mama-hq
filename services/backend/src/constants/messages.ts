@@ -46,4 +46,11 @@ export const messages = {
     CONSULTATION_COMPLETED_SUCCESS: "Consultation completed successfully",
     CONSULTATION_FETCHED_SUCCESS: "Consultation fetched successfully",
     FCM_TOKEN_UPDATED_SUCCESS: "FCM token updated successfully",
+    CONSULTATION_ID_NOT_PROVIDED: "Consultation id not provided",
+    CONSULTATION_NOT_FOUND: "Consultation not found",
+};
+
+export const notificationMessages = {
+    NOTIFICATION_COMPLETE_NOTIFICATION_BODY: "Please help us to improve our service",
+    NOTIFICATION_COMPLETE_NOTIFICATION_TITLE: "Your consultation has been completed successfully.",
 };

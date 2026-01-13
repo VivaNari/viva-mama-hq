@@ -5,23 +5,23 @@ import { ConsultationController } from "../../controllers/consultations/consulta
 import addConsultationRequestValidator from "../../validators/consultations/consultation.validator";
 
 const consultationRouter = Router();
-const getConsultationController = new ConsultationController();
+const consultationController = new ConsultationController();
 
 consultationRouter.post(
     "/callback-request",
     authMiddleware(),
     requestValidator(addConsultationRequestValidator),
-    getConsultationController.requestCallback,
+    consultationController.requestCallback,
 );
 consultationRouter.put(
     "/admin/consultation/:id/completed",
     authMiddleware(),
-    getConsultationController.completeConsultation,
+    consultationController.completeConsultation,
 );
 consultationRouter.get(
-    "/active-consultations",
+    "/pending-consultations",
     authMiddleware(),
-    getConsultationController.getActiveConsultations,
+    consultationController.getPendingConsultations,
 );
 
 export default consultationRouter;

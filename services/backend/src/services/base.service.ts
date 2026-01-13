@@ -86,7 +86,7 @@ class BaseService<T> {
         _id: string | Schema.Types.ObjectId;
         payload: Partial<T>;
     }) => {
-        const result = await this.model.findByIdAndUpdate(_id, payload);
+        const result = await this.model.findByIdAndUpdate(_id, payload, { new: true });
         return result;
     };
 }

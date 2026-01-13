@@ -4,7 +4,6 @@ import { messages } from "../../../../constants/messages";
 import { ExpertService } from "../../../../services/expert/expert.service";
 import { IExpert } from "../../../../types/expert.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
-import { sendWhatsAppMessage } from "../../../../services/twilio/sendSMS";
 
 export class ExpertController {
     private expertService: ExpertService = new ExpertService();

@@ -113,7 +113,7 @@ class ChatFlowController {
                     response,
                 });
             }
-            console.log("-1111");
+
             // Call service with both optional parameters
             const result = await this.chatFlowService.saveResponse(
                 userId,

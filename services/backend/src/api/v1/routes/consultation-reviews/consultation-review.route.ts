@@ -11,7 +11,7 @@ consultationReviewRouter.post(
     "/consultation-review",
     authMiddleware(),
     requestValidator(addConsultationReviewValidator),
-    consultationReviewController.addConsultationReview,
+    consultationReviewController.createConsultationReview,
 );
 
 export default consultationReviewRouter;
