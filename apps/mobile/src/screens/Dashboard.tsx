@@ -1,9 +1,7 @@
-import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging'
 import Lucide from '@react-native-vector-icons/lucide'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import React, { useCallback, useEffect, useState } from 'react'
 import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
-import Toast from 'react-native-toast-message'
 import { getActiveConsultations } from '../api/getActiveConsultatons'
 import { getUserContents } from '../api/getUserContents'
 import { getUserProducts } from '../api/getUserProducts'
@@ -23,7 +21,6 @@ import { syncUserData } from '../utils/syncUserData'
 
 const Dashboard = () => {
     const navigation = useNavigation<any>();
-    const [vivaScore, setVivaScore] = useState<string | null>(null);
     const [userData, setUserdata] = useState<IUserAllData>();
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
     const [productsData, setProductsData] = useState<IUserProduct[]>([]);
@@ -63,25 +60,7 @@ const Dashboard = () => {
             })()
         }, [userId, userToken]))
 
-    useEffect(() => {
-        console.log("userActiveConsultationsData ", userActiveConsultationsData)
-    }, [userActiveConsultationsData])
 
-    useEffect(() => {
-        (async function () {
-            // forground message received
-            messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
-                console.log("remoteMessage.data inside Dashboard.tsx ==>> ", remoteMessage.data);
-                setVivaScore(remoteMessage.data?.score as string);
-                Toast.show({
-                    type: 'success',
-                    text1: remoteMessage.notification?.title,
-                    text2: remoteMessage.notification?.body,
-                    position: 'bottom'
-                });
-            });
-        })()
-    }, [])
 
     const username = userData?.user.onboarding_data.preferred_name ?
         userData.user.onboarding_data.preferred_name.split(" ")[0] :
@@ -106,7 +85,7 @@ const Dashboard = () => {
                     <View
                     >
 
-                        <DashboardMotherTab userData={userData as IUserAllData} userActiveConsultationsData={userActiveConsultationsData} score={Number(vivaScore)} />
+                        <DashboardMotherTab userData={userData as IUserAllData} userActiveConsultationsData={userActiveConsultationsData} />
 
                     </View>
 

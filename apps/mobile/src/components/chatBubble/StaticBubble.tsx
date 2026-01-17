@@ -11,10 +11,14 @@ import {
     isTextInputMessage,
     isMultiSelectMessage,
     isDeliveryDateNode,
+    isChatbotMessage,
 } from '../../utils/messageHelpers';
 import { bubbleStyles } from './styles';
+import Lucide from '@react-native-vector-icons/lucide';
+import { colors } from '../../public/assets/colors';
 
 interface StaticBubbleProps {
+    isFirst: boolean;
     message: IChatMessage;
     isLast: boolean;
     isAnimating: boolean;
@@ -27,6 +31,7 @@ interface StaticBubbleProps {
 }
 
 export const StaticBubble: React.FC<StaticBubbleProps> = ({
+    isFirst,
     message,
     isLast,
     isAnimating,
@@ -38,9 +43,14 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
     onNotPregnantSelect,
 }) => {
     const isAi = isAiMessage(message);
+    const isChatbot = isChatbotMessage(message);
     const isTextInput = isAi && isTextInputMessage(message);
     const isMultiSelect = isAi && isMultiSelectMessage(message);
     const isDeliveryDate = isAi && isDeliveryDateNode(message);
+
+    const saveBookmark = (id: string) => {
+        console.log("message id is => ", id);
+    }
 
     const showOptions =
         isAi &&
@@ -153,6 +163,18 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                         {message.text}
                     </Text>
                 </View>
+                {isChatbot && !isFirst ? <View
+                    style={{
+                        padding: 5,
+                    }}
+                >
+                    <TouchableOpacity
+                        onPress={() => saveBookmark(message.type === 'ai' ? message.id : '')}
+                        activeOpacity={0.2}
+                    >
+                        <Lucide name='bookmark' size={20} color={colors.darkGray} />
+                    </TouchableOpacity>
+                </View> : <></>}
 
                 {isDeliveryDate && isLast && !isAnimating && !isFlowComplete && renderDeliveryDateOptions()}
 

@@ -11,7 +11,7 @@ export const TypingIndicator: React.FC = () => {
             accessibilityLabel="AI is thinking"
             accessibilityRole="text"
         >
-            <Text style={[styles.text, globalStyles.fontRegular]}>
+            <Text style={[styles.text, globalStyles.fontSemiBold]}>
                 AI is thinking...
             </Text>
         </View>

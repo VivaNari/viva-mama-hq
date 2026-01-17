@@ -3,7 +3,7 @@ import { IMyProfileData, ISettingsMenu } from "../types/myProfile.types";
 export const myProfileData: IMyProfileData = {
   name: "Harsha Tomar",
   email: "harshatomar@gmail.com",
-  avatar: require("../public/assets/images/doctors/Dr_Harsha_Tomar.png"),
+  avatar: require("../public/assets/images/avatar_ai.jpg"),
   age: 29,
   isPremium: true,
 };

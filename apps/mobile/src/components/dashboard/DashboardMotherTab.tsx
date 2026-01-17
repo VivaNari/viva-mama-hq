@@ -1,3 +1,4 @@
+import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging';
 import Lucide from '@react-native-vector-icons/lucide';
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -17,8 +18,11 @@ import { IUserActiveConsultations } from '../../types/consultation.types';
 import { ICheckInRecommendation, ICheckInRecommendationResponse, IndividualRecommendationEnum, IndividualRecommendationZoneEnum, IUserAllData } from '../../types/dashboard.types';
 import { IExpert, IExpertResponse } from '../../types/expert.types';
 import { UserCategoryEnum } from '../../types/user.types';
+import ActiveConsultation from '../ActiveConsultation';
 import { useBottomSheet } from '../bottomSheet/AppBottomSheet';
+import HowToGenerateVivaScoreGuide from '../bottomSheet/HowToGenerateVivaScoreGuide';
 import RecoveryProgressGraph from '../bottomSheet/RecoveryProgressGraph';
+import RecoveryScoreBriefInfo from '../bottomSheet/RecoveryScoreBriefInfo';
 import CareManagerCard from '../CareManagerCard';
 import ExpertItem from '../experts/FLExpertItem';
 import GradientButtonWithSlightRadius from '../GradientButtonWithSlightRadius';
@@ -26,22 +30,32 @@ import IndividualRecoveryCard from '../IndividualRecoveryCard';
 import NNWomanPlanningForBaby from '../NNWomanPlanningForBaby';
 import NPWomanBabyArriving from '../NPWomanBabyArriving';
 import VivaScoreGauge from '../VivaScoreGauge';
-import ActiveConsultation from '../ActiveConsultation';
 
-const DashboardMotherTab = ({ score, userData, userActiveConsultationsData }: { score: number, userData: IUserAllData, userActiveConsultationsData: IUserActiveConsultations[] }) => {
+
+const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userData: IUserAllData, userActiveConsultationsData: IUserActiveConsultations[] }) => {
     const [recentCheckindata, setRecentChekinData] = useState<ICheckInRecommendation[]>();
     const [experts, setExperts] = useState<IExpert[]>([]);
+
+    const fetchRecentCheckIn = useCallback(async () => {
+        const theRecentcheckinData = await getRecentCheckinData() as ICheckInRecommendationResponse;
+        setRecentChekinData(theRecentcheckinData.data);
+    }, []);
+
+    useEffect(() => {
+        (async function () {
+            // forground message received
+            messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
+                console.log("remoteMessage.data inside Dashboard.tsx ==>> ", remoteMessage.data);
+                fetchRecentCheckIn();
+            });
+        })()
+    }, [fetchRecentCheckIn])
 
     useEffect(() => {
         (async () => {
             const response: IExpertResponse = await getExperts();
             setExperts(response.data);
         })();
-    }, []);
-
-    const fetchRecentCheckIn = useCallback(async () => {
-        const theRecentcheckinData = await getRecentCheckinData() as ICheckInRecommendationResponse;
-        setRecentChekinData(theRecentcheckinData.data);
     }, []);
 
     useFocusEffect(
@@ -211,16 +225,20 @@ const DashboardMotherTab = ({ score, userData, userActiveConsultationsData }: { 
                                         Week {recentCheckindata.length > 0 ? recentCheckindata[0].week : userData.user.current_weekdays.weeks}
                                     </Text>
                                 </View>
-                                {/* <View>
+                                <View>
                                     <TouchableOpacity
                                         activeOpacity={0.1}
-                                        onPress={() =>
-                                            open(<HowToGenerateVivaScoreGuide />)
-                                        }
+                                        onPress={() => {
+                                            try {
+                                                open(<HowToGenerateVivaScoreGuide />)
+                                            } catch (error) {
+                                                console.error('[Screen] Error calling open():', error)
+                                            }
+                                        }}
                                     >
                                         <Lucide name='info' size={20} color={colors.darkGray} />
                                     </TouchableOpacity>
-                                </View> */}
+                                </View>
 
                             </View>
 
@@ -229,7 +247,7 @@ const DashboardMotherTab = ({ score, userData, userActiveConsultationsData }: { 
                                     paddingHorizontal: 20
                                 }}
                             >
-                                <VivaScoreGauge percentage={Math.trunc(score ? score : userData?.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0]?.finalScore : 0)} />
+                                <VivaScoreGauge percentage={userData?.user.current_weekdays.upcoming_checkin_due_days !== 0 ? recentCheckindata[0]?.finalScore : 0} />
 
                                 {
 
@@ -247,21 +265,22 @@ const DashboardMotherTab = ({ score, userData, userActiveConsultationsData }: { 
                                         >
                                             <Text style={{ color: colors.black, fontSize: 45, textAlign: "center", ...globalStyles.fontBold, marginTop: 10 }}>
                                                 {
-                                                    score ?
-                                                        `${String(score).split(".")[0]}` :
+                                                    recentCheckindata.length > 0 ?
+                                                        `${String(recentCheckindata[0].finalScore).split(".")[0]}` :
                                                         `${String(recentCheckindata[0].finalScore).split(".")[0]}`
                                                 }
                                             </Text>
-                                            {/* <TouchableOpacity
+                                            <TouchableOpacity
                                                 onPress={() => open(
                                                     <RecoveryScoreBriefInfo
                                                         significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
                                                         briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
+                                                        navigation={navigation}
                                                     />
                                                 )}
                                             >
                                                 <Lucide name='info' size={15} color={colors.darkPurple} style={{ alignSelf: "center", marginTop: -10 }} />
-                                            </TouchableOpacity> */}
+                                            </TouchableOpacity>
                                         </View>
                                         <Text
                                             style={{

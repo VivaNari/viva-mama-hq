@@ -51,12 +51,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     if (!userToken || !FCMToken) return;
 
-    console.log('[FCM] Syncing token to backend:', FCMToken);
+    console.log('[FCM] Syncing token to backend:', FCMToken, "\n");
     (async function () {
       try {
-        await apiClientInterceptor().put(API_UPDATE_FCM_TOKEN, {
+        const resp = await apiClientInterceptor().put(API_UPDATE_FCM_TOKEN, {
           FCM_token: FCMToken
         });
+        console.log("update fcm token resp is", resp)
         console.log('[FCM] Token updated on backend');
       } catch (err) {
         console.error('[FCM] Failed to update token', err);

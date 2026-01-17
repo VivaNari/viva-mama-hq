@@ -149,6 +149,7 @@ export interface UseChatMessagesReturn {
 // ============================================
 
 export interface ChatBubbleProps {
+  isFirst: boolean;
   message: IChatMessage;
   isLast: boolean;
   isAnimating: boolean;

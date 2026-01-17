@@ -1,8 +1,8 @@
 import { API_VERSION, BASE_API_URL as RN_BASE_API_URL } from "@env";
 
 // Use environment variable in production, fallback for development
-export const BASE_API_URL = "https://bcc7c055ff5f.ngrok-free.app";
-// export const BASE_API_URL = "http://192.168.1.11:4000";
+// export const BASE_API_URL = "https://4d731cb4d05c.ngrok-free.app/";
+export const BASE_API_URL = "http://192.168.1.11:4000";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
 export const GUIDED_FLOW_START = "/api/v1/chat/checkin/start";
@@ -64,7 +64,7 @@ export const USER_CONTENTS = `${API_VERSION_URL}/contents`;
 export const EXPERTS = `${API_VERSION_URL}/experts`;
 export const USER_PRODUCTS = `${API_VERSION_URL}/products`;
 export const USER_REQUEST_CALLBACK = `${API_VERSION_URL}/callback-request`;
-export const USER_ACTIVE_CONSULTATIONS = `${API_VERSION_URL}/active-consultations`;
+export const USER_ACTIVE_CONSULTATIONS = `${API_VERSION_URL}/pending-consultations`;
 export const API_UPDATE_FCM_TOKEN = `${API_VERSION_URL}/user/update-fcm-token`;
 export const SUBMIT_CONSULTATION_REVIEW = `${API_VERSION_URL}/consultation-review`;
 

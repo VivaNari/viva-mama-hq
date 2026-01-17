@@ -14,6 +14,10 @@ export const isAiMessage = (message: IChatMessage): message is IAiMessage => {
   return message.type === "ai";
 };
 
+export const isChatbotMessage = (message: IChatMessage): boolean => {
+  return message.type === "ai" && message.flowInstanceId === "chatbot";
+};
+
 /**
  * Check if message expects text input
  */

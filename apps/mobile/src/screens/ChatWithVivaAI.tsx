@@ -74,6 +74,10 @@ const ChatWithVivaAI: React.FC = () => {
         flowType,
     });
 
+    useEffect(() => {
+        console.log("state.messages is => ", state.messages);
+    }, [state.messages])
+
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [refreshing, setRefreshing] = useState(false);
@@ -421,6 +425,7 @@ const ChatWithVivaAI: React.FC = () => {
 
                             return (
                                 <ChatBubble
+                                    isFirst={index === 0}
                                     key={`${msg.type}-${msg.timestamp}-${index}`}
                                     message={msg}
                                     isLast={isLast}

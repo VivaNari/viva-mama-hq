@@ -10,7 +10,6 @@ import { colors } from "../public/assets/colors";
 import AppStack from "./stacks/AppStack";
 import AuthStack from "./stacks/AuthStack";
 import OnboardingStack from "./stacks/OnboardingStack";
-import { BottomSheetProvider, BottomSheetModalProvider } from "../components/bottomSheet/AppBottomSheet";
 
 const Stack = createNativeStackNavigator();
 
@@ -24,7 +23,6 @@ export default function RootNavigator() {
     const navigationRef = useRef<any>(null);
     const isFirstLoad = useRef(true);
 
-    // Track previous auth state to detect changes
     const prevAuthState = useRef({
         userToken: userToken,
         isOnboarded: isFullyOnboarded()
@@ -53,21 +51,17 @@ export default function RootNavigator() {
         };
 
         const setupNotifications = async () => {
-            // Cold start notification
             const initialNotification = await messaging().getInitialNotification();
             if (initialNotification) {
                 console.log('[ROOT_NAVIGATOR] Initial notification found:', initialNotification);
-                // Wait for navigator to be ready
                 setTimeout(() => handleNotification(initialNotification), 500);
             }
 
-            // Background notification
             const unsubscribeOnOpened = messaging().onNotificationOpenedApp((remoteMessage) => {
                 console.log('[ROOT_NAVIGATOR] App opened from background via notification');
                 handleNotification(remoteMessage);
             });
 
-            // Foreground notification
             const unsubscribeOnMessage = messaging().onMessage(async (remoteMessage) => {
                 console.log('[ROOT_NAVIGATOR] Foreground message received:', remoteMessage);
 
@@ -114,13 +108,10 @@ export default function RootNavigator() {
             return;
         }
 
-        // Detect if auth state actually changed
         const authStateChanged =
             prevAuthState.current.userToken !== userToken ||
             prevAuthState.current.isOnboarded !== currentIsOnboarded;
 
-        // SKIP RESET ON FIRST LOAD after isLoading becomes false
-        // This is crucial to prevent wiping out notification redirects on cold start
         if (isFirstLoad.current) {
             console.log("[ROOT_NAVIGATOR] First load complete, skipping initial reset");
             isFirstLoad.current = false;
@@ -132,7 +123,6 @@ export default function RootNavigator() {
         }
 
         if (authStateChanged && navigationRef.current) {
-            // Determine target stack
             let targetStack = "AuthStack";
             if (userToken) {
                 targetStack = currentIsOnboarded ? "AppStack" : "OnboardingStack";
@@ -140,7 +130,6 @@ export default function RootNavigator() {
 
             console.log("[ROOT_NAVIGATOR] Auth state changed, resetting to:", targetStack);
 
-            // Reset navigation to the appropriate stack
             setTimeout(() => {
                 navigationRef.current?.reset({
                     index: 0,
@@ -148,7 +137,6 @@ export default function RootNavigator() {
                 });
             }, 50);
 
-            // Update previous state
             prevAuthState.current = {
                 userToken: userToken,
                 isOnboarded: currentIsOnboarded
@@ -164,7 +152,6 @@ export default function RootNavigator() {
         );
     }
 
-    // Determine initial route
     let initialRouteName = "AuthStack";
     if (userToken) {
         initialRouteName = isFullyOnboarded() ? "AppStack" : "OnboardingStack";
@@ -172,21 +159,17 @@ export default function RootNavigator() {
 
     return (
         <NavigationContainer ref={navigationRef}>
-            <BottomSheetModalProvider>
-                <BottomSheetProvider>
-                    <Stack.Navigator
-                        initialRouteName={initialRouteName}
-                        screenOptions={{
-                            headerShown: false,
-                            animation: "fade"
-                        }}
-                    >
-                        <Stack.Screen name="AuthStack" component={AuthStack} />
-                        <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
-                        <Stack.Screen name="AppStack" component={AppStack} />
-                    </Stack.Navigator>
-                </BottomSheetProvider>
-            </BottomSheetModalProvider>
+            <Stack.Navigator
+                initialRouteName={initialRouteName}
+                screenOptions={{
+                    headerShown: false,
+                    animation: "fade"
+                }}
+            >
+                <Stack.Screen name="AuthStack" component={AuthStack} />
+                <Stack.Screen name="OnboardingStack" component={OnboardingStack} />
+                <Stack.Screen name="AppStack" component={AppStack} />
+            </Stack.Navigator>
         </NavigationContainer>
     );
 }

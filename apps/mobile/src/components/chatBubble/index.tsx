@@ -10,6 +10,7 @@ interface Props extends ChatBubbleProps {
 }
 
 export const ChatBubble: React.FC<Props> = ({
+	isFirst,
 	message,
 	isLast,
 	isAnimating,
@@ -39,6 +40,7 @@ export const ChatBubble: React.FC<Props> = ({
 	return (
 		<StaticBubble
 			message={message}
+			isFirst={isFirst}
 			isLast={isLast}
 			isAnimating={isAnimating}
 			isFlowComplete={isFlowComplete}
