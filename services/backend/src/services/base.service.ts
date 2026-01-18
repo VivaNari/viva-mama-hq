@@ -89,6 +89,11 @@ class BaseService<T> {
         const result = await this.model.findByIdAndUpdate(_id, payload, { new: true });
         return result;
     };
+
+    delete = async ({ filter = {} }: Partial<FindOptions<T>>) => {
+        const result = await this.model.deleteOne(filter, { new: true });
+        return result;
+    };
 }
 
 export default BaseService;

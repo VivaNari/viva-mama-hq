@@ -48,6 +48,9 @@ export const messages = {
     FCM_TOKEN_UPDATED_SUCCESS: "FCM token updated successfully",
     CONSULTATION_ID_NOT_PROVIDED: "Consultation id not provided",
     CONSULTATION_NOT_FOUND: "Consultation not found",
+    BOOKMARK_CREATED_SUCCESS: "Bookmark created successfully",
+    BOOKMARK_DELETED_SUCCESS: "Bookmark deleted successfully",
+    BOOKMARK_FETCH_SUCCESS: "Bookmark fetched successfully",
 };
 
 export const notificationMessages = {

@@ -1,7 +1,6 @@
 import { Schema } from "mongoose";
 import { messages, notificationMessages } from "../../constants/messages";
 import consultationModel from "../../models/consultation.model";
-import { IUser } from "../../types";
 import { ICareManager } from "../../types/care-manager.types";
 import {
     CallbackRequestStatusEnum,
@@ -12,12 +11,11 @@ import {
     IValidateRequestCallBackParams,
     IValidateRequestCallBackParamsError,
 } from "../../types/consultation.types";
-import { constructConsultationWhatsappMessage } from "../../utils/functions/constructConsultationWhatsappMessage";
+import { sendPushNotification } from "../../utils/sendPushNotification";
 import BaseService from "../base.service";
 import { CareManagerService } from "../care-manager/care-manager.service";
-import { sendWhatsAppMessage } from "../twilio/sendSMS";
+import { sendWhatsappMessageForCareManager } from "../getgabs/sendWhatsappMessageForCareManager";
 import UserService from "../users/user.service";
-import { sendPushNotification } from "../../utils/sendPushNotification";
 
 export class ConsultationService extends BaseService<IConsultationRequest> {
     private userService: UserService;
@@ -83,14 +81,14 @@ export class ConsultationService extends BaseService<IConsultationRequest> {
 
         const consultationInstance: IConsultationRequest = await this.create(consultationPayload);
 
-        // Send WhatsApp message
-        const message = constructConsultationWhatsappMessage(
-            consultatorInstance as ICareManager,
-            userInstance as IUser,
-        );
-
         try {
-            await sendWhatsAppMessage((consultatorInstance as ICareManager).phoneNumber, message);
+            await sendWhatsappMessageForCareManager({
+                to: (consultatorInstance as ICareManager).phoneNumber,
+                careManagerName: (consultatorInstance as ICareManager).name,
+                userId: userInstance._id.toString(),
+                userEmailOrPhone: userInstance.email || userInstance.mobile_number || "",
+                requestedAt: new Date().toLocaleString(),
+            });
         } catch (err) {
             console.error("WhatsApp failed (ignored)", err);
             throw err;

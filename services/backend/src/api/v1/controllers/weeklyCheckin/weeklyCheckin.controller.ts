@@ -7,14 +7,11 @@ import WeeklyCheckinService from "../../../../services/weeklyCheckin/weeklyCheck
 class WeeklyCheckinController {
     private weeklyCheckinService: WeeklyCheckinService;
     constructor() {
-        console.error("121211212121221212121221211");
         this.weeklyCheckinService = new WeeklyCheckinService();
-        console.error("121211212121221212121221211", this.weeklyCheckinService);
     }
 
     handleSSEConnection = async (req: Request, res: Response): Promise<void> => {
         try {
-            console.warn("1111111111111");
             const userId = req.user?._id?.toString();
 
             if (!userId) {
@@ -40,10 +37,8 @@ class WeeklyCheckinController {
                 week,
                 flowSlug,
             };
-            console.log("this.", this);
             await this.weeklyCheckinService.handleSSEConnection(params, res);
         } catch (error) {
-            console.log(error, "111");
             logger.error({ error }, "Error in weekly check-in SSE controller");
 
             if (!res.headersSent) {

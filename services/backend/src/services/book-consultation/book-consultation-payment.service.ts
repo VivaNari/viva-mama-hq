@@ -5,19 +5,19 @@ import Razorpay from "razorpay";
 import env from "../../config/env";
 import { messages } from "../../constants/messages";
 
+import { expert } from "../../constants/expert";
 import bookConsultationOrderModel from "../../models/book-consultation.model";
+import expertModel from "../../models/expert.model";
+import UserModel from "../../models/user.model";
 import {
     IBookConsultationOrder,
     ICreateIBookConsultationOrderPayload,
 } from "../../types/book-consultation.types";
+import { ConsultationTypeEnum } from "../../types/consultation.types";
 import sendResponse from "../../utils/commonFunctions/sendResponse";
 import BaseService from "../base.service";
-import expertModel from "../../models/expert.model";
-import UserModel from "../../models/user.model";
-import { expert } from "../../constants/expert";
-import { sendWhatsAppMessage } from "../twilio/sendSMS";
-import { ConsultationTypeEnum } from "../../types/consultation.types";
 import { ConsultationService } from "../consultations/consultation.service";
+import { sendWhatsappMessageForExpertConsultation } from "../getgabs/sendWhatsappMessageForExpertConsultation";
 
 class BookConsultationPaymentService extends BaseService<IBookConsultationOrder> {
     private razorpayInstance;
@@ -118,8 +118,6 @@ class BookConsultationPaymentService extends BaseService<IBookConsultationOrder>
                 },
                 { new: true },
             );
-            const expertInstance = await expertModel.findById(updatedOrder?.expert_id);
-            const userInstance = await UserModel.findById(updatedOrder?.user_id);
 
             if (!updatedOrder) {
                 return sendResponse({
@@ -130,6 +128,16 @@ class BookConsultationPaymentService extends BaseService<IBookConsultationOrder>
                     response,
                 });
             }
+            const expertInstance = await expertModel.findById(updatedOrder.expert_id);
+            const userInstance = await UserModel.findById(updatedOrder.user_id);
+
+            if (!expertInstance) {
+                throw new Error(messages.EXPERT_NOT_FOUND);
+            }
+
+            if (!userInstance) {
+                throw new Error(messages.USER_NOT_FOUND);
+            }
 
             // Create callback request for expert
             await this.callbackRequestService.create({
@@ -139,18 +147,15 @@ class BookConsultationPaymentService extends BaseService<IBookConsultationOrder>
                 requestStatus: "PENDING",
             } as any);
 
-            // send whatsapp message here
-            const message = `📞 *New Expert Consultation Booking*
-
-            *Expert ID:* ${expertInstance?.id}
-            *Expert:* ${expertInstance?.name}
-            *User ID:* ${userInstance?.id}
-            *User Email/Phone Number:* ${userInstance?.email || userInstance?.mobile_number}
-
-            Please take actions as soon as possible.`;
-
             try {
-                await sendWhatsAppMessage(expert.whatsappMessageReceiver, message);
+                // await sendWhatsAppMessage(expert.whatsappMessageReceiver, message);
+                await sendWhatsappMessageForExpertConsultation({
+                    to: expert.whatsappMessageReceiver,
+                    expertId: expertInstance._id.toString(),
+                    expertName: expertInstance.name,
+                    userId: userInstance._id.toString(),
+                    userEmailOrPhone: userInstance.email || userInstance.mobile_number || "",
+                });
             } catch (err) {
                 console.error("WhatsApp failed (ignored)", err);
             }

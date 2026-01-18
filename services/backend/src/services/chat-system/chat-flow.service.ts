@@ -542,9 +542,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             switch (flowType) {
                 case FlowTypeEnum.CHECK_IN: {
                     await this.completeCheckinFlow(userInstance, flowInstance);
+                    break;
                 }
                 case FlowTypeEnum.ONBOARDING: {
                     await this.completeOnboardingFlow(userInstance);
+                    break;
                 }
             }
             if (userConnection) {

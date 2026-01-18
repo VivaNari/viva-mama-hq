@@ -20,6 +20,9 @@ const env = {
     RAZORPAY_SECRET_KEY: process.env.RAZORPAY_SECRET_KEY,
     LLM_SERVER_URL: process.env.LLM_SERVER_URL as string,
     LLM_API_KEY: process.env.LLM_API_KEY as string,
+    GETGABS_API_KEY: process.env.GETGABS_API_KEY as string,
+    GETGABS_CAMPAIGN_ID: process.env.GETGABS_CAMPAIGN_ID as string,
+    GETGABS_SENDER: process.env.GETGABS_SENDER as string,
     isDevelopment(): boolean {
         return env.NODE_ENV === "development";
     },

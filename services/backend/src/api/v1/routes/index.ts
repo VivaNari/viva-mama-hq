@@ -14,6 +14,7 @@ import bookConsultationRouter from "./book-consultation/book-consultation.route"
 import consultationRouter from "./consultations/consultation.routes";
 import consultationReviewRouter from "./consultation-reviews/consultation-review.route";
 import weeklyCheckinV1Router from "./weekly-checkin-v1.routes";
+import aiBookmarkRouter from "./ai-message-bookmarks/ai-message-bookmark.route";
 
 const router = Router();
 
@@ -32,5 +33,6 @@ router.use(careManagerRouter);
 router.use(bookConsultationRouter);
 router.use(consultationReviewRouter);
 router.use(weeklyCheckinV1Router);
+router.use(aiBookmarkRouter);
 
 export default router;

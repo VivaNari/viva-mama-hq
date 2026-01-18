@@ -173,7 +173,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 message,
                 sessionId,
             );
-            await this.createMessage({
+            const aiMessageInstance = await this.createMessage({
                 conversationId: conversationId,
                 userId: userInstance._id as unknown as string,
                 role: MessageRoleEnum.ASSITANT,
@@ -191,7 +191,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
             const aiLlmResponse: AILLMResponse = {
                 sessionId: sessionId,
                 conversationId: conversationId,
-                id: getUuid(),
+                id: aiMessageInstance._id as unknown as string,
                 type: "ai_message",
                 text: llmResponse.answer as string,
                 timestamp: Date.now(),
@@ -199,7 +199,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 nodeType: FlowNodeEnum.QUESTION_FREE_TEXT,
             };
 
-            console.log("final aiLlmResponse issssssssssssss=>>>>>>>>", aiLlmResponse);
+            console.log("final aiLLMResponse is => ", aiLlmResponse);
 
             if (userSession) {
                 this.writeToSse(userSession, aiLlmResponse);
