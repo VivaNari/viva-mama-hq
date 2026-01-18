@@ -4,7 +4,7 @@ declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
     namespace Express {
         interface Request {
-            user: IUser;
+            user: IJWTDecodedUser;
         }
     }
 }
@@ -19,6 +19,17 @@ export enum ESex {
     MALE = "Male",
     FEMALE = "Female",
     OTHER = "Other",
+}
+
+export interface IJWTDecodedUser {
+    _id: string;
+    email: string | null;
+    mobile_number: string | null;
+    is_onboarded: {
+        is_questionnaire_completed: boolean;
+        is_subscription_completed: boolean;
+    };
+    user_id: number;
 }
 
 export interface IUser {

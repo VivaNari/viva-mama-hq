@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import sendErrorResponse from "../utils/commonFunctions/sendErrorResponse";
-import { messages } from "../constants/messages";
 import { StatusCodes } from "http-status-codes";
+import sendErrorResponse from "../utils/commonFunctions/sendErrorResponse";
 
 export const errorHandler = (
     error: Error,
@@ -12,7 +11,7 @@ export const errorHandler = (
     console.log("Error Middleware called");
     sendErrorResponse({
         error: error,
-        errorMessage: messages.INTERNAL_SERVER_ERROR,
+        errorMessage: error.message,
         response: response,
         statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
     });

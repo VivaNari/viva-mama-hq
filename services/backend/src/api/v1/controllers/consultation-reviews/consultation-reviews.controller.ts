@@ -11,9 +11,10 @@ export class ConsultationReviewController {
         this.consultationReviewService = new ConsultationReviewService();
     }
 
-    addConsultationReview = async (request: Request, response: Response, next: NextFunction) => {
+    createConsultationReview = async (request: Request, response: Response, next: NextFunction) => {
         try {
             const { consultationId, rating, review } = request.body;
+
             if (!request.user) {
                 throw new Error(messages.USER_FETCH_FAILED);
             }
