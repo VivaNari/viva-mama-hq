@@ -19,7 +19,8 @@ class LLMService {
         message: string,
         sessionId: string,
     ): Promise<Record<string, unknown>> => {
-        const payload = { userId: user._id, query: message, sessionId };
+        const payload = { user_id: user._id.toString(), query: message, sessionId };
+        console.log("payload", payload);
         const llmResponse = await this.axiosInstance.post("/v1/chat", payload);
 
         console.log(`LLM response: ${JSON.stringify(llmResponse.data)}`);
