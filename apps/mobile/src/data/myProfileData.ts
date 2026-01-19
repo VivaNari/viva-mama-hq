@@ -21,10 +21,10 @@ export const settingsMenu: ISettingsMenu[] = [
     description: "Manage your account and app preferences.",
   },
   {
-    title: "Hide content",
-    icon: "eye-closed",
-    componentName: "HideContent",
-    description: "Customize what information is visible.",
+    title: "Bookmarked Messages",
+    icon: "bookmark",
+    componentName: "BookmarkedMessages",
+    description: "See the bookmarked messages from Viva",
   },
   {
     title: "Notifications",

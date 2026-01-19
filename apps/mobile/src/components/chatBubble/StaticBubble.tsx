@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 
 import { globalStyles } from '../../public/styles/globalStyles';
 import {
@@ -14,8 +14,8 @@ import {
     isChatbotMessage,
 } from '../../utils/messageHelpers';
 import { bubbleStyles } from './styles';
-import Lucide from '@react-native-vector-icons/lucide';
 import { colors } from '../../public/assets/colors';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 
 interface StaticBubbleProps {
     isFirst: boolean;
@@ -28,6 +28,7 @@ interface StaticBubbleProps {
     selectedMultiOptions: Set<string>;
     onDatePickerOpen: () => void;
     onNotPregnantSelect: () => void;
+    onBookmarkPress: (id: string) => void;
 }
 
 export const StaticBubble: React.FC<StaticBubbleProps> = ({
@@ -41,6 +42,7 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
     selectedMultiOptions,
     onDatePickerOpen,
     onNotPregnantSelect,
+    onBookmarkPress,
 }) => {
     const isAi = isAiMessage(message);
     const isChatbot = isChatbotMessage(message);
@@ -48,9 +50,7 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
     const isMultiSelect = isAi && isMultiSelectMessage(message);
     const isDeliveryDate = isAi && isDeliveryDateNode(message);
 
-    const saveBookmark = (id: string) => {
-        console.log("message id is => ", id);
-    }
+
 
     const showOptions =
         isAi &&
@@ -163,16 +163,33 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                         {message.text}
                     </Text>
                 </View>
-                {isChatbot && !isFirst ? <View
+                {isChatbot && !isFirst && isAi ? <View
                     style={{
-                        padding: 5,
+                        paddingVertical: 8,
                     }}
                 >
                     <TouchableOpacity
-                        onPress={() => saveBookmark(message.type === 'ai' ? message.id : '')}
+                        onPress={() => onBookmarkPress(message.id)}
                         activeOpacity={0.2}
+                        disabled={message.isBookmarkLoading}
                     >
-                        <Lucide name='bookmark' size={20} color={colors.darkGray} />
+                        {
+                            message.isBookmarkLoading ? (
+                                <ActivityIndicator size="small" color={colors.darkPurple} />
+                            ) : message.isBookmarked ? (
+                                <MaterialDesignIcons
+                                    name='bookmark'
+                                    size={20}
+                                    color={colors.darkPurple}
+                                />
+                            ) : (
+                                <MaterialDesignIcons
+                                    name='bookmark-outline'
+                                    size={20}
+                                    color={colors.darkGray}
+                                />
+                            )
+                        }
                     </TouchableOpacity>
                 </View> : <></>}
 

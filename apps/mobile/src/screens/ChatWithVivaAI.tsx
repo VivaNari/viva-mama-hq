@@ -46,6 +46,8 @@ import { determineInputMode, isAiMessage } from '../utils/messageHelpers';
 import { chatLogger } from '../utils/logger';
 import { globalStyles } from '../public/styles';
 import { syncUserData } from '../utils/syncUserData';
+import { addAIMessageBookmark } from '../api/addAIMessageBookmark';
+import { removeAIMessageBookmark } from '../api/removeAIMessageBookmark';
 
 const ChatWithVivaAI: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -388,6 +390,56 @@ const ChatWithVivaAI: React.FC = () => {
         };
     }, []);
 
+    const handleBookmarkPress = useCallback(async (messageId: string) => {
+        const message = state.messages.find(m => m.type === 'ai' && m.id === messageId) as IAiMessage | undefined;
+        if (!message || message.isBookmarkLoading) return;
+
+        dispatch({
+            type: 'SET_MESSAGE_BOOKMARK_LOADING',
+            payload: { messageId, isLoading: true }
+        });
+
+        try {
+            if (message.isBookmarked) {
+                await removeAIMessageBookmark(messageId);
+                dispatch({
+                    type: 'UPDATE_MESSAGE_BOOKMARK_STATUS',
+                    payload: { messageId, isBookmarked: false }
+                });
+                Toast.show({
+                    type: 'success',
+                    text1: 'Bookmark Removed',
+                    position: 'bottom',
+                });
+            } else {
+                await addAIMessageBookmark(messageId);
+                dispatch({
+                    type: 'UPDATE_MESSAGE_BOOKMARK_STATUS',
+                    payload: { messageId, isBookmarked: true }
+                });
+                Toast.show({
+                    type: 'success',
+                    text1: 'Bookmark Added',
+                    text2: 'Go to Profile > Bookmarked Messages to view bookmarks',
+                    position: 'bottom',
+                });
+            }
+        } catch (error) {
+            chatLogger.error('Bookmark action failed', error);
+            Toast.show({
+                type: 'error',
+                text1: 'Action Failed',
+                text2: 'Please try again',
+                position: 'bottom',
+            });
+        } finally {
+            dispatch({
+                type: 'SET_MESSAGE_BOOKMARK_LOADING',
+                payload: { messageId, isLoading: false }
+            });
+        }
+    }, [state.messages, dispatch]);
+
     const insets = useSafeAreaInsets();
 
     return (
@@ -438,6 +490,7 @@ const ChatWithVivaAI: React.FC = () => {
                                     onDatePickerOpen={handleDatePickerOpen}
                                     onNotPregnantSelect={handleNotPregnantSelect}
                                     onAnimationComplete={handleAnimationComplete}
+                                    onBookmarkPress={handleBookmarkPress}
                                 />
                             );
                         })}

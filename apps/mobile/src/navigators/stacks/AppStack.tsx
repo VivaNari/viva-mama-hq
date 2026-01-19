@@ -29,6 +29,7 @@ import ChatWithVivaAi from '../../screens/ChatWithVivaAI';
 import ProductDetails from '../../screens/ProductDetails';
 import Services from '../../screens/Services copy';
 import ConsultationRating from '../../screens/ConsultationRating';
+import BookmarkedMessages from '../../screens/BookmarkedMessages';
 
 const Stack = createNativeStackNavigator();
 
@@ -108,6 +109,14 @@ const AppStack = () => {
                 }}
                 name="ChatWithVivaAI"
                 component={ChatWithVivaAi as any}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: "Bookmarked Messages"
+                }}
+                name="BookmarkedMessages"
+                component={BookmarkedMessages}
             />
             <Stack.Screen
                 options={{
