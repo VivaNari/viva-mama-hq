@@ -5,7 +5,7 @@ services:
         container_name: core-backend
         build:
             context: .
-            dockerfile: vivamama-backend-server:latest
+            dockerfile: Dockerfile
         env_file:
             - .env
         ports:
