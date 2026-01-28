@@ -7,6 +7,8 @@ import authMiddleware from "../../../../middlewares/authorization.middleware";
 
 const userRouter = Router();
 const getUserController = new UserController();
+userRouter.get("/user", authMiddleware(), getUserController.getUserbyAuthToken);
+userRouter.put("/user/update-fcm-token", authMiddleware(), getUserController.updateFCMToken);
 userRouter.post(
     "/auth/send-otp",
     requestValidator(sentOTPValidator),
@@ -22,6 +24,10 @@ userRouter.post(
     requestValidator(googleAuthValidator),
     getUserController.googleAuth,
 );
-userRouter.get("/user/onboarded", authMiddleware("header"), getUserController.getIsOnboarded);
+userRouter.get(
+    "/dashboard/viva-score",
+    authMiddleware("header"),
+    getUserController.getCheckinScoreData,
+);
 
 export default userRouter;

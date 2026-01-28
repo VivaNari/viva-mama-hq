@@ -1,5 +1,5 @@
-import mongoose, { Schema, model, Document } from "mongoose";
-import { ESex, IChild, IUser } from "../../types";
+import mongoose, { Schema } from "mongoose";
+import { ESex, EUserCategory, IChild, IUser, TUsercategory } from "../../types";
 const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const childSchema = new Schema<IChild>(
@@ -30,9 +30,13 @@ const userSchema = new Schema<IUser>(
         user_id: {
             type: Number,
         },
+        user_category: {
+            type: String,
+            default: null,
+            enum: Object.values(EUserCategory),
+        },
         email: {
             type: String,
-            unique: true,
             lowercase: true,
             trim: true,
             default: null,
@@ -84,9 +88,23 @@ const userSchema = new Schema<IUser>(
         FCM_token: {
             type: String,
         },
-        current_postpartum_week: {
-            type: Number,
-            default: null,
+        current_weekdays: {
+            weeks: {
+                type: Number,
+                default: 1,
+            },
+            days: {
+                type: Number,
+                default: null,
+            },
+            upcoming_checkin_due_days: {
+                type: Number,
+                default: 0,
+            },
+            previous_checkin_due_days: {
+                type: Number,
+                default: 0,
+            },
         },
         is_breastfeeding_currently: Boolean,
         onboarding_data: {

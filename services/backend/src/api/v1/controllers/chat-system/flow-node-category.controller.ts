@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import { IFlowNodeCategory } from "../../../../types/chat.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 import { StatusCodes } from "http-status-codes";
-import FlowNodeCategoryService from "../../../../services/chat-system/flow-definition-categiry.service";
+import FlowNodeCategoryService from "../../../../services/chat-system/flow-definition-category.service";
 import { messages } from "../../../../constants/messages";
 
 class FlowNodeController {

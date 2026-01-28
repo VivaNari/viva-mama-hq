@@ -5,6 +5,11 @@ import { generalSchemaOptions } from "../../constants/model";
 const flowResponseSchema: Schema<IFlowResponse> = new Schema<IFlowResponse>(
     {
         flowInstanceId: Schema.Types.ObjectId,
+        flowDefId: {
+            type: Schema.Types.ObjectId,
+            ref: "flow_definitions",
+            required: true,
+        },
         nodeId: String,
         answer: {
             answerType: String,
@@ -16,6 +21,10 @@ const flowResponseSchema: Schema<IFlowResponse> = new Schema<IFlowResponse>(
                 type: String,
                 default: null,
             },
+        },
+        idempotencyKey: {
+            type: String,
+            default: null,
         },
         computed: {
             type: Object,

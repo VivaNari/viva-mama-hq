@@ -7,9 +7,9 @@ export interface IRecommendationBase {
     title: string;
     goingWell: string;
     needsHelp?: string;
-    celebrate?: string;
-    tips?: string;
-    next?: string;
+    celebrate?: string[];
+    tips?: string[];
+    next?: string[];
 }
 
 // For Mongoose documents
@@ -22,4 +22,13 @@ export interface IRecommendationLean extends IRecommendationBase {
     _id: Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
+}
+
+export interface IRecommendationResponse {
+    overall: IRecommendationLean;
+    individual: {
+        physical: IRecommendationLean | null;
+        lactation: IRecommendationLean | null;
+        emotional: IRecommendationLean | null;
+    };
 }

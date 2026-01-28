@@ -8,6 +8,7 @@ const env = {
     TWILIO_ACCOUNT_SID: process.env.TWILIO_ACCOUNT_SID,
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
     TWILIO_PHONE_NUMBER: process.env.TWILIO_PHONE_NUMBER,
+    TWILIO_WHATSAPP_PHONE_NUMBER: process.env.TWILIO_WHATSAPP_PHONE_NUMBER,
     JWT_SECRET: process.env.JWT_SECRET,
     CRYPTO_PASSWORD: process.env.CRYPTO_PASSWORD,
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
@@ -17,6 +18,11 @@ const env = {
     LOG_TO_FILE: process.env.LOG_TO_FILE === "true",
     RAZORPAY_API_KEY: process.env.RAZORPAY_API_KEY,
     RAZORPAY_SECRET_KEY: process.env.RAZORPAY_SECRET_KEY,
+    LLM_SERVER_URL: process.env.LLM_SERVER_URL as string,
+    LLM_API_KEY: process.env.LLM_API_KEY as string,
+    GETGABS_API_KEY: process.env.GETGABS_API_KEY as string,
+    GETGABS_CAMPAIGN_ID: process.env.GETGABS_CAMPAIGN_ID as string,
+    GETGABS_SENDER: process.env.GETGABS_SENDER as string,
     isDevelopment(): boolean {
         return env.NODE_ENV === "development";
     },

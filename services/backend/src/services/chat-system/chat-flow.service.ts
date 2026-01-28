@@ -1,179 +1,712 @@
 import { Response } from "express";
-import { Schema } from "mongoose";
+import { Schema, Types } from "mongoose";
 import admin from "../../config/firebase";
 import conversationModel from "../../models/conversation.model";
 import flowDefinitionModel from "../../models/flowDefinition.model";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
-import userModel from "../../models/user.model";
 import {
+    AnswerData,
     AnswerTypeEnum,
-    EndFlowPayload,
     FlowInstanceStateEnum,
+    FlowNodeEnum,
     FlowType,
+    FlowTypeEnum,
+    IFlowDefinition,
+    IFlowInstance,
     IFlowNode,
+    IMessage,
     MessageRoleEnum,
     MessageTypeEnum,
     QuestionPayload,
+    QuestionSourceEnum,
 } from "../../types/chat.types";
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
-// @ts-ignore
-import { v4 as uuidv4 } from "uuid";
-import { IUser } from "../../types";
+// import { v4 as uuidv4 } from "uuid";
+import { NAME_QUERY } from "../../constants/chat";
+import { ONBOARDING_SLUG } from "../../constants/conversationSlugs";
+import UserModel from "../../models/user.model";
+import {
+    AlcoholUseEnum,
+    ConceptionMethod,
+    CurrentMedicationEnum,
+    DeliveryOutcomeEnum,
+    DeliveryTypeEnum,
+    EUserCategory,
+    IUser,
+    ParityEnum,
+    PastMedicationEnum,
+    PregnancyConditionEnum,
+    SocialSupportEnum,
+    TobaccoUseEnum,
+} from "../../types";
+import { getUuid } from "../../utils/commonFunctions/uuid";
+import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
+import BaseService from "../base.service";
+import { FlowInstanceService } from "../flow/flow-instance.service";
+import LLMService from "../llm/llm.service";
+import MessageService from "../message/message.service";
+import UserService from "../users/user.service";
+import FlowResponseService from "./flowResponse.service";
 
-// const QUESTION_FETCH_DELAY_MS = 2000;
 const STOPPED_BREASTFEEDING_SCORE = -1;
 
-class ChatFlowService {
+class ChatFlowService extends BaseService<IFlowDefinition> {
     private activeSessions = new Map<string, Response>();
     private pendingQuestions = new Map<string, { questionId: string }>();
+    private flowInstanceService: FlowInstanceService;
+    private userService: UserService;
+    private messageService: MessageService;
+    private llmService: LLMService;
+    private flowResponseService: FlowResponseService;
 
-    private async detectFlowType(userId: string): Promise<FlowType> {
-        const user = await userModel.findById(userId);
-
-        if (!user) {
-            throw new Error(` User not found: ${userId}`);
-        }
-
-        if (
-            user.is_onboarded.is_questionnaire_completed &&
-            user.is_onboarded.is_subscription_completed
-        ) {
-            console.log(` User ${userId} is onboarded. Flow type: CHECK_IN`);
-            return "CHECK_IN";
-        } else {
-            console.log(` User ${userId} is not onboarded. Flow type: ONBOARDING`);
-            return "ONBOARDING";
-        }
+    constructor() {
+        super(flowDefinitionModel);
+        this.flowInstanceService = new FlowInstanceService();
+        this.userService = new UserService();
+        this.messageService = new MessageService();
+        this.llmService = new LLMService();
+        this.flowResponseService = new FlowResponseService();
     }
 
-    public async handleSseConnection(userId: string, slug: string, res: Response): Promise<void> {
+    setSseConnection = (res: Response): void => {
         res.setHeader("Content-Type", "text/event-stream");
         res.setHeader("Cache-Control", "no-cache");
         res.setHeader("Connection", "keep-alive");
         res.flushHeaders();
+    };
 
-        console.log(`User ${userId} connected via SSE for flow: ${slug}`);
-        this.activeSessions.set(userId, res);
+    writeToSse = (res: Response, payload: Record<string, unknown>): void => {
+        res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
 
-        try {
-            const flowType = await this.detectFlowType(userId);
-            console.log(`Flow type detected: ${flowType}`);
+    getPendingQuestion = (userInstance: IUser): { questionId: string } | undefined => {
+        return this.pendingQuestions.get(userInstance._id as unknown as string);
+    };
 
-            const flowDefinition = await flowDefinitionModel.findOne({
-                slug: slug,
-                status: "PUBLISHED",
-            });
+    deletePendingQuestion = (userInstance: IUser): void => {
+        this.pendingQuestions.delete(userInstance._id as unknown as string);
+    };
 
-            if (!flowDefinition) {
-                this.sendError(res, "Flow not found");
-                return;
-            }
-
-            let flowInstance = await flowInstanceModel.findOne({
-                userId: userId,
+    sendGuidedFlowResponse = async (
+        userInstance: IUser,
+        res: Response,
+        flowDefinition: IFlowDefinition,
+        flowType: string,
+        slug: string,
+    ) => {
+        let flowInstance = await this.flowInstanceService.findOne({
+            filter: {
+                userId: userInstance._id,
                 flowDefId: flowDefinition._id,
                 state: FlowInstanceStateEnum.ACTIVE,
-            });
+            },
+        });
+        if (!flowInstance) {
+            const conversationId = await this.getOrCreateConversation(
+                userInstance,
+                flowType as FlowType,
+            );
+            const startNodeId: string = flowDefinition.startNodeId;
+            const currentWeek: number = userInstance.current_weekdays.weeks as number;
 
-            const pending = this.pendingQuestions.get(userId);
-            if (pending) {
-                console.log(
-                    `User ${userId} reconnected with pending question: ${pending.questionId}. ` +
-                        `Question already sent - waiting for user to submit answer. No new question will be sent.`,
-                );
+            flowInstance = await this.flowInstanceService.create({
+                userId: userInstance._id,
+                conversationId: conversationId,
+                flowDefId: flowDefinition._id,
+                flowSlug: slug,
+                version: flowDefinition.version,
+                postpartumWeek: currentWeek,
+                state: FlowInstanceStateEnum.ACTIVE,
+                cursorNodeId: startNodeId,
+                variables: {},
+                outcome: null,
+            });
+            this.deletePendingQuestion(userInstance);
+        }
+        this.sendCurrentQuestion(
+            userInstance,
+            res,
+            flowInstance,
+            flowDefinition,
+            flowType as FlowType,
+        );
+    };
+
+    processGuidedFlowConnection = async (
+        userInstance: IUser,
+        res: Response,
+        slug: string,
+        flowType: FlowType,
+    ): Promise<boolean> => {
+        const flowDefinition = await this.findOne({
+            filter: { slug: slug, status: "PUBLISHED" },
+        });
+        if (!flowDefinition) {
+            throw new Error("Flow not found");
+        }
+
+        const pendingQuestion = this.getPendingQuestion(userInstance);
+        if (pendingQuestion) {
+            console.log(
+                `User ${userInstance._id} reconnected with pending question: ${pendingQuestion.questionId}. ` +
+                    `Question already sent - waiting for user to submit answer. No new question will be sent.`,
+            );
+            return false;
+        }
+        this.sendGuidedFlowResponse(userInstance, res, flowDefinition, flowType, slug);
+        return true;
+    };
+
+    initInstanceVariables = async ({ res }: { res: Response }): Promise<void> => {
+        this.setSseConnection(res);
+    };
+
+    sendSilentPushNotification = async (
+        userInstance: IUser,
+        slug: string,
+        flowType: FlowType,
+    ): Promise<void> => {
+        try {
+            const flowInstance = await this.flowInstanceService.findOne({
+                filter: {
+                    userId: userInstance._id as unknown as string,
+                    state: FlowInstanceStateEnum.ACTIVE,
+                    flowSlug: slug,
+                },
+            });
+            if (!flowInstance) {
+                throw new Error("No active flow instance found for silent push");
+            }
+
+            const flowDefinition = await this.findById({ filter: { _id: flowInstance.flowDefId } });
+            if (!flowDefinition) {
+                throw new Error("Flow definition not found for silent push");
+            }
+
+            await this.sendSilentPush(
+                userInstance._id as unknown as string,
+                flowInstance,
+                flowDefinition,
+                flowType,
+            );
+        } catch (error) {
+            console.error(`Error handling disconnect for ${userInstance._id}:`, error);
+        }
+    };
+
+    handleOnCloseSseConnection = (
+        userInstance: IUser,
+        res: Response,
+        flowType: FlowType,
+        slug: string,
+    ): void => {
+        res.on("close", async () => {
+            console.log(`User ${userInstance._id} disconnected`);
+            this.activeSessions.delete(userInstance._id as unknown as string);
+
+            const pendingQuestion = this.getPendingQuestion(userInstance);
+            if (!pendingQuestion) {
                 return;
             }
 
-            if (!flowInstance) {
-                console.log(`✨ New user ${userId}. Creating flow instance...`);
+            this.deletePendingQuestion(userInstance);
 
-                const conversationId = await this.getOrCreateConversation(userId, flowType);
-                const startNodeId = flowDefinition.startNodeId;
+            await this.sendSilentPushNotification(userInstance, slug, flowType);
+        });
+    };
 
-                const user = (await userModel.findById(userId)) as IUser;
-                const currentWeek = user.current_postpartum_week;
+    handleSseConnection = async (
+        userId: string,
+        slug: string,
+        flowType: FlowType,
+        res: Response,
+    ): Promise<void> => {
+        try {
+            await this.initInstanceVariables({ res });
+            const userInstance: IUser | null = await this.userService.findById({ _id: userId });
 
-                flowInstance = await new flowInstanceModel({
-                    userId: userId,
-                    conversationId: conversationId,
-                    flowDefId: flowDefinition._id,
-                    flowSlug: slug,
-                    version: flowDefinition.version,
-                    postpartumWeek: currentWeek,
-                    state: FlowInstanceStateEnum.ACTIVE,
-                    cursorNodeId: startNodeId,
-                    variables: {},
-                    outcome: null,
-                }).save();
-
-                this.pendingQuestions.delete(userId);
-                await this.sendCurrentQuestion(userId, flowInstance, flowDefinition, res, flowType);
-
-                this.pendingQuestions.set(userId, { questionId: startNodeId });
-            } else {
-                console.log(`Returning user ${userId}. Cursor: ${flowInstance.cursorNodeId}`);
-                await this.sendCurrentQuestion(userId, flowInstance, flowDefinition, res, flowType);
+            if (userInstance === null) {
+                throw new Error("User not found");
             }
+
+            console.log(`User ${userId} connected via SSE for flow: ${slug}, type: ${flowType}`);
+            this.activeSessions.set(userId, res);
+
+            switch (flowType) {
+                // Guided Flows
+                case FlowTypeEnum.CHECK_IN: {
+                    this.processGuidedFlowConnection(userInstance, res, slug, flowType);
+                    break;
+                }
+                case FlowTypeEnum.ONBOARDING: {
+                    this.processGuidedFlowConnection(userInstance, res, slug, flowType);
+                    break;
+                }
+            }
+            this.handleOnCloseSseConnection(userInstance, res, flowType, slug);
         } catch (error) {
-            console.error(" SSE connection error:", error);
+            console.error("SSE connection error:", error);
             this.sendError(res, "Internal server error");
         }
+    };
 
-        res.on("close", () => {
-            console.log(`User ${userId} disconnected`);
-            this.activeSessions.delete(userId);
+    createMessage = async (payload: Partial<IMessage>): Promise<IMessage> => {
+        const messageInstance = await this.messageService.create(payload);
+        return messageInstance;
+    };
 
-            const pending = this.pendingQuestions.get(userId);
-            if (pending) {
-                this.pendingQuestions.delete(userId);
+    getUserConnection = (userId: Types.ObjectId): Response | undefined => {
+        const userSession: Response | undefined = this.activeSessions.get(userId.toString());
+        return userSession;
+    };
 
-                (async () => {
-                    try {
-                        const flowInstance = await flowInstanceModel.findOne({
-                            userId: userId,
-                            state: FlowInstanceStateEnum.ACTIVE,
-                            flowSlug: slug,
-                        });
+    validateResponseArgs = (selectedKeys: number[], freeText?: string): boolean => {
+        if (!selectedKeys && !freeText) {
+            throw new Error("Either selectedKeys or freeText must be provided");
+        }
+        return true;
+    };
 
-                        if (flowInstance) {
-                            const flowDefinition = await flowDefinitionModel.findById(
-                                flowInstance.flowDefId,
-                            );
-                            const flowType = await this.detectFlowType(userId);
+    getCurrentNodeId = (flowDefinition: IFlowDefinition, nodeId: string): IFlowNode | undefined => {
+        const currentNode = flowDefinition.nodes.find((n) => n.id === nodeId);
+        return currentNode;
+    };
 
-                            if (flowDefinition /*&& flowType === "CHECK_IN"*/) {
-                                await this.sendSilentPush(
-                                    userId,
-                                    flowInstance,
-                                    flowDefinition,
-                                    flowType,
-                                );
-                            }
-                        }
-                    } catch (error) {
-                        console.error(` Error handling disconnect for ${userId}:`, error);
-                    }
-                })();
-            }
+    getFlowDetails = async (
+        userInstance: IUser,
+        flowInstanceId: string,
+        nodeId: string,
+    ): Promise<{
+        currentNode: IFlowNode;
+        flowDefinition: IFlowDefinition;
+        flowInstance: IFlowInstance;
+    }> => {
+        const flowInstance = await this.flowInstanceService.findOne({
+            filter: {
+                _id: flowInstanceId,
+                userId: userInstance._id,
+                state: FlowInstanceStateEnum.ACTIVE,
+            },
         });
-    }
+        if (!flowInstance) {
+            throw new Error("Flow instance not found");
+        }
+
+        if (flowInstance.cursorNodeId !== nodeId) {
+            throw new Error(
+                `Wrong question. Expected: ${flowInstance.cursorNodeId}, Got: ${nodeId}`,
+            );
+        }
+
+        const flowDefinition = await this.findById({
+            _id: flowInstance.flowDefId as unknown as string,
+        });
+
+        if (!flowDefinition) {
+            throw new Error("FlowDefinition not found");
+        }
+
+        const currentNode = this.getCurrentNodeId(flowDefinition, nodeId);
+        if (!currentNode) {
+            throw new Error("Node not found");
+        }
+
+        return {
+            currentNode,
+            flowDefinition,
+            flowInstance,
+        };
+    };
+
+    getAnswerDetails = (
+        currentNode: IFlowNode,
+        selectedKeys: number[],
+        freeText?: string,
+    ): {
+        answerType: AnswerTypeEnum;
+        answerData: any;
+    } => {
+        let answerType: AnswerTypeEnum;
+        if (freeText) {
+            answerType = AnswerTypeEnum.FREE;
+        } else if (currentNode.nodeType === "QUESTION_SINGLE") {
+            answerType = AnswerTypeEnum.SINGLE;
+        } else if (currentNode.nodeType === "QUESTION_MULTI") {
+            answerType = AnswerTypeEnum.MULTI;
+        } else {
+            answerType = AnswerTypeEnum.FREE;
+        }
+
+        const answerData: AnswerData = { type: answerType, selectedKeys: [], freeText: null };
+        if (freeText) {
+            answerData.freeText = freeText;
+        } else {
+            answerData.selectedKeys = [...selectedKeys];
+        }
+
+        return { answerType, answerData };
+    };
+
+    insertAnswer = async (
+        userInstance: IUser,
+        flowInstance: IFlowInstance,
+        nodeId: string,
+        answerData: AnswerData,
+        currentNode: IFlowNode,
+    ) => {
+        await this.flowResponseService.create({
+            flowInstanceId: flowInstance._id,
+            flowDefId: flowInstance.flowDefId,
+            nodeId: nodeId,
+            answer: answerData,
+            computed: null,
+        });
+
+        console.log(`Answer saved to FlowResponse`);
+
+        const userAnswerText =
+            answerData.freeText ||
+            currentNode.options
+                .filter((opt) => answerData.selectedKeys?.includes(opt.score!))
+                .map((o) => o.label)
+                .join(", ");
+
+        await this.messageService.create({
+            conversationId: flowInstance.conversationId,
+            userId: userInstance._id as unknown as string,
+            role: MessageRoleEnum.USER,
+            type: MessageTypeEnum.GUIDED,
+            text: userAnswerText,
+            rich: null,
+            attachments: null,
+            ai: null,
+            guided: {
+                flowInstanceId: flowInstance._id,
+                nodeId: nodeId,
+                optionKey:
+                    (answerData.freeText as string) ||
+                    (answerData.selectedKeys?.join(",") as string),
+            },
+        });
+
+        console.log(`User message saved to conversation`);
+
+        // SPECIAL VALIDATION FOR NAME NODE
+        console.log(` Checking special validations for node ${nodeId}`);
+    };
+
+    completeFlowInstance = async (flowInstance: any) => {
+        flowInstance.cursorNodeId = null;
+        flowInstance.state = FlowInstanceStateEnum.COMPLETED;
+        await flowInstance.save();
+    };
+
+    completeCheckinFlow = async (userInstance: IUser, flowInstance: IFlowInstance) => {
+        const indicators = await transformFlowResponsesToIndicators(flowInstance._id.toString());
+
+        console.log(`Publishing score job to Redis...`);
+        await redisPublisherService.publishScoreJob(
+            userInstance._id as unknown as string,
+            indicators,
+            userInstance.FCM_token as string,
+            flowInstance._id.toString(),
+        );
+    };
+
+    completeOnboardingFlow = async (userInstance: IUser) => {
+        console.log(
+            `Onboarding completed for user ${userInstance._id}. Update is_onboarded in users collection`,
+        );
+
+        const flowDeninition = await flowDefinitionModel.findOne({
+            slug: ONBOARDING_SLUG,
+            status: "PUBLISHED",
+        });
+
+        if (!flowDeninition) {
+            console.error(`Default flow "${ONBOARDING_SLUG}" not found or not published.`);
+            return;
+        }
+        const updatedUserInstance = await this.userService.findById({
+            _id: userInstance._id as unknown as string,
+        });
+        if (!updatedUserInstance) {
+            throw new Error("User not found");
+        }
+        //this.flowInstanceService.createNewFlowForUser(updatedUserInstance, flowDeninition);
+
+        await this.userService.findByIdAndUpdate({
+            _id: updatedUserInstance._id as unknown as string,
+            payload: {
+                is_onboarded: {
+                    is_questionnaire_completed: true,
+                    is_subscription_completed:
+                        updatedUserInstance.is_onboarded.is_subscription_completed,
+                },
+            },
+        });
+    };
+
+    processGuidedResponse = async (
+        userInstance: IUser,
+        flowInstanceId: string,
+        nodeId: string,
+        flowType: FlowType,
+        selectedKeys: number[],
+        freeText?: string,
+    ) => {
+        this.validateResponseArgs(selectedKeys, freeText);
+        const { currentNode, flowDefinition, flowInstance } = await this.getFlowDetails(
+            userInstance,
+            flowInstanceId,
+            nodeId,
+        );
+
+        const { answerData } = this.getAnswerDetails(currentNode, selectedKeys, freeText);
+
+        await this.insertAnswer(userInstance, flowInstance, nodeId, answerData, currentNode);
+        const specialCaseNode = await this.handleSpecialNodeCase(
+            userInstance,
+            flowInstance,
+            flowDefinition,
+            nodeId,
+            flowType,
+            freeText,
+            nodeId,
+        );
+
+        if (specialCaseNode?.success === false) {
+            // Invalid input - question already re-sent, just return
+            return {
+                success: false,
+                message: specialCaseNode.message,
+            };
+        } else if (specialCaseNode?.success) {
+            // Valid input - use detected name
+            freeText = specialCaseNode.data as string;
+            // Update answerData with corrected name
+            answerData.freeText = freeText;
+        }
+
+        if (flowType === "ONBOARDING") {
+            await this.updateOnboardingData(
+                userInstance._id as unknown as string,
+                flowDefinition,
+                nodeId,
+                selectedKeys,
+                freeText,
+            );
+        }
+        if (flowType === "CHECK_IN" && currentNode.indicator === "Lactation Status") {
+            if (selectedKeys?.includes(STOPPED_BREASTFEEDING_SCORE)) {
+                console.log(
+                    `User ${userInstance._id} stopped breastfeeding. Updating user record...`,
+                );
+                await this.userService.findByIdAndUpdate({
+                    _id: userInstance._id as unknown as string,
+                    payload: {
+                        is_breastfeeding_currently: false,
+                    },
+                });
+            }
+        }
+        const nextNodeId = await this.findNextValidNode(
+            userInstance._id as unknown as string,
+            flowInstance,
+            flowDefinition,
+            currentNode.next,
+            flowType,
+        );
+
+        if (!nextNodeId) {
+            await this.completeFlowInstance(flowInstance);
+            const userConnection = this.getUserConnection(userInstance._id as any);
+            if (userConnection) {
+                await this.sendThankYouMessage(
+                    userInstance._id as unknown as string,
+                    flowInstance,
+                    userConnection,
+                    flowType,
+                );
+            }
+            switch (flowType) {
+                case FlowTypeEnum.CHECK_IN: {
+                    await this.completeCheckinFlow(userInstance, flowInstance);
+                    break;
+                }
+                case FlowTypeEnum.ONBOARDING: {
+                    await this.completeOnboardingFlow(userInstance);
+                    break;
+                }
+            }
+            if (userConnection) {
+                this.endFlow(userInstance._id as unknown as string, userConnection, flowType);
+            }
+            return {
+                success: true,
+                message:
+                    flowType === "ONBOARDING"
+                        ? "Onboarding completed!"
+                        : "Check-in completed. Score processing initiated.",
+            };
+        } else {
+            flowInstance.cursorNodeId = nextNodeId;
+            await (flowInstance as any).save();
+            console.log(`Moving cursor to: ${nextNodeId}`);
+            this.deletePendingQuestion(userInstance);
+
+            const userConnection = this.getUserConnection(userInstance._id as any);
+            if (userConnection) {
+                await this.sendCurrentQuestion(
+                    userInstance,
+                    userConnection,
+                    flowInstance,
+                    flowDefinition,
+                    flowType,
+                );
+            } else {
+                await this.sendSilentPush(
+                    userInstance._id as unknown as string,
+                    flowInstance,
+                    flowDefinition,
+                    flowType,
+                );
+            }
+
+            this.pendingQuestions.set(userInstance._id as unknown as string, {
+                questionId: nextNodeId,
+            });
+            return { success: true, message: "Answer saved, fetching next question" };
+        }
+    };
+
+    handleSpecialNodeCase = async (
+        userInstance: IUser,
+        flowInstance: IFlowInstance,
+        flowDefinition: IFlowDefinition,
+        nodeId: string,
+        flowType: FlowType,
+        freeText?: string,
+        idOverride?: string,
+    ) => {
+        console.log(`Processing special node case for ${nodeId}`);
+        if (flowType !== FlowTypeEnum.ONBOARDING || nodeId !== "name") {
+            return;
+        }
+        if (!freeText) {
+            throw new Error("Free text not found");
+        }
+        // 1. Call your LLM API to validate name
+        const { has_name, detected_name } = await this.llmService.sendNameQuery(freeText);
+        console.log(` LLM response: ${JSON.stringify({ has_name, detected_name })}`);
+        if (!has_name) {
+            await flowResponseModel.deleteOne({
+                flowInstanceId: flowInstance._id,
+                nodeId: nodeId,
+            });
+            //console.log("LLM could not detect a valid name. Asking question again.");
+            this.deletePendingQuestion(userInstance);
+            // send same question again
+            const userConnection = this.getUserConnection(userInstance._id as any);
+            console.log(` User connection: ${userConnection}`);
+            if (userConnection) {
+                await this.sendCurrentQuestion(
+                    userInstance,
+                    userConnection,
+                    flowInstance,
+                    flowDefinition,
+                    flowType,
+                    getUuid(),
+                    NAME_QUERY,
+                );
+            } else {
+                await this.sendSilentPush(
+                    userInstance._id as unknown as string,
+                    flowInstance,
+                    flowDefinition,
+                    flowType,
+                );
+            }
+
+            // IMPORTANT: Keep cursor on same node
+            // And DO NOT save answer
+            return {
+                success: false,
+                message: "Invalid name. Asking again.",
+                data: null,
+            };
+        }
+
+        // If name is valid, override the freeText with LLM's detected name
+        const specialCaseNodeResponse = {
+            success: true,
+            message: "Invalid name. Asking again.",
+            data: detected_name,
+        };
+        return specialCaseNodeResponse;
+    };
+
+    saveResponse = async (
+        userId: string,
+        flowInstanceId: string,
+        nodeId: string,
+        flowType: FlowType,
+        selectedKeys: number[],
+        freeText?: string,
+    ) => {
+        try {
+            const userInstance: IUser | null = await this.userService.findById({ _id: userId });
+            if (!userInstance) {
+                throw new Error("User not found");
+            }
+            switch (flowType) {
+                case FlowTypeEnum.CHECK_IN: {
+                    await this.processGuidedResponse(
+                        userInstance,
+                        flowInstanceId,
+                        nodeId,
+                        flowType,
+                        selectedKeys,
+                        freeText,
+                    );
+                    return;
+                }
+                case FlowTypeEnum.ONBOARDING: {
+                    await this.processGuidedResponse(
+                        userInstance,
+                        flowInstanceId,
+                        nodeId,
+                        flowType,
+                        selectedKeys,
+                        freeText,
+                    );
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error("Error saving answer:", error);
+            throw error;
+        }
+    };
 
     public async saveAnswer(
         userId: string,
         flowInstanceId: string,
         nodeId: string,
+        flowType: FlowType,
         selectedKeys?: number[],
         freeText?: string,
-    ): Promise<{ success: boolean; message: string }> {
+    ): Promise<{ success: boolean; message: string } | void> {
         try {
+            // ===== GUIDED FLOWS (ONBOARDING/CHECK-IN) =====
             if (!selectedKeys && !freeText) {
                 throw new Error("Either selectedKeys or freeText must be provided");
             }
 
-            const user = await userModel.findOne({ _id: userId });
+            const user = await UserModel.findOne({ _id: userId });
 
             const flowInstance = await flowInstanceModel.findOne({
                 _id: flowInstanceId,
@@ -185,11 +718,9 @@ class ChatFlowService {
                 throw new Error("FlowInstance not found or already completed");
             }
 
-            const flowType = await this.detectFlowType(userId);
-
             if (flowInstance.cursorNodeId !== nodeId) {
                 throw new Error(
-                    ` Wrong question. Expected: ${flowInstance.cursorNodeId}, Got: ${nodeId}`,
+                    `Wrong question. Expected: ${flowInstance.cursorNodeId}, Got: ${nodeId}`,
                 );
             }
 
@@ -224,12 +755,13 @@ class ChatFlowService {
 
             await new flowResponseModel({
                 flowInstanceId: flowInstance._id,
+                flowDefId: flowInstance.flowDefId,
                 nodeId: nodeId,
                 answer: answerData,
                 computed: null,
             }).save();
 
-            console.log(` Answer saved to FlowResponse`);
+            console.log(`Answer saved to FlowResponse`);
 
             const userAnswerText =
                 freeText ||
@@ -254,7 +786,7 @@ class ChatFlowService {
                 },
             }).save();
 
-            console.log(`💬 User message saved to conversation`);
+            console.log(`User message saved to conversation`);
 
             // SPECIAL VALIDATION FOR NAME NODE
             console.log(` Checking special validations for node ${nodeId}`);
@@ -314,7 +846,7 @@ class ChatFlowService {
             if (flowType === "CHECK_IN" && currentNode.indicator === "Lactation Status") {
                 if (selectedKeys?.includes(STOPPED_BREASTFEEDING_SCORE)) {
                     console.log(`User ${userId} stopped breastfeeding. Updating user record...`);
-                    await userModel.findByIdAndUpdate(userId, {
+                    await UserModel.findByIdAndUpdate(userId, {
                         is_breastfeeding_currently: false,
                     });
                 }
@@ -329,7 +861,7 @@ class ChatFlowService {
             );
 
             if (!nextNodeId) {
-                console.log(`🏁 FLOW COMPLETE FOR USER ${userId}`);
+                console.log(`FLOW COMPLETE FOR USER ${userId}`);
 
                 flowInstance.cursorNodeId = null;
                 flowInstance.state = FlowInstanceStateEnum.COMPLETED;
@@ -350,18 +882,34 @@ class ChatFlowService {
                     await redisPublisherService.publishScoreJob(
                         userId,
                         indicators,
-                        user?.FCM_token!,
+                        user?.FCM_token as string,
+                        flowInstance._id.toString(),
                     );
                     console.log(`Score processing job published.\n`);
                 }
 
-                // FOR ONBOARDING: Update user collection to mark onboarding as complete and make the flowInstance as completed
+                // FOR ONBOARDING: Update user collection to mark onboarding as complete
                 if (flowType === "ONBOARDING") {
                     console.log(
                         `Onboarding completed for user ${userId}. Update is_onboarded in users collection`,
                     );
 
-                    await userModel.findByIdAndUpdate(userId, {
+                    const flowDeninition = await flowDefinitionModel.findOne({
+                        slug: ONBOARDING_SLUG,
+                        status: "PUBLISHED",
+                    });
+
+                    if (!flowDeninition) {
+                        console.error(
+                            `Default flow "${ONBOARDING_SLUG}" not found or not published.`,
+                        );
+                        return;
+                    }
+                    const user = (await UserModel.findById(userId)) as IUser;
+                    this.flowInstanceService.createNewFlowForUser(user, flowDeninition);
+
+                    await UserModel.findByIdAndUpdate(userId, {
+                        is_breastfeeding_currently: true,
                         is_onboarded: {
                             is_questionnaire_completed: true,
                             is_subscription_completed: user?.is_onboarded.is_subscription_completed,
@@ -390,13 +938,12 @@ class ChatFlowService {
 
             const userConnection = this.activeSessions.get(userId);
             if (userConnection) {
-                await this.sendCurrentQuestion(
-                    userId,
-                    flowInstance,
-                    flowDefinition,
-                    userConnection,
-                    flowType,
-                );
+                // await this.sendCurrentQuestion(
+                //     userConnection,
+                //     flowInstance,
+                //     flowDefinition,
+                //     flowType,
+                // );
             } else {
                 await this.sendSilentPush(userId, flowInstance, flowDefinition, flowType);
             }
@@ -405,12 +952,12 @@ class ChatFlowService {
 
             return { success: true, message: "Answer saved, fetching next question" };
         } catch (error: any) {
-            console.error(" Error saving answer:", error);
+            console.error("Error saving answer:", error);
             throw error;
         }
     }
 
-    private async updateOnboardingData(
+    public async updateOnboardingData(
         userId: string,
         flowDefinition: any,
         nodeId: string,
@@ -418,7 +965,7 @@ class ChatFlowService {
         freeText?: string,
     ): Promise<void> {
         try {
-            const user = await userModel.findById(userId);
+            const user = await UserModel.findById(userId);
             if (!user) {
                 throw new Error("User not found");
             }
@@ -431,117 +978,132 @@ class ChatFlowService {
 
                 case "name":
                     user.onboarding_data.preferred_name = freeText as string;
-                    console.log(` Saved preferred_name: ${freeText}`);
+                    console.log(`Saved preferred_name: ${freeText}`);
                     break;
 
                 case "dob":
                     const dobDate = new Date(freeText!);
                     user.onboarding_data.date_of_birth = dobDate;
-                    console.log(` Saved date_of_birth: ${dobDate}`);
+                    console.log(`Saved date_of_birth: ${dobDate}`);
                     break;
 
                 case "location":
                     user.onboarding_data.location = freeText as string;
-                    console.log(` Saved location: ${freeText}`);
+                    console.log(`Saved location: ${freeText}`);
                     break;
 
                 case "conception":
                     const conception = this.getOptionValuesByScores(node, selectedKeys);
                     if (conception[0]) {
-                        user.onboarding_data.conception_method = conception[0];
-                        console.log(` Saved conception_method: ${conception[0]}`);
+                        user.onboarding_data.conception_method = conception[0] as ConceptionMethod;
+                        console.log(`Saved conception_method: ${conception[0]}`);
                     }
                     break;
 
                 case "pregnancy_conditions":
                     const conditions = this.getOptionValuesByScores(node, selectedKeys);
-                    user.onboarding_data.pregnancy_conditions = conditions;
-                    console.log(` Saved pregnancy_conditions: ${conditions.join(", ")}`);
+                    user.onboarding_data.pregnancy_conditions =
+                        conditions as PregnancyConditionEnum[];
+                    console.log(`Saved pregnancy_conditions: ${conditions.join(", ")}`);
                     break;
 
                 case "delivery_date":
                     if (freeText == "not_pragnent") {
                         user.onboarding_data.is_not_pragnant_yet = true;
+                        user.user_category = EUserCategory.NN;
                         break;
                     }
                     const deliveryDate = new Date(freeText!);
                     user.onboarding_data.delivery_date = deliveryDate;
-                    const postpartumWeek = this.calculatePostpartumWeek(deliveryDate);
-                    user.current_postpartum_week = postpartumWeek;
+                    const user_current_week_and_days = calculateUserCurrentWeek(deliveryDate);
+
+                    user.user_category =
+                        user_current_week_and_days.mode === "pregnancy"
+                            ? EUserCategory.NP
+                            : EUserCategory.PP;
+
+                    await UserModel.findOneAndUpdate(
+                        { _id: user._id },
+                        { $set: { current_weekdays: user_current_week_and_days } },
+                        { new: true },
+                    );
                     user.onboarding_data.is_not_pragnant_yet = false;
-                    console.log(` Saved delivery_date: ${deliveryDate}, week: ${postpartumWeek}`);
+                    console.log(
+                        `Saved delivery_date: ${deliveryDate}, week: ${user_current_week_and_days.weeks}`,
+                    );
                     break;
 
                 case "delivery_type":
                     const deliveryType = this.getOptionValuesByScores(node, selectedKeys);
                     if (deliveryType[0]) {
-                        user.onboarding_data.delivery_type = deliveryType[0];
-                        console.log(` Saved delivery_type: ${deliveryType[0]}`);
+                        user.onboarding_data.delivery_type = deliveryType[0] as DeliveryTypeEnum;
+                        console.log(`Saved delivery_type: ${deliveryType[0]}`);
                     }
                     break;
 
                 case "delivery_outcome":
                     const outcome = this.getOptionValuesByScores(node, selectedKeys);
                     if (outcome[0]) {
-                        user.onboarding_data.delivery_outcome = outcome[0];
-                        console.log(` Saved delivery_outcome: ${outcome[0]}`);
+                        user.onboarding_data.delivery_outcome = outcome[0] as DeliveryOutcomeEnum;
+                        console.log(`Saved delivery_outcome: ${outcome[0]}`);
                     }
                     break;
 
                 case "meds_history":
                     const historyMeds = this.getOptionValuesByScores(node, selectedKeys);
-                    user.onboarding_data.past_medications = historyMeds;
-                    console.log(` Saved past_medications: ${historyMeds.join(", ")}`);
+                    user.onboarding_data.past_medications = historyMeds as PastMedicationEnum[];
+                    console.log(`Saved past_medications: ${historyMeds.join(", ")}`);
                     break;
 
                 case "current_meds":
                     const currentMeds = this.getOptionValuesByScores(node, selectedKeys);
-                    user.onboarding_data.current_medications = currentMeds;
-                    console.log(` Saved current_medications: ${currentMeds.join(", ")}`);
+                    user.onboarding_data.current_medications =
+                        currentMeds as CurrentMedicationEnum[];
+                    console.log(`Saved current_medications: ${currentMeds.join(", ")}`);
                     break;
 
                 case "smoking":
                     const smoking = this.getOptionValuesByScores(node, selectedKeys);
                     if (smoking[0]) {
-                        user.onboarding_data.tobacco_use = smoking[0];
-                        console.log(` Saved tobacco_use: ${smoking[0]}`);
+                        user.onboarding_data.tobacco_use = smoking[0] as TobaccoUseEnum;
+                        console.log(`Saved tobacco_use: ${smoking[0]}`);
                     }
                     break;
 
                 case "alcohol":
                     const alcohol = this.getOptionValuesByScores(node, selectedKeys);
                     if (alcohol[0]) {
-                        user.onboarding_data.alcohol_use = alcohol[0];
-                        console.log(` Saved alcohol_use: ${alcohol[0]}`);
+                        user.onboarding_data.alcohol_use = alcohol[0] as AlcoholUseEnum;
+                        console.log(`Saved alcohol_use: ${alcohol[0]}`);
                     }
                     break;
 
                 case "support":
                     const support = this.getOptionValuesByScores(node, selectedKeys);
                     if (support[0]) {
-                        user.onboarding_data.social_support = support[0];
-                        console.log(` Saved social_support: ${support[0]}`);
+                        user.onboarding_data.social_support = support[0] as SocialSupportEnum;
+                        console.log(`Saved social_support: ${support[0]}`);
                     }
                     break;
 
                 case "parity":
                     const parity = this.getOptionValuesByScores(node, selectedKeys);
                     if (parity[0]) {
-                        user.onboarding_data.parity = parity[0];
-                        console.log(` Saved parity: ${parity[0]}`);
+                        user.onboarding_data.parity = parity[0] as ParityEnum;
+                        console.log(`Saved parity: ${parity[0]}`);
                     }
                     break;
 
                 case "wrap_up":
                     user.is_onboarded.is_questionnaire_completed = true;
                     user.onboarding_data.onboarded_at = new Date();
-                    console.log(` Onboarding marked as complete`);
+                    console.log(`Onboarding marked as complete`);
                     break;
             }
 
             await user.save();
         } catch (error) {
-            console.error(` Error updating onboarding data for nodeId ${nodeId}:`, error);
+            console.error(`Error updating onboarding data for nodeId ${nodeId}:`, error);
             throw error;
         }
     }
@@ -556,25 +1118,6 @@ class ChatFlowService {
             .map((opt) => opt.value);
     }
 
-    // private calculatePostpartumWeek(deliveryDate: Date): number {
-    //     const today = new Date();
-    //     const diffMs = today.getTime() - deliveryDate.getTime();
-    //     const diffDays = diffMs / (1000 * 60 * 60 * 24);
-    //     const weeks = Math.floor(diffDays / 7);
-    //     return Math.max(1, weeks);
-    // }
-
-    private calculatePostpartumWeek(deliveryDate: Date): number {
-        const today = new Date();
-        const diffMs = today.getTime() - deliveryDate.getTime();
-        const diffDays = diffMs / (1000 * 60 * 60 * 24);
-        const weeks = Math.floor(diffDays / 7);
-        if (diffMs < 0) {
-            return -1;
-        }
-
-        return Math.max(1, weeks + 1);
-    }
     private async findNextValidNode(
         userId: string,
         flowInstance: any,
@@ -582,13 +1125,9 @@ class ChatFlowService {
         startingNodeId: string | null,
         flowType: FlowType,
     ): Promise<string | null> {
-        // if (flowType === "ONBOARDING") {
-        //     console.log(`Onboarding: returning next node`);
-        //     return startingNodeId;
-        // }
         if (flowType === "CHECK_IN") {
             let currentNodeId = startingNodeId;
-            const user = await userModel.findById(userId);
+            const user = await UserModel.findById(userId);
             const currentWeek = flowInstance.postpartumWeek;
             const isBreastfeeding = user?.is_breastfeeding_currently ?? true;
 
@@ -606,36 +1145,36 @@ class ChatFlowService {
                 console.log(`Checking node: ${node.id} (${node.indicator})`);
 
                 if (!this.isNodeActiveForWeek(node, currentWeek)) {
-                    console.log(`⏭️ Skipping - Not active for week ${currentWeek}`);
+                    console.log(`Skipping - Not active for week ${currentWeek}`);
                     currentNodeId = node.next;
                     continue;
                 }
 
                 if (!this.isNodeValidForBreastfeeding(node, isBreastfeeding)) {
-                    console.log(`⏭️ Skipping - Not breastfeeding`);
+                    console.log(`Skipping - Not breastfeeding`);
                     currentNodeId = node.next;
                     continue;
                 }
 
                 const isEliminated = await this.isNodeEliminated(userId, node, flowInstance);
                 if (isEliminated) {
-                    console.log(`⏭️ Skipping - Eliminated (scored 2 for 2 weeks)`);
+                    console.log(`Skipping - Eliminated (scored 2 for 2 weeks)`);
                     currentNodeId = node.next;
                     continue;
                 }
 
-                console.log(` Valid node found: ${node.id}\n`);
+                console.log(`Valid node found: ${node.id}\n`);
                 return currentNodeId;
             }
 
-            console.log(`No more valid nodes - flow complete\n`);
+            console.log(`🏁 No more valid nodes - flow complete\n`);
             return null;
         }
 
         // ONBOARDING flow logic with pregnancy skip
         console.log(`Onboarding: checking if pregnancy-related questions should be skipped`);
 
-        const user = await userModel.findById(userId);
+        const user = await UserModel.findById(userId);
         const isNotPregnantYet = user?.onboarding_data?.is_not_pragnant_yet ?? false;
 
         let currentNodeId = startingNodeId;
@@ -648,7 +1187,6 @@ class ChatFlowService {
                 return null;
             }
 
-            // Skip pregnancy-related questions if user is not pregnant yet
             if (isNotPregnantYet && this.isPregnancyRelatedNode(node.id)) {
                 console.log(`Skipping pregnancy related node: ${node.id} (user not pregnant yet)`);
                 currentNodeId = node.next;
@@ -658,8 +1196,8 @@ class ChatFlowService {
             if (!isNotPregnantYet && this.isFutureDeliveryRalatedNode(node.id)) {
                 const deliveryDate = user?.onboarding_data?.delivery_date;
                 if (deliveryDate) {
-                    const postpartumWeek = this.calculatePostpartumWeek(deliveryDate);
-                    if (postpartumWeek < 1) {
+                    const postpartumWeek = calculateUserCurrentWeek(deliveryDate);
+                    if (postpartumWeek.mode == "pregnancy") {
                         console.log(
                             `Skipping delivery_date node: ${node.id} (delivery date in future)`,
                         );
@@ -779,45 +1317,43 @@ class ChatFlowService {
     }
 
     private async sendCurrentQuestion(
-        userId: string,
-        flowInstance: any,
-        flowDefinition: any,
+        userInstance: IUser,
         res: Response,
+        flowInstance: IFlowInstance,
+        flowDefinition: IFlowDefinition,
         flowType: FlowType,
-        questionOvverrideId?: string,
+        questionOvverideId?: string,
         questionTextOverride?: string,
     ): Promise<void> {
         if (!flowInstance.cursorNodeId) {
-            this.endFlow(userId, res);
+            this.endFlow(userInstance._id as unknown as string, res);
             return;
         }
 
         const validNodeId = await this.findNextValidNode(
-            userId,
+            userInstance._id as unknown as string,
             flowInstance,
             flowDefinition,
             flowInstance.cursorNodeId,
             flowType,
         );
-        console.log(` Next valid node: ${validNodeId}`);
+        console.log(`Next valid node: ${validNodeId}`);
         if (!validNodeId) {
-            console.log(`No valid questions remaining for user ${userId}`);
-            this.endFlow(userId, res);
+            console.log(`No valid questions remaining for user ${userInstance._id}`);
+            this.endFlow(userInstance._id as unknown as string, res);
             return;
         }
-        console.log(` 2222`);
+
         if (validNodeId !== flowInstance.cursorNodeId) {
             flowInstance.cursorNodeId = validNodeId;
-            await flowInstance.save();
-            console.log(` 33333`);
+            await (flowInstance as any).save();
         }
 
         const currentNode = flowDefinition.nodes.find((n: IFlowNode) => n.id === validNodeId);
-        console.log(` 4444`);
+
         if (!currentNode) {
             console.error(`Node ${validNodeId} not found`);
-            this.endFlow(userId, res, flowType);
-            console.log(` 55555`);
+            this.endFlow(userInstance._id as unknown as string, res, flowType);
             return;
         }
 
@@ -827,10 +1363,11 @@ class ChatFlowService {
             value: opt.value,
             score: opt.score,
         }));
-        console.log(`66666`);
 
-        const payload: QuestionPayload & { askId: any; uuid: any } = {
-            uuid: questionOvverrideId || uuidv4(),
+        const payload: QuestionPayload = {
+            // uuid: questionOvverideId || uuidv4()
+            type: QuestionSourceEnum.AI_Message,
+            uuid: questionOvverideId,
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
             text: questionTextOverride ? questionTextOverride : currentNode.text || "",
@@ -840,10 +1377,12 @@ class ChatFlowService {
             nodeType: currentNode.nodeType,
             askId: Date.now(),
         };
-        console.log(`77777`);
+
+        console.log(`Prepared question payload: ${JSON.stringify(payload)}`, questionTextOverride);
+
         await new messageModel({
             conversationId: flowInstance.conversationId,
-            userId: userId,
+            userId: userInstance._id as unknown as string,
             role: MessageRoleEnum.ASSITANT,
             type: MessageTypeEnum.GUIDED,
             text: payload.text,
@@ -856,29 +1395,39 @@ class ChatFlowService {
                 optionKey: null,
             },
         }).save();
-        console.log(`8888`);
+
         res.write(`data: ${JSON.stringify(payload)}\n\n`);
         console.log(`Sent question via SSE: ${currentNode.id}`);
     }
 
     private async getOrCreateConversation(
-        userId: string,
+        userInstance: IUser,
         flowType: FlowType,
     ): Promise<Schema.Types.ObjectId> {
-        const title = flowType === "ONBOARDING" ? "Onboarding" : "Check-in";
-        const tag = flowType === "ONBOARDING" ? "onboarding" : "check-in";
+        let title: string;
+        let tag: string;
+
+        if (flowType === "ONBOARDING") {
+            title = "Onboarding";
+            tag = "onboarding";
+        } else {
+            title = "Check-in";
+            tag = "check-in";
+        }
+
+        const chatMode = "GUIDED_ONLY";
 
         let conversation = await conversationModel.findOne({
-            userId: userId,
-            chatMode: "GUIDED_ONLY",
+            userId: userInstance._id,
+            chatMode: chatMode,
             "meta.tags": tag,
         });
 
         if (!conversation) {
             conversation = await new conversationModel({
-                userId: userId,
+                userId: userInstance._id,
                 title: title,
-                chatMode: "GUIDED_ONLY",
+                chatMode: chatMode,
                 lastMessageAt: new Date(),
                 meta: {
                     channel: "App",
@@ -906,9 +1455,10 @@ class ChatFlowService {
         }
 
         const thankYouMessage = {
-            type: "completion_message",
+            type: "end_flow",
             text: text,
-            uuid: uuidv4(),
+            flowType: flowType,
+            // uuid: uuidv4(),
         };
 
         await new messageModel({
@@ -924,21 +1474,25 @@ class ChatFlowService {
         }).save();
 
         res.write(`data: ${JSON.stringify(thankYouMessage)}\n\n`);
-        console.log(`💬 Sent thank you message`);
+        console.log(`Sent thank you message`);
+        res.end();
+
+        this.activeSessions.delete(userId);
+        console.log(`Flow ended for user ${userId}`);
     }
 
     private endFlow(userId: string, res: Response, flowType?: FlowType): void {
-        const endPayload: EndFlowPayload = {
-            type: "end_flow",
-            message: "Flow completed",
-            flowType: flowType!,
+        const endPayload: any = {
+            text: "Flow completed",
+            nodeType: FlowNodeEnum.END,
+            flowType: flowType,
         };
 
         res.write(`data: ${JSON.stringify(endPayload)}\n\n`);
         res.end();
 
         this.activeSessions.delete(userId);
-        console.log(`🏁 Flow ended for user ${userId}`);
+        console.log(`Flow ended for user ${userId}`);
     }
 
     private sendError(res: Response, message: string): void {
@@ -957,13 +1511,8 @@ class ChatFlowService {
         flowDefinition: any,
         flowType: FlowType,
     ): Promise<void> {
-        // if (flowType === "ONBOARDING") {
-        //     console.log(`Skipping silent push for onboarding flow`);
-        //     return;
-        // }
-
         try {
-            const user = await userModel.findById(userId);
+            const user = await UserModel.findById(userId);
             if (!user || !user.FCM_token) {
                 console.log(`No FCM token for user ${userId}`);
                 return;
@@ -997,6 +1546,8 @@ class ChatFlowService {
             }));
 
             const questionPayload: QuestionPayload = {
+                askId: Date.now(),
+                type: QuestionSourceEnum.AI_Message,
                 id: currentNode.id,
                 flowInstanceId: flowInstance._id.toString(),
                 text: currentNode.text || "",
@@ -1028,8 +1579,8 @@ class ChatFlowService {
                 },
             };
 
-            await admin.messaging().send(message);
-            console.log(`📬 Sent silent push for question ${currentNode.id}`);
+            await admin!.messaging().send(message);
+            console.log(`Sent silent push for question ${currentNode.id}`);
 
             await new messageModel({
                 conversationId: flowInstance.conversationId,
@@ -1047,7 +1598,7 @@ class ChatFlowService {
                 },
             }).save();
         } catch (error) {
-            console.error(" Error sending silent push:", error);
+            console.error("Error sending silent push:", error);
         }
     }
 }

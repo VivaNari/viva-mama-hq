@@ -24,9 +24,9 @@ export const RecommendationSchema = new Schema<IRecommendation>(
         title: { type: String, required: true },
         goingWell: { type: String, required: true },
         needsHelp: { type: String },
-        celebrate: { type: String },
-        tips: { type: String },
-        next: { type: String },
+        celebrate: { type: [String], default: [] },
+        tips: { type: [String], default: [] },
+        next: { type: [String], default: [] },
     },
     { timestamps: true },
 );

@@ -1,5 +1,6 @@
 import { Schema } from "mongoose";
 import { IRecommendationHistory } from "../../types/recommendation-history.types";
+import { required } from "joi";
 
 export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
     {
@@ -16,16 +17,66 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
             required: true,
             enum: ["RED", "YELLOW", "GREEN"],
         },
-        weakestCategory: {
-            type: String,
-            required: true,
-            enum: ["physical", "lactation", "emotional"],
-        },
         breastfeeding: { type: Boolean, required: true },
-        recommendationId: {
-            type: Schema.Types.ObjectId,
-            ref: "Recommendation",
-            required: true,
+        tagline: { type: String },
+        individualRecommendations: {
+            physical: {
+                recommendation: {
+                    title: { type: String, required: false },
+                    goingWell: { type: String, required: false },
+                    needsHelp: { type: String },
+                    celebrate: { type: [String], default: [] },
+                    tips: { type: [String], default: [] },
+                    next: { type: [String], default: [] },
+                },
+                score: {
+                    type: Number,
+                    required: true,
+                },
+                zone: {
+                    type: String,
+                    required: true,
+                    enum: ["RED", "YELLOW", "GREEN"],
+                },
+            },
+            lactation: {
+                recommendation: {
+                    title: { type: String, required: true },
+                    goingWell: { type: String, required: true },
+                    needsHelp: { type: String },
+                    celebrate: { type: [String], default: [] },
+                    tips: { type: [String], default: [] },
+                    next: { type: [String], default: [] },
+                },
+                score: {
+                    type: Number,
+                    required: true,
+                },
+                zone: {
+                    type: String,
+                    required: true,
+                    enum: ["RED", "YELLOW", "GREEN"],
+                },
+            },
+            emotional: {
+                recommendation: {
+                    title: { type: String, required: true },
+                    goingWell: { type: String, required: true },
+                    needsHelp: { type: String },
+                    celebrate: { type: [String], default: [] },
+                    tips: { type: [String], default: [] },
+                    next: { type: [String], default: [] },
+                },
+                score: {
+                    type: Number,
+                    required: true,
+                },
+                zone: {
+                    type: String,
+                    required: true,
+                    enum: ["RED", "YELLOW", "GREEN"],
+                },
+            },
         },
         categoryScores: {
             physical: {
@@ -41,6 +92,12 @@ export const RecommendationHistorySchema = new Schema<IRecommendationHistory>(
                 weighted: { type: Number, required: true },
             },
         },
+        checkinAnswersDump: [
+            {
+                question: { type: String, required: true },
+                answer: { type: Schema.Types.Mixed, required: true },
+            },
+        ],
     },
     { timestamps: true },
 );

@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build outputs
+build
+dist
+
+# Tests
+__tests__
+*.test.ts
+*.spec.ts
+coverage
+
+# Git
+.git
+.github
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Config files
+# .env
+# .env.*
+# .env.local
+# .env.development
+# .env.test
+
+# Linting
+.eslintrc
+.eslintrc.*
+.prettierrc
+.prettierignore
+
+# Husky
+.husky
+
+# Misc
+*.md
+README.md
+LICENSE
+.DS_Store
+be.zip
+
+# Lock files (optional - keep package-lock.json)
+# package-lock.json
