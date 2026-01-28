@@ -26,6 +26,17 @@ jobs:
                   echo "Tag - ${{ github.ref_name }}"
                   echo "Branch - ${{ github.event.base_ref }}"
 
+            - name: Extract tag name
+              id: tag
+              uses: actions/github-script@0.2.0
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      return context.payload.ref.replace(/\/refs\/tags\//, '');
+
+            - name: Echo
+              run: echo "Tag - ${{ steps.tag.outputs.result }}"
+
             # -------------------------------
             # Checkout Source Code
             # -------------------------------
