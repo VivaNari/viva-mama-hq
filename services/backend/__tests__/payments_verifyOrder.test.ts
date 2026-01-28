@@ -10,6 +10,13 @@ jest.mock(require.resolve("../src/middlewares/authorization.middleware"), () =>
     jest.fn(() => (req: any, res: any, next: any) => next()),
 );
 
+jest.mock("razorpay", () => {
+    return jest.fn().mockImplementation(() => ({
+        orders: { create: jest.fn(), fetch: jest.fn() },
+        payments: { fetch: jest.fn() },
+    }));
+});
+
 // Mock controller
 jest.mock(require.resolve("../src/api/v1/controllers/payments/payment.controller"), () => {
     return jest.fn().mockImplementation(() => ({

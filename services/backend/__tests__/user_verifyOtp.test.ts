@@ -29,6 +29,8 @@ jest.mock("razorpay", () => {
 jest.mock(require.resolve("../src/api/v1/controllers/users/user.controller"), () => ({
     __esModule: true,
     default: jest.fn().mockImplementation(() => ({
+        getUserbyAuthToken: jest.fn(),
+        updateFCMToken: jest.fn(),
         sendOTPToPhone: jest.fn(),
         verifyOTP: (req: any, res: any) => {
             const { phone, otp } = req.body || {};
@@ -44,7 +46,7 @@ jest.mock(require.resolve("../src/api/v1/controllers/users/user.controller"), ()
             return res.status(200).json({ verified: true });
         },
         googleAuth: jest.fn(),
-        getIsOnboarded: jest.fn(),
+        getCheckinScoreData: jest.fn(),
     })),
 }));
 

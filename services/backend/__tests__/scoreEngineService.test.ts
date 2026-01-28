@@ -5,7 +5,7 @@ jest.mock("../src/models/user.model", () => ({
             select: jest.fn().mockReturnThis(),
             lean: jest.fn().mockReturnThis(),
             exec: jest.fn().mockResolvedValue({
-                current_postpartum_week: 3,
+                current_weekdays: { weeks: 3 },
                 is_breastfeeding_currently: true,
             }),
         }),

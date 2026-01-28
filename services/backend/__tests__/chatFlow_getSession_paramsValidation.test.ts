@@ -26,7 +26,7 @@ jest.mock(require.resolve("../src/api/v1/controllers/chat-system/chat-flow.contr
             }
             return res.status(200).json({ slugReceived: slug });
         },
-        saveAnswer: () => {},
+        saveResponse: () => {},
     }));
 });
 

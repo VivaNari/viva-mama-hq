@@ -7,7 +7,7 @@ jest.mock(require.resolve("../src/middlewares/authorization.middleware"), () =>
 jest.mock(require.resolve("../src/api/v1/controllers/chat-system/chat-flow.controller"), () =>
     jest.fn().mockImplementation(() => ({
         handleSseConnection: () => {},
-        saveAnswer: (req: any, res: any) => {
+        saveResponse: (req: any, res: any) => {
             if (!req.body?.answer) {
                 return res.status(422).json({ error: "answer required" });
             }
