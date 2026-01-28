@@ -17,26 +17,7 @@ jobs:
     build-and-push:
         name: Build → Test → Audit → Push to GCP
         runs-on: ubuntu-latest
-
         steps:
-            - name: Show Tag and Branch Name
-              run: echo "${{ github.ref }}"
-                  echo "${{ github.ref_name }}"
-                  echo "${{ github.ref_type }}"
-                  echo "Tag - ${{ github.ref_name }}"
-                  echo "Branch - ${{ github.event.base_ref }}"
-
-            - name: Extract tag name
-              id: tag
-              uses: actions/github-script@0.2.0
-              with:
-                  github-token: ${{ secrets.GITHUB_TOKEN }}
-                  script: |
-                      return context.payload.ref.replace(/\/refs\/tags\//, '');
-
-            - name: Echo
-              run: echo "Tag - ${{ steps.tag.outputs.result }}"
-
             # -------------------------------
             # Checkout Source Code
             # -------------------------------
@@ -157,7 +138,7 @@ jobs:
               run: |
                   echo "🔨 Building Docker image..."
                   docker build \
-                    -t ${{ steps.image_tags.outputs.image_tag_sha }} \
+                    -t ${{ github.ref_name }} \
                     -t ${{ steps.image_tags.outputs.image_tag_full_sha }} \
                     -t ${{ steps.image_tags.outputs.image_tag_latest }} \
                     --build-arg NODE_ENV=production \
