@@ -160,15 +160,9 @@ jobs:
               run: |
                   echo "🚀 Pushing Docker images to Artifact Registry..."
 
-                  # Push short SHA tag
-                  docker push ${{ steps.image_tags.outputs.image_tag_sha }}
-                  echo "✅ Pushed: ${{ steps.image_tags.outputs.image_tag_sha }}"
+                  docker push ${{ steps.image_tags.outputs.image_tag_gittag }}
+                  echo "✅ Pushed: ${{ steps.image_tags.outputs.image_tag_gittag }}"
 
-                  # Push full SHA tag
-                  docker push ${{ steps.image_tags.outputs.image_tag_full_sha }}
-                  echo "✅ Pushed: ${{ steps.image_tags.outputs.image_tag_full_sha }}"
-
-                  # Push latest tag
                   docker push ${{ steps.image_tags.outputs.image_tag_latest }}
                   echo "✅ Pushed: ${{ steps.image_tags.outputs.image_tag_latest }}"
 
@@ -191,8 +185,7 @@ jobs:
             - name: Clean up Docker images
               if: always()
               run: |
-                  docker rmi ${{ steps.image_tags.outputs.image_tag_sha }} || true
-                  docker rmi ${{ steps.image_tags.outputs.image_tag_full_sha }} || true
+                  docker rmi ${{ steps.image_tags.outputs.image_tag_gittag }} || true
                   docker rmi ${{ steps.image_tags.outputs.image_tag_latest }} || true
                   docker system prune -f
 
@@ -212,20 +205,12 @@ jobs:
                   echo "  Region: ${{ env.GCP_REGION }}"
                   echo ""
                   echo "🏷️  Tags Pushed:"
-                  echo "  - ${{ steps.image_tags.outputs.short_sha }}"
-                  echo "  - ${{ github.sha }}"
+                  echo "  - ${{ github.ref_name }}"
                   echo "  - latest"
                   echo ""
                   echo "🔗 Full Image Paths:"
-                  echo "  ${{ steps.image_tags.outputs.image_tag_sha }}"
-                  echo "  ${{ steps.image_tags.outputs.image_tag_full_sha }}"
+                  echo "  ${{ steps.image_tags.outputs.image_tag_gittag }}"
                   echo "  ${{ steps.image_tags.outputs.image_tag_latest }}"
-                  echo ""
-                  echo "📝 Next Steps:"
-                  echo "  1. Verify image in GCP Console:"
-                  echo "     https://console.cloud.google.com/artifacts"
-                  echo "  2. Deploy using the devops-vivamama repository"
-                  echo "  3. Use tag '${{ steps.image_tags.outputs.short_sha }}' or 'latest'"
                   echo ""
                   echo "════════════════════════════════════════════════════════════════"
 
