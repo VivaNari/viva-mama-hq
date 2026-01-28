@@ -1,0 +1,255 @@
+name: Build, Test, Audit & Push to Google Artifact Registry
+
+on:
+    push:
+        branches:
+            - release/v1.0.0
+    workflow_dispatch:
+
+env:
+    GCP_REGION: asia-south1
+    GAR_REPO: vivamama-repo
+    IMAGE_NAME: vivamama-backend
+
+jobs:
+    build-and-push:
+        name: Build → Test → Audit → Push to GCP
+        runs-on: ubuntu-latest
+
+        steps:
+            # -------------------------------
+            # Checkout Source Code
+            # -------------------------------
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            # -------------------------------
+            # Setup Node.js
+            # -------------------------------
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 20
+                  cache: "npm"
+
+            # -------------------------------
+            # Install dependencies
+            # -------------------------------
+            - name: Install dependencies
+              run: npm ci --legacy-peer-deps
+
+            # -------------------------------
+            # NPM Audit
+            # -------------------------------
+            - name: Audit packages (npm audit)
+              run: |
+                  npm install -g better-npm-audit
+                  better-npm-audit audit
+              continue-on-error: true # Don't fail build on audit warnings
+
+            # -------------------------------
+            # License Checker
+            # -------------------------------
+            - name: Check license of packages
+              run: |
+                  npm install -g license-checker
+                  license-checker
+              continue-on-error: true
+
+            # -------------------------------
+            # License Report
+            # -------------------------------
+            - name: Generate license report
+              run: |
+                  npm install -g license-report
+                  license-report --output=table \
+                    --fields="name" \
+                    --fields="licensePeriod" \
+                    --fields="material" \
+                    --fields="licenseType" \
+                    --fields="link" \
+                    --fields="installedVersion" \
+                    --fields="remoteVersion" \
+                    --fields="latestRemoteVersion"
+              continue-on-error: true
+
+            # -------------------------------
+            # Lint & Format Checks
+            # -------------------------------
+            # Uncomment when lint and format scripts are ready
+            # - name: Run Code Lint
+            #   run: npm run lint
+
+            # - name: Run Format Check
+            #   run: npm run format:check
+
+            # -------------------------------
+            # API Automation Tests
+            # -------------------------------
+            - name: Run API automation tests
+              run: npm run test
+
+            # -------------------------------
+            # Authenticate to Google Cloud
+            # -------------------------------
+            - name: Authenticate to Google Cloud
+              uses: google-github-actions/auth@v2
+              with:
+                  credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+            # -------------------------------
+            # Setup Cloud SDK
+            # -------------------------------
+            - name: Set up Cloud SDK
+              uses: google-github-actions/setup-gcloud@v2
+
+            # -------------------------------
+            # Configure Docker for Artifact Registry
+            # -------------------------------
+            - name: Configure Docker authentication for Artifact Registry
+              run: |
+                  gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+            # -------------------------------
+            # Build Image Tag
+            # -------------------------------
+            - name: Set image tags
+              id: image_tags
+              run: |
+                  SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+
+                  echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+                  echo "image_base=${IMAGE_BASE}" >> $GITHUB_OUTPUT
+                  echo "image_tag_sha=${IMAGE_BASE}:${SHORT_SHA}" >> $GITHUB_OUTPUT
+                  echo "image_tag_full_sha=${IMAGE_BASE}:${{ github.sha }}" >> $GITHUB_OUTPUT
+                  echo "image_tag_latest=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
+
+                  echo "📦 Image will be pushed to:"
+                  echo "  - ${IMAGE_BASE}:${SHORT_SHA}"
+                  echo "  - ${IMAGE_BASE}:${{ github.sha }}"
+                  echo "  - ${IMAGE_BASE}:latest"
+
+            # -------------------------------
+            # Docker Build
+            # -------------------------------
+            - name: Build Docker image
+              run: |
+                  echo "🔨 Building Docker image..."
+                  docker build \
+                    -t ${{ steps.image_tags.outputs.image_tag_sha }} \
+                    -t ${{ steps.image_tags.outputs.image_tag_full_sha }} \
+                    -t ${{ steps.image_tags.outputs.image_tag_latest }} \
+                    --build-arg NODE_ENV=production \
+                    .
+
+                  echo "✅ Docker image built successfully"
+
+            # -------------------------------
+            # Trivy Vulnerability Scan
+            # -------------------------------
+            # - name: Run Trivy security scan
+            #   uses: aquasecurity/trivy-action@0.20.0
+            #   with:
+            #       image-ref: ${{ steps.image_tags.outputs.image_tag_sha }}
+            #       format: "table"
+            #       severity: "CRITICAL,HIGH"
+            #       ignore-unfixed: true
+            #       exit-code: "0"  # Don't fail build, just report
+            #   continue-on-error: true
+
+            # -------------------------------
+            # Push to Artifact Registry
+            # -------------------------------
+            - name: Push Docker image to Google Artifact Registry
+              run: |
+                  echo "🚀 Pushing Docker images to Artifact Registry..."
+
+                  # Push short SHA tag
+                  docker push ${{ steps.image_tags.outputs.image_tag_sha }}
+                  echo "✅ Pushed: ${{ steps.image_tags.outputs.image_tag_sha }}"
+
+                  # Push full SHA tag
+                  docker push ${{ steps.image_tags.outputs.image_tag_full_sha }}
+                  echo "✅ Pushed: ${{ steps.image_tags.outputs.image_tag_full_sha }}"
+
+                  # Push latest tag
+                  docker push ${{ steps.image_tags.outputs.image_tag_latest }}
+                  echo "✅ Pushed: ${{ steps.image_tags.outputs.image_tag_latest }}"
+
+            # -------------------------------
+            # Verify Image in Registry
+            # -------------------------------
+            - name: Verify image in Artifact Registry
+              run: |
+                  echo "🔍 Verifying image in Artifact Registry..."
+                  gcloud artifacts docker images list \
+                    ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GAR_REPO }} \
+                    --include-tags \
+                    --filter="package=${{ env.IMAGE_NAME }}" \
+                    --format="table(package,version,CREATE_TIME,UPDATE_TIME)" \
+                    --limit=5
+
+            # -------------------------------
+            # Clean up local Docker images
+            # -------------------------------
+            - name: Clean up Docker images
+              if: always()
+              run: |
+                  docker rmi ${{ steps.image_tags.outputs.image_tag_sha }} || true
+                  docker rmi ${{ steps.image_tags.outputs.image_tag_full_sha }} || true
+                  docker rmi ${{ steps.image_tags.outputs.image_tag_latest }} || true
+                  docker system prune -f
+
+            # -------------------------------
+            # Deployment Summary
+            # -------------------------------
+            - name: 📊 Deployment Summary
+              if: success()
+              run: |
+                  echo "════════════════════════════════════════════════════════════════"
+                  echo "✅ DOCKER IMAGE PUSHED SUCCESSFULLY!"
+                  echo "════════════════════════════════════════════════════════════════"
+                  echo ""
+                  echo "📦 Image Details:"
+                  echo "  Repository: ${{ env.GAR_REPO }}"
+                  echo "  Image Name: ${{ env.IMAGE_NAME }}"
+                  echo "  Region: ${{ env.GCP_REGION }}"
+                  echo ""
+                  echo "🏷️  Tags Pushed:"
+                  echo "  - ${{ steps.image_tags.outputs.short_sha }}"
+                  echo "  - ${{ github.sha }}"
+                  echo "  - latest"
+                  echo ""
+                  echo "🔗 Full Image Paths:"
+                  echo "  ${{ steps.image_tags.outputs.image_tag_sha }}"
+                  echo "  ${{ steps.image_tags.outputs.image_tag_full_sha }}"
+                  echo "  ${{ steps.image_tags.outputs.image_tag_latest }}"
+                  echo ""
+                  echo "📝 Next Steps:"
+                  echo "  1. Verify image in GCP Console:"
+                  echo "     https://console.cloud.google.com/artifacts"
+                  echo "  2. Deploy using the devops-vivamama repository"
+                  echo "  3. Use tag '${{ steps.image_tags.outputs.short_sha }}' or 'latest'"
+                  echo ""
+                  echo "════════════════════════════════════════════════════════════════"
+
+            # -------------------------------
+            # Build Failed
+            # -------------------------------
+            - name: ❌ Build Failed
+              if: failure()
+              run: |
+                  echo "════════════════════════════════════════════════════════════════"
+                  echo "❌ BUILD FAILED!"
+                  echo "════════════════════════════════════════════════════════════════"
+                  echo ""
+                  echo "Please check the logs above for errors."
+                  echo ""
+                  echo "Common Issues:"
+                  echo "  • Tests failed - Check test logs"
+                  echo "  • Docker build failed - Check Dockerfile"
+                  echo "  • Authentication failed - Verify GCP_SA_KEY secret"
+                  echo "  • Push failed - Check Artifact Registry permissions"
+                  echo ""
+                  echo "════════════════════════════════════════════════════════════════"
