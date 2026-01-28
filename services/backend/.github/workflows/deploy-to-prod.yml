@@ -2,8 +2,6 @@ name: Build, Test, Audit & Push to Google Artifact Registry
 
 on:
     push:
-        branches:
-            - main
         tags:
             - "v*.*.*"
     workflow_dispatch:
