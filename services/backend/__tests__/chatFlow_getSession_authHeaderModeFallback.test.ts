@@ -25,7 +25,7 @@ jest.mock(require.resolve("../src/api/v1/controllers/chat-system/chat-flow.contr
     jest.fn().mockImplementation(() => ({
         handleSseConnection: (_req: any, res: any) =>
             res.status(200).json({ ok: true, via: "fallback-header" }),
-        saveAnswer: () => {},
+        saveResponse: () => {},
     })),
 );
 

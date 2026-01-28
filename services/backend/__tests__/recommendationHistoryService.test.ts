@@ -33,6 +33,26 @@ jest.mock("../src/models/recommendation-history.model", () => ({
     },
 }));
 
+// Mock the service to add static methods
+jest.mock("../src/services/recommendations/recommendation-history.service", () => {
+    return {
+        __esModule: true,
+        default: class RecommendationHistoryService {
+            static async create(data: any) {
+                return mockCreate(data);
+            }
+            static async getUserHistory(userId: string, limit?: number) {
+                mockFind({ userId });
+                return mockFind.mock.results.at(-1)?.value;
+            }
+            static async getHistoryByWeek(userId: string, week: number) {
+                mockFindOne({ userId, week });
+                return mockFindOne.mock.results.at(-1)?.value;
+            }
+        },
+    };
+});
+
 // ---- Silence console logs ONLY for this test file ----
 jest.spyOn(console, "log").mockImplementation(() => {});
 jest.spyOn(console, "error").mockImplementation(() => {});

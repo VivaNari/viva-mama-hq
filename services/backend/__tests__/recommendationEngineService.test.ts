@@ -31,21 +31,25 @@ describe("RecommendationEngineService.getRecommendation", () => {
         // Mock DB return value for primary query
         mockFindOne.mockResolvedValueOnce(fakeRecommendation);
 
+        const dummyScore = { score: 5, zone: "YELLOW" as const };
         const result = await RecommendationEngineService.getRecommendation(
             3, // week
             "RED", // zone
             "physical", // weakest category
             true, // breastfeeding
+            dummyScore,
+            dummyScore,
+            dummyScore,
         );
 
         // Expectations
-        expect(mockFindOne).toHaveBeenCalledTimes(1);
+        expect(mockFindOne).toHaveBeenCalledTimes(4);
         expect(mockFindOne).toHaveBeenCalledWith({
             phase: "3-4",
             zone: "RED",
             category: "physical",
         });
 
-        expect(result).toEqual(fakeRecommendation);
+        expect(result.overall).toEqual(fakeRecommendation);
     });
 });
