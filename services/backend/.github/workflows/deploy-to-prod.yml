@@ -3,7 +3,9 @@ name: Build, Test, Audit & Push to Google Artifact Registry
 on:
     push:
         branches:
-            - release/v1.0.0
+            - main
+        tags:
+            - "v*.*.*"
     workflow_dispatch:
 
 env:
@@ -13,6 +15,7 @@ env:
 
 jobs:
     build-and-push:
+        if: github.event.base_ref == 'refs/heads/main'
         name: Build → Test → Audit → Push to GCP
         runs-on: ubuntu-latest
 
