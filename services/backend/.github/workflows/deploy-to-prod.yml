@@ -13,9 +13,16 @@ env:
 
 jobs:
     build-and-push:
+        
         name: Build → Test → Audit → Push to GCP
         runs-on: ubuntu-latest
         steps:
+            - name: Show Tag and Branch Name
+              run: echo "${{ github.ref }}"
+                  echo "${{ github.ref_name }}"
+                  echo "${{ github.ref_type }}"
+                  echo "Tag - ${{ github.ref_name }}"
+                  echo "Branch - ${{ github.event.base_ref }}"
             # -------------------------------
             # Checkout Source Code
             # -------------------------------
