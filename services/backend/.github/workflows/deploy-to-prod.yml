@@ -86,8 +86,8 @@ jobs:
             # -------------------------------
             # API Automation Tests
             # -------------------------------
-            # - name: Run API automation tests
-            #   run: npm run test
+            - name: Run API automation tests
+              run: npm run test
 
             # -------------------------------
             # Authenticate to Google Cloud
