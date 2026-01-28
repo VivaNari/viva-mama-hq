@@ -7,11 +7,8 @@ import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
 import {
-    AIGreetingMessage,
-    AILLMResponse,
     AnswerData,
     AnswerTypeEnum,
-    EndFlowPayload,
     FlowInstanceStateEnum,
     FlowNodeEnum,
     FlowType,
@@ -28,6 +25,7 @@ import {
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
 // import { v4 as uuidv4 } from "uuid";
+import { NAME_QUERY } from "../../constants/chat";
 import { ONBOARDING_SLUG } from "../../constants/conversationSlugs";
 import UserModel from "../../models/user.model";
 import {
@@ -44,15 +42,14 @@ import {
     SocialSupportEnum,
     TobaccoUseEnum,
 } from "../../types";
-import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
-import { FlowInstanceService } from "../flow/flow-instance.service";
-import BaseService from "../base.service";
-import UserService from "../users/user.service";
-import MessageService from "../message/message.service";
-import LLMService from "../llm/llm.service";
-import FlowResponseService from "./flowResponse.service";
 import { getUuid } from "../../utils/commonFunctions/uuid";
-import { NAME_QUERY } from "../../constants/chat";
+import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
+import BaseService from "../base.service";
+import { FlowInstanceService } from "../flow/flow-instance.service";
+import LLMService from "../llm/llm.service";
+import MessageService from "../message/message.service";
+import UserService from "../users/user.service";
+import FlowResponseService from "./flowResponse.service";
 
 const STOPPED_BREASTFEEDING_SCORE = -1;
 
@@ -228,7 +225,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         res: Response,
     ): Promise<void> => {
         try {
-            console.log("slug", slug);
             await this.initInstanceVariables({ res });
             const userInstance: IUser | null = await this.userService.findById({ _id: userId });
 
@@ -468,9 +464,9 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             flowInstanceId,
             nodeId,
         );
-        console.log("222");
+
         const { answerData } = this.getAnswerDetails(currentNode, selectedKeys, freeText);
-        console.log("333");
+
         await this.insertAnswer(userInstance, flowInstance, nodeId, answerData, currentNode);
         const specialCaseNode = await this.handleSpecialNodeCase(
             userInstance,
@@ -481,7 +477,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             freeText,
             nodeId,
         );
-        console.log("444", specialCaseNode);
+
         if (specialCaseNode?.success === false) {
             // Invalid input - question already re-sent, just return
             return {
@@ -494,10 +490,8 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             // Update answerData with corrected name
             answerData.freeText = freeText;
         }
-        console.log("555", flowType);
-        if (flowType === "ONBOARDING") {
-            console.log("666", nodeId);
 
+        if (flowType === "ONBOARDING") {
             await this.updateOnboardingData(
                 userInstance._id as unknown as string,
                 flowDefinition,
@@ -526,7 +520,6 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             currentNode.next,
             flowType,
         );
-        console.log("777", nextNodeId);
 
         if (!nextNodeId) {
             await this.completeFlowInstance(flowInstance);
@@ -563,11 +556,9 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             flowInstance.cursorNodeId = nextNodeId;
             await (flowInstance as any).save();
             console.log(`Moving cursor to: ${nextNodeId}`);
-            console.log("8888", flowInstance.cursorNodeId);
             this.deletePendingQuestion(userInstance);
 
             const userConnection = this.getUserConnection(userInstance._id as any);
-            console.log("8888", userConnection, userInstance._id, this.activeSessions.keys());
             if (userConnection) {
                 await this.sendCurrentQuestion(
                     userInstance,
@@ -601,7 +592,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         freeText?: string,
         idOverride?: string,
     ) => {
-        console.log(flowType, nodeId, freeText, "2.55555");
+        console.log(`Processing special node case for ${nodeId}`);
         if (flowType !== FlowTypeEnum.ONBOARDING || nodeId !== "name") {
             return;
         }

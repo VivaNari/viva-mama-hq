@@ -231,9 +231,8 @@ class WeeklyCheckinService {
      * Process user's answer and return next question
      */
     async processAnswer(params: WeeklyCheckinAnswerParams): Promise<WeeklyCheckinResponse> {
-        const { userId, flowInstanceId, nodeId, week, selectedKeys, freeText, idempotencyKey } =
-            params;
-        console.log("process", params);
+        const { userId, flowInstanceId, nodeId, week, selectedKeys, idempotencyKey } = params;
+        let { freeText } = params;
 
         try {
             // 1. Validate inputs
@@ -345,6 +344,43 @@ class WeeklyCheckinService {
                     idempotencyKey,
                 },
             );
+
+            // SPECIAL VALIDATION FOR NAME NODE
+            // console.log(` Checking special validations for node ${nodeId}`);
+            // if (/*flowType === "ONBOARDING" &&*/ nodeId === "name") {
+            //     // 1. Call your LLM API to validate name
+            //     const llmRes = await axios.post(
+            //         `http://192.168.1.15:8001/v1/chat/username`,
+            //         { response: freeText || "" },
+            //         {
+            //             headers: {
+            //                 "x-api-key": env.LLM_API_KEY,
+            //             },
+            //         },
+            //     );
+            //     console.log(` LLM response: ${JSON.stringify(llmRes.data)}`);
+            //     const { detected_name, has_name } = llmRes.data;
+
+            //     if (!has_name) {
+            //         console.log("LLM could not detect a valid name. Asking question again.");
+
+            //         return {
+            //             success: true,
+            //             message: "Answer saved",
+            //             data: {
+            //                 flowInstanceId,
+            //                 week,
+            //                 isCompleted: false,
+            //                 nextQuestion: this.mapNodeToQuestion(currentNode, flowInstanceId, week),
+            //                 progress: await this.getProgress(flowInstanceId, flowDefinition),
+            //             },
+            //         };
+            //     }
+
+            //     // If name is valid, override the freeText with LLM's detected name
+            //     freeText = detected_name;
+            // }
+
             await this.chatFlowService.updateOnboardingData(
                 userId,
                 flowDefinition,
@@ -418,6 +454,31 @@ class WeeklyCheckinService {
             logger.error({ error, userId, flowInstanceId, nodeId }, "Error processing answer");
             return { success: false, message: "Failed to process answer" };
         }
+    }
+
+    /**
+     * Map flow node to question payload
+     */
+    private mapNodeToQuestion(
+        node: IFlowNode,
+        flowInstanceId: string,
+        week: number,
+    ): QuestionPayload {
+        return {
+            id: node.id,
+            flowInstanceId,
+            week,
+            text: node.text || "",
+            educationalMessage: node.educationalMessage || "",
+            whyThisMatters: node.whyThisMatters || "",
+            options: node.options.map((opt) => ({
+                id: opt.value,
+                label: opt.label,
+                value: opt.value,
+                score: opt.score!,
+            })),
+            nodeType: node.nodeType,
+        };
     }
 
     // ============================================

@@ -116,7 +116,6 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
         conversationId: ObjectId,
     ) => {
         console.log("SaveResponse in aiChat flow called!");
-        console.log("conversationId is =>>", conversationId);
         try {
             const userInstance: IUser | null = await this.userService.findById({ _id: userId });
             if (!userInstance) {

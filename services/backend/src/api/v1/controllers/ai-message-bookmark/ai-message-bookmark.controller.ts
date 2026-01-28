@@ -16,6 +16,9 @@ export default class AIBookmarkController {
                 filter: {
                     userId: req.user._id,
                 },
+                sort: {
+                    _id: -1,
+                },
                 populate: "messageId",
             });
             sendResponse({

@@ -99,7 +99,6 @@ class WeeklyCheckinController {
     processAnswer = async (req: Request, res: Response): Promise<void> => {
         try {
             const userId = req.user?._id?.toString();
-
             if (!userId) {
                 res.status(401).json({ error: "Unauthorized" });
                 return;
@@ -107,6 +106,7 @@ class WeeklyCheckinController {
 
             const { flowInstanceId, nodeId, week, selectedKeys, freeText, idempotencyKey } =
                 req.body;
+            console.log("nodeId inside controller", nodeId);
 
             // Validate required fields
             if (!flowInstanceId || !nodeId || week === undefined) {
