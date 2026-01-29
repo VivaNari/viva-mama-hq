@@ -28,7 +28,7 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 ENV MONGO_URI=***REDACTED-SECRET*** \
-    PORT=4000 \
+    PORT=8080 \
     TWILIO_ACCOUNT_SID=***REDACTED-SECRET*** \
     TWILIO_AUTH_TOKEN=***REDACTED-SECRET*** \
     TWILIO_PHONE_NUMBER=+15705325932 \
@@ -65,7 +65,7 @@ COPY --chown=nodejs:nodejs VivaMamaServiceAccountKey.json ./
 USER nodejs
 
 # Expose port (adjust if your app uses different port)
-EXPOSE 4000
+EXPOSE 8080
 
 # Set environment to production
 ENV NODE_ENV=production
