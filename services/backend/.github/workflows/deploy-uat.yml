@@ -144,12 +144,12 @@ jobs:
               uses: actions/checkout@v4
 
             # -------------------------------
-            # Authenticate to Google Cloud
+            # Authenticate to Google Cloud (PROD)
             # -------------------------------
             - name: 🔐 Authenticate to Google Cloud
               uses: google-github-actions/auth@v2
               with:
-                  credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+                  credentials_json: ${{ secrets.PROD_GCP_SA_KEY }}
 
             # -------------------------------
             # Setup Cloud SDK
@@ -178,7 +178,7 @@ jobs:
                     TAG="latest"
                   fi
 
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
 
                   # Save only the TAG to outputs, not the full path with secrets
                   echo "tag=${TAG}" >> $GITHUB_OUTPUT
@@ -192,7 +192,7 @@ jobs:
             # -------------------------------
             - name: 🔨 Build Docker image
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
                   TAG="${{ steps.image_tags.outputs.tag }}"
 
                   echo "🔨 Building Docker image..."
@@ -207,7 +207,7 @@ jobs:
             # -------------------------------
             - name: 💾 Save Docker image to file
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
                   TAG="${{ steps.image_tags.outputs.tag }}"
 
                   echo "💾 Saving Docker image to tar file..."
@@ -255,7 +255,7 @@ jobs:
     #                   Please review and approve to push to Artifact Registry.
 
     # ════════════════════════════════════════════════════════════════
-    # JOB 5: PUSH DOCKER IMAGE TO ARTIFACT REGISTRY
+    # JOB 5: PUSH DOCKER IMAGE TO ARTIFACT REGISTRY (PROD)
     # ════════════════════════════════════════════════════════════════
     push-to-gar:
         name: 📤 Push to Google Artifact Registry
@@ -267,12 +267,12 @@ jobs:
 
         steps:
             # -------------------------------
-            # Authenticate to Google Cloud
+            # Authenticate to Google Cloud (PROD)
             # -------------------------------
             - name: 🔐 Authenticate to Google Cloud
               uses: google-github-actions/auth@v2
               with:
-                  credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+                  credentials_json: ${{ secrets.PROD_GCP_SA_KEY }}
 
             # -------------------------------
             # Setup Cloud SDK
@@ -301,7 +301,7 @@ jobs:
             # -------------------------------
             - name: 🔄 Load, tag, and push Docker image
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
                   TAG="${{ needs.build-docker-image.outputs.tag }}"
 
                   echo "🔄 Loading Docker image from tar file..."
@@ -340,7 +340,7 @@ jobs:
               run: |
                   echo "🔍 Verifying pushed images..."
                   gcloud artifacts docker images list \
-                    ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }} \
+                    ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }} \
                     --include-tags \
                     --filter="package=${{ env.IMAGE_NAME }}" \
                     --format="table(package,version,CREATE_TIME,UPDATE_TIME)" \
@@ -356,7 +356,7 @@ jobs:
 
         steps:
             # -------------------------------
-            # Authenticate to Google Cloud
+            # Authenticate to Google Cloud (UAT)
             # -------------------------------
             - name: 🔐 Authenticate to Google Cloud (UAT)
               uses: google-github-actions/auth@v2
@@ -374,7 +374,7 @@ jobs:
             # -------------------------------
             - name: 🚀 Deploy to Cloud Run
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
                   TAG="${{ needs.push-to-gar.outputs.tag }}"
                   IMAGE_URL="${IMAGE_BASE}:${TAG}"
 
@@ -405,7 +405,7 @@ jobs:
             # -------------------------------
             - name: 📊 Create deployment summary
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
                   TAG="${{ needs.push-to-gar.outputs.tag }}"
                   IMAGE_URL="${IMAGE_BASE}:${TAG}"
 
@@ -431,7 +431,7 @@ jobs:
             # -------------------------------
             - name: 🎉 Deployment complete
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
                   TAG="${{ needs.push-to-gar.outputs.tag }}"
                   IMAGE_URL="${IMAGE_BASE}:${TAG}"
 
