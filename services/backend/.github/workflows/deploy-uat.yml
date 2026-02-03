@@ -239,7 +239,7 @@ jobs:
         needs: [approve-before-push, build-docker-image]
         runs-on: ubuntu-latest
         outputs:
-            image_tag: ${{ steps.set_tag.outputs.image_tag }}
+            image_tag: ${{ needs.build-docker-image.outputs.image_tag_gittag }}
 
         steps:
             # -------------------------------
@@ -270,34 +270,25 @@ jobs:
                   gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
             # -------------------------------
-            # Set Output Tag
-            # -------------------------------
-            - name: 🏷️ Set output image tag
-              id: set_tag
-              run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
-                  echo "image_tag=${IMAGE_BASE}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
-
-            # -------------------------------
             # Rebuild and Push Image
             # -------------------------------
             - name: 🚀 Rebuild and push Docker image
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  echo "🔨 Rebuilding Docker image..."
 
-                  echo "🔨 Rebuilding Docker image (images don't persist between jobs)..."
                   docker build \
-                    -t ${IMAGE_BASE}:${{ github.ref_name }} \
-                    -t ${IMAGE_BASE}:latest \
+                    -t ${{ needs.build-docker-image.outputs.image_tag_gittag }} \
+                    -t ${{ needs.build-docker-image.outputs.image_tag_latest }} \
                     --build-arg NODE_ENV=production \
                     .
 
                   echo "📤 Pushing images to Artifact Registry..."
-                  docker push ${IMAGE_BASE}:${{ github.ref_name }}
-                  echo "✅ Pushed: ${IMAGE_BASE}:${{ github.ref_name }}"
 
-                  docker push ${IMAGE_BASE}:latest
-                  echo "✅ Pushed: ${IMAGE_BASE}:latest"
+                  docker push ${{ needs.build-docker-image.outputs.image_tag_gittag }}
+                  echo "✅ Pushed: ${{ needs.build-docker-image.outputs.image_tag_gittag }}"
+
+                  docker push ${{ needs.build-docker-image.outputs.image_tag_latest }}
+                  echo "✅ Pushed: ${{ needs.build-docker-image.outputs.image_tag_latest }}"
 
             # -------------------------------
             # Verify Image in Registry
