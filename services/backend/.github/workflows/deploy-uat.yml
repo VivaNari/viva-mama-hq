@@ -306,6 +306,7 @@ jobs:
     # ════════════════════════════════════════════════════════════════
     deploy-to-cloud-run:
         name: 🚀 Deploy to Cloud Run (UAT)
+        needs: push-to-gar
         runs-on: ubuntu-latest
 
         steps:
