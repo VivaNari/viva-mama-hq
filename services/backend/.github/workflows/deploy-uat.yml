@@ -131,7 +131,7 @@ jobs:
     # ════════════════════════════════════════════════════════════════
     build-docker-image:
         name: 🔨 Build Docker Image
-        # needs: approve-before-build
+        needs: tests-and-audit
         runs-on: ubuntu-latest
         outputs:
             tag: ${{ steps.image_tags.outputs.tag }}
