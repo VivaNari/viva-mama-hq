@@ -4,6 +4,9 @@ on:
     pull_request:
         branches:
             - "main"
+    push:
+        tags:
+            - "v*.*.*"
     workflow_dispatch:
 
 permissions:
@@ -168,13 +171,21 @@ jobs:
             - name: 🏷️ Set image tags
               id: image_tags
               run: |
+                  if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+                    TAG="pr-${{ github.event.pull_request.number }}"
+                  elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+                    TAG="${{ github.ref_name }}"
+                  else
+                    TAG="latest"
+                  fi
+
                   IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
 
-                  echo "image_tag_gittag=${IMAGE_BASE}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
+                  echo "image_tag_gittag=${IMAGE_BASE}:${TAG}" >> $GITHUB_OUTPUT
                   echo "image_tag_latest=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
 
                   echo "📦 Image will be tagged as:"
-                  echo "  - ${IMAGE_BASE}:${{ github.ref_name }}"
+                  echo "  - ${IMAGE_BASE}:${TAG}"
                   echo "  - ${IMAGE_BASE}:latest"
 
             # -------------------------------
