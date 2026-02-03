@@ -307,6 +307,18 @@ jobs:
                   docker images | grep ${{ env.IMAGE_NAME }} || docker images
 
             # -------------------------------
+            # Re-tag Image with Latest
+            # -------------------------------
+            - name: 🏷️ Re-tag image with latest
+              run: |
+                  echo "🏷️ Creating latest tag from loaded image..."
+                  docker tag ${{ needs.build-docker-image.outputs.image_tag_gittag }} ${{ needs.build-docker-image.outputs.image_tag_latest }}
+                  echo "✅ Tagged successfully"
+                  echo ""
+                  echo "📋 Current tags:"
+                  docker images | grep ${{ env.IMAGE_NAME }}
+
+            # -------------------------------
             # Push Images to GAR
             # -------------------------------
             - name: 📤 Push Docker images to Artifact Registry
