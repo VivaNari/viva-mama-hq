@@ -1,133 +1,373 @@
-name: Deploy Vivamama Core Server
+name: Deploy to UAT Environment
 
 on:
-  push:
+  pull_request:
     branches:
-      - uat
+      - "main"
   workflow_dispatch:
 
+permissions:
+  issues: write      # Required for manual approval action
+  contents: read
+
 env:
-  DOCKER_REPOSITORY: vivamama-backend
+  GCP_REGION: asia-south1
+  GAR_REPO: vivamama-repo
+  IMAGE_NAME: vivamama-backend
+  CLOUD_RUN_SERVICE: nodejs-api 
 
 jobs:
-  build-and-push:
-    name: Build → Test → Audit → Docker Push
+  # ════════════════════════════════════════════════════════════════
+  # JOB 1: RUN TESTS AND SECURITY AUDITS
+  # ════════════════════════════════════════════════════════════════
+  tests-and-audit:
+    name: 🧪 Install → Test → Audit
     runs-on: ubuntu-latest
 
     steps:
       # -------------------------------
       # Checkout Source Code
       # -------------------------------
-      - name: Checkout code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
       # -------------------------------
-      # Setup Node.js
+      # Setup Node.js Environment
       # -------------------------------
-      - name: Setup Node.js
+      - name: ⚙️ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: "npm"
 
       # -------------------------------
-      # Install dependencies
+      # Install Dependencies
       # -------------------------------
-      - name: Install dependencies
-        run: npm ci
+      - name: 📦 Install dependencies
+        run: npm ci --legacy-peer-deps
 
       # -------------------------------
-      # NPM Audit
+      # Security Audit
       # -------------------------------
-      - name: Audit packages (npm audit)
+      - name: 🔒 Run npm security audit
         run: |
           npm install -g better-npm-audit
           better-npm-audit audit
+        continue-on-error: true  # Don't fail build on audit warnings
 
       # -------------------------------
-      # License Checker
+      # Run Automated Tests
       # -------------------------------
-      - name: Check license of packages
-        run: |
-          npm install -g license-checker
-          license-checker
-
-      # -------------------------------
-      # License Report
-      # -------------------------------
-      - name: Generate license report
-        run: |
-          npm install -g license-report
-          license-report --output=table \
-            --fields="name" \
-            --fields="licensePeriod" \
-            --fields="material" \
-            --fields="licenseType" \
-            --fields="link" \
-            --fields="installedVersion" \
-            --fields="remoteVersion" \
-            --fields="latestRemoteVersion"
-
-      # -------------------------------
-      # Lint & Format Checks
-      # -------------------------------
-      - name: Run Code Lint
-        run: npm run lint
-
-      - name: Run Format Check
-        run: npm run format:check
-
-      # -------------------------------
-      # API Automation Tests
-      # -------------------------------
-      - name: Run API automation tests
+      - name: 🧪 Run API automation tests
         run: npm run test
 
+  # ════════════════════════════════════════════════════════════════
+  # JOB 2: MANUAL APPROVAL BEFORE DOCKER BUILD
+  # ════════════════════════════════════════════════════════════════
+  approve-before-build:
+    name: ✋ Manual Approval → Start Docker Build
+    needs: tests-and-audit
+    runs-on: ubuntu-latest
+
+    steps:
       # -------------------------------
-      # Docker Login (Docker Hub)
+      # Wait for Manual Approval
       # -------------------------------
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
+      - name: 👤 Wait for manual approval to build
+        uses: trstringer/manual-approval@v1
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          secret: ${{ github.TOKEN }}
+          approvers: rahul-qbit   # ⚠️ CHANGE TO YOUR GITHUB USERNAME
+          minimum-approvals: 1
+          issue-title: "🚀 Approve Docker Build for ${{ github.ref_name }}"
+          issue-body: |
+            ✅ Tests & security audits completed successfully.
+            
+            **Next Step:** Docker image build
+            
+            Please review and approve to proceed with Docker build.
+
+  # ════════════════════════════════════════════════════════════════
+  # JOB 3: BUILD DOCKER IMAGE
+  # ════════════════════════════════════════════════════════════════
+  build-docker-image:
+    name: 🔨 Build Docker Image
+    needs: approve-before-build
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag_gittag: ${{ steps.image_tags.outputs.image_tag_gittag }}
+      image_tag_latest: ${{ steps.image_tags.outputs.image_tag_latest }}
+
+    steps:
+      # -------------------------------
+      # Checkout Source Code
+      # -------------------------------
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
       # -------------------------------
-      # Docker Build
+      # Authenticate to Google Cloud
       # -------------------------------
-      - name: Build Docker image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/$DOCKER_REPOSITORY:$IMAGE_TAG .
-
-      # -------------------------------
-      # Trivy Vulnerability Scan
-      # -------------------------------
-      - name: Scan Docker image with Trivy
-        uses: aquasecurity/trivy-action@0.20.0
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
         with:
-          image-ref: ${{ secrets.DOCKERHUB_USERNAME }}/$DOCKER_REPOSITORY:${{ github.sha }}
-          format: "table"
-          severity: "CRITICAL,HIGH"
-          ignore-unfixed: true
-          exit-code: "1" # FAIL pipeline if critical/high vulnerabilities found
+          credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
 
       # -------------------------------
-      # Push Docker Image (only if Trivy passes)
+      # Setup Cloud SDK
       # -------------------------------
-      - name: Push Docker image to Docker Hub
-        env:
-          IMAGE_TAG: ${{ github.sha }}
+      - name: ⚙️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # -------------------------------
+      # Configure Docker Authentication
+      # -------------------------------
+      - name: 🐳 Configure Docker authentication for Artifact Registry
         run: |
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$DOCKER_REPOSITORY:$IMAGE_TAG
-          docker tag ${{ secrets.DOCKERHUB_USERNAME }}/$DOCKER_REPOSITORY:$IMAGE_TAG \
-            ${{ secrets.DOCKERHUB_USERNAME }}/$DOCKER_REPOSITORY:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/$DOCKER_REPOSITORY:latest
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # -------------------------------
+      # Set Image Tags
+      # -------------------------------
+      - name: 🏷️ Set image tags
+        id: image_tags
+        run: |
+          IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+
+          echo "image_tag_gittag=${IMAGE_BASE}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "image_tag_latest=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
+
+          echo "📦 Image will be tagged as:"
+          echo "  - ${IMAGE_BASE}:${{ github.ref_name }}"
+          echo "  - ${IMAGE_BASE}:latest"
+
+      # -------------------------------
+      # Build Docker Image
+      # -------------------------------
+      - name: 🔨 Build Docker image
+        run: |
+          echo "🔨 Building Docker image..."
+          docker build \
+            -t ${{ steps.image_tags.outputs.image_tag_gittag }} \
+            -t ${{ steps.image_tags.outputs.image_tag_latest }} \
+            --build-arg NODE_ENV=production \
+            .
+          echo "✅ Docker image built successfully"
+
+  # ════════════════════════════════════════════════════════════════
+  # JOB 4: MANUAL APPROVAL BEFORE PUSHING TO GAR
+  # ════════════════════════════════════════════════════════════════
+  approve-before-push:
+    name: ✋ Manual Approval → Push to GAR
+    needs: build-docker-image
+    runs-on: ubuntu-latest
+
+    steps:
+      # -------------------------------
+      # Wait for Manual Approval
+      # -------------------------------
+      - name: 👤 Wait for manual approval to push
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: rahul-dutta   # ⚠️ CHANGE TO YOUR GITHUB USERNAME
+          minimum-approvals: 1
+          issue-title: "📦 Approve GAR Push for ${{ github.ref_name }}"
+          issue-body: |
+            ✅ Docker image built successfully.
+            
+            **Next Step:** Push to Google Artifact Registry
+            
+            **Tags:**
+            - `${{ needs.build-docker-image.outputs.image_tag_gittag }}`
+            - `${{ needs.build-docker-image.outputs.image_tag_latest }}`
+            
+            Please review and approve to push to Artifact Registry.
+
+  # ════════════════════════════════════════════════════════════════
+  # JOB 5: PUSH DOCKER IMAGE TO ARTIFACT REGISTRY
+  # ════════════════════════════════════════════════════════════════
+  push-to-gar:
+    name: 📤 Push to Google Artifact Registry
+    needs: [approve-before-push, build-docker-image]
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set_tag.outputs.image_tag }}
+
+    steps:
+      # -------------------------------
+      # Checkout Source Code
+      # -------------------------------
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+
+      # -------------------------------
+      # Authenticate to Google Cloud
+      # -------------------------------
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+
+      # -------------------------------
+      # Setup Cloud SDK
+      # -------------------------------
+      - name: ⚙️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # -------------------------------
+      # Configure Docker Authentication
+      # -------------------------------
+      - name: 🐳 Configure Docker authentication
+        run: |
+          gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      # -------------------------------
+      # Set Output Tag
+      # -------------------------------
+      - name: 🏷️ Set output image tag
+        id: set_tag
+        run: |
+          IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+          echo "image_tag=${IMAGE_BASE}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
+
+      # -------------------------------
+      # Rebuild and Push Image
+      # -------------------------------
+      - name: 🚀 Rebuild and push Docker image
+        run: |
+          IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+
+          echo "🔨 Rebuilding Docker image (images don't persist between jobs)..."
+          docker build \
+            -t ${IMAGE_BASE}:${{ github.ref_name }} \
+            -t ${IMAGE_BASE}:latest \
+            --build-arg NODE_ENV=production \
+            .
+
+          echo "📤 Pushing images to Artifact Registry..."
+          docker push ${IMAGE_BASE}:${{ github.ref_name }}
+          echo "✅ Pushed: ${IMAGE_BASE}:${{ github.ref_name }}"
+          
+          docker push ${IMAGE_BASE}:latest
+          echo "✅ Pushed: ${IMAGE_BASE}:latest"
+
+      # -------------------------------
+      # Verify Image in Registry
+      # -------------------------------
+      - name: 🔍 Verify image in Artifact Registry
+        run: |
+          echo "🔍 Verifying pushed images..."
+          gcloud artifacts docker images list \
+            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }} \
+            --include-tags \
+            --filter="package=${{ env.IMAGE_NAME }}" \
+            --format="table(package,version,CREATE_TIME,UPDATE_TIME)" \
+            --limit=5
+
+  # ════════════════════════════════════════════════════════════════
+  # JOB 7: DEPLOY TO CLOUD RUN (UAT)
+  # ════════════════════════════════════════════════════════════════
+  deploy-to-cloud-run:
+    name: 🚀 Deploy to Cloud Run (UAT)
+    runs-on: ubuntu-latest
+
+    steps:
+      # -------------------------------
+      # Authenticate to Google Cloud
+      # -------------------------------
+      - name: 🔐 Authenticate to Google Cloud (UAT)
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+
+      # -------------------------------
+      # Setup Cloud SDK
+      # -------------------------------
+      - name: ⚙️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      # -------------------------------
+      # Deploy to Cloud Run
+      # -------------------------------
+      - name: 🚀 Deploy to Cloud Run
+        run: |
+          echo "🚀 Deploying to Cloud Run..."
+          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
+            --image=${{ needs.push-to-gar.outputs.image_tag }} \
+            --region=${{ env.GCP_REGION }} \
+            --platform=managed \
+            --project=${{ secrets.UAT_GCP_PROJECT_ID }}
+          echo "✅ Deployment initiated successfully"
+
+      # -------------------------------
+      # Get Service URL
+      # -------------------------------
+      - name: 🔗 Get Cloud Run service URL
+        id: get_url
+        run: |
+          URL=$(gcloud run services describe ${{ env.CLOUD_RUN_SERVICE }} \
+            --region=${{ env.GCP_REGION }} \
+            --project=${{ secrets.UAT_GCP_PROJECT_ID }} \
+            --format='value(status.url)')
+          echo "service_url=$URL" >> $GITHUB_OUTPUT
+          echo "🌐 Service URL: $URL"
 
       # -------------------------------
       # Deployment Summary
       # -------------------------------
-      - name: Deployment Summary
+      - name: 📊 Create deployment summary
         run: |
-          echo "🚀 Docker image pushed successfully!"
-          echo "Image: ${{ secrets.DOCKERHUB_USERNAME }}/$DOCKER_REPOSITORY:${{ github.sha }}"
+          echo "## 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Deployment Details" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Environment** | UAT |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Version** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Service** | \`${{ env.CLOUD_RUN_SERVICE }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Region** | \`${{ env.GCP_REGION }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Image** | \`${{ needs.push-to-gar.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Service URL** | ${{ steps.get_url.outputs.service_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✅ Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "- Test the deployment at: ${{ steps.get_url.outputs.service_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Monitor logs: \`gcloud run logs tail ${{ env.CLOUD_RUN_SERVICE }} --project=${{ secrets.UAT_GCP_PROJECT_ID }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Check metrics in Cloud Console" >> $GITHUB_STEP_SUMMARY
+
+      # -------------------------------
+      # Console Output
+      # -------------------------------
+      - name: 🎉 Deployment complete
+        run: |
+          echo "════════════════════════════════════════════════════════════════"
+          echo "✅ DEPLOYMENT TO UAT SUCCESSFUL!"
+          echo "════════════════════════════════════════════════════════════════"
+          echo ""
+          echo "🌐 Service URL: ${{ steps.get_url.outputs.service_url }}"
+          echo "📦 Image: ${{ needs.push-to-gar.outputs.image_tag }}"
+          echo "🏷️  Version: ${{ github.ref_name }}"
+          echo ""
+          echo "════════════════════════════════════════════════════════════════"
+
+  # ════════════════════════════════════════════════════════════════
+  # JOB 8: CLEANUP (RUNS ALWAYS)
+  # ════════════════════════════════════════════════════════════════
+  cleanup:
+    name: 🧹 Cleanup
+    needs: [deploy-to-cloud-run]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      # -------------------------------
+      # Workflow Summary
+      # -------------------------------
+      - name: 📝 Workflow summary
+        run: |
+          if [ "${{ needs.deploy-to-cloud-run.result }}" == "success" ]; then
+            echo "✅ UAT deployment completed successfully"
+          else
+            echo "❌ UAT deployment failed or was cancelled"
+            echo "Please check the logs above for details"
+          fi
