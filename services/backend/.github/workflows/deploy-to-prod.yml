@@ -6,6 +6,10 @@ on:
       - "v*.*.*"
   workflow_dispatch:
 
+permissions:
+  issues: write      # <-- REQUIRED for manual approval action
+  contents: read
+
 env:
   GCP_REGION: asia-south1
   GAR_REPO: vivamama-repo
