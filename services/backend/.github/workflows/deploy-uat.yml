@@ -304,17 +304,7 @@ jobs:
                   echo "✅ Image loaded successfully"
                   echo ""
                   echo "📋 Available images:"
-                  docker images
-
-            # -------------------------------
-            # Tag with Latest
-            # -------------------------------
-            - name: 🏷️ Tag image with latest
-              run: |
-                  echo "🏷️ Tagging image with latest..."
-                  docker tag ${{ needs.build-docker-image.outputs.image_tag_gittag }} \
-                             ${{ needs.build-docker-image.outputs.image_tag_latest }}
-                  echo "✅ Tagged successfully"
+                  docker images | grep ${{ env.IMAGE_NAME }} || docker images
 
             # -------------------------------
             # Push Images to GAR
