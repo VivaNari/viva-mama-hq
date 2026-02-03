@@ -1,4 +1,4 @@
-name: Build, Test, Audit & Push to Google Artifact Registry
+name: Build → Approve → Build Docker → Approve → Push GAR
 
 on:
   push:
@@ -13,80 +13,64 @@ env:
 
 jobs:
   # --------------------------------------------------
-  # JOB 1 — CHECKOUT + INSTALL + TEST + AUDIT (NO DOCKER YET)
+  # JOB 1 — TESTS & AUDITS
   # --------------------------------------------------
-  pre-build-checks:
-    name: Install → Test → Audit (Pre-Build)
+  tests-and-audit:
+    name: Install → Test → Audit
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
+      - run: npm ci --legacy-peer-deps
 
-      - name: Audit packages (npm audit)
+      - name: npm audit
         run: |
           npm install -g better-npm-audit
           better-npm-audit audit
         continue-on-error: true
 
-      - name: Check license of packages
-        run: |
-          npm install -g license-checker
-          license-checker
-        continue-on-error: true
-
-      - name: Generate license report
-        run: |
-          npm install -g license-report
-          license-report --output=table \
-            --fields="name" \
-            --fields="licensePeriod" \
-            --fields="material" \
-            --fields="licenseType" \
-            --fields="link" \
-            --fields="installedVersion" \
-            --fields="remoteVersion" \
-            --fields="latestRemoteVersion"
-        continue-on-error: true
-
-      - name: Run API automation tests
+      - name: Run API tests
         run: npm run test
 
   # --------------------------------------------------
-  # JOB 2 — MANUAL APPROVAL #1 (BEFORE DOCKER BUILD)
+  # MANUAL APPROVAL #1 — BEFORE DOCKER BUILD
   # --------------------------------------------------
-  approve_before_docker_build:
-    name: Approve Docker Build
-    needs: pre-build-checks
+  approve-before-build:
+    name: Manual Approval → Start Docker Build
+    needs: tests-and-audit
     runs-on: ubuntu-latest
-    environment: manual-approval   # <-- Approval gate #1
+
     steps:
-      - run: echo "Waiting for approval to start Docker build..."
+      - name: Wait for manual approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: rahul-qbit   # <-- CHANGE TO YOUR GITHUB USERNAME
+          minimum-approvals: 1
+          issue-title: "Approve Docker Build for ${{ github.ref_name }}"
+          issue-body: |
+            Tests & audits completed.
+            Please approve to start Docker build.
 
   # --------------------------------------------------
-  # JOB 3 — DOCKER BUILD (NO PUSH)
+  # JOB 3 — BUILD DOCKER IMAGE (NO PUSH YET)
   # --------------------------------------------------
   build-docker-image:
     name: Build Docker Image
-    needs: approve_before_docker_build
+    needs: approve-before-build
     runs-on: ubuntu-latest
     outputs:
-      image_base: ${{ steps.image_tags.outputs.image_base }}
-      image_tag_latest: ${{ steps.image_tags.outputs.image_tag_latest }}
       image_tag_gittag: ${{ steps.image_tags.outputs.image_tag_gittag }}
+      image_tag_latest: ${{ steps.image_tags.outputs.image_tag_latest }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
@@ -96,7 +80,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for Artifact Registry
+      - name: Configure Docker auth
         run: |
           gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
@@ -105,41 +89,43 @@ jobs:
         run: |
           IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
 
-          echo "image_base=${IMAGE_BASE}" >> $GITHUB_OUTPUT
-          echo "image_tag_latest=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
           echo "image_tag_gittag=${IMAGE_BASE}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
-
-          echo "📦 Prepared image tags:"
-          echo "  - ${IMAGE_BASE}:${{ github.ref_name }}"
-          echo "  - ${IMAGE_BASE}:latest"
+          echo "image_tag_latest=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
 
       - name: Build Docker image
         run: |
-          echo "🔨 Building Docker image..."
           docker build \
             -t ${{ steps.image_tags.outputs.image_tag_gittag }} \
             -t ${{ steps.image_tags.outputs.image_tag_latest }} \
             --build-arg NODE_ENV=production \
             .
-          echo "✅ Docker image built successfully"
 
   # --------------------------------------------------
-  # JOB 4 — MANUAL APPROVAL #2 (BEFORE PUSH)
+  # MANUAL APPROVAL #2 — BEFORE PUSH
   # --------------------------------------------------
-  approve_before_push:
-    name: Approve Push to GAR
+  approve-before-push:
+    name: Manual Approval → Push to GAR
     needs: build-docker-image
     runs-on: ubuntu-latest
-    environment: manual-approval   # <-- Approval gate #2
+
     steps:
-      - run: echo "Waiting for approval to push images to GAR..."
+      - name: Wait for manual approval
+        uses: trstringer/manual-approval@v1
+        with:
+          secret: ${{ github.TOKEN }}
+          approvers: rahul-dutta   # <-- CHANGE TO YOUR GITHUB USERNAME
+          minimum-approvals: 1
+          issue-title: "Approve GAR Push for ${{ github.ref_name }}"
+          issue-body: |
+            Docker image built successfully.
+            Please approve to push to Google Artifact Registry.
 
   # --------------------------------------------------
   # JOB 5 — PUSH TO GAR (AFTER APPROVAL)
   # --------------------------------------------------
   push-to-gar:
     name: Push to Google Artifact Registry
-    needs: approve_before_push
+    needs: approve-before-push
     runs-on: ubuntu-latest
 
     steps:
@@ -151,43 +137,13 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Configure Docker for Artifact Registry
+      - name: Configure Docker auth
         run: |
           gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
-      - name: Push Docker image to Google Artifact Registry
+      - name: Push Docker image
         run: |
-          echo "🚀 Pushing Docker images to Artifact Registry..."
+          IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
 
-          docker push ${{ needs.build-docker-image.outputs.image_tag_gittag }}
-          echo "✅ Pushed: ${{ needs.build-docker-image.outputs.image_tag_gittag }}"
-
-          docker push ${{ needs.build-docker-image.outputs.image_tag_latest }}
-          echo "✅ Pushed: ${{ needs.build-docker-image.outputs.image_tag_latest }}"
-
-      - name: Verify image in Artifact Registry
-        run: |
-          echo "🔍 Verifying image in Artifact Registry..."
-          gcloud artifacts docker images list \
-            ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.GAR_REPO }} \
-            --include-tags \
-            --filter="package=${{ env.IMAGE_NAME }}" \
-            --format="table(package,version,CREATE_TIME,UPDATE_TIME)" \
-            --limit=5
-
-      - name: 📊 Deployment Summary
-        if: success()
-        run: |
-          echo "════════════════════════════════════════════════════════════════"
-          echo "✅ DOCKER IMAGE PUSHED SUCCESSFULLY!"
-          echo "════════════════════════════════════════════════════════════════"
-          echo ""
-          echo "🏷️  Tags Pushed:"
-          echo "  - ${{ github.ref_name }}"
-          echo "  - latest"
-          echo ""
-          echo "🔗 Full Image Paths:"
-          echo "  ${{ needs.build-docker-image.outputs.image_tag_gittag }}"
-          echo "  ${{ needs.build-docker-image.outputs.image_tag_latest }}"
-          echo ""
-          echo "════════════════════════════════════════════════════════════════"
+          docker push ${IMAGE_BASE}:${{ github.ref_name }}
+          docker push ${IMAGE_BASE}:latest
