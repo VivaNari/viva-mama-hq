@@ -113,7 +113,7 @@ jobs:
               uses: trstringer/manual-approval@v1
               with:
                   secret: ${{ github.TOKEN }}
-                  approvers: rahul-qbit # ⚠️ CHANGE TO YOUR GITHUB USERNAME
+                  approvers: rahul-qbit,souvik-dev-sudo
                   minimum-approvals: 1
                   issue-title: "🚀 Approve Docker Build for ${{ github.ref_name }}"
                   issue-body: |
@@ -206,7 +206,7 @@ jobs:
               uses: trstringer/manual-approval@v1
               with:
                   secret: ${{ github.TOKEN }}
-                  approvers: rahul-dutta # ⚠️ CHANGE TO YOUR GITHUB USERNAME
+                  approvers: rahul-qbit,souvik-dev-sudo
                   minimum-approvals: 1
                   issue-title: "📦 Approve GAR Push for ${{ github.ref_name }}"
                   issue-body: |
