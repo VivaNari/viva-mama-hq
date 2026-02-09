@@ -1,13 +1,15 @@
 name: Deploy to UAT Environment
 
 on:
-    pull_request:
-        branches:
-            - "main"
+    # pull_request:
+    #     branches:
+    #         - "main"
+    push:
+        tags:
+            - "v*.*.*"
     workflow_dispatch:
 
 permissions:
-    issues: write # Required for manual approval action
     contents: read
 
 env:
@@ -98,41 +100,14 @@ jobs:
               run: npm run test
 
     # ════════════════════════════════════════════════════════════════
-    # JOB 2: MANUAL APPROVAL BEFORE DOCKER BUILD
-    # ════════════════════════════════════════════════════════════════
-    approve-before-build:
-        name: ✋ Manual Approval → Start Docker Build
-        needs: tests-and-audit
-        runs-on: ubuntu-latest
-
-        steps:
-            # -------------------------------
-            # Wait for Manual Approval
-            # -------------------------------
-            - name: 👤 Wait for manual approval to build
-              uses: trstringer/manual-approval@v1
-              with:
-                  secret: ${{ github.TOKEN }}
-                  approvers: rahul-qbit,souvik-dev-sudo
-                  minimum-approvals: 1
-                  issue-title: "🚀 Approve Docker Build for ${{ github.ref_name }}"
-                  issue-body: |
-                      ✅ Tests & security audits completed successfully.
-
-                      **Next Step:** Docker image build
-
-                      Please review and approve to proceed with Docker build.
-
-    # ════════════════════════════════════════════════════════════════
     # JOB 3: BUILD DOCKER IMAGE
     # ════════════════════════════════════════════════════════════════
     build-docker-image:
         name: 🔨 Build Docker Image
-        needs: approve-before-build
+        needs: tests-and-audit
         runs-on: ubuntu-latest
         outputs:
-            image_tag_gittag: ${{ steps.image_tags.outputs.image_tag_gittag }}
-            image_tag_latest: ${{ steps.image_tags.outputs.image_tag_latest }}
+            tag: ${{ steps.image_tags.outputs.tag }}
 
         steps:
             # -------------------------------
@@ -142,7 +117,7 @@ jobs:
               uses: actions/checkout@v4
 
             # -------------------------------
-            # Authenticate to Google Cloud
+            # Authenticate to Google Cloud (UAT credentials with PROD access)
             # -------------------------------
             - name: 🔐 Authenticate to Google Cloud
               uses: google-github-actions/auth@v2
@@ -160,7 +135,15 @@ jobs:
             # -------------------------------
             - name: 🐳 Configure Docker authentication for Artifact Registry
               run: |
+                  # Set the project explicitly before configuring docker
+                  gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
+
+                  # Configure docker auth
                   gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+                  # Verify authentication
+                  echo "Current project: $(gcloud config get-value project)"
+                  echo "Current account: $(gcloud config get-value account)"
 
             # -------------------------------
             # Set Image Tags
@@ -168,13 +151,21 @@ jobs:
             - name: 🏷️ Set image tags
               id: image_tags
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+                    TAG="pr-${{ github.event.pull_request.number }}"
+                  elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+                    TAG="${{ github.ref_name }}"
+                  else
+                    TAG="latest"
+                  fi
 
-                  echo "image_tag_gittag=${IMAGE_BASE}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
-                  echo "image_tag_latest=${IMAGE_BASE}:latest" >> $GITHUB_OUTPUT
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+
+                  # Save only the TAG to outputs, not the full path with secrets
+                  echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
                   echo "📦 Image will be tagged as:"
-                  echo "  - ${IMAGE_BASE}:${{ github.ref_name }}"
+                  echo "  - ${IMAGE_BASE}:${TAG}"
                   echo "  - ${IMAGE_BASE}:latest"
 
             # -------------------------------
@@ -182,63 +173,53 @@ jobs:
             # -------------------------------
             - name: 🔨 Build Docker image
               run: |
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  TAG="${{ steps.image_tags.outputs.tag }}"
+
                   echo "🔨 Building Docker image..."
                   docker build \
-                    -t ${{ steps.image_tags.outputs.image_tag_gittag }} \
-                    -t ${{ steps.image_tags.outputs.image_tag_latest }} \
+                    -t "${IMAGE_BASE}:${TAG}" \
                     --build-arg NODE_ENV=production \
                     .
                   echo "✅ Docker image built successfully"
 
-    # ════════════════════════════════════════════════════════════════
-    # JOB 4: MANUAL APPROVAL BEFORE PUSHING TO GAR
-    # ════════════════════════════════════════════════════════════════
-    approve-before-push:
-        name: ✋ Manual Approval → Push to GAR
-        needs: build-docker-image
-        runs-on: ubuntu-latest
+            # -------------------------------
+            # Save Docker Image as Artifact
+            # -------------------------------
+            - name: 💾 Save Docker image to file
+              run: |
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  TAG="${{ steps.image_tags.outputs.tag }}"
 
-        steps:
+                  echo "💾 Saving Docker image to tar file..."
+                  docker save "${IMAGE_BASE}:${TAG}" -o /tmp/docker-image.tar
+                  echo "✅ Image saved successfully"
+                  ls -lh /tmp/docker-image.tar
+
             # -------------------------------
-            # Wait for Manual Approval
+            # Upload Docker Image Artifact
             # -------------------------------
-            - name: 👤 Wait for manual approval to push
-              uses: trstringer/manual-approval@v1
+            - name: 📤 Upload Docker image artifact
+              uses: actions/upload-artifact@v4
               with:
-                  secret: ${{ github.TOKEN }}
-                  approvers: rahul-qbit,souvik-dev-sudo
-                  minimum-approvals: 1
-                  issue-title: "📦 Approve GAR Push for ${{ github.ref_name }}"
-                  issue-body: |
-                      ✅ Docker image built successfully.
-
-                      **Next Step:** Push to Google Artifact Registry
-
-                      **Tags:**
-                      - `${{ needs.build-docker-image.outputs.image_tag_gittag }}`
-                      - `${{ needs.build-docker-image.outputs.image_tag_latest }}`
-
-                      Please review and approve to push to Artifact Registry.
+                  name: docker-image
+                  path: /tmp/docker-image.tar
+                  retention-days: 1
+                  compression-level: 0 # Image is already compressed
 
     # ════════════════════════════════════════════════════════════════
-    # JOB 5: PUSH DOCKER IMAGE TO ARTIFACT REGISTRY
+    # JOB 5: PUSH DOCKER IMAGE TO ARTIFACT REGISTRY (PROD)
     # ════════════════════════════════════════════════════════════════
     push-to-gar:
         name: 📤 Push to Google Artifact Registry
-        needs: [approve-before-push, build-docker-image]
+        needs: [build-docker-image]
         runs-on: ubuntu-latest
         outputs:
-            image_tag: ${{ steps.set_tag.outputs.image_tag }}
+            tag: ${{ needs.build-docker-image.outputs.tag }}
 
         steps:
             # -------------------------------
-            # Checkout Source Code
-            # -------------------------------
-            - name: 📥 Checkout code
-              uses: actions/checkout@v4
-
-            # -------------------------------
-            # Authenticate to Google Cloud
+            # Authenticate to Google Cloud (UAT credentials with PROD access)
             # -------------------------------
             - name: 🔐 Authenticate to Google Cloud
               uses: google-github-actions/auth@v2
@@ -256,37 +237,69 @@ jobs:
             # -------------------------------
             - name: 🐳 Configure Docker authentication
               run: |
-                  gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+                  # Set the project explicitly before configuring docker
+                  gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
+
+                  # Configure docker auth
+                  gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+                  # Verify authentication
+                  echo "Current project: $(gcloud config get-value project)"
+                  echo "Current account: $(gcloud config get-value account)"
 
             # -------------------------------
-            # Set Output Tag
+            # Download Docker Image Artifact
             # -------------------------------
-            - name: 🏷️ Set output image tag
-              id: set_tag
+            - name: 📥 Download Docker image artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: docker-image
+                  path: /tmp
+
+            # -------------------------------
+            # Load and Push Docker Image
+            # -------------------------------
+            - name: 🔄 Load, tag, and push Docker image
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
-                  echo "image_tag=${IMAGE_BASE}:${{ github.ref_name }}" >> $GITHUB_OUTPUT
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  TAG="${{ needs.build-docker-image.outputs.tag }}"
 
-            # -------------------------------
-            # Rebuild and Push Image
-            # -------------------------------
-            - name: 🚀 Rebuild and push Docker image
-              run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  # Verify repository is accessible
+                  echo "🔍 Verifying repository access..."
+                  gcloud artifacts repositories describe ${{ env.GAR_REPO }} \
+                    --location=${{ env.GCP_REGION }} \
+                    --project=${{ secrets.PROD_GCP_PROJECT_ID }}
+                  echo "✅ Repository is accessible"
+                  echo ""
 
-                  echo "🔨 Rebuilding Docker image (images don't persist between jobs)..."
-                  docker build \
-                    -t ${IMAGE_BASE}:${{ github.ref_name }} \
-                    -t ${IMAGE_BASE}:latest \
-                    --build-arg NODE_ENV=production \
-                    .
+                  echo "🔄 Loading Docker image from tar file..."
+                  ls -lh /tmp/docker-image.tar
+                  docker load -i /tmp/docker-image.tar
+                  echo "✅ Image loaded successfully"
+                  echo ""
+
+                  echo "📋 Loaded image:"
+                  docker images | grep ${{ env.IMAGE_NAME }} || true
+                  echo ""
+
+                  echo "🏷️ Tagging image with latest..."
+                  docker tag "${IMAGE_BASE}:${TAG}" "${IMAGE_BASE}:latest"
+                  echo "✅ Tagged successfully"
+                  echo ""
+
+                  echo "📋 Current tags:"
+                  docker images | grep ${{ env.IMAGE_NAME }}
+                  echo ""
 
                   echo "📤 Pushing images to Artifact Registry..."
-                  docker push ${IMAGE_BASE}:${{ github.ref_name }}
-                  echo "✅ Pushed: ${IMAGE_BASE}:${{ github.ref_name }}"
+                  echo "Pushing version tag: ${IMAGE_BASE}:${TAG}"
+                  docker push "${IMAGE_BASE}:${TAG}"
+                  echo "✅ Pushed version tag"
+                  echo ""
 
-                  docker push ${IMAGE_BASE}:latest
-                  echo "✅ Pushed: ${IMAGE_BASE}:latest"
+                  echo "Pushing latest tag: ${IMAGE_BASE}:latest"
+                  docker push "${IMAGE_BASE}:latest"
+                  echo "✅ Pushed latest tag"
 
             # -------------------------------
             # Verify Image in Registry
@@ -295,14 +308,14 @@ jobs:
               run: |
                   echo "🔍 Verifying pushed images..."
                   gcloud artifacts docker images list \
-                    ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.UAT_GCP_PROJECT_ID }}/${{ env.GAR_REPO }} \
+                    ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }} \
                     --include-tags \
                     --filter="package=${{ env.IMAGE_NAME }}" \
                     --format="table(package,version,CREATE_TIME,UPDATE_TIME)" \
                     --limit=5
 
     # ════════════════════════════════════════════════════════════════
-    # JOB 7: DEPLOY TO CLOUD RUN (UAT)
+    # JOB 6: DEPLOY TO CLOUD RUN (UAT)
     # ════════════════════════════════════════════════════════════════
     deploy-to-cloud-run:
         name: 🚀 Deploy to Cloud Run (UAT)
@@ -311,7 +324,7 @@ jobs:
 
         steps:
             # -------------------------------
-            # Authenticate to Google Cloud
+            # Authenticate to Google Cloud (UAT)
             # -------------------------------
             - name: 🔐 Authenticate to Google Cloud (UAT)
               uses: google-github-actions/auth@v2
@@ -329,9 +342,14 @@ jobs:
             # -------------------------------
             - name: 🚀 Deploy to Cloud Run
               run: |
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  TAG="${{ needs.push-to-gar.outputs.tag }}"
+                  IMAGE_URL="${IMAGE_BASE}:${TAG}"
+
                   echo "🚀 Deploying to Cloud Run..."
+                  echo "Image: ${IMAGE_URL}"
                   gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
-                    --image=${{ needs.push-to-gar.outputs.image_tag }} \
+                    --image="${IMAGE_URL}" \
                     --region=${{ env.GCP_REGION }} \
                     --platform=managed \
                     --project=${{ secrets.UAT_GCP_PROJECT_ID }}
@@ -355,6 +373,10 @@ jobs:
             # -------------------------------
             - name: 📊 Create deployment summary
               run: |
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  TAG="${{ needs.push-to-gar.outputs.tag }}"
+                  IMAGE_URL="${IMAGE_BASE}:${TAG}"
+
                   echo "## 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "### 📋 Deployment Details" >> $GITHUB_STEP_SUMMARY
@@ -364,7 +386,7 @@ jobs:
                   echo "| **Version** | \`${{ github.ref_name }}\` |" >> $GITHUB_STEP_SUMMARY
                   echo "| **Service** | \`${{ env.CLOUD_RUN_SERVICE }}\` |" >> $GITHUB_STEP_SUMMARY
                   echo "| **Region** | \`${{ env.GCP_REGION }}\` |" >> $GITHUB_STEP_SUMMARY
-                  echo "| **Image** | \`${{ needs.push-to-gar.outputs.image_tag }}\` |" >> $GITHUB_STEP_SUMMARY
+                  echo "| **Image** | \`${IMAGE_URL}\` |" >> $GITHUB_STEP_SUMMARY
                   echo "| **Service URL** | ${{ steps.get_url.outputs.service_url }} |" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "### ✅ Next Steps" >> $GITHUB_STEP_SUMMARY
@@ -377,18 +399,22 @@ jobs:
             # -------------------------------
             - name: 🎉 Deployment complete
               run: |
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  TAG="${{ needs.push-to-gar.outputs.tag }}"
+                  IMAGE_URL="${IMAGE_BASE}:${TAG}"
+
                   echo "════════════════════════════════════════════════════════════════"
                   echo "✅ DEPLOYMENT TO UAT SUCCESSFUL!"
                   echo "════════════════════════════════════════════════════════════════"
                   echo ""
                   echo "🌐 Service URL: ${{ steps.get_url.outputs.service_url }}"
-                  echo "📦 Image: ${{ needs.push-to-gar.outputs.image_tag }}"
+                  echo "📦 Image: ${IMAGE_URL}"
                   echo "🏷️  Version: ${{ github.ref_name }}"
                   echo ""
                   echo "════════════════════════════════════════════════════════════════"
 
     # ════════════════════════════════════════════════════════════════
-    # JOB 8: CLEANUP (RUNS ALWAYS)
+    # JOB 7: CLEANUP (RUNS ALWAYS)
     # ════════════════════════════════════════════════════════════════
     cleanup:
         name: 🧹 Cleanup
