@@ -1,4 +1,4 @@
-name: Deploy to UAT Environment
+name: Deploy to UAT Environment (Old version)
 
 on:
     # pull_request:
