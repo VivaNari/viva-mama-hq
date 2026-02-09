@@ -16,7 +16,7 @@ app.use(correlationIdMiddleware);
 app.use(requestLoggerMiddleware);
 
 app.get("/", (_, res) => {
-    res.status(200).json({ message: "You have reached the root api endpoint" });
+    res.status(200).json({ message: "Yes, you have reached the root api endpoint" });
 });
 
 app.get("/health", (_, res) => {
