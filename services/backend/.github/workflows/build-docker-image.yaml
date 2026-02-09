@@ -1,0 +1,82 @@
+name: Docker Build
+
+on:
+    workflow_dispatch:
+
+permissions:
+    contents: read
+
+env:
+    GCP_REGION: asia-south1
+    GAR_REPO: vivamama-repo
+    IMAGE_NAME: vivamama-backend
+
+jobs:
+    build-docker-image:
+        name: 🔨 Build Docker Image
+        runs-on: ubuntu-latest
+        outputs:
+            tag: ${{ steps.image_tags.outputs.tag }}
+
+        steps:
+            # Checkout
+            - name: 📥 Checkout code
+              uses: actions/checkout@v4
+
+            # Auth GCP
+            - name: 🔐 Authenticate to Google Cloud
+              uses: google-github-actions/auth@v2
+              with:
+                  credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+
+            # Setup gcloud
+            - name: ⚙️ Set up Cloud SDK
+              uses: google-github-actions/setup-gcloud@v2
+
+            # Docker Auth
+            - name: 🐳 Configure Docker authentication
+              run: |
+                  gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
+                  gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+            # Tag Logic
+            - name: 🏷️ Set image tags
+              id: image_tags
+              run: |
+                  if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+                    TAG="pr-${{ github.event.pull_request.number }}"
+                  elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+                    TAG="${{ github.ref_name }}"
+                  else
+                    TAG="latest"
+                  fi
+
+                  echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+            # Build Image
+            - name: 🔨 Build Docker image
+              run: |
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  TAG="${{ steps.image_tags.outputs.tag }}"
+
+                  docker build \
+                    -t "${IMAGE_BASE}:${TAG}" \
+                    --build-arg NODE_ENV=production \
+                    .
+
+            # Save Image
+            - name: 💾 Save Docker image
+              run: |
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  TAG="${{ steps.image_tags.outputs.tag }}"
+
+                  docker save "${IMAGE_BASE}:${TAG}" -o /tmp/docker-image.tar
+
+            # Upload Artifact
+            - name: 📤 Upload Docker image artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: docker-image
+                  path: /tmp/docker-image.tar
+                  retention-days: 1
+                  compression-level: 0

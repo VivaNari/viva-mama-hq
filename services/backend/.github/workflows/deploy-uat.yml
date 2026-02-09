@@ -10,7 +10,6 @@ on:
     workflow_dispatch:
 
 permissions:
-    issues: write # Required for manual approval action
     contents: read
 
 env:
@@ -99,32 +98,6 @@ jobs:
             # -------------------------------
             - name: Run API automation tests
               run: npm run test
-
-    # ════════════════════════════════════════════════════════════════
-    # JOB 2: MANUAL APPROVAL BEFORE DOCKER BUILD
-    # ════════════════════════════════════════════════════════════════
-    # approve-before-build:
-    #     name: ✋ Manual Approval → Start Docker Build
-    #     needs: tests-and-audit
-    #     runs-on: ubuntu-latest
-
-    #     steps:
-    #         # -------------------------------
-    #         # Wait for Manual Approval
-    #         # -------------------------------
-    #         - name: 👤 Wait for manual approval to build
-    #           uses: trstringer/manual-approval@v1
-    #           with:
-    #               secret: ${{ github.TOKEN }}
-    #               approvers: rahul-qbit,souvik-dev-sudo
-    #               minimum-approvals: 1
-    #               issue-title: "🚀 Approve Docker Build for ${{ github.ref_name }}"
-    #               issue-body: |
-    #                   ✅ Tests & security audits completed successfully.
-
-    #                   **Next Step:** Docker image build
-
-    #                   Please review and approve to proceed with Docker build.
 
     # ════════════════════════════════════════════════════════════════
     # JOB 3: BUILD DOCKER IMAGE
@@ -235,39 +208,10 @@ jobs:
                   compression-level: 0 # Image is already compressed
 
     # ════════════════════════════════════════════════════════════════
-    # JOB 4: MANUAL APPROVAL BEFORE PUSHING TO GAR
-    # ════════════════════════════════════════════════════════════════
-    # approve-before-push:
-    #     name: ✋ Manual Approval → Push to GAR
-    #     needs: build-docker-image
-    #     runs-on: ubuntu-latest
-
-    #     steps:
-    #         # -------------------------------
-    #         # Wait for Manual Approval
-    #         # -------------------------------
-    #         - name: 👤 Wait for manual approval to push
-    #           uses: trstringer/manual-approval@v1
-    #           with:
-    #               secret: ${{ github.TOKEN }}
-    #               approvers: rahul-qbit,souvik-dev-sudo
-    #               minimum-approvals: 1
-    #               issue-title: "📦 Approve GAR Push for ${{ github.ref_name }}"
-    #               issue-body: |
-    #                   ✅ Docker image built successfully.
-
-    #                   **Next Step:** Push to Google Artifact Registry
-
-    #                   **Tag:** `${{ needs.build-docker-image.outputs.tag }}`
-
-    #                   Please review and approve to push to Artifact Registry.
-
-    # ════════════════════════════════════════════════════════════════
     # JOB 5: PUSH DOCKER IMAGE TO ARTIFACT REGISTRY (PROD)
     # ════════════════════════════════════════════════════════════════
     push-to-gar:
         name: 📤 Push to Google Artifact Registry
-        # needs: [approve-before-push, build-docker-image]
         needs: [build-docker-image]
         runs-on: ubuntu-latest
         outputs:
