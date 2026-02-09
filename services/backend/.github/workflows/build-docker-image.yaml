@@ -1,7 +1,12 @@
-name: Docker Build
+name: Build Docker Image
 
 on:
     workflow_dispatch:
+        inputs:
+            image_tag:
+                description: "Docker Image Tag (example: v1.0.0 or latest)"
+                required: true
+                default: "latest"
 
 permissions:
     contents: read
@@ -13,10 +18,8 @@ env:
 
 jobs:
     build-docker-image:
-        name: 🔨 Build Docker Image
+        name: 🔨 Build & Push Docker Image
         runs-on: ubuntu-latest
-        outputs:
-            tag: ${{ steps.image_tags.outputs.tag }}
 
         steps:
             # Checkout
@@ -39,44 +42,30 @@ jobs:
                   gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
                   gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
-            # Tag Logic
-            - name: 🏷️ Set image tags
-              id: image_tags
-              run: |
-                  if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-                    TAG="pr-${{ github.event.pull_request.number }}"
-                  elif [[ "${{ github.ref_type }}" == "tag" ]]; then
-                    TAG="${{ github.ref_name }}"
-                  else
-                    TAG="latest"
-                  fi
-
-                  echo "tag=${TAG}" >> $GITHUB_OUTPUT
+            # Set Tag
+            - name: 🏷️ Set image tag
+              run: echo "TAG=${{ github.event.inputs.image_tag }}" >> $GITHUB_ENV
 
             # Build Image
             - name: 🔨 Build Docker image
               run: |
                   IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
-                  TAG="${{ steps.image_tags.outputs.tag }}"
 
                   docker build \
                     -t "${IMAGE_BASE}:${TAG}" \
                     --build-arg NODE_ENV=production \
                     .
 
-            # Save Image
-            - name: 💾 Save Docker image
+            # Push Image
+            - name: 📤 Push Docker image to Artifact Registry
               run: |
                   IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
-                  TAG="${{ steps.image_tags.outputs.tag }}"
 
-                  docker save "${IMAGE_BASE}:${TAG}" -o /tmp/docker-image.tar
+                  echo "Pushing version tag..."
+                  docker push "${IMAGE_BASE}:${TAG}"
 
-            # Upload Artifact
-            - name: 📤 Upload Docker image artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: docker-image
-                  path: /tmp/docker-image.tar
-                  retention-days: 1
-                  compression-level: 0
+                  echo "Tagging latest..."
+                  docker tag "${IMAGE_BASE}:${TAG}" "${IMAGE_BASE}:latest"
+
+                  echo "Pushing latest..."
+                  docker push "${IMAGE_BASE}:latest"
