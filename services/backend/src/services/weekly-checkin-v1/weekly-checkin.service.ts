@@ -393,9 +393,15 @@ class WeeklyCheckinService {
                 return { success: false, message: saveResult.error || "Failed to save answer" };
             }
 
+            // [FIX] Re-fetch user to get updated user_category
+            const updatedUser = await UserModel.findById(userId);
+            if (!updatedUser) {
+                return { success: false, message: "User not found after update" };
+            }
+
             // 8. Move to next node
             const nextNodeId = await this.flowService.moveToNextNode(
-                user,
+                updatedUser,
                 flowInstance,
                 flowDefinition,
                 nodeId,
@@ -404,7 +410,7 @@ class WeeklyCheckinService {
 
             // 9. Handle flow completion or next question
             if (!nextNodeId) {
-                return await this.completeCheckin(user, flowInstance, flowDefinition, week);
+                return await this.completeCheckin(updatedUser, flowInstance, flowDefinition, week);
             }
 
             // 10. Get next question
@@ -415,7 +421,7 @@ class WeeklyCheckinService {
             }
 
             const questionResult = await this.getNextQuestion(
-                user,
+                updatedUser,
                 updatedInstance,
                 flowDefinition,
                 week,
@@ -423,11 +429,16 @@ class WeeklyCheckinService {
 
             if (!questionResult.question) {
                 // No more questions - complete the flow
-                return await this.completeCheckin(user, updatedInstance, flowDefinition, week);
+                return await this.completeCheckin(
+                    updatedUser,
+                    updatedInstance,
+                    flowDefinition,
+                    week,
+                );
             }
 
             // 11. Save AI message for the next question
-            await this.saveQuestionMessage(user, updatedInstance, questionResult.question);
+            await this.saveQuestionMessage(updatedUser, updatedInstance, questionResult.question);
 
             logger.info(
                 {

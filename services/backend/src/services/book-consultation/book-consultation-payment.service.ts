@@ -34,6 +34,7 @@ class BookConsultationPaymentService extends BaseService<IBookConsultationOrder>
     public async createOrder({
         amount,
         expertId,
+        date,
         userId,
         response,
     }: ICreateIBookConsultationOrderPayload) {
@@ -55,6 +56,7 @@ class BookConsultationPaymentService extends BaseService<IBookConsultationOrder>
                 amount: amount * 100,
                 currency: "INR",
                 status: "created",
+                preferred_consultation_date: date,
             });
 
             return sendResponse({
@@ -145,6 +147,7 @@ class BookConsultationPaymentService extends BaseService<IBookConsultationOrder>
                 consultatorId: updatedOrder.expert_id,
                 consultationType: ConsultationTypeEnum.EXPERT,
                 requestStatus: "PENDING",
+                preferred_consultation_date: updatedOrder.preferred_consultation_date,
             } as any);
 
             try {

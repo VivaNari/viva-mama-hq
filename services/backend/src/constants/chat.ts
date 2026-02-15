@@ -29,6 +29,16 @@ export const ELIMINATION_INDICATORS = [
 
 export const BREASTFEEDING_DEPENDENT_INDICATORS = ["Lactation Status", "Supplement Adherence"];
 
+export const NP_WOMEN_INDICATORS = ["Delivery Type", "Delivery Outcome"];
+export const NN_WOMEN_INDICATORS = [
+    "Conception Method",
+    "Pregnancy Conditions",
+    "Delivery Type",
+    "Delivery Outcome",
+    "Social Support",
+    "Parity",
+];
+
 export const STOPPED_BREASTFEEDING_SCORE = -1;
 
 // ============================================

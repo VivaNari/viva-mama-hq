@@ -8,11 +8,13 @@ import {
     IFlowNode,
     FlowInstanceStateEnum,
 } from "../../types/chat.types";
-import { IUser } from "../../types";
+import { EUserCategory, IUser } from "../../types";
 import {
     ELIMINATION_INDICATORS,
     BREASTFEEDING_DEPENDENT_INDICATORS,
     WEEKLY_CHECKIN_SLUG,
+    NP_WOMEN_INDICATORS,
+    NN_WOMEN_INDICATORS,
 } from "../../constants/chat";
 import logger from "../../utils/logger";
 
@@ -168,6 +170,40 @@ class FlowService {
     }
 
     /**
+     * Check if node is valid based on NP women status true
+     */
+    isNodeValidForNPWomen(node: IFlowNode, isNPWomen: boolean): NodeEligibilityResult {
+        console.log("Checking is node valid for NP woman", node.indicator, isNPWomen);
+        if (!NP_WOMEN_INDICATORS.includes(node.indicator)) {
+            return { isEligible: true };
+        }
+
+        return {
+            isEligible: !isNPWomen,
+            reason: !isNPWomen
+                ? undefined
+                : `Node requires NP women (indicator: ${node.indicator})`,
+        };
+    }
+
+    /**
+     * Check if node is valid based on NN women status true
+     */
+    isNodeValidForNNWomen(node: IFlowNode, isNNWomen: boolean): NodeEligibilityResult {
+        console.log("Checking is node valid for NN woman", node.indicator, isNNWomen);
+        if (!NN_WOMEN_INDICATORS.includes(node.indicator)) {
+            return { isEligible: true };
+        }
+
+        return {
+            isEligible: !isNNWomen,
+            reason: !isNNWomen
+                ? undefined
+                : `Node requires NN women (indicator: ${node.indicator})`,
+        };
+    }
+
+    /**
      * Comprehensive node eligibility check
      */
     async checkNodeEligibility(
@@ -199,6 +235,24 @@ class FlowService {
         );
         if (!eliminationResult.isEligible) {
             return eliminationResult;
+        }
+
+        // 4. Check NP women dependency
+        const npWomenResult = this.isNodeValidForNPWomen(
+            node,
+            user.user_category == EUserCategory.NP,
+        );
+        if (!npWomenResult.isEligible) {
+            return npWomenResult;
+        }
+
+        // 5. Check NN women dependency
+        const nnWomenResult = this.isNodeValidForNNWomen(
+            node,
+            user.user_category == EUserCategory.NN,
+        );
+        if (!nnWomenResult.isEligible) {
+            return nnWomenResult;
         }
 
         return { isEligible: true };

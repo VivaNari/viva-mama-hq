@@ -14,10 +14,14 @@ export class ConsultationController {
 
     requestCallback = async (request: Request, response: Response, next: NextFunction) => {
         try {
-            const { consultatorId } = request.body;
+            const { consultatorId, preferred_consultation_date } = request.body;
             const userId = request.user._id;
 
-            const result = await this.consultationService.requestCallback(userId, consultatorId);
+            const result = await this.consultationService.requestCallback(
+                userId,
+                consultatorId,
+                preferred_consultation_date,
+            );
 
             sendResponse({
                 data: result,

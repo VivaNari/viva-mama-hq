@@ -15,9 +15,9 @@ export default class BookConsultationController {
             const req = request as AuthenticatedRequest;
             const userId = req.user._id;
 
-            const { amount, expertId } = req.body;
+            const { amount, expertId, date } = req.body;
 
-            if (!amount || !expertId) {
+            if (!amount || !expertId || !date) {
                 sendResponse({
                     data: {},
                     statusCode: StatusCodes.BAD_REQUEST,
@@ -30,6 +30,7 @@ export default class BookConsultationController {
             await this.bookConsultationService.createOrder({
                 amount,
                 expertId,
+                date,
                 userId,
                 response,
             });

@@ -18,6 +18,7 @@ export const redisSubscriber = new Redis({
     port: parseInt(process.env.REDIS_PORT || "6379"),
     password: process.env.REDIS_PASSWORD || "",
     maxRetriesPerRequest: 3,
+    enableReadyCheck: false, // Disable ready check to avoid INFO command in subscriber mode
     retryStrategy(times) {
         const delay = Math.min(times * 50, 2000);
         return delay;

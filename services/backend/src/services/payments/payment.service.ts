@@ -163,9 +163,7 @@ class PaymentService extends BaseService<IPaymentOrder> {
         response: Response;
     }) {
         try {
-            console.log("qqqqqqqqqqqqq", plan, billingCycle);
             const user = (await UserModel.findById(userId)) as IUser;
-            console.log("userrrrrrrrrrr", user);
             if (!user) {
                 sendResponse({
                     data: {},
