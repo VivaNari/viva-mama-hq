@@ -7,6 +7,9 @@ import { ConsultationTypeEnum, IUserActiveConsultations } from '../types/consult
 import { convertDateToIST } from '../utils/convertDateToIST'
 
 const ActiveConsultation = ({ item }: { item: IUserActiveConsultations }) => {
+    if (!item.preferred_consultation_date || new Date(item.preferred_consultation_date) < new Date()) {
+        return null;
+    }
     return (
         <View style={{ flexDirection: 'row', marginBottom: 8 }}>
             <LinearGradient
@@ -28,14 +31,14 @@ const ActiveConsultation = ({ item }: { item: IUserActiveConsultations }) => {
                 <Text
                     style={[
                         {
-                            fontSize: 16,
+                            fontSize: 14,
                             flexShrink: 1,
                             color: colors.white,
                         },
                         globalStyles.fontSemiBold
                     ]}
                 >
-                    You have an upcoming consultation with {item.consultationType === ConsultationTypeEnum.CARE_MANAGER ? "Care Manager" : "Expert"}: {item.consultatorId.name}, initiated at {convertDateToIST(item.createdAt)}
+                    You have an upcoming consultation with {item.consultationType === ConsultationTypeEnum.CARE_MANAGER ? "Care Manager" : "Expert"}: {item.consultatorId.name}, initiated at {convertDateToIST(item.preferred_consultation_date)}
 
                 </Text>
             </LinearGradient>

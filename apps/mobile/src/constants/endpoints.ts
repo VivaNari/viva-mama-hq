@@ -2,7 +2,7 @@ import { API_VERSION, BASE_API_URL as RN_BASE_API_URL } from "@env";
 
 // Use environment variable in production, fallback for development
 // export const BASE_API_URL = "https://d8aca411a7e2.ngrok-free.app";
-export const BASE_API_URL = "http://192.168.1.11:4000";
+export const BASE_API_URL = "http://192.168.1.11:4001";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
 export const GUIDED_FLOW_START = "/api/v1/chat/checkin/start";

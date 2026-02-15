@@ -8,6 +8,7 @@ export interface IUserActiveConsultations {
   consultationType: ConsultationTypeEnum;
   requestStatus: RequestCallbackStatusEnum;
   createdAt: string;
+  preferred_consultation_date: string;
 }
 
 export enum ConsultationTypeEnum {

@@ -8,11 +8,11 @@ export const TypingIndicator: React.FC = () => {
     return (
         <View
             style={styles.container}
-            accessibilityLabel="AI is thinking"
+            accessibilityLabel="Viva AI is thinking"
             accessibilityRole="text"
         >
             <Text style={[styles.text, globalStyles.fontSemiBold]}>
-                AI is thinking...
+                Viva is thinking...
             </Text>
         </View>
     );

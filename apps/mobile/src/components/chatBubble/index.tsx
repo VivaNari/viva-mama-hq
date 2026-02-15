@@ -23,6 +23,7 @@ export const ChatBubble: React.FC<Props> = ({
 	onAnimationComplete,
 	shouldAnimate,
 	onBookmarkPress,
+	isBookmarked,
 }) => {
 	if (shouldAnimate && isAiMessage(message) && onAnimationComplete) {
 		return (
@@ -51,6 +52,7 @@ export const ChatBubble: React.FC<Props> = ({
 			onDatePickerOpen={onDatePickerOpen}
 			onNotPregnantSelect={onNotPregnantSelect}
 			onBookmarkPress={onBookmarkPress}
+			isBookmarked={isBookmarked}
 		/>
 	);
 };

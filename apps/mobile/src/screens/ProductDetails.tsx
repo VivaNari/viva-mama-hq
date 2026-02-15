@@ -173,7 +173,7 @@ const ProductDetails = () => {
             <View style={styles.footer}>
                 <GradientButtonWithSlightRadius
                     onPress={() => Linking.openURL(product.productAffiliateLink)}
-                    title="Buy Now"
+                    title="Buy at Amazon"
                     fullRounded
                 />
             </View>

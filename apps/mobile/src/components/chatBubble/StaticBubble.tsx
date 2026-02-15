@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { globalStyles } from '../../public/styles/globalStyles';
 import {
@@ -8,14 +8,14 @@ import {
 } from '../../types/chat.types';
 import {
     isAiMessage,
-    isTextInputMessage,
-    isMultiSelectMessage,
-    isDeliveryDateNode,
     isChatbotMessage,
+    isDeliveryDateNode,
+    isMultiSelectMessage,
+    isTextInputMessage,
 } from '../../utils/messageHelpers';
 import { bubbleStyles } from './styles';
-import { colors } from '../../public/assets/colors';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import { colors } from '../../public/assets/colors';
 
 interface StaticBubbleProps {
     isFirst: boolean;
@@ -29,6 +29,7 @@ interface StaticBubbleProps {
     onDatePickerOpen: () => void;
     onNotPregnantSelect: () => void;
     onBookmarkPress: (id: string) => void;
+    isBookmarked?: boolean;
 }
 
 export const StaticBubble: React.FC<StaticBubbleProps> = ({
@@ -43,14 +44,13 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
     onDatePickerOpen,
     onNotPregnantSelect,
     onBookmarkPress,
+    isBookmarked,
 }) => {
     const isAi = isAiMessage(message);
     const isChatbot = isChatbotMessage(message);
     const isTextInput = isAi && isTextInputMessage(message);
     const isMultiSelect = isAi && isMultiSelectMessage(message);
     const isDeliveryDate = isAi && isDeliveryDateNode(message);
-
-
 
     const showOptions =
         isAi &&
@@ -171,12 +171,9 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                     <TouchableOpacity
                         onPress={() => onBookmarkPress(message.id)}
                         activeOpacity={0.2}
-                        disabled={message.isBookmarkLoading}
                     >
                         {
-                            message.isBookmarkLoading ? (
-                                <ActivityIndicator size="small" color={colors.darkPurple} />
-                            ) : message.isBookmarked ? (
+                            isBookmarked ? (
                                 <MaterialDesignIcons
                                     name='bookmark'
                                     size={20}
@@ -186,7 +183,7 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                                 <MaterialDesignIcons
                                     name='bookmark-outline'
                                     size={20}
-                                    color={colors.darkGray}
+                                    color={colors.darkPurple}
                                 />
                             )
                         }

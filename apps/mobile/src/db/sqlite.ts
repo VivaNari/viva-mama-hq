@@ -75,15 +75,29 @@ class ChatDatabase {
     );
     `;
 
+    const createBookmarkTableQuery = `
+    CREATE TABLE IF NOT EXISTS bookmarks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+
     try {
       await this.database.executeSql(createTableQuery);
       console.log("chat_messages table created");
 
       await this.addColumnIfNotExists("chat_messages", "node_type", "TEXT");
-      await chatDB.addColumnIfNotExists("chat_messages", "uuid", "TEXT");
+      await this.addColumnIfNotExists("chat_messages", "uuid", "TEXT");
 
       await this.database.executeSql(createUserTableQuery);
       console.log("users table created");
+
+      await this.database.executeSql(createBookmarkTableQuery);
+      console.log("Bookmarks table created");
+
+      await this.addColumnIfNotExists("bookmarks", "user_id", "TEXT");
 
       for (const indexQuery of createIndexQueries) {
         await this.database.executeSql(indexQuery);
@@ -319,6 +333,75 @@ class ChatDatabase {
     } catch (error) {
       console.error("❌ Failed to check message existence:", error);
       return false;
+    }
+  }
+
+  async saveBookmark(messageId: string, userId: string): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            INSERT INTO bookmarks (
+                message_id, user_id, timestamp
+            ) VALUES (?, ?, ?);
+        `;
+
+    const params = [messageId, userId, Date.now()];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log("Bookmark saved");
+    } catch (error) {
+      console.error("Failed to save bookmark:", error);
+      throw error;
+    }
+  }
+
+  async deleteBookmark(messageId: string): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+        DELETE FROM bookmarks WHERE message_id = ?;
+    `;
+
+    const params = [messageId];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log("Bookmark deleted");
+    } catch (error) {
+      console.error("Failed to delete bookmark:", error);
+      throw error;
+    }
+  }
+
+  async getBookmarkedMessages(userId: string): Promise<string[]> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT message_id FROM bookmarks 
+            WHERE user_id = ?;
+        `;
+
+    const params = [userId];
+
+    try {
+      const [result] = await this.database!.executeSql(query, params);
+      const bookmarkedMessages: string[] = [];
+
+      for (let i = 0; i < result.rows.length; i++) {
+        bookmarkedMessages.push(result.rows.item(i).message_id);
+      }
+
+      return bookmarkedMessages;
+    } catch (error) {
+      console.error("Failed to get bookmarked messages:", error);
+      throw error;
     }
   }
 

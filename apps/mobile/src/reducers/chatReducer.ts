@@ -107,50 +107,25 @@ export const chatReducer = (
         errorMessage: null,
       };
 
-    case "TOGGLE_BOOKMARK": {
-      const { messageId } = action.payload;
-      const updatedMessages = state.messages.map(msg => {
-        if (msg.type === "ai" && msg.id === messageId) {
-          return { ...msg, isBookmarked: !msg.isBookmarked } as IAiMessage;
-        }
-        return msg;
-      });
-      return {
-        ...state,
-        messages: updatedMessages,
-      };
-    }
-
-    case "SET_MESSAGE_BOOKMARK_LOADING": {
-      const { messageId, isLoading } = action.payload;
-      const updatedMessages = state.messages.map(msg => {
-        if (msg.type === "ai" && msg.id === messageId) {
-          return { ...msg, isBookmarkLoading: isLoading } as IAiMessage;
-        }
-        return msg;
-      });
-      return {
-        ...state,
-        messages: updatedMessages,
-      };
-    }
-
-    case "UPDATE_MESSAGE_BOOKMARK_STATUS": {
-      const { messageId, isBookmarked } = action.payload;
-      const updatedMessages = state.messages.map(msg => {
-        if (msg.type === "ai" && msg.id === messageId) {
-          return { ...msg, isBookmarked } as IAiMessage;
-        }
-        return msg;
-      });
-      return {
-        ...state,
-        messages: updatedMessages,
-      };
-    }
-
     case "RESET":
       return INITIAL_CHAT_STATE;
+
+    case "SET_BOOKMARKED_MESSAGES":
+      return {
+        ...state,
+        bookMarkedMessages: action.payload,
+      };
+
+    case "TOGGLE_BOOKMARK": {
+      const messageId = action.payload;
+      const isBookmarked = state.bookMarkedMessages.includes(messageId);
+      return {
+        ...state,
+        bookMarkedMessages: isBookmarked
+          ? state.bookMarkedMessages.filter(id => id !== messageId)
+          : [...state.bookMarkedMessages, messageId],
+      };
+    }
 
     default:
       return state;

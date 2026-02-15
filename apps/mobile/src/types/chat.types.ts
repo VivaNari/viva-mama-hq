@@ -45,8 +45,6 @@ export interface IAiMessage {
   uuid: string;
   sessionId?: string;
   conversationId?: string;
-  isBookmarked?: boolean;
-  isBookmarkLoading?: boolean;
 }
 
 export interface IUserMessage {
@@ -97,6 +95,7 @@ export interface ChatState {
   selectedMultiOptions: Set<string>;
   connectionStatus: "connecting" | "connected" | "disconnected" | "error";
   errorMessage: string | null;
+  bookMarkedMessages: string[];
 }
 
 export type ChatAction =
@@ -116,15 +115,8 @@ export type ChatAction =
   | { type: "SET_ERROR"; payload: string | null }
   | { type: "RESET" }
   | { type: "RESET_ERROR" }
-  | { type: "TOGGLE_BOOKMARK"; payload: { messageId: string } }
-  | {
-      type: "SET_MESSAGE_BOOKMARK_LOADING";
-      payload: { messageId: string; isLoading: boolean };
-    }
-  | {
-      type: "UPDATE_MESSAGE_BOOKMARK_STATUS";
-      payload: { messageId: string; isBookmarked: boolean };
-    };
+  | { type: "TOGGLE_BOOKMARK"; payload: string }
+  | { type: "SET_BOOKMARKED_MESSAGES"; payload: string[] };
 
 // ============================================
 // Navigation Types
@@ -172,6 +164,7 @@ export interface ChatBubbleProps {
   onNotPregnantSelect: () => void;
   onAnimationComplete?: () => void;
   onBookmarkPress: (id: string) => void;
+  isBookmarked?: boolean;
 }
 
 export interface ChatInputBarProps {

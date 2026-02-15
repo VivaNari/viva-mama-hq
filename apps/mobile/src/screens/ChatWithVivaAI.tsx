@@ -14,13 +14,14 @@ import {
     View,
     Keyboard
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 
 import CustomDatePicker from '../components/CustomDatePicker';
 import { useAuth } from '../context/AuthContext';
 import { chatDB } from '../db/sqlite';
 import { colors } from '../public/assets/colors';
+import ChatDropdownMenu from '../components/ChatDropdownMenu';
 
 import { ChatBubble } from '../components/chatBubble';
 import { ChatInputBar } from '../components/ChatInputBar';
@@ -48,6 +49,7 @@ import { globalStyles } from '../public/styles';
 import { syncUserData } from '../utils/syncUserData';
 import { addAIMessageBookmark } from '../api/addAIMessageBookmark';
 import { removeAIMessageBookmark } from '../api/removeAIMessageBookmark';
+import Lucide from '@react-native-vector-icons/lucide';
 
 const ChatWithVivaAI: React.FC = () => {
     const navigation = useNavigation<any>();
@@ -62,6 +64,7 @@ const ChatWithVivaAI: React.FC = () => {
 
     // Determine if this is a guided flow (request-response) or chatbot (SSE)
     const isGuidedFlow = flowType === FlowType.ONBOARDING || flowType === FlowType.CHECKIN;
+    const isChatbotFlow = flowType === FlowType.CHATBOT;
 
     const {
         state,
@@ -76,14 +79,32 @@ const ChatWithVivaAI: React.FC = () => {
         flowType,
     });
 
+    // console.log("state issss =>>> ", state)
+
     useEffect(() => {
-        console.log("state.messages is => ", state.messages);
-    }, [state.messages])
+        (async function () {
+            if (flowType && shouldSaveHistory(flowType)) {
+                await loadHistory();
+            }
+        })()
+    }, [flowType, loadHistory])
 
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     const [refreshing, setRefreshing] = useState(false);
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+    const [menuVisible, setMenuVisible] = useState(false);
+
+    const handleMenuOptionSelect = (option: 'Bookmarks' | 'About') => {
+        switch (option) {
+            case 'Bookmarks':
+                navigation.navigate('BookmarkedMessages');
+                break;
+            case 'About':
+                setMenuVisible(false);
+                break;
+        }
+    };
 
     const scrollViewRef = useRef<ScrollView>(null);
     const appStateRef = useRef<AppStateStatus>(AppState.currentState);
@@ -343,6 +364,19 @@ const ChatWithVivaAI: React.FC = () => {
 
     useFocusEffect(
         useCallback(() => {
+            const fetchBookmarks = async () => {
+                if (!userId) return;
+                try {
+                    const bookmarkedMessages = await chatDB.getBookmarkedMessages(userId);
+                    dispatch({ type: 'SET_BOOKMARKED_MESSAGES', payload: bookmarkedMessages });
+                } catch (error) {
+                    console.error('Failed to fetch bookmarks on focus', error);
+                }
+            };
+
+            console.log("fetchBookmarks() is calling");
+            fetchBookmarks();
+
             const onBackPress = () => {
                 if (navigation.canGoBack()) {
                     navigation.goBack();
@@ -357,7 +391,7 @@ const ChatWithVivaAI: React.FC = () => {
             const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
 
             return () => subscription.remove();
-        }, [navigation, isFullyOnboarded])
+        }, [navigation, isFullyOnboarded, userId, dispatch])
     );
 
     useEffect(() => {
@@ -391,21 +425,15 @@ const ChatWithVivaAI: React.FC = () => {
     }, []);
 
     const handleBookmarkPress = useCallback(async (messageId: string) => {
-        const message = state.messages.find(m => m.type === 'ai' && m.id === messageId) as IAiMessage | undefined;
-        if (!message || message.isBookmarkLoading) return;
-
-        dispatch({
-            type: 'SET_MESSAGE_BOOKMARK_LOADING',
-            payload: { messageId, isLoading: true }
-        });
+        const getBookmarkedMessages = await chatDB.getBookmarkedMessages(userId as string);
 
         try {
-            if (message.isBookmarked) {
+            if (getBookmarkedMessages.includes(messageId)) {
                 await removeAIMessageBookmark(messageId);
-                dispatch({
-                    type: 'UPDATE_MESSAGE_BOOKMARK_STATUS',
-                    payload: { messageId, isBookmarked: false }
-                });
+                await chatDB.deleteBookmark(messageId);
+                console.log("Bookmarked messages after deleting: ", await chatDB.getBookmarkedMessages(userId as string))
+                dispatch({ type: 'TOGGLE_BOOKMARK', payload: messageId });
+
                 Toast.show({
                     type: 'success',
                     text1: 'Bookmark Removed',
@@ -413,14 +441,13 @@ const ChatWithVivaAI: React.FC = () => {
                 });
             } else {
                 await addAIMessageBookmark(messageId);
-                dispatch({
-                    type: 'UPDATE_MESSAGE_BOOKMARK_STATUS',
-                    payload: { messageId, isBookmarked: true }
-                });
+                await chatDB.saveBookmark(messageId, userId as string);
+                console.log("Bookmarked messages after adding: ", await chatDB.getBookmarkedMessages(userId as string))
+                dispatch({ type: 'TOGGLE_BOOKMARK', payload: messageId });
+
                 Toast.show({
                     type: 'success',
                     text1: 'Bookmark Added',
-                    text2: 'Go to Profile > Bookmarked Messages to view bookmarks',
                     position: 'bottom',
                 });
             }
@@ -433,27 +460,73 @@ const ChatWithVivaAI: React.FC = () => {
                 position: 'bottom',
             });
         } finally {
-            dispatch({
-                type: 'SET_MESSAGE_BOOKMARK_LOADING',
-                payload: { messageId, isLoading: false }
-            });
-        }
-    }, [state.messages, dispatch]);
 
-    const insets = useSafeAreaInsets();
+        }
+    }, [dispatch, userId]);
 
     return (
-        <View style={[styles.container, { paddingTop: insets.top }]}>
+        <SafeAreaView style={[styles.container]}>
             <KeyboardAvoidingView
-                behavior="padding"
+                behavior={isKeyboardVisible ? 'padding' : undefined}
                 style={{ flex: 1 }}
                 keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
                 enabled={true}
             >
                 <View style={{ flex: 1 }}>
-                    <View style={styles.vivaIntroContainer}>
-                        <Text style={[styles.vivaIntroText, globalStyles.fontBold]}>Viva, your personal assistant</Text>
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            paddingHorizontal: 10,
+                            marginBottom: 10,
+                            marginTop: 20,
+                            gap: 10
+                        }}
+                    >
+                        {/* Navigate Back */}
+                        <View>
+                            <TouchableOpacity onPress={() => {
+                                navigation.canGoBack() ?
+                                    navigation.goBack() :
+                                    BackHandler.exitApp();
+                            }}>
+                                <Lucide
+                                    name='chevron-left'
+                                    size={20}
+                                    style={{
+                                        padding: 5
+                                    }}
+                                    color={colors.black}
+                                />
+                            </TouchableOpacity>
+                        </View>
+                        <View style={[styles.vivaIntroContainer, { flexShrink: 1, flex: 1 }]}>
+                            <Text style={[styles.vivaIntroText, globalStyles.fontBold]}>Viva, your personal assistant</Text>
+                        </View>
+                        {/* Navigate Back */}
+                        {
+                            isChatbotFlow && (
+                                <View>
+                                    <TouchableOpacity onPress={() => setMenuVisible(true)}>
+                                        <Lucide
+                                            name='ellipsis'
+                                            size={20}
+                                            style={{
+                                                padding: 5
+                                            }}
+                                            color={colors.black}
+                                        />
+                                    </TouchableOpacity>
+                                </View>
+                            )
+                        }
                     </View>
+                    <ChatDropdownMenu
+                        visible={menuVisible}
+                        onClose={() => setMenuVisible(false)}
+                        onOptionSelect={handleMenuOptionSelect}
+                    />
                     <ScrollView
                         ref={scrollViewRef}
                         style={styles.scrollView}
@@ -491,6 +564,11 @@ const ChatWithVivaAI: React.FC = () => {
                                     onNotPregnantSelect={handleNotPregnantSelect}
                                     onAnimationComplete={handleAnimationComplete}
                                     onBookmarkPress={handleBookmarkPress}
+                                    isBookmarked={
+                                        isAiMessage(msg)
+                                            ? state.bookMarkedMessages.includes(msg.id)
+                                            : false
+                                    }
                                 />
                             );
                         })}
@@ -500,7 +578,7 @@ const ChatWithVivaAI: React.FC = () => {
                     </ScrollView>
                 </View>
 
-                <View style={{ paddingBottom: isKeyboardVisible ? 0 : insets.bottom, backgroundColor: colors.white }}>
+                <View style={{ backgroundColor: colors.white }}>
                     <ChatInputBar
                         inputMode={inputMode}
                         inputText={state.inputText}
@@ -520,7 +598,7 @@ const ChatWithVivaAI: React.FC = () => {
                     onSelect={handleDateSelected}
                 />
             </KeyboardAvoidingView>
-        </View>
+        </SafeAreaView>
     );
 };
 
@@ -537,11 +615,8 @@ const styles = StyleSheet.create({
         paddingVertical: 12,
     },
     vivaIntroContainer: {
-        marginTop: 30,
-        marginBottom: 10,
         backgroundColor: colors.lightPurple,
         padding: 10,
-        marginHorizontal: 40,
         borderRadius: 10,
         alignItems: "center",
         borderColor: colors.darkPurple,
@@ -549,7 +624,7 @@ const styles = StyleSheet.create({
     },
     vivaIntroText: {
         color: colors.darkPurple,
-        fontWeight: "600",
+        textAlign: 'center',
         fontSize: 15,
         lineHeight: 20
     }

@@ -14,6 +14,7 @@ import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getExpertById } from "../api/getExpertsById";
 import GradientButtonWithSlightRadius from "../components/GradientButtonWithSlightRadius";
+import CustomDatePicker from "../components/CustomDatePicker";
 import { colors } from "../public/assets/colors";
 import { globalStyles } from "../public/styles";
 import { IExpert, IExpertByIdResponse, IExpertLoadingState } from "../types/expert.types";
@@ -34,18 +35,19 @@ const ExpertDetails = () => {
         uiLoading: false,
         paymentLoading: false
     });
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
     const bookConsultation = async () => {
         try {
-            console.log("RAZORPAY_API_KEY is ", RAZORPAY_API_KEY);
-            console.warn("RAZORPAY_API_KEY is ", RAZORPAY_API_KEY);
             setLoading({
                 ...loading,
                 paymentLoading: true
             });
             const { data } = await apiClientInterceptor().post(RAZORPAY_BOOK_CONSULTATION_CREATE_ORDER, {
                 amount: expert?.remuneration,
-                expertId
+                expertId,
+                date: selectedDate ? selectedDate.toISOString() : new Date().toISOString()
             }) as { data: IPaymentOrderResponse };
 
             const options: any = {
@@ -67,6 +69,8 @@ const ExpertDetails = () => {
                         razorpay_payment_id: data.razorpay_payment_id,
                         razorpay_signature: data.razorpay_signature
                     });
+
+                    setSelectedDate(null);
 
                     Toast.show({
                         type: 'success',
@@ -279,18 +283,52 @@ const ExpertDetails = () => {
 
             {/* Fixed Bottom Action Buttons */}
             <View>
-
                 <View style={styles.buttonRow}>
+                    {/* Date Picker Button */}
+                    <View style={styles.dateButtonWrapper}>
+                        <GradientButtonWithSlightRadius
+                            onPress={() => setShowDatePicker(true)}
+                            fullRounded
+                            borderedOnly={true}
+                            title={selectedDate
+                                ? selectedDate.toLocaleDateString('en-GB', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                })
+                                : 'Select Date'}
+                        />
+                    </View>
+
+                    {/* Book Consultation Button */}
                     <View style={styles.buttonWrapper}>
                         <GradientButtonWithSlightRadius
                             onPress={bookConsultation}
                             fullRounded
-                            title={loading.paymentLoading ? "Processing, Please wait..." : 'Book Consultation'}
-                            disabled={loading.paymentLoading}
+                            title={loading.paymentLoading ? "Processing..." : 'Book Consultation'}
+                            disabled={
+                                loading.paymentLoading ||
+                                !selectedDate ||
+                                (() => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const selected = new Date(selectedDate);
+                                    selected.setHours(0, 0, 0, 0);
+                                    return selected < today;
+                                })()
+                            }
                         />
                     </View>
                 </View>
             </View>
+
+            <CustomDatePicker
+                show={showDatePicker}
+                setShow={setShowDatePicker}
+                selectedDate={selectedDate}
+                onSelect={(date) => setSelectedDate(date)}
+                minimumDate={true}
+            />
         </SafeAreaView>
     );
 };
@@ -437,12 +475,19 @@ const styles = StyleSheet.create({
     },
 
     buttonRow: {
+        flexDirection: 'row',
         paddingHorizontal: 20,
         paddingTop: 8,
         paddingBottom: 16,
+        gap: 12,
+        alignItems: 'center',
+    },
+    dateButtonWrapper: {
+        flex: 0.8,
+        flexDirection: 'row',
     },
     buttonWrapper: {
-        width: '100%',
+        flex: 1,
         flexDirection: 'row',
     },
 });

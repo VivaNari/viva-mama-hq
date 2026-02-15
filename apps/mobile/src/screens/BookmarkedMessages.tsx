@@ -8,6 +8,7 @@ import { removeAIMessageBookmark } from '../api/removeAIMessageBookmark';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { BackendAiMessage, BookmarkedMessageResponse } from '../types/bookmarkedMessages.types';
+import { chatDB } from '../db/sqlite';
 
 
 const BookmarkedMessages: React.FC = () => {
@@ -46,6 +47,7 @@ const BookmarkedMessages: React.FC = () => {
     const handleUnbookmark = async (item: BackendAiMessage) => {
         try {
             await removeAIMessageBookmark(item._id);
+            await chatDB.deleteBookmark(item._id);
             Toast.show({
                 type: 'success',
                 text1: 'Bookmark Removed',
