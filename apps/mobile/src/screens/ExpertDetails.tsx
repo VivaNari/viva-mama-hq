@@ -62,12 +62,12 @@ const ExpertDetails = () => {
                 },
                 theme: { color: colors.darkPurple }
             }
-            RazorpayCheckout.open(options).then(async (data) => {
+            RazorpayCheckout.open(options).then(async (razorpay_data) => {
                 try {
                     await apiClientInterceptor().post(RAZORPAY_BOOK_CONSULTATION_VERIFY_ORDER, {
-                        razorpay_order_id: data.razorpay_order_id,
-                        razorpay_payment_id: data.razorpay_payment_id,
-                        razorpay_signature: data.razorpay_signature
+                        razorpay_order_id: razorpay_data.razorpay_order_id,
+                        razorpay_payment_id: razorpay_data.razorpay_payment_id,
+                        razorpay_signature: razorpay_data.razorpay_signature
                     });
 
                     setSelectedDate(null);
