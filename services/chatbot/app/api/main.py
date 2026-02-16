@@ -194,6 +194,7 @@ async def chat_endpoint(
     )
 
     start = time.time()
+    logger.info(f"hi hi hi hi hi {req}")
     try:
         result = await chat_once(
             req.query,
@@ -202,7 +203,7 @@ async def chat_endpoint(
         )
         
         elapsed = time.time() - start
-        print(result)
+        # print(result)
         logger.info(
             f"[{request_id}] Success: "
             f"intent={result.intent}, "

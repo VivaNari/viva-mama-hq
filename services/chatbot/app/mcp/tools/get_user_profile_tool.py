@@ -117,7 +117,6 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
         user_doc = users.find_one({
             "$or": [
                 {"_id": object_id if isinstance(object_id, ObjectId) else None},
-                {"user_id": int(user_id) if user_id.isdigit() else None}
             ]
         })
         

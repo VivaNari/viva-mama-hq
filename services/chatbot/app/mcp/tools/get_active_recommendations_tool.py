@@ -404,7 +404,7 @@ def format_recommendations_for_prompt(recommendations_data: Dict[str, Any]) -> s
                 
                 parts.append(f"  Q: {question}")
                 parts.append(f"  A: {answer_str}")
-    
+    print("parts", parts)
     return "\n".join(parts)
 
 
