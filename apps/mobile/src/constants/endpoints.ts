@@ -67,6 +67,7 @@ export const USER_REQUEST_CALLBACK = `${API_VERSION_URL}/callback-request`;
 export const USER_ACTIVE_CONSULTATIONS = `${API_VERSION_URL}/pending-consultations`;
 export const API_UPDATE_FCM_TOKEN = `${API_VERSION_URL}/user/update-fcm-token`;
 export const SUBMIT_CONSULTATION_REVIEW = `${API_VERSION_URL}/consultation-review`;
+export const API_UPDATE_USER_DATA = `${API_VERSION_URL}/user/update-user-data`;
 
 // Bookmark endpoints
 export const ADD_AI_MESSAGE_BOOKMARK = `${API_VERSION_URL}/ai-message-bookmarks`;
@@ -81,3 +82,7 @@ export const USER_PRODUCT_URL = (productId: string): string => {
 export const USER_EXPERT_URL = (expertId: string): string => {
   return `${API_VERSION_URL}/expert/${expertId}`;
 };
+
+//Support Endpoint
+
+export const API_CREATE_SUPPORT = `${API_VERSION_URL}/support`;

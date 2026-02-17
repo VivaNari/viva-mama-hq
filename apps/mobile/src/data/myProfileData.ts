@@ -1,12 +1,5 @@
-import { IMyProfileData, ISettingsMenu } from "../types/myProfile.types";
+import { ISettingsMenu } from "../types/myProfile.types";
 
-export const myProfileData: IMyProfileData = {
-  name: "Harsha Tomar",
-  email: "harshatomar@gmail.com",
-  avatar: require("../public/assets/images/avatar_ai.jpg"),
-  age: 29,
-  isPremium: true,
-};
 export const settingsMenu: ISettingsMenu[] = [
   {
     title: "Add Partner",
@@ -15,22 +8,28 @@ export const settingsMenu: ISettingsMenu[] = [
     description: "Invite your partner to share your journey.",
   },
   {
+    title: "Notifications",
+    icon: "bell-ring",
+    componentName: "Notifications",
+    description: "Stay updated with alerts and reminders.",
+  },
+  {
     title: "Settings",
     icon: "cog",
     componentName: "Settings",
     description: "Manage your account and app preferences.",
   },
   {
-    title: "Bookmarked Messages",
-    icon: "bookmark",
-    componentName: "BookmarkedMessages",
-    description: "See the bookmarked messages from Viva",
+    title: "Privacy Policy",
+    icon: "book-open-text",
+    componentName: "PrivacyPolicy",
+    description: "View terms of service and privacy policies.",
   },
   {
-    title: "Notifications",
-    icon: "bell-ring",
-    componentName: "Notifications",
-    description: "Stay updated with alerts and reminders.",
+    title: "Terms of Use",
+    icon: "book-open-text",
+    componentName: "TermsOfUse",
+    description: "View terms of service and privacy policies.",
   },
   {
     title: "Support",
@@ -39,21 +38,9 @@ export const settingsMenu: ISettingsMenu[] = [
     description: "Get help and reach out to our team.",
   },
   {
-    title: "Legal",
-    icon: "book-open-text",
-    componentName: "Legal",
-    description: "View terms of service and privacy policies.",
-  },
-  {
-    title: "Medical",
-    icon: "stethoscope",
-    componentName: "Medical",
-    description: "Access your health records and medical info.",
-  },
-  {
     title: "About VivaMama",
     icon: "info",
-    componentName: "AboutVivaNari",
+    componentName: "AboutVivaMama",
     description: "Learn more about our mission and the app.",
   },
 ];

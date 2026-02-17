@@ -1,7 +1,7 @@
 import { IPartnerData } from "../types/addPartner.types";
 
 export const partnerData: IPartnerData = {
-  title: "Vivanari for partners",
+  title: "VivaMama for partners",
   benefits: [
     { id: 1, text: "Expand your reach and connect with more clients" },
     { id: 2, text: "Access professional tools to manage your partnerships" },

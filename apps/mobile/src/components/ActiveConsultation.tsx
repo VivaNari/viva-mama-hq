@@ -38,7 +38,7 @@ const ActiveConsultation = ({ item }: { item: IUserActiveConsultations }) => {
                         globalStyles.fontSemiBold
                     ]}
                 >
-                    You have an upcoming consultation with {item.consultationType === ConsultationTypeEnum.CARE_MANAGER ? "Care Manager" : "Expert"}: {item.consultatorId.name}, initiated at {convertDateToIST(item.preferred_consultation_date)}
+                    You have an upcoming consultation with {item.consultationType === ConsultationTypeEnum.CARE_MANAGER ? "Care Manager" : "Expert"}: {item.consultatorId.name} on {convertDateToIST(item.preferred_consultation_date)}
 
                 </Text>
             </LinearGradient>

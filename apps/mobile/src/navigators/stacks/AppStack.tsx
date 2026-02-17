@@ -30,6 +30,8 @@ import ProductDetails from '../../screens/ProductDetails';
 import Services from '../../screens/Services copy';
 import ConsultationRating from '../../screens/ConsultationRating';
 import BookmarkedMessages from '../../screens/BookmarkedMessages';
+import AboutVivaMama from '../../screens/AboutVivaMama';
+import Support from '../../screens/Support';
 
 const Stack = createNativeStackNavigator();
 
@@ -237,6 +239,22 @@ const AppStack = () => {
                 }}
                 name="PrivacyPolicy"
                 component={PrivacyPolicy}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'About VivaMama',
+                }}
+                name="AboutVivaMama"
+                component={AboutVivaMama}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Support',
+                }}
+                name="Support"
+                component={Support}
             />
             {/* Infant screens */}
             <Stack.Screen

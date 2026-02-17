@@ -22,7 +22,7 @@ const ProfileSettingsMenu = ({ item, navigation, isFirst, isLast }: { item: ISet
                 borderBottomRightRadius: isLast ? 8 : 0,
             }}
         >
-            <Lucide name={item.icon as any} size={20} color={colors.mediumGray} />
+            <Lucide name={item.icon as any} size={20} color={colors.darkGray} />
             <View
                 style={{
                     flex: 1,
