@@ -20,9 +20,43 @@ import { colors } from "../public/assets/colors.ts";
 import { globalStyles } from "../public/styles";
 import { ContentDetailsStyles } from "../public/styles/contentStyles";
 import { ContentBodyTypeEnum, IUserContent, IUserContentresponse } from "../types/content.types.ts";
+import YoutubePlayer from 'react-native-youtube-iframe';
+
+
+const extractYoutubeVideoId = (url: string) => {
+    const regExp = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[7].length === 11) ? match[7] : null;
+};
+
+const ArticleVideo = ({ url }: { url: string }) => {
+    const [playing, setPlaying] = React.useState(false);
+
+    const onStateChange = React.useCallback((state: string) => {
+        if (state === "ended") {
+            setPlaying(false);
+        }
+    }, []);
+
+    const videoId = extractYoutubeVideoId(url);
+
+    if (!videoId) return null;
+
+    return (
+        <View style={{ height: 220, marginVertical: 20, borderRadius: 10, overflow: 'hidden' }}>
+            <YoutubePlayer
+                height={220}
+                play={playing}
+                videoId={videoId}
+                onChangeState={onStateChange}
+            />
+        </View>
+    );
+};
 
 const renderContentBody = (article: IUserContent) => {
     if (!article?.contentBody?.length) return null;
+
 
     return article.contentBody.map((item) => {
         switch (item.contentType) {
@@ -54,6 +88,14 @@ const renderContentBody = (article: IUserContent) => {
                     >
                         {item.body}
                     </Text>
+                );
+
+            case ContentBodyTypeEnum.VIDEO:
+                return (
+                    <View style={{ height: 220, marginBottom: 20, borderRadius: 10, overflow: 'hidden' }}>
+                        <ArticleVideo key={item._id} url={item.body} />
+                    </View>
+
                 );
 
             default:
@@ -168,13 +210,6 @@ const ArticleDetails = () => {
                             }}
                         >
                             <MaterialDesignIcons name="share-variant" size={22} color="#333" />
-                        </TouchableOpacity>
-                        <TouchableOpacity style={ContentDetailsStyles.iconButton}>
-                            <MaterialDesignIcons
-                                name={"bookmark"}
-                                size={22}
-                                color="#333"
-                            />
                         </TouchableOpacity>
                     </View>
                     {renderContentBody(article)}

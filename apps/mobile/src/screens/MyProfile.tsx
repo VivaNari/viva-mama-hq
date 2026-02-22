@@ -1,7 +1,8 @@
+import InAppReview from 'react-native-in-app-review'
 import Lucide from '@react-native-vector-icons/lucide'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import React, { useCallback, useState } from 'react'
-import { FlatList, Image, Text, TouchableOpacity, View } from 'react-native'
+import { FlatList, Image, Text, TouchableOpacity, View, Linking, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import ProfileSettingsMenu from '../components/profile/ProfileSettingsMenu'
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +19,36 @@ const MyProfile = () => {
     const [getLoading, setLoading] = useState<boolean>(false);
     const [userData, setUserdata] = useState<IUserAllData>();
     const { userId, userToken } = useAuth();
+
+    const handleInAppReview = () => {
+        // NOTE: In-App Review only shows up in Production/Internal Test Track on Play Store.
+        // It will NOT show on debug builds or sideloaded APKs.
+        if (InAppReview.isAvailable()) {
+            InAppReview.RequestInAppReview()
+                .then((hasFlowFinishedSuccessfully) => {
+                    console.log('In-App Review flow finished successfully:', hasFlowFinishedSuccessfully);
+                })
+                .catch((error) => {
+                    console.log('In-App Review Error:', error);
+                    openStoreFallback();
+                });
+        } else {
+            openStoreFallback();
+        }
+    };
+
+    const openStoreFallback = () => {
+        const GOOGLE_PACKAGE_NAME = 'com.viva_nari_app';
+        const url = Platform.OS === 'ios'
+            ? `itms-apps://itunes.apple.com/app/viewContentsUserReviews/idYOUR_APPLE_ID?action=write-review`
+            : `market://details?id=${GOOGLE_PACKAGE_NAME}`;
+
+        Linking.openURL(url).catch(() => {
+            // If play store app is not available, open in browser
+            const browserUrl = `https://play.google.com/store/apps/details?id=${GOOGLE_PACKAGE_NAME}`;
+            Linking.openURL(browserUrl);
+        });
+    };
 
     useFocusEffect(useCallback(() => {
         (async function () {
@@ -118,29 +149,52 @@ const MyProfile = () => {
                                         >
                                             {userData?.user.onboarding_data.preferred_name}
                                         </Text>
-                                        <TouchableOpacity
-                                            style={{
-                                                backgroundColor: colors.darkPurple,
-                                                paddingVertical: 6,
-                                                paddingHorizontal: 10,
-                                                borderRadius: 15
-                                            }}
-                                        >
-                                            <Text
-                                                style={[{
-                                                    color: colors.white,
-                                                    textAlign: 'center',
-                                                    fontSize: 10
-                                                }, globalStyles.fontRegular]}
-                                            >
-                                                {
-                                                    userData &&
-                                                        (!(userData.user.subscription.expiryDate) || new Date(userData.user.subscription.expiryDate) < new Date())
-                                                        ? "Get Premium Today"
-                                                        : userData && userData.user.subscription.plan
-                                                }
-                                            </Text>
-                                        </TouchableOpacity>
+
+                                        {
+                                            userData &&
+                                                (!(userData.user.subscription.expiryDate) || new Date(userData.user.subscription.expiryDate) < new Date())
+                                                ? (
+                                                    <TouchableOpacity
+                                                        style={{
+                                                            backgroundColor: colors.darkPurple,
+                                                            paddingVertical: 6,
+                                                            paddingHorizontal: 10,
+                                                            borderRadius: 15
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={[{
+                                                                color: colors.white,
+                                                                textAlign: 'center',
+                                                                fontSize: 10
+                                                            }, globalStyles.fontRegular]}
+                                                        >
+                                                            Get Premium Today
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                )
+                                                : userData && (
+                                                    <TouchableOpacity
+                                                        style={{
+                                                            backgroundColor: colors.darkPurple,
+                                                            paddingVertical: 6,
+                                                            paddingHorizontal: 10,
+                                                            borderRadius: 15
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={[{
+                                                                color: colors.white,
+                                                                textAlign: 'center',
+                                                                fontSize: 10
+                                                            }, globalStyles.fontRegular]}
+                                                        >
+                                                            {userData.user.subscription.plan}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                )
+                                        }
+
                                     </View>
 
                                     <TouchableOpacity
@@ -175,8 +229,7 @@ const MyProfile = () => {
                     >
                         <TouchableOpacity
                             activeOpacity={0.4}
-                            onPress={() => {
-                            }}
+                            onPress={handleInAppReview}
                             style={{
                                 flexDirection: "row",
                                 gap: 5,
