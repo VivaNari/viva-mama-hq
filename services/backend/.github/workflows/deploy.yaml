@@ -40,7 +40,7 @@ jobs:
             # Deploy to Cloud Run
             - name: 🚀 Deploy to Cloud Run
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_REGISTRY_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
                   IMAGE_URL="${IMAGE_BASE}:${TAG}"
 
                   echo "Deploying image: ${IMAGE_URL}"

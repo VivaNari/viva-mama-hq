@@ -39,7 +39,7 @@ jobs:
             # Docker Auth
             - name: 🐳 Configure Docker authentication
               run: |
-                  gcloud config set project ${{ secrets.PROD_GCP_PROJECT_ID }}
+                  gcloud config set project ${{ secrets.SHARED_ARTIFACT_REGISTRY_PROJECT_ID }}
                   gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
             # Set Tag
@@ -49,7 +49,7 @@ jobs:
             # Build Image
             - name: 🔨 Build Docker image
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_REGISTRY_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
 
                   docker build \
                     -t "${IMAGE_BASE}:${TAG}" \
@@ -59,7 +59,7 @@ jobs:
             # Push Image
             - name: 📤 Push Docker image to Artifact Registry
               run: |
-                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.PROD_GCP_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
+                  IMAGE_BASE="${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_REGISTRY_PROJECT_ID }}/${{ env.GAR_REPO }}/${{ env.IMAGE_NAME }}"
 
                   echo "Pushing version tag..."
                   docker push "${IMAGE_BASE}:${TAG}"
