@@ -58,6 +58,7 @@ export default class UserService extends BaseService<IUser> {
             throw err;
         }
     };
+
     sendOTPToPhone = async (req: Request, res: Response) => {
         try {
             const { mobile_number, country_code, FCM_token } = req.body;

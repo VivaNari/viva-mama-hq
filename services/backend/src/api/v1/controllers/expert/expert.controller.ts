@@ -6,7 +6,7 @@ import { IExpert } from "../../../../types/expert.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 
 export class ExpertController {
-    private expertService: ExpertService = new ExpertService();
+    private expertService: ExpertService;
     constructor() {
         this.expertService = new ExpertService();
     }

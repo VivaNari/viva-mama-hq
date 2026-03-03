@@ -8,7 +8,7 @@ import UserModel from "../../../../models/user.model";
 import { IUser } from "../../../../types";
 
 export class ContentController {
-    private contentService: ContentService = new ContentService();
+    private contentService: ContentService;
     constructor() {
         this.contentService = new ContentService();
     }

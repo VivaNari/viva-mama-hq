@@ -1,6 +1,6 @@
 import { REDIS_CHANNELS } from "./redis-publisher.service";
 import { redisSubscriber } from "../../config/redis.config";
-import ScoreRecommendationHandler from "../../api/v1/handlers/score-recommendation.handler";
+import ScoreRecommendationHandler from "../../handlers/score-recommendation.handler";
 import { sendPushNotification } from "../../utils/sendPushNotification";
 
 class RedisSubscriberService {

@@ -10,7 +10,7 @@ import { ProductService } from "../../../../services/products/product.service";
 import { IProduct } from "../../../../types/products.types";
 
 export class ProductController {
-    private productService: ProductService = new ProductService();
+    private productService: ProductService;
     constructor() {
         this.productService = new ProductService();
     }
@@ -28,7 +28,6 @@ export class ProductController {
                     validWeekEnd: { $gte: user.current_weekdays.weeks },
                 },
             });
-            console.log("products", products);
             response.set({
                 "Cache-Control": "no-store, no-cache, must-revalidate",
                 Pragma: "no-cache",

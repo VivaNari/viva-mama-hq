@@ -51,6 +51,11 @@ export const messages = {
     BOOKMARK_CREATED_SUCCESS: "Bookmark created successfully",
     BOOKMARK_DELETED_SUCCESS: "Bookmark deleted successfully",
     BOOKMARK_FETCH_SUCCESS: "Bookmark fetched successfully",
+    USER_UPDATED_SUCCESS: "User updated successfully",
+    SUPPORT_CREATED_SUCCESS: "Support created successfully",
+    SUPPORT_RESOLVED_SUCCESS: "Support resolved successfully",
+    SUPPORT_ID_NOT_PROVIDED: "Support id not provided",
+    SUPPORT_NOT_FOUND: "Support not found",
 };
 
 export const notificationMessages = {

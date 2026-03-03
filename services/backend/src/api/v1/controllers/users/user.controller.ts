@@ -8,13 +8,13 @@ import { StatusCodes } from "http-status-codes";
 import RecommendationHistoryService from "../../../../services/recommendations/recommendation-history.service";
 import recommendationHistoryModel from "../../../../models/recommendation-history.model";
 
-const getUserService = new UserService();
+const userService = new UserService();
 const recommendationHistoryService = new RecommendationHistoryService(recommendationHistoryModel);
 
 export default class UserController {
     getUserbyAuthToken = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            await getUserService.getUserbyAuthToken(req, res);
+            await userService.getUserbyAuthToken(req, res);
         } catch (err) {
             console.log(err);
             next(err);
@@ -26,7 +26,7 @@ export default class UserController {
             if (!req.user) {
                 throw new Error(messages.USER_FETCH_FAILED);
             }
-            const updatedUser = await getUserService.findByIdAndUpdate({
+            const updatedUser = await userService.findByIdAndUpdate({
                 _id: req.user._id,
                 payload: {
                     FCM_token: req.body.FCM_token,
@@ -46,14 +46,14 @@ export default class UserController {
     };
 
     sendOTPToPhone = async (req: Request, res: Response) => {
-        await getUserService.sendOTPToPhone(req, res);
+        await userService.sendOTPToPhone(req, res);
     };
     verifyOTP = async (req: Request, res: Response) => {
-        await getUserService.verifyOTP(req, res);
+        await userService.verifyOTP(req, res);
     };
 
     googleAuth = async (req: Request, res: Response) => {
-        await getUserService.googleAuth(req, res);
+        await userService.googleAuth(req, res);
     };
 
     getCheckinScoreData = async (request: Request, response: Response, next: NextFunction) => {
@@ -83,6 +83,28 @@ export default class UserController {
                 response,
             });
         } catch (err) {
+            next(err);
+        }
+    };
+
+    updateUserData = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            if (!req.user) {
+                throw new Error(messages.USER_FETCH_FAILED);
+            }
+            const updatedUser = await userService.findByIdAndPartialUpdate({
+                _id: req.user._id,
+                payload: req.body,
+            });
+            sendResponse({
+                data: updatedUser,
+                statusCode: StatusCodes.OK,
+                success: true,
+                message: messages.USER_UPDATED_SUCCESS,
+                response: res,
+            });
+        } catch (err) {
+            console.log(err);
             next(err);
         }
     };

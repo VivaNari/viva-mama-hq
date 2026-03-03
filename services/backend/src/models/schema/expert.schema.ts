@@ -34,6 +34,11 @@ const expertSchema: Schema<IExpert> = new Schema<IExpert>(
             type: Number,
             required: true,
         },
+        isActive: {
+            type: Boolean,
+            required: true,
+            default: true,
+        },
     },
     generalSchemaOptions,
 );

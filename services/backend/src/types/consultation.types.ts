@@ -15,6 +15,7 @@ export interface IConsultationRequest {
     consultatorId: Schema.Types.ObjectId;
     consultationType: ConsultationTypeEnum;
     requestStatus: CallbackRequestStatus;
+    preferred_consultation_date: Date;
 }
 
 export enum ConsultationTypeEnum {

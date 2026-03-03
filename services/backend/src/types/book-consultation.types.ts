@@ -10,11 +10,13 @@ export interface IBookConsultationOrder {
     currency: string;
     razorpay_payment_id: string;
     status: TIBookConsultationOrderOrderStatus;
+    preferred_consultation_date: Date;
 }
 
 export interface ICreateIBookConsultationOrderPayload {
     expertId: string;
     amount: number;
+    date: string;
     userId: string;
     response: Response;
 }

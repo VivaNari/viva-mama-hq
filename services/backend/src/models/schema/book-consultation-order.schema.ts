@@ -40,6 +40,9 @@ const bookConsultationOrderSchema: Schema<IBookConsultationOrder> =
                     "failed",
                 ] as TIBookConsultationOrderOrderStatus[],
             },
+            preferred_consultation_date: {
+                type: Date,
+            },
         },
         generalSchemaOptions,
     );

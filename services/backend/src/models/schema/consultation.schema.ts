@@ -24,6 +24,10 @@ const consultationSchema = new Schema<IConsultationRequest>(
             enum: ["PENDING", "COMPLETED", "UNHANDLED"],
             default: null,
         },
+        preferred_consultation_date: {
+            type: Date,
+            required: true,
+        },
     },
     generalSchemaOptions,
 );

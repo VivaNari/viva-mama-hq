@@ -60,7 +60,11 @@ export class ConsultationService extends BaseService<IConsultationRequest> {
         };
     };
 
-    requestCallback = async (userId: string, consultatorId: string) => {
+    requestCallback = async (
+        userId: string,
+        consultatorId: string,
+        preferred_consultation_date: Date,
+    ) => {
         const result = await this.validateRequestCallBackParams(userId, consultatorId);
 
         if (!result.isValid) {
@@ -77,6 +81,7 @@ export class ConsultationService extends BaseService<IConsultationRequest> {
             consultatorId: consultatorId as unknown as Schema.Types.ObjectId,
             consultationType: ConsultationTypeEnum.CARE_MANAGER,
             requestStatus: CallbackRequestStatusEnum.PENDING,
+            preferred_consultation_date,
         };
 
         const consultationInstance: IConsultationRequest = await this.create(consultationPayload);

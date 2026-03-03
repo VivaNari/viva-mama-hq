@@ -1,9 +1,9 @@
 import { Schema } from "mongoose";
-import ScoreEngineService from "../../../services/score-engine/scoreEngine.service";
-import RecommendationEngineService from "../../../services/recommendations/recommendation-engine.service";
-import RecommendationHistoryService from "../../../services/recommendations/recommendation-history.service";
-import { Indicators } from "../../../types/score-engine.types";
-import { getFlowQuestionsAndAnswers } from "../../../utils/getFlowQuestionsAndAnswers";
+import ScoreEngineService from "../services/score-engine/scoreEngine.service";
+import RecommendationEngineService from "../services/recommendations/recommendation-engine.service";
+import RecommendationHistoryService from "../services/recommendations/recommendation-history.service";
+import { Indicators } from "../types/score-engine.types";
+import { getFlowQuestionsAndAnswers } from "../utils/getFlowQuestionsAndAnswers";
 
 export default class ScoreRecommendationHandler {
     public static async process(

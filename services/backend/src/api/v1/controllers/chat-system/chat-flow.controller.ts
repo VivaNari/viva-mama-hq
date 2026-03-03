@@ -61,10 +61,17 @@ class ChatFlowController {
                 flowType,
                 sessionId,
                 conversationId,
+                model,
             } = req.body;
 
             if (flowType == FlowTypeEnum.CHATBOT) {
-                this.chatFlowAIService.saveResponse(userId, freeText, sessionId, conversationId);
+                this.chatFlowAIService.saveResponse(
+                    userId,
+                    freeText,
+                    sessionId,
+                    conversationId,
+                    model,
+                );
                 return sendResponse({
                     data: null,
                     message: messages.ANSWER_SAVED_SUCCESS,
