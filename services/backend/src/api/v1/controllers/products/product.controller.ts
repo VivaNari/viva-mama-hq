@@ -10,7 +10,7 @@ import { ProductService } from "../../../../services/products/product.service";
 import { IProduct } from "../../../../types/products.types";
 
 export class ProductController {
-    private productService: ProductService = new ProductService();
+    private productService: ProductService;
     constructor() {
         this.productService = new ProductService();
     }

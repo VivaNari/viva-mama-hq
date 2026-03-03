@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import ScoreRecommendationHandler from "../handlers/score-recommendation.handler";
+import ScoreRecommendationHandler from "../../../handlers/score-recommendation.handler";
 import RecommendationHistoryService from "../../../services/recommendations/recommendation-history.service";
 import recommendationHistoryModel from "../../../models/recommendation-history.model";
 

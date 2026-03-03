@@ -8,4 +8,5 @@ export interface IExpert extends Document {
     bio: string;
     photograph: string;
     remuneration: number;
+    isActive: boolean;
 }

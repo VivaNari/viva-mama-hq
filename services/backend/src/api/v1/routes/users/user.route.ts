@@ -6,28 +6,28 @@ import { sentOTPValidator, verifyOTPValidator } from "../../validators/users/otp
 import authMiddleware from "../../../../middlewares/authorization.middleware";
 
 const userRouter = Router();
-const getUserController = new UserController();
-userRouter.get("/user", authMiddleware(), getUserController.getUserbyAuthToken);
-userRouter.put("/user/update-fcm-token", authMiddleware(), getUserController.updateFCMToken);
+const userController = new UserController();
+
+userRouter.get("/user", authMiddleware(), userController.getUserbyAuthToken);
+
+userRouter.put("/user/update-fcm-token", authMiddleware(), userController.updateFCMToken);
+
 userRouter.post(
     "/auth/send-otp",
     requestValidator(sentOTPValidator),
-    getUserController.sendOTPToPhone,
+    userController.sendOTPToPhone,
 );
-userRouter.post(
-    "/auth/verify-otp",
-    requestValidator(verifyOTPValidator),
-    getUserController.verifyOTP,
-);
-userRouter.post(
-    "/auth/google",
-    requestValidator(googleAuthValidator),
-    getUserController.googleAuth,
-);
+
+userRouter.post("/auth/verify-otp", requestValidator(verifyOTPValidator), userController.verifyOTP);
+
+userRouter.post("/auth/google", requestValidator(googleAuthValidator), userController.googleAuth);
+
 userRouter.get(
     "/dashboard/viva-score",
     authMiddleware("header"),
-    getUserController.getCheckinScoreData,
+    userController.getCheckinScoreData,
 );
+
+userRouter.put("/user/update-user-data", authMiddleware("header"), userController.updateUserData);
 
 export default userRouter;

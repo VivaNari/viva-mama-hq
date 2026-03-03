@@ -1,3 +1,4 @@
+import { flattenObject } from "../utils/flattenObject";
 import { FilterQuery, Model, Schema } from "mongoose";
 
 type FindOptions<T> = {
@@ -87,6 +88,23 @@ class BaseService<T> {
         payload: Partial<T>;
     }) => {
         const result = await this.model.findByIdAndUpdate(_id, payload, { new: true });
+        return result;
+    };
+
+    findByIdAndPartialUpdate = async ({
+        _id,
+        payload,
+    }: {
+        _id: string | Schema.Types.ObjectId;
+        payload: Partial<T>;
+    }) => {
+        const flatPayload = flattenObject(payload as Record<string, any>);
+
+        const result = await this.model.findByIdAndUpdate(
+            _id,
+            { $set: flatPayload },
+            { new: true },
+        );
         return result;
     };
 

@@ -18,6 +18,7 @@ export enum ContentBodyTypeEnum {
     HEADING = "HEADING",
     SUBHEADING = "SUBHEADING",
     PARAGRAPH = "PARAGRAPH",
+    VIDEO = "VIDEO",
 }
 
 export interface IContentBody {

@@ -21,7 +21,7 @@ import { sendWhatsappMessageForExpertConsultation } from "../getgabs/sendWhatsap
 
 class BookConsultationPaymentService extends BaseService<IBookConsultationOrder> {
     private razorpayInstance;
-    private callbackRequestService: ConsultationService = new ConsultationService();
+    private callbackRequestService: ConsultationService;
     constructor() {
         super(bookConsultationOrderModel);
         this.razorpayInstance = new Razorpay({

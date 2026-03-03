@@ -114,6 +114,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
         freeText: string,
         sessionId: string,
         conversationId: ObjectId,
+        model: string,
     ) => {
         console.log("SaveResponse in aiChat flow called!");
         try {
@@ -124,7 +125,13 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
             if (!freeText) {
                 throw new Error("Free text is required");
             }
-            await this.processChatbotResponse(userInstance, freeText, sessionId, conversationId);
+            await this.processChatbotResponse(
+                userInstance,
+                freeText,
+                sessionId,
+                conversationId,
+                model,
+            );
         } catch (error) {
             console.error("Error saving answer:", error);
             throw error;
@@ -145,6 +152,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
         message: string,
         sessionId: string,
         conversationId: ObjectId,
+        model: string,
     ): Promise<{ success: boolean; message: string }> => {
         try {
             console.log(`Processing chatbot message from user ${userInstance._id}`);
@@ -171,6 +179,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 userInstance,
                 message,
                 sessionId,
+                model,
             );
             const aiMessageInstance = await this.createMessage({
                 conversationId: conversationId,
