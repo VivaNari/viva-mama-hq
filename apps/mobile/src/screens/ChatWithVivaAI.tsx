@@ -22,6 +22,7 @@ import { useAuth } from '../context/AuthContext';
 import { chatDB } from '../db/sqlite';
 import { colors } from '../public/assets/colors';
 import ChatDropdownMenu from '../components/ChatDropdownMenu';
+import ModelSelector, { MODELS } from '../components/ModelSelector';
 
 import { ChatBubble } from '../components/chatBubble';
 import { ChatInputBar } from '../components/ChatInputBar';
@@ -94,6 +95,8 @@ const ChatWithVivaAI: React.FC = () => {
     const [refreshing, setRefreshing] = useState(false);
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
     const [menuVisible, setMenuVisible] = useState(false);
+    const [modelSelectorVisible, setModelSelectorVisible] = useState(false);
+    const [selectedModel, setSelectedModel] = useState(MODELS[0].id); // Default to Llama 3.3
 
     const handleMenuOptionSelect = (option: 'Bookmarks' | 'About') => {
         switch (option) {
@@ -213,6 +216,7 @@ const ChatWithVivaAI: React.FC = () => {
         getLastAiMessage,
         saveUserMessage,
         submitGuidedAnswer: isGuidedFlow ? submitGuidedAnswer : undefined,
+        selectedModel: isChatbotFlow ? selectedModel : undefined,
     });
 
     const handleAnimationComplete = useCallback(() => {
@@ -503,6 +507,17 @@ const ChatWithVivaAI: React.FC = () => {
                         </View>
                         <View style={[styles.vivaIntroContainer, { flexShrink: 1, flex: 1 }]}>
                             <Text style={[styles.vivaIntroText, globalStyles.fontBold]}>Viva, your personal assistant</Text>
+                            {isChatbotFlow && (
+                                <TouchableOpacity
+                                    style={styles.modelPill}
+                                    onPress={() => setModelSelectorVisible(true)}
+                                >
+                                    <Text style={styles.modelPillText}>
+                                        {MODELS.find(m => m.id === selectedModel)?.label || selectedModel}
+                                    </Text>
+                                    <Lucide name="chevron-down" size={12} color={colors.darkPurple} />
+                                </TouchableOpacity>
+                            )}
                         </View>
                         {/* Navigate Back */}
                         {
@@ -597,6 +612,12 @@ const ChatWithVivaAI: React.FC = () => {
                     selectedDate={selectedDate}
                     onSelect={handleDateSelected}
                 />
+                <ModelSelector
+                    visible={modelSelectorVisible}
+                    onClose={() => setModelSelectorVisible(false)}
+                    onSelect={setSelectedModel}
+                    selectedModelId={selectedModel}
+                />
             </KeyboardAvoidingView>
         </SafeAreaView>
     );
@@ -627,6 +648,22 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         fontSize: 15,
         lineHeight: 20
+    },
+    modelPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(75, 30, 170, 0.1)',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 12,
+        marginTop: 4,
+        gap: 4,
+    },
+    modelPillText: {
+        fontSize: 11,
+        color: colors.darkPurple,
+        fontWeight: '600',
+        ...globalStyles.fontSemiBold
     }
 });
 

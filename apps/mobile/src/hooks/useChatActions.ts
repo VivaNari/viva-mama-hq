@@ -33,6 +33,7 @@ interface UseChatActionsProps {
     selectedKeys?: number[];
     freeText?: string;
   }) => Promise<boolean>;
+  selectedModel?: string; // New: Selected model for chatbot flow
 }
 
 export const useChatActions = ({
@@ -43,6 +44,7 @@ export const useChatActions = ({
   getLastAiMessage,
   saveUserMessage,
   submitGuidedAnswer,
+  selectedModel,
 }: UseChatActionsProps) => {
   /**
    * Check if this is a guided flow (uses request-response)
@@ -60,6 +62,7 @@ export const useChatActions = ({
       conversationId?: string;
     }): Promise<boolean> => {
       try {
+        console.log("[API] Selected model: ", selectedModel);
         await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
           userId,
           flowInstanceId: "chatbot",
@@ -68,7 +71,7 @@ export const useChatActions = ({
           flowType,
           sessionId: payload.sessionId,
           conversationId: payload.conversationId,
-          model: "qwen/qwen3-32b",
+          model: selectedModel || "qwen/qwen3-32b",
         });
         return true;
       } catch (error: any) {
@@ -83,7 +86,7 @@ export const useChatActions = ({
         return false;
       }
     },
-    [userId, flowType, dispatch],
+    [userId, flowType, dispatch, selectedModel],
   );
 
   /**

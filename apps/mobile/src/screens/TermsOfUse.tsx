@@ -1,43 +1,48 @@
 import React from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
-import { globalStyles } from "../public/styles";
-import { ContentDetailsStyles } from "../public/styles/contentStyles";
+import { StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { WebView } from "react-native-webview";
 
-const TermsOfUse = () => {
+const TermsAndConditions = () => {
+    // JavaScript to hide common navbar/header elements
+    const hideNavbarJS = `
+        (function() {
+            var selectors = [
+                'header', 'nav', '.header', '.navbar', '#header', '#navbar', 
+                '.site-header', '.elementor-location-header', '.top-bar'
+            ];
+            selectors.forEach(function(selector) {
+                var elements = document.querySelectorAll(selector);
+                elements.forEach(function(el) {
+                    el.style.display = 'none';
+                });
+            });
+            // Adjust body padding if needed
+            document.body.style.paddingTop = '0';
+            document.body.style.marginTop = '0';
+        })();
+        true; // note: this is required, or it will sometimes fail on Android
+    `;
+
     return (
-        <ScrollView >
-            <Image source={require("../public/assets/images/single_article_breadcrumb.png")} style={ContentDetailsStyles.image} />
-
-            <View
-                style={globalStyles.container}
-            >
-                <Text style={[styles.sectionTitle, globalStyles.fontMedium]}>1. Acceptance of Terms</Text>
-                <Text style={[styles.paragraph, globalStyles.fontRegular]}>
-                    By accessing or using our app, you agree to comply with these Terms of
-                    Use. If you do not agree, please do not use the app.
-                </Text>
-
-                <Text style={[styles.sectionTitle, globalStyles.fontMedium]}>2. User Responsibilities</Text>
-                <Text style={[styles.paragraph, globalStyles.fontRegular]}>
-                    You are responsible for keeping your account secure and for all
-                    activities that occur under your account. Misuse of the app may result
-                    in suspension.
-                </Text>
-
-                <Text style={[styles.sectionTitle, globalStyles.fontMedium]}>3. Modifications</Text>
-                <Text style={[styles.paragraph, globalStyles.fontRegular]}>
-                    We may update these Terms of Use at any time. Continued use of the app
-                    after changes means you accept the updated terms.
-                </Text>
-            </View>
-        </ScrollView>
+        <SafeAreaView style={styles.container}>
+            <WebView
+                source={{ uri: "https://vivamama.in/terms-and-conditions/" }}
+                injectedJavaScript={hideNavbarJS}
+                javaScriptEnabled={true}
+                domStorageEnabled={true}
+                startInLoadingState={true}
+                scalesPageToFit={true}
+            />
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
-    heading: { fontSize: 22, marginBottom: 16 },
-    sectionTitle: { fontSize: 16, fontWeight: "600", marginTop: 12 },
-    paragraph: { fontSize: 12, lineHeight: 20, marginTop: 4, color: "#555" },
+    container: {
+        flex: 1,
+        backgroundColor: "#fff",
+    },
 });
 
-export default TermsOfUse;
+export default TermsAndConditions;

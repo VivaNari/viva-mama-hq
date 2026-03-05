@@ -1,6 +1,6 @@
 {
   "name": "viva_nari_app",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -30,7 +30,6 @@
     "react": "19.1.0",
     "react-native": "0.81.1",
     "react-native-dotenv": "^2.5.3",
-    "react-native-geolocation-service": "^5.3.1",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-gifted-charts": "^1.4.70",
     "react-native-in-app-review": "^4.4.2",
