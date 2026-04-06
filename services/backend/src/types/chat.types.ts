@@ -116,7 +116,8 @@ export type FlowNodeType =
     | FlowNodeEnum.BRANCH
     | FlowNodeEnum.CALC
     | FlowNodeEnum.END
-    | FlowNodeEnum.QUESTION_FREE_TEXT;
+    | FlowNodeEnum.QUESTION_FREE_TEXT
+    | FlowNodeEnum.QUESTION_DATE;
 
 export interface IFlowNode {
     id: string;
