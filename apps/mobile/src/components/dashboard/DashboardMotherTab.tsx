@@ -376,6 +376,66 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                                                 />
                                             </View> : null}
                                         </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            activeOpacity={0.8}
+                                            // onPress={() => {
+                                            //     navigation.navigate("ChatWithVivaAI", {
+                                            //         flowSlug: "mood-log-v1",
+                                            //     });
+                                            // }}
+                                            style={{
+                                                flexDirection: "row",
+                                                borderRadius: 30,
+                                                justifyContent: "center",
+                                                alignItems: "center",
+                                                paddingVertical: 15,
+                                                paddingHorizontal: 10,
+                                                flex: 1,
+                                                marginTop: 10,
+                                                borderWidth: 2,
+                                                borderColor: colors.purple
+                                            }}
+                                        >
+                                            <Text
+                                                style={[{
+                                                    color: colors.darkPurple,
+                                                    fontSize: 16,
+                                                }, globalStyles.fontBold]}
+                                            >
+                                                Log your Mood
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        <TouchableOpacity
+                                            activeOpacity={0.8}
+                                            // onPress={() => {
+                                            //     navigation.navigate("ChatWithVivaAI", {
+                                            //         flowSlug: "sleep-log-v1",
+                                            //     });
+                                            // }}
+                                            style={{
+                                                flexDirection: "row",
+                                                borderRadius: 30,
+                                                justifyContent: "center",
+                                                alignItems: "center",
+                                                paddingVertical: 15,
+                                                paddingHorizontal: 10,
+                                                flex: 1,
+                                                marginTop: 10,
+                                                borderWidth: 2,
+                                                borderColor: colors.purple
+                                            }}
+                                        >
+                                            <Text
+                                                style={[{
+                                                    color: colors.darkPurple,
+                                                    fontSize: 16,
+                                                }, globalStyles.fontBold]}
+                                            >
+                                                Log your Sleep
+                                            </Text>
+                                        </TouchableOpacity>
                                     </View>
 
                                 }
@@ -405,7 +465,6 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                         </View>
                     )
                 }
-
 
 
                 {

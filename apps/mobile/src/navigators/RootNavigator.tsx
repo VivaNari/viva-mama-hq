@@ -14,8 +14,10 @@ import OnboardingStack from "./stacks/OnboardingStack";
 const Stack = createNativeStackNavigator();
 
 interface NotificationData {
-    flowSlug: string;
-    consultationId: string;
+    flowSlug?: string;
+    consultationId?: string;
+    type?: string;
+    contentId?: string;
 }
 
 export default function RootNavigator() {
@@ -31,10 +33,33 @@ export default function RootNavigator() {
     useEffect(() => {
         const handleNotification = (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
             console.log('[ROOT_NAVIGATOR] Handling notification:', remoteMessage);
-            const { flowSlug, consultationId } = remoteMessage.data as unknown as NotificationData;
+            const { flowSlug, consultationId, type, contentId } = remoteMessage.data as unknown as NotificationData;
 
             if (userToken && isFullyOnboarded()) {
-                if (flowSlug) {
+                if (type === 'SLEEP_LOG_REMINDER') {
+                    console.log("[ROOT_NAVIGATOR] Navigating to sleep log");
+                    // navigationRef.current?.navigate("AppStack", {
+                    //     screen: "ChatWithVivaAI",
+                    //     params: { flowSlug: 'sleep-log-v1' }
+                    // });
+                } else if (type === 'MOOD_LOG_REMINDER') {
+                    console.log("[ROOT_NAVIGATOR] Navigating to mood log");
+                    // navigationRef.current?.navigate("AppStack", {
+                    //     screen: "ChatWithVivaAI",
+                    //     params: { flowSlug: 'mood-log-v1' }
+                    // });
+                } else if (type === 'WEEKLY_CONTENT_NOTIFICATION' && contentId) {
+                    console.log("[ROOT_NAVIGATOR] Navigating to article details");
+                    navigationRef.current?.navigate("AppStack", {
+                        screen: "ArticleDetails",
+                        params: { articleId: contentId }
+                    });
+                } else if (type === 'DAILY_VIVA_INTERACTION') {
+                    console.log("[ROOT_NAVIGATOR] Navigating to article details");
+                    navigationRef.current?.navigate("AppStack", {
+                        screen: "ChatWithVivaAI",
+                    });
+                } else if (flowSlug) {
                     navigationRef.current?.navigate("AppStack", {
                         screen: "ChatWithVivaAI",
                         params: { flowSlug }

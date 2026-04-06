@@ -168,11 +168,34 @@ const ChatWithVivaAI: React.FC = () => {
         [completeQuestionnaire, navigation, userToken]
     );
 
+    const stripThinkTags = (text: string): string => {
+        if (!text) {
+            return text;
+        }
+
+        const withoutThink = text.replace(/<think>[\s\S]*?<\/think>/i, '').trim();
+
+        if (!withoutThink) {
+            return text;
+        }
+
+        return withoutThink;
+    };
+
     const handleMessageReceived = useCallback(
         async (message: IAiMessage) => {
-            await saveAiMessage(message);
+            let processedMessage = message;
+
+            if (isChatbotFlow) {
+                processedMessage = {
+                    ...message,
+                    text: stripThinkTags(message.text),
+                };
+            }
+
+            await saveAiMessage(processedMessage);
         },
-        [saveAiMessage]
+        [saveAiMessage, isChatbotFlow]
     );
 
     // ============================================

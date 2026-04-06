@@ -30,8 +30,12 @@ export const isTextInputMessage = (message: IChatMessage): boolean => {
 /**
  * Check if message expects date input
  */
-export const isDateInputMessage = (message: IChatMessage): boolean => {
+export const isDateInputMessage = (message: IAiMessage): boolean => {
   return isAiMessage(message) && message.nodeType === NodeType.QUESTION_DATE;
+};
+
+export const hasOptions = (message: IAiMessage): boolean => {
+  return !!message.options && message.options.length > 0;
 };
 
 /**
@@ -68,7 +72,11 @@ export const determineInputMode = (
     return "deliveryDate";
   }
 
-  if (isTextInputMessage(lastMessage)) {
+  if (
+    isTextInputMessage(lastMessage) &&
+    !hasOptions(lastMessage) &&
+    !isDateInputMessage(lastMessage)
+  ) {
     return "text";
   }
 

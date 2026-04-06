@@ -13,10 +13,10 @@ import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 
 export const MODELS = [
+    { id: 'qwen/qwen3-32b', label: 'Qwen 3-32B' },
     { id: 'llama-3.3-70b-versatile', label: 'Llama 3.3 70B' },
     { id: 'openai/gpt-oss-20b', label: 'GPT OSS 20B' },
-    { id: 'qwen/qwen3-32b', label: 'Qwen 3-32B' },
-    { id: 'meta-llama/llama-4-maverick-17b-128e-instruct', label: 'Llama 4 Maverick' },
+    { id: 'openai/gpt-oss-120b', label: 'GPT OSS 120B' },
 ];
 
 interface ModelSelectorProps {
