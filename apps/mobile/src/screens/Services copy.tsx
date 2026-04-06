@@ -72,7 +72,7 @@ const Services: React.FC = () => {
                     <View>
                         <View style={{ marginBottom: 40 }}>
                             <View style={styles.card}>
-                                <Text style={[styles.cardTitle, globalStyles.fontBold]}>Choose a plan</Text>
+                                <Text style={[styles.cardTitle, globalStyles.fontBold]}>Choose a plan1</Text>
 
                                 <View style={styles.segmentRow}>
                                     <TouchableOpacity

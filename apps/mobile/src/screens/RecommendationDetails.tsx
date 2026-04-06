@@ -1,22 +1,17 @@
-import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
 import { useRoute } from "@react-navigation/native";
 import React from "react";
 import {
     Image,
     ScrollView,
     Text,
-    TouchableOpacity,
     View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { contentsData } from "../data/contentsData";
-import { globalStyles } from "../public/styles";
-import { ContentDetailsStyles } from "../public/styles/contentStyles";
-import { IContent } from "../types/content.types";
-import Share from 'react-native-share';
-import { IRecommendationItem } from "../types/recommendation.types";
 import { recommendationsData } from "../data/recommendationsData";
 import { colors } from "../public/assets/colors";
+import { globalStyles } from "../public/styles";
+import { ContentDetailsStyles } from "../public/styles/contentStyles";
+import { IRecommendationItem } from "../types/recommendation.types";
 
 
 const RecommendationDetails = () => {

@@ -14,6 +14,7 @@ import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getExpertById } from "../api/getExpertsById";
 import GradientButtonWithSlightRadius from "../components/GradientButtonWithSlightRadius";
+import CustomDatePicker from "../components/CustomDatePicker";
 import { colors } from "../public/assets/colors";
 import { globalStyles } from "../public/styles";
 import { IExpert, IExpertByIdResponse, IExpertLoadingState } from "../types/expert.types";
@@ -34,6 +35,8 @@ const ExpertDetails = () => {
         uiLoading: false,
         paymentLoading: false
     });
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
     const bookConsultation = async () => {
         try {
@@ -43,7 +46,8 @@ const ExpertDetails = () => {
             });
             const { data } = await apiClientInterceptor().post(RAZORPAY_BOOK_CONSULTATION_CREATE_ORDER, {
                 amount: expert?.remuneration,
-                expertId
+                expertId,
+                date: selectedDate ? selectedDate.toISOString() : new Date().toISOString()
             }) as { data: IPaymentOrderResponse };
 
             const options: any = {
@@ -56,15 +60,17 @@ const ExpertDetails = () => {
                 name: `Expert Consultation with ${expert?.name}`,
                 prefill: {
                 },
-                theme: { color: colors.primary }
+                theme: { color: colors.darkPurple }
             }
-            RazorpayCheckout.open(options).then(async (data) => {
+            RazorpayCheckout.open(options).then(async (razorpay_data) => {
                 try {
                     await apiClientInterceptor().post(RAZORPAY_BOOK_CONSULTATION_VERIFY_ORDER, {
-                        razorpay_order_id: data.razorpay_order_id,
-                        razorpay_payment_id: data.razorpay_payment_id,
-                        razorpay_signature: data.razorpay_signature
+                        razorpay_order_id: razorpay_data.razorpay_order_id,
+                        razorpay_payment_id: razorpay_data.razorpay_payment_id,
+                        razorpay_signature: razorpay_data.razorpay_signature
                     });
+
+                    setSelectedDate(null);
 
                     Toast.show({
                         type: 'success',
@@ -137,7 +143,7 @@ const ExpertDetails = () => {
     if (loading.uiLoading) {
         return (
             <SafeAreaView style={[globalStyles.container, styles.centerContainer]}>
-                <ActivityIndicator size="large" color={colors.primary || colors.purple} />
+                <ActivityIndicator size="large" color={colors.darkPurple || colors.purple} />
                 <Text style={[styles.loadingText, globalStyles.fontRegular]}>
                     Loading expert details...
                 </Text>
@@ -212,30 +218,40 @@ const ExpertDetails = () => {
                     </View>
 
                     {/* Qualification Card */}
-                    <View style={styles.infoCard}>
-                        <View style={styles.cardHeader}>
-                            <Lucide name="school" size={20} color={colors.purple} />
-                            <Text style={[styles.cardTitle, globalStyles.fontBold]}>
-                                Qualification
-                            </Text>
-                        </View>
-                        <Text style={[styles.cardContent, globalStyles.fontRegular]}>
-                            {expert.qualification}
-                        </Text>
-                    </View>
+                    {
+                        expert.qualification && (
+
+                            <View style={styles.infoCard}>
+                                <View style={styles.cardHeader}>
+                                    <Lucide name="school" size={20} color={colors.purple} />
+                                    <Text style={[styles.cardTitle, globalStyles.fontBold]}>
+                                        Qualification
+                                    </Text>
+                                </View>
+                                <Text style={[styles.cardContent, globalStyles.fontRegular]}>
+                                    {expert.qualification}
+                                </Text>
+                            </View>
+                        )
+                    }
 
                     {/* About / Bio Card */}
-                    <View style={styles.infoCard}>
-                        <View style={styles.cardHeader}>
-                            <Lucide name="info" size={20} color={colors.purple} />
-                            <Text style={[styles.cardTitle, globalStyles.fontBold]}>
-                                About
-                            </Text>
-                        </View>
-                        <Text style={[styles.bioText, globalStyles.fontRegular]}>
-                            {expert.bio}
-                        </Text>
-                    </View>
+                    {
+                        expert.bio && (
+
+                            <View style={styles.infoCard}>
+                                <View style={styles.cardHeader}>
+                                    <Lucide name="info" size={20} color={colors.purple} />
+                                    <Text style={[styles.cardTitle, globalStyles.fontBold]}>
+                                        About
+                                    </Text>
+                                </View>
+                                <Text style={[styles.bioText, globalStyles.fontRegular]}>
+                                    {expert.bio}
+                                </Text>
+                            </View>
+                        )
+                    }
 
                     {/* Speciality Details Card */}
                     <View style={styles.infoCard}>
@@ -267,17 +283,52 @@ const ExpertDetails = () => {
 
             {/* Fixed Bottom Action Buttons */}
             <View>
-
                 <View style={styles.buttonRow}>
+                    {/* Date Picker Button */}
+                    <View style={styles.dateButtonWrapper}>
+                        <GradientButtonWithSlightRadius
+                            onPress={() => setShowDatePicker(true)}
+                            fullRounded
+                            borderedOnly={true}
+                            title={selectedDate
+                                ? selectedDate.toLocaleDateString('en-GB', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric'
+                                })
+                                : 'Select Date'}
+                        />
+                    </View>
+
+                    {/* Book Consultation Button */}
                     <View style={styles.buttonWrapper}>
                         <GradientButtonWithSlightRadius
                             onPress={bookConsultation}
-                            title={loading.paymentLoading ? "Processing, Please wait..." : 'Book Consultation'}
-                            disabled={loading.paymentLoading}
+                            fullRounded
+                            title={loading.paymentLoading ? "Processing..." : 'Book Consultation'}
+                            disabled={
+                                loading.paymentLoading ||
+                                !selectedDate ||
+                                (() => {
+                                    const today = new Date();
+                                    today.setHours(0, 0, 0, 0);
+                                    const selected = new Date(selectedDate);
+                                    selected.setHours(0, 0, 0, 0);
+                                    return selected < today;
+                                })()
+                            }
                         />
                     </View>
                 </View>
             </View>
+
+            <CustomDatePicker
+                show={showDatePicker}
+                setShow={setShowDatePicker}
+                selectedDate={selectedDate}
+                onSelect={(date) => setSelectedDate(date)}
+                minimumDate={true}
+            />
         </SafeAreaView>
     );
 };
@@ -308,7 +359,7 @@ const styles = StyleSheet.create({
     },
     notFoundSubtext: {
         marginTop: 8,
-        fontSize: 14,
+        fontSize: 16,
         color: '#666',
         textAlign: 'center',
     },
@@ -365,7 +416,7 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         overflow: 'hidden',
         elevation: 4,
-        shadowColor: '#6B4CE6',
+        shadowColor: colors.purple,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -385,7 +436,7 @@ const styles = StyleSheet.create({
         marginBottom: 4,
     },
     experienceLabel: {
-        fontSize: 14,
+        fontSize: 16,
         color: 'rgba(255, 255, 255, 0.9)',
     },
     infoCard: {
@@ -410,12 +461,12 @@ const styles = StyleSheet.create({
         color: '#1a1a1a',
     },
     cardContent: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#555',
         lineHeight: 20,
     },
     bioText: {
-        fontSize: 14,
+        fontSize: 16,
         color: '#555',
         lineHeight: 20,
     },
@@ -424,12 +475,19 @@ const styles = StyleSheet.create({
     },
 
     buttonRow: {
+        flexDirection: 'row',
         paddingHorizontal: 20,
         paddingTop: 8,
         paddingBottom: 16,
+        gap: 12,
+        alignItems: 'center',
+    },
+    dateButtonWrapper: {
+        flex: 0.8,
+        flexDirection: 'row',
     },
     buttonWrapper: {
-        width: '100%',
+        flex: 1,
         flexDirection: 'row',
     },
 });

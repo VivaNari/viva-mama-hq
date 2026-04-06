@@ -26,6 +26,12 @@ import VivaClubPost from '../../screens/VivaClubPost';
 import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
 import { DashboardTabs } from '../tabs/DashboardTabs';
 import ChatWithVivaAi from '../../screens/ChatWithVivaAI';
+import ProductDetails from '../../screens/ProductDetails';
+import Services from '../../screens/Services copy';
+import ConsultationRating from '../../screens/ConsultationRating';
+import BookmarkedMessages from '../../screens/BookmarkedMessages';
+import AboutVivaMama from '../../screens/AboutVivaMama';
+import Support from '../../screens/Support';
 
 const Stack = createNativeStackNavigator();
 
@@ -40,10 +46,9 @@ const AppStack = () => {
                 headerStyle: {
                     backgroundColor: colors.pageBG
                 }
-
             }}
         >
-            
+
             <Stack.Screen
                 name="DashboardTabNavigator"
                 component={DashboardTabs}
@@ -82,6 +87,15 @@ const AppStack = () => {
                 name="Products"
                 component={Products}
             />
+
+            <Stack.Screen
+                options={{
+                    headerShown: false,
+                    title: 'Product',
+                }}
+                name="ProductDetails"
+                component={ProductDetails}
+            />
             <Stack.Screen
                 options={{
                     headerShown: true,
@@ -92,11 +106,19 @@ const AppStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: false,
                     title: "Viva AI"
                 }}
                 name="ChatWithVivaAI"
                 component={ChatWithVivaAi as any}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: "Bookmarked Messages"
+                }}
+                name="BookmarkedMessages"
+                component={BookmarkedMessages}
             />
             <Stack.Screen
                 options={{
@@ -140,7 +162,7 @@ const AppStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: false,
                     title: 'Article Details',
                 }}
                 name="ArticleDetails"
@@ -164,7 +186,15 @@ const AppStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: true,
+                    headerShown: false,
+                    title: "Services"
+                }}
+                name="Services"
+                component={Services as any}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: false,
                     title: 'My Profile',
                 }}
                 name="MyProfile"
@@ -210,6 +240,22 @@ const AppStack = () => {
                 name="PrivacyPolicy"
                 component={PrivacyPolicy}
             />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'About VivaMama',
+                }}
+                name="AboutVivaMama"
+                component={AboutVivaMama}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Support',
+                }}
+                name="Support"
+                component={Support}
+            />
             {/* Infant screens */}
             <Stack.Screen
                 options={{
@@ -226,6 +272,14 @@ const AppStack = () => {
                 }}
                 name="VaccinationLog"
                 component={VaccinationLog}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Consultation Rating',
+                }}
+                name="ConsultationRating"
+                component={ConsultationRating}
             />
         </Stack.Navigator>
     );

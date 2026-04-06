@@ -45,7 +45,7 @@ const CreatePost = () => {
                         }}
                     >
                         <Image
-                            source={require("../public/assets/images/doctors/Dr_Harsha_Tomar.png")}
+                            source={require("../public/assets/images/avatar_ai.jpg")}
                             style={{
                                 height: 30,
                                 width: 30,

@@ -41,13 +41,12 @@ const apiClientInterceptor = (): AxiosInstance => {
    * RETRY CONFIG
    */
   const retryOptions: IAxiosRetryConfig = {
-    retries: 2,
+    retries: 5,
     retryCondition: (err: AxiosError) =>
-      axiosRetry.isNetworkOrIdempotentRequestError(err) ||
-      err.response?.status === 429,
+      err.response?.status !== 200,
 
     retryDelay: (retryCount, err) => {
-      const retryAfter = err.response?.headers["retry-after"];
+      const retryAfter = 1000;
       if (retryAfter) {
         return Number(retryAfter) * 1000; // seconds → ms
       }

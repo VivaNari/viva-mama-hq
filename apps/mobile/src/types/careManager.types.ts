@@ -5,13 +5,23 @@ export enum RequestCallbackStatusEnum {
 }
 
 export interface IRequestCallbackResponse {
-  data: {
-    _id: string;
-    userId: string;
-    careManagerId: string;
-    requestStatus: RequestCallbackStatusEnum;
-  };
+  data: IRequestCallbackResponseData;
   message: string;
   success: boolean;
   statusCode: number;
+}
+
+export interface IRequestCallbackResponseData {
+  _id: string;
+  userId: string;
+  consultatorId: ICareManager;
+  requestStatus: RequestCallbackStatusEnum;
+}
+
+export interface ICareManager {
+  _id: string;
+  name: string;
+  email: string;
+  phoneNumber: string;
+  imageUrl?: string;
 }

@@ -10,4 +10,5 @@ export interface ISettingsMenu {
   title: string;
   icon: string;
   componentName: string;
+  description: string;
 }

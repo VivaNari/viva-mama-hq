@@ -24,13 +24,10 @@ const LoginwithPhone = () => {
     const [verificationKey, setVerificationKey] = useState<string>('');
     const [getLoading, setLoading] = useState<boolean>(false);
     const { requestPhoneOTP, verifyPhoneOTP } = useAuth();
-    useEffect(() => {
-        console.log('🔥 BEFORE FETCH');
-    }, []);
     return (
-        <SafeAreaView>
-            <ScrollView>
-                <View style={globalStyles.container}>
+        <SafeAreaView style={{ flex: 1 }}>
+            <ScrollView style={{ backgroundColor: "white" }}>
+                <View style={[globalStyles.container, { backgroundColor: colors.white }]}>
                     {/* Logo */}
                     <View
                         style={{
@@ -49,10 +46,10 @@ const LoginwithPhone = () => {
                             <View>
                                 <TextInput
                                     inputMode="tel"
-                                    selectionColor={colors.primary}
-                                    placeholderTextColor={colors.white}
+                                    selectionColor={colors.darkPurple}
+                                    placeholderTextColor={colors.black}
                                     placeholder={'Enter Phone Number'}
-                                    style={[globalStyles.input, globalStyles.fontRegular]}
+                                    style={[globalStyles.input, globalStyles.fontSemiBold, { backgroundColor: colors.lightGray, borderWidth: 1, borderColor: colors.darkPurple, color: colors.purple }]}
                                     onChangeText={setPhoneNumber}
                                     value={phoneNumber}
                                 />
@@ -72,14 +69,12 @@ const LoginwithPhone = () => {
                                             setLoading(false);
                                         }
                                     }}
-                                    style={{ flex: 1, marginTop: 30 }}
+                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.darkPurple, borderRadius: 40 }}
                                     activeOpacity={0.8}
                                     disabled={getLoading}
                                 >
-                                    <LinearGradient
-                                        colors={[colors.primary, colors.secondary]}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
+                                    <View
+
                                         style={{
                                             height: '100%',
                                             width: '100%',
@@ -89,6 +84,7 @@ const LoginwithPhone = () => {
                                             flexDirection: 'row',
                                             padding: 14,
                                             gap: 20,
+
                                         }}
                                     >
                                         {
@@ -106,12 +102,12 @@ const LoginwithPhone = () => {
                                             style={[{
                                                 color: colors.white,
                                                 fontSize: 18,
-                                            }, globalStyles.fontRegular]}
+                                            }, globalStyles.fontSemiBold]}
                                         >
 
                                             Send OTP
                                         </Text>
-                                    </LinearGradient>
+                                    </View>
                                 </TouchableOpacity>
                             </View>
                         ) : (
@@ -122,7 +118,7 @@ const LoginwithPhone = () => {
                                         pinCodeTextStyle: globalStyles.fontRegular
                                     }}
                                     numberOfDigits={6}
-                                    focusColor={colors.secondary}
+                                    focusColor={colors.purple}
                                     autoFocus={false}
                                     hideStick={true}
                                     placeholder="******"
@@ -151,14 +147,11 @@ const LoginwithPhone = () => {
                                         await verifyPhoneOTP(phoneNumber, otp, verificationKey);
                                         setLoading(false);
                                     }}
-                                    style={{ flex: 1, marginTop: 30 }}
+                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.darkPurple, borderRadius: 40, borderWidth: 1, borderColor: colors.darkPurple }}
                                     activeOpacity={0.8}
                                     disabled={getLoading}
                                 >
-                                    <LinearGradient
-                                        colors={[colors.primary, colors.secondary]}
-                                        start={{ x: 0, y: 0 }}
-                                        end={{ x: 1, y: 0 }}
+                                    <View
                                         style={{
                                             height: '100%',
                                             width: '100%',
@@ -168,6 +161,7 @@ const LoginwithPhone = () => {
                                             flexDirection: 'row',
                                             padding: 14,
                                             gap: 10,
+
                                         }}
                                     >
                                         {
@@ -179,19 +173,19 @@ const LoginwithPhone = () => {
                                         <Text
                                             style={[{
                                                 color: colors.white,
-                                                fontSize: 18,
-                                            }, globalStyles.fontRegular]}
+                                                fontSize: 18
+                                            }, globalStyles.fontSemiBold]}
                                         >
                                             Submit
                                         </Text>
-                                    </LinearGradient>
+                                    </View>
                                 </TouchableOpacity>
                             </View>
                         )}
                     </View>
                 </View>
             </ScrollView>
-        </SafeAreaView>
+        </SafeAreaView >
     );
 };
 

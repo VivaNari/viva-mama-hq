@@ -70,7 +70,7 @@ const SubscriptionDetails: React.FC<{ plan: string; billing: string }> = ({ bill
                     // contact: '9191919191',
                     // name: 'Razorpay Software'
                 },
-                theme: { color: colors.primary }
+                theme: { color: colors.darkPurple }
             }
             RazorpayCheckout.open(options).then(async (data) => {
                 try {
@@ -315,7 +315,7 @@ const SubscriptionDetails: React.FC<{ plan: string; billing: string }> = ({ bill
 
             {/* Floating Continue Button */}
             <LinearGradient
-                colors={[colors.primary, colors.secondary]}
+                colors={[colors.darkPurple, colors.purple]}
                 style={{
                     borderRadius: 40,
                     justifyContent: "center",
@@ -338,7 +338,7 @@ const SubscriptionDetails: React.FC<{ plan: string; billing: string }> = ({ bill
                     <Text
                         style={[
                             { color: colors.white, fontSize: 16, textAlign: "center" },
-                            globalStyles.fontRegular,
+                            globalStyles.fontSemiBold,
                         ]}
                     >
                         {

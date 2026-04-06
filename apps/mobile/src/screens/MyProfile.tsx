@@ -1,20 +1,75 @@
-import { useNavigation } from '@react-navigation/native'
-import React, { useState } from 'react'
-import { FlatList, Image, ImageBackground, StyleSheet, Text, TouchableOpacity, View, ActivityIndicator } from 'react-native'
-import LinearGradient from 'react-native-linear-gradient'
+import InAppReview from 'react-native-in-app-review'
+import Lucide from '@react-native-vector-icons/lucide'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import React, { useCallback, useState } from 'react'
+import { FlatList, Image, Text, TouchableOpacity, View, Linking, Platform } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { myProfileData, settingsMenu } from '../data/myProfileData'
-import { colors } from '../public/assets/colors'
-import { globalStyles } from '../public/styles'
 import ProfileSettingsMenu from '../components/profile/ProfileSettingsMenu'
 import { useAuth } from '../context/AuthContext'
+import { settingsMenu } from '../data/myProfileData'
+import { chatDB } from '../db/sqlite'
+import { colors } from '../public/assets/colors'
+import { globalStyles } from '../public/styles'
+import { IUserAllData } from '../types/dashboard.types'
+import { syncUserData } from '../utils/syncUserData'
 
 const MyProfile = () => {
     const navigation = useNavigation<any>();
     const { signOut } = useAuth();
     const [getLoading, setLoading] = useState<boolean>(false);
+    const [userData, setUserdata] = useState<IUserAllData>();
+    const { userId, userToken } = useAuth();
+
+    const handleInAppReview = () => {
+        // NOTE: In-App Review only shows up in Production/Internal Test Track on Play Store.
+        // It will NOT show on debug builds or sideloaded APKs.
+        if (InAppReview.isAvailable()) {
+            InAppReview.RequestInAppReview()
+                .then((hasFlowFinishedSuccessfully) => {
+                    console.log('In-App Review flow finished successfully:', hasFlowFinishedSuccessfully);
+                })
+                .catch((error) => {
+                    console.log('In-App Review Error:', error);
+                    openStoreFallback();
+                });
+        } else {
+            openStoreFallback();
+        }
+    };
+
+    const openStoreFallback = () => {
+        const GOOGLE_PACKAGE_NAME = 'com.viva_nari_app';
+        const url = Platform.OS === 'ios'
+            ? `itms-apps://itunes.apple.com/app/viewContentsUserReviews/idYOUR_APPLE_ID?action=write-review`
+            : `market://details?id=${GOOGLE_PACKAGE_NAME}`;
+
+        Linking.openURL(url).catch(() => {
+            // If play store app is not available, open in browser
+            const browserUrl = `https://play.google.com/store/apps/details?id=${GOOGLE_PACKAGE_NAME}`;
+            Linking.openURL(browserUrl);
+        });
+    };
+
+    useFocusEffect(useCallback(() => {
+        (async function () {
+
+            let getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+
+            // Fallback: If no data in SQLite, try to sync from API
+            if (!getUserDataFromSQLite && userToken) {
+                console.log("[PROFILE] No local data, attempting fallback sync...");
+                await syncUserData(userToken);
+                getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+            }
+
+            if (getUserDataFromSQLite) {
+                setUserdata(getUserDataFromSQLite.data);
+            }
+        })()
+    }, [userId, userToken]));
+
     return (
-        <SafeAreaView style={[globalStyles.container, { flex: 1 }]}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
             <FlatList
                 data={settingsMenu}
                 renderItem={({ item, index }) => {
@@ -22,195 +77,216 @@ const MyProfile = () => {
                     const isLast = index === settingsMenu.length - 1
 
                     return (
-                        <ProfileSettingsMenu
-                            item={item}
-                            navigation={navigation}
-                            isFirst={isFirst}
-                            isLast={isLast}
-                        />
+                        <View
+                            style={{
+                                marginHorizontal: 20,
+
+                            }}
+                        >
+                            <ProfileSettingsMenu
+                                item={item}
+                                navigation={navigation}
+                                isFirst={isFirst}
+                                isLast={isLast}
+                            />
+                        </View>
                     )
                 }}
                 keyExtractor={(_, index) => index.toString()}
                 showsVerticalScrollIndicator={false}
+
                 ListHeaderComponent={() => (
                     <>
                         {/* Profile Card */}
-                        <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={{ padding: 1, borderRadius: 10 }}
+
+                        <View
+                            style={[globalStyles.container, {
+                                backgroundColor: colors.pageBG,
+                                borderRadius: 10,
+                                paddingVertical: 30,
+                                marginBottom: 20,
+
+                            }]}
                         >
                             <View
                                 style={{
-                                    backgroundColor: colors.white,
-                                    borderRadius: 10
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    gap: 20,
                                 }}
                             >
-                                <ImageBackground
-                                    source={require("../public/assets/images/Wave.png")}
-                                    resizeMode="cover"
+                                <View>
+                                    <Image
+                                        source={require("../public/assets/images/avatar_ai.jpg")}
+                                        style={{
+                                            height: 70,
+                                            width: 70,
+                                            borderRadius: 75,
+                                            borderWidth: 2,
+                                            borderColor: colors.purple,
+                                        }}
+                                    />
+
+                                </View>
+
+                                <View
                                     style={{
-                                        height: 180,
-                                        width: '100%',
-                                        justifyContent: "flex-end",
+                                        flex: 1,
+                                        flexDirection: 'row',
+                                        justifyContent: 'space-between',
+                                        alignItems: 'center'
+
                                     }}
                                 >
-                                    <View style={{
-                                        ...StyleSheet.absoluteFillObject,
-                                        backgroundColor: "rgba(244, 244, 244, 0.4)",
-                                        borderRadius: 10
-                                    }} />
-                                    <View
+
+                                    <View>
+
+                                        <Text
+                                            style={[{
+                                                fontSize: 18,
+                                                marginBottom: 5
+                                            }, globalStyles.fontSemiBold]}
+                                        >
+                                            {userData?.user.onboarding_data.preferred_name}
+                                        </Text>
+
+                                        {
+                                            userData &&
+                                                (!(userData.user.subscription.expiryDate) || new Date(userData.user.subscription.expiryDate) < new Date())
+                                                ? (
+                                                    <TouchableOpacity
+                                                        style={{
+                                                            backgroundColor: colors.darkPurple,
+                                                            paddingVertical: 6,
+                                                            paddingHorizontal: 10,
+                                                            borderRadius: 15
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={[{
+                                                                color: colors.white,
+                                                                textAlign: 'center',
+                                                                fontSize: 10
+                                                            }, globalStyles.fontRegular]}
+                                                        >
+                                                            Get Premium Today
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                )
+                                                : userData && (
+                                                    <TouchableOpacity
+                                                        style={{
+                                                            backgroundColor: colors.darkPurple,
+                                                            paddingVertical: 6,
+                                                            paddingHorizontal: 10,
+                                                            borderRadius: 15
+                                                        }}
+                                                    >
+                                                        <Text
+                                                            style={[{
+                                                                color: colors.white,
+                                                                textAlign: 'center',
+                                                                fontSize: 10
+                                                            }, globalStyles.fontRegular]}
+                                                        >
+                                                            {userData.user.subscription.plan}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                )
+                                        }
+
+                                    </View>
+
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate("EditProfile")}
+                                        activeOpacity={0.7}
                                         style={{
-                                            padding: 10,
-                                            flex: 1,
-                                            flexDirection: 'row',
-                                            justifyContent: 'flex-start',
-                                            gap: 30,
-                                            alignItems: 'center'
+                                            padding: 6,
+                                            borderRadius: 15,
+                                            marginTop: 10,
                                         }}
                                     >
-                                        <View>
-                                            <Image
-                                                source={myProfileData.avatar}
-                                                style={{
-                                                    height: 110,
-                                                    width: 110,
-                                                    borderRadius: 75,
-                                                    marginBottom: 10,
-                                                    borderWidth: 2,
-                                                    borderColor: colors.purple
-                                                }}
-                                            />
-                                            {myProfileData.isPremium && (
-                                                <TouchableOpacity
-                                                    style={{
-                                                        backgroundColor: colors.primary,
-                                                        paddingVertical: 6,
-                                                        borderRadius: 15
-                                                    }}
-                                                >
-                                                    <Text
-                                                        style={[{
-                                                            color: colors.white,
-                                                            textAlign: 'center',
-                                                            fontSize: 10
-                                                        }, globalStyles.fontRegular]}
-                                                    >
-                                                        Viva Premium
-                                                    </Text>
-                                                </TouchableOpacity>
-                                            )}
-                                        </View>
+                                        <Lucide
+                                            name='chevron-right'
+                                            color={colors.darkPurple}
+                                            size={20}
+                                        />
+                                    </TouchableOpacity>
 
-                                        <View>
-                                            <Text
-                                                style={[{
-                                                    fontSize: 16,
-                                                    marginBottom: 5
-                                                }, globalStyles.fontSemiBold]}
-                                            >
-                                                {myProfileData.name}
-                                            </Text>
-                                            <Text
-                                                style={[{
-                                                    color: 'rgba(0, 0, 0, 0.6)',
-                                                    fontSize: 12,
-                                                }, globalStyles.fontRegular]}
-                                            >
-                                                {myProfileData.email}
-                                            </Text>
-                                            <Text
-                                                style={[{
-                                                    color: 'rgba(0, 0, 0, 0.6)',
-                                                    fontSize: 12,
-                                                }, globalStyles.fontRegular]}
-                                            >
-                                                Age - {myProfileData.age}
-                                            </Text>
-
-                                            <TouchableOpacity
-                                                onPress={() => navigation.navigate("EditProfile")}
-                                                activeOpacity={0.7}
-                                                style={{
-                                                    backgroundColor: colors.secondary,
-                                                    paddingVertical: 6,
-                                                    borderRadius: 15,
-                                                    marginTop: 10,
-                                                }}
-                                            >
-                                                <Text style={[{
-                                                    textAlign: "center",
-                                                    color: colors.white,
-                                                    fontSize: 10
-                                                }, globalStyles.fontRegular]}>
-                                                    Edit Profile
-                                                </Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    </View>
-                                </ImageBackground>
+                                </View>
                             </View>
-                        </LinearGradient>
-
-                        {/* Link Your Partner */}
-                        <View
-                            style={{
-                                backgroundColor: colors.profileOptionsBG,
-                                paddingVertical: 15,
-                                paddingHorizontal: 20,
-                                borderRadius: 10,
-                                marginVertical: 25,
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                alignItems: 'center',
-                            }}
-                        >
-                            <Text
-                                style={[globalStyles.fontRegular]}
-                            >Add Your partner</Text>
-                            <TouchableOpacity
-                                onPress={() => navigation.navigate("AddPartner")}
-                                activeOpacity={0.7}
-                                style={{
-                                    backgroundColor: colors.primary,
-                                    paddingVertical: 10,
-                                    paddingHorizontal: 20,
-                                    borderRadius: 15
-                                }}
-                            >
-                                <Text
-                                    style={[{
-                                        color: colors.white,
-                                        textAlign: 'center',
-                                        fontSize: 12
-                                    }, globalStyles.fontRegular]}
-                                >
-                                    Link Your Partner
-                                </Text>
-                            </TouchableOpacity>
                         </View>
                     </>
                 )}
+
                 // Footer
                 ListFooterComponent={() => (
                     <View
                         style={{
-                            marginTop: 30,
+                            marginHorizontal: 20,
+
                         }}
                     >
                         <TouchableOpacity
-                            activeOpacity={0.7}
+                            activeOpacity={0.4}
+                            onPress={handleInAppReview}
                             style={{
-                                backgroundColor: colors.logout,
-                                padding: 14,
-                                borderRadius: 10,
-                                flexDirection: 'row',
-                                justifyContent: 'center',
+                                flexDirection: "row",
+                                gap: 5,
                                 alignItems: 'center',
-                                gap: 10
+                                justifyContent: 'flex-start',
+                                paddingVertical: 10,
+                                borderTopLeftRadius: 8,
+                                borderTopRightRadius: 8,
+                                borderBottomLeftRadius: 8,
+                                borderBottomRightRadius: 8,
                             }}
+                        >
+                            <Lucide name={"star"} size={20} color={colors.darkGray} />
+                            <View
+                                style={{
+                                    flex: 1,
+                                }}
+                            >
+                                <Text
+                                    style={[{
+                                        fontSize: 16,
+                                        flex: 1,
+                                        marginLeft: 10
+                                    }, globalStyles.fontSemiBold]}
+                                >
+                                    Review Us
+                                </Text>
+                                <Text
+                                    style={[{
+                                        fontSize: 14,
+                                        paddingBottom: 12,
+                                        borderBottomWidth: 1,
+                                        borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+                                        flex: 1,
+                                        marginLeft: 10,
+                                        color: colors.darkGray
+                                    }, globalStyles.fontRegular]}
+                                >
+                                    Share your feedback and help us improve.
+                                </Text>
+                            </View>
+                            <View
+                                style={{
+                                    padding: 5,
+                                    height: 30,
+                                    width: 30,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    backgroundColor: colors.pageBG,
+                                    borderRadius: '50%',
+                                }}
+                            >
+                                <Lucide name={'chevron-right'} size={20} color={colors.darkPurple} />
+                            </View>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            activeOpacity={0.4}
                             onPress={() => {
                                 setLoading(true);
                                 setTimeout(() => {
@@ -218,29 +294,68 @@ const MyProfile = () => {
                                     setLoading(false);
                                 }, 500);
                             }}
+                            style={{
+                                flexDirection: "row",
+                                gap: 5,
+                                alignItems: 'center',
+                                justifyContent: 'flex-start',
+                                paddingVertical: 10,
+                                borderTopLeftRadius: 8,
+                                borderTopRightRadius: 8,
+                                borderBottomLeftRadius: 8,
+                                borderBottomRightRadius: 8,
+                            }}
                         >
-                            {
-                                getLoading && <ActivityIndicator />
-                            }
-                            <Text
-                                style={[{
-                                    fontSize: 16,
-                                    color: colors.white,
-                                    textAlign: 'center'
-                                }, globalStyles.fontBold]}
+                            <Lucide name={"log-out"} size={20} color={colors.darkGray} />
+                            <View
+                                style={{
+                                    flex: 1,
+                                }}
                             >
-                                {
-                                    getLoading ? 'Signing Out...' : 'Sign Out'
-                                }
-                            </Text>
+                                <Text
+                                    style={[{
+                                        fontSize: 16,
+                                        flex: 1,
+                                        marginLeft: 10
+                                    }, globalStyles.fontSemiBold]}
+                                >
+                                    {
+                                        getLoading ? 'Signing Out...' : 'Sign Out'
+                                    }
+                                </Text>
+                                <Text
+                                    style={[{
+                                        fontSize: 14,
+                                        paddingBottom: 12,
+                                        borderBottomWidth: 1,
+                                        borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+                                        flex: 1,
+                                        marginLeft: 10,
+                                        color: colors.darkGray
+                                    }, globalStyles.fontRegular]}
+                                >
+                                    Signout from your current session
+                                </Text>
+                            </View>
+                            <View
+                                style={{
+                                    padding: 5,
+                                    height: 30,
+                                    width: 30,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    backgroundColor: colors.pageBG,
+                                    borderRadius: '50%',
+                                }}
+                            >
+                                <Lucide name={'chevron-right'} size={20} color={colors.darkPurple} />
+                            </View>
                         </TouchableOpacity>
-
                         <View
                             style={{
                                 flexDirection: 'row',
-                                justifyContent: 'center',
+                                justifyContent: 'space-evenly',
                                 alignItems: 'center',
-                                gap: 20,
                                 marginTop: 30
                             }}
                         >
@@ -248,23 +363,35 @@ const MyProfile = () => {
                                 onPress={() => navigation.navigate('TermsOfUse' as any)}
                                 style={[{
                                     fontSize: 12,
-                                    color: colors.primary,
+                                    color: colors.darkPurple,
                                     fontWeight: 600
-                                }, globalStyles.fontRegular]}
+                                }, globalStyles.fontSemiBold]}
                             >
                                 Terms of use
                             </Text>
+
+                            <Text
+                                style={[{
+                                    fontSize: 12,
+                                    color: colors.darkGray,
+                                    fontWeight: 600
+                                }, globalStyles.fontRegular]}
+                            >
+                                App Version: 1.0.0
+                            </Text>
+
                             <Text
                                 onPress={() => navigation.navigate('PrivacyPolicy' as any)}
                                 style={[{
                                     fontSize: 12,
-                                    color: colors.primary,
+                                    color: colors.darkPurple,
                                     fontWeight: 600
-                                }, globalStyles.fontRegular]}
+                                }, globalStyles.fontSemiBold]}
                             >
                                 Privacy Policy
                             </Text>
                         </View>
+
 
                         <View
                             style={{

@@ -1,6 +1,6 @@
 {
   "name": "viva_nari_app",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "assemble-release": "cd android && ./gradlew assembleRelease -PsplitApks"
+    "assemble-release": "cd android && ./gradlew assembleRelease"
   },
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.8",
@@ -20,7 +20,6 @@
     "@react-native-google-signin/google-signin": "^16.0.0",
     "@react-native-vector-icons/lucide": "^12.4.0",
     "@react-native-vector-icons/material-design-icons": "^12.3.0",
-    "@react-native/new-app-screen": "0.81.1",
     "@react-navigation/bottom-tabs": "^7.4.7",
     "@react-navigation/native": "^7.1.17",
     "@react-navigation/native-stack": "^7.3.26",
@@ -30,11 +29,12 @@
     "react": "19.1.0",
     "react-native": "0.81.1",
     "react-native-dotenv": "^2.5.3",
-    "react-native-geolocation-service": "^5.3.1",
     "react-native-gesture-handler": "^2.30.0",
     "react-native-gifted-charts": "^1.4.70",
+    "react-native-in-app-review": "^4.4.2",
     "react-native-linear-gradient": "^2.8.3",
     "react-native-otp-entry": "^1.8.5",
+    "react-native-ratings": "^8.1.0",
     "react-native-razorpay": "^2.3.1",
     "react-native-reanimated": "^4.2.1",
     "react-native-safe-area-context": "^5.6.1",
@@ -45,16 +45,18 @@
     "react-native-sse": "^1.2.1",
     "react-native-svg": "^15.13.0",
     "react-native-toast-message": "^2.3.3",
-    "react-native-worklets": "^0.7.1"
+    "react-native-webview": "^13.16.0",
+    "react-native-worklets": "^0.7.1",
+    "react-native-youtube-iframe": "^2.4.1"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@babel/runtime": "^7.25.0",
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "@react-native-community/cli": "20.0.0",
-    "@react-native-community/cli-platform-android": "20.0.0",
-    "@react-native-community/cli-platform-ios": "20.0.0",
+    "@react-native-community/cli": "^20.1.3",
+    "@react-native-community/cli-platform-android": "^20.1.3",
+    "@react-native-community/cli-platform-ios": "^20.1.3",
     "@react-native/babel-preset": "0.81.1",
     "@react-native/eslint-config": "0.81.1",
     "@react-native/metro-config": "0.81.1",

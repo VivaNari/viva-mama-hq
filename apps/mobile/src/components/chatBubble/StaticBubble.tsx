@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { globalStyles } from '../../public/styles/globalStyles';
 import {
@@ -8,13 +8,17 @@ import {
 } from '../../types/chat.types';
 import {
     isAiMessage,
-    isTextInputMessage,
-    isMultiSelectMessage,
+    isChatbotMessage,
     isDeliveryDateNode,
+    isMultiSelectMessage,
+    isTextInputMessage,
 } from '../../utils/messageHelpers';
 import { bubbleStyles } from './styles';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import { colors } from '../../public/assets/colors';
 
 interface StaticBubbleProps {
+    isFirst: boolean;
     message: IChatMessage;
     isLast: boolean;
     isAnimating: boolean;
@@ -24,9 +28,12 @@ interface StaticBubbleProps {
     selectedMultiOptions: Set<string>;
     onDatePickerOpen: () => void;
     onNotPregnantSelect: () => void;
+    onBookmarkPress: (id: string) => void;
+    isBookmarked?: boolean;
 }
 
 export const StaticBubble: React.FC<StaticBubbleProps> = ({
+    isFirst,
     message,
     isLast,
     isAnimating,
@@ -36,8 +43,11 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
     selectedMultiOptions,
     onDatePickerOpen,
     onNotPregnantSelect,
+    onBookmarkPress,
+    isBookmarked,
 }) => {
     const isAi = isAiMessage(message);
+    const isChatbot = isChatbotMessage(message);
     const isTextInput = isAi && isTextInputMessage(message);
     const isMultiSelect = isAi && isMultiSelectMessage(message);
     const isDeliveryDate = isAi && isDeliveryDateNode(message);
@@ -58,7 +68,7 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel="Select delivery date"
             >
-                <Text style={[bubbleStyles.optionButtonText, bubbleStyles.specialOptionText, globalStyles.fontRegular]}>
+                <Text style={[bubbleStyles.optionButtonText, bubbleStyles.specialOptionText, globalStyles.fontSemiBold]}>
                     Select Delivery Date
                 </Text>
             </TouchableOpacity>
@@ -69,7 +79,7 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                 accessibilityRole="button"
                 accessibilityLabel="I'm not pregnant yet"
             >
-                <Text style={[bubbleStyles.optionButtonText, globalStyles.fontRegular]}>
+                <Text style={[bubbleStyles.optionButtonText, globalStyles.fontSemiBold]}>
                     I'm Not Pregnant Yet
                 </Text>
             </TouchableOpacity>
@@ -103,7 +113,7 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                             <Text
                                 style={[
                                     bubbleStyles.optionButtonText,
-                                    globalStyles.fontRegular,
+                                    globalStyles.fontSemiBold,
                                     isMultiSelect && isSelected && bubbleStyles.optionButtonTextSelected,
                                 ]}
                             >
@@ -146,13 +156,39 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                     <Text
                         style={[
                             bubbleStyles.messageText,
-                            globalStyles.fontRegular,
+                            globalStyles.fontSemiBold,
                             isAi ? bubbleStyles.aiText : bubbleStyles.userText,
                         ]}
                     >
                         {message.text}
                     </Text>
                 </View>
+                {isChatbot && !isFirst && isAi ? <View
+                    style={{
+                        paddingVertical: 8,
+                    }}
+                >
+                    <TouchableOpacity
+                        onPress={() => onBookmarkPress(message.id)}
+                        activeOpacity={0.2}
+                    >
+                        {
+                            isBookmarked ? (
+                                <MaterialDesignIcons
+                                    name='bookmark'
+                                    size={20}
+                                    color={colors.darkPurple}
+                                />
+                            ) : (
+                                <MaterialDesignIcons
+                                    name='bookmark-outline'
+                                    size={20}
+                                    color={colors.darkPurple}
+                                />
+                            )
+                        }
+                    </TouchableOpacity>
+                </View> : <></>}
 
                 {isDeliveryDate && isLast && !isAnimating && !isFlowComplete && renderDeliveryDateOptions()}
 

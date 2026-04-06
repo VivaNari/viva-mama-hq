@@ -10,6 +10,7 @@ interface Props extends ChatBubbleProps {
 }
 
 export const ChatBubble: React.FC<Props> = ({
+	isFirst,
 	message,
 	isLast,
 	isAnimating,
@@ -21,6 +22,8 @@ export const ChatBubble: React.FC<Props> = ({
 	onNotPregnantSelect,
 	onAnimationComplete,
 	shouldAnimate,
+	onBookmarkPress,
+	isBookmarked,
 }) => {
 	if (shouldAnimate && isAiMessage(message) && onAnimationComplete) {
 		return (
@@ -39,6 +42,7 @@ export const ChatBubble: React.FC<Props> = ({
 	return (
 		<StaticBubble
 			message={message}
+			isFirst={isFirst}
 			isLast={isLast}
 			isAnimating={isAnimating}
 			isFlowComplete={isFlowComplete}
@@ -47,6 +51,8 @@ export const ChatBubble: React.FC<Props> = ({
 			selectedMultiOptions={selectedMultiOptions}
 			onDatePickerOpen={onDatePickerOpen}
 			onNotPregnantSelect={onNotPregnantSelect}
+			onBookmarkPress={onBookmarkPress}
+			isBookmarked={isBookmarked}
 		/>
 	);
 };

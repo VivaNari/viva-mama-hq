@@ -2,10 +2,7 @@ import { useCallback } from "react";
 import Toast from "react-native-toast-message";
 
 import apiClientInterceptor from "../api/apiClientInterceptor";
-import {
-  CHAT_FLOW_ANSWER,
-  WEEKLY_CHECKIN_ANSWER,
-} from "../constants/endpoints";
+import { CHAT_FLOW_ANSWER } from "../constants/endpoints";
 import {
   FlowType,
   IOption,
@@ -30,6 +27,13 @@ interface UseChatActionsProps {
   dispatch: React.Dispatch<ChatAction>;
   getLastAiMessage: () => Promise<IAiMessage | null>;
   saveUserMessage: (text: string, lastAiMessageId?: string) => Promise<void>;
+  // New: Optional guided flow submit function
+  submitGuidedAnswer?: (payload: {
+    nodeId: string;
+    selectedKeys?: number[];
+    freeText?: string;
+  }) => Promise<boolean>;
+  selectedModel?: string; // New: Selected model for chatbot flow
 }
 
 export const useChatActions = ({
@@ -39,56 +43,55 @@ export const useChatActions = ({
   dispatch,
   getLastAiMessage,
   saveUserMessage,
+  submitGuidedAnswer,
+  selectedModel,
 }: UseChatActionsProps) => {
-  const sendAnswer = useCallback(
+  /**
+   * Check if this is a guided flow (uses request-response)
+   */
+  const isGuidedFlow =
+    flowType === FlowType.ONBOARDING || flowType === FlowType.CHECKIN;
+
+  /**
+   * Send answer for CHATBOT flow (SSE-based)
+   */
+  const sendChatbotAnswer = useCallback(
     async (payload: {
-      flowInstanceId: string;
-      nodeId: string;
-      selectedKeys?: number[];
       freeText?: string;
       sessionId?: string;
       conversationId?: string;
     }): Promise<boolean> => {
       try {
-        if (flowType === FlowType.CHECKIN) {
-          await apiClientInterceptor().post(WEEKLY_CHECKIN_ANSWER, {
-            userId,
-            flowInstanceId: payload.flowInstanceId,
-            nodeId: payload.nodeId,
-            selectedKeys: payload.selectedKeys,
-            freeText: payload.freeText,
-            flowType,
-            week: 1,
-            idempotencyKey: payload.nodeId,
-          });
-        } else {
-          await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
-            userId,
-            flowInstanceId: payload.flowInstanceId,
-            nodeId: payload.nodeId,
-            selectedKeys: payload.selectedKeys,
-            freeText: payload.freeText,
-            flowType,
-            sessionId: payload.sessionId,
-            conversationId: payload.conversationId,
-          });
-        }
+        console.log("[API] Selected model: ", selectedModel);
+        await apiClientInterceptor().post(CHAT_FLOW_ANSWER, {
+          userId,
+          flowInstanceId: "chatbot",
+          nodeId: "chatbot",
+          freeText: payload.freeText,
+          flowType,
+          sessionId: payload.sessionId,
+          conversationId: payload.conversationId,
+          model: selectedModel || "qwen/qwen3-32b",
+        });
         return true;
       } catch (error: any) {
-        chatLogger.error("Failed to send answer", error);
+        chatLogger.error("Failed to send chatbot answer", error);
         Toast.show({
           type: "error",
           text1: "Error",
-          text2: error.response?.data?.message || "Failed to send answer",
+          text2: error.response?.data?.message || "Failed to send message",
           position: "bottom",
         });
         dispatch({ type: "SET_LOADING", payload: false });
         return false;
       }
     },
-    [userId, flowType, dispatch],
+    [userId, flowType, dispatch, selectedModel],
   );
 
+  /**
+   * Handle single option selection
+   */
   const handleOptionSelect = useCallback(
     async (option: IOption) => {
       const lastAi = await getLastAiMessage();
@@ -98,17 +101,20 @@ export const useChatActions = ({
       }
 
       await saveUserMessage(option.label, lastAi.id);
-      dispatch({ type: "SET_LOADING", payload: true });
 
-      await sendAnswer({
-        flowInstanceId: lastAi.flowInstanceId,
-        nodeId: lastAi.id,
-        selectedKeys: [option.score],
-      });
+      if (isGuidedFlow && submitGuidedAnswer) {
+        await submitGuidedAnswer({
+          nodeId: lastAi.id,
+          selectedKeys: [option.score],
+        });
+      }
     },
-    [getLastAiMessage, saveUserMessage, sendAnswer, dispatch],
+    [getLastAiMessage, saveUserMessage, isGuidedFlow, submitGuidedAnswer],
   );
 
+  /**
+   * Handle multi-select submission
+   */
   const handleMultiSelectSubmit = useCallback(
     async (selectedOptions: Set<string>, options: IOption[]) => {
       if (selectedOptions.size === 0) {
@@ -131,17 +137,26 @@ export const useChatActions = ({
 
       await saveUserMessage(selectedLabels, lastAi.id);
       dispatch({ type: "CLEAR_MULTI_OPTIONS" });
-      dispatch({ type: "SET_LOADING", payload: true });
 
-      await sendAnswer({
-        flowInstanceId: lastAi.flowInstanceId,
-        nodeId: lastAi.id,
-        selectedKeys: selectedScores,
-      });
+      if (isGuidedFlow && submitGuidedAnswer) {
+        await submitGuidedAnswer({
+          nodeId: lastAi.id,
+          selectedKeys: selectedScores,
+        });
+      }
     },
-    [getLastAiMessage, saveUserMessage, sendAnswer, dispatch],
+    [
+      getLastAiMessage,
+      saveUserMessage,
+      dispatch,
+      isGuidedFlow,
+      submitGuidedAnswer,
+    ],
   );
 
+  /**
+   * Handle text submission
+   */
   const handleTextSubmit = useCallback(
     async (text: string) => {
       const trimmedText = text.trim();
@@ -149,7 +164,7 @@ export const useChatActions = ({
         return;
       }
 
-      // For chatbot, we don't need the last AI message
+      // For CHATBOT - use SSE flow
       if (flowType === FlowType.CHATBOT) {
         await saveUserMessage(trimmedText);
         dispatch({ type: "SET_INPUT_TEXT", payload: "" });
@@ -157,21 +172,19 @@ export const useChatActions = ({
 
         const lastMessage = state.messages[state.messages.length - 1];
         const sessionId =
-          lastMessage.type === "ai" ? lastMessage.sessionId : undefined;
+          lastMessage?.type === "ai" ? lastMessage.sessionId : undefined;
         const conversationId =
-          lastMessage.type === "ai" ? lastMessage.conversationId : undefined;
+          lastMessage?.type === "ai" ? lastMessage.conversationId : undefined;
 
-        await sendAnswer({
-          flowInstanceId: "chatbot",
-          nodeId: "chatbot",
+        await sendChatbotAnswer({
           freeText: trimmedText,
-          sessionId: sessionId,
-          conversationId: conversationId,
+          sessionId,
+          conversationId,
         });
         return;
       }
 
-      // For guided flows
+      // For GUIDED FLOWS - use request-response
       const lastAi = await getLastAiMessage();
       if (!lastAi) {
         chatLogger.error("No AI message to respond to");
@@ -185,17 +198,28 @@ export const useChatActions = ({
 
       await saveUserMessage(trimmedText, lastAi.id);
       dispatch({ type: "SET_INPUT_TEXT", payload: "" });
-      dispatch({ type: "SET_LOADING", payload: true });
 
-      await sendAnswer({
-        flowInstanceId: lastAi.flowInstanceId,
-        nodeId: lastAi.id,
-        freeText: trimmedText,
-      });
+      if (submitGuidedAnswer) {
+        await submitGuidedAnswer({
+          nodeId: lastAi.id,
+          freeText: trimmedText,
+        });
+      }
     },
-    [flowType, getLastAiMessage, saveUserMessage, sendAnswer, dispatch, state],
+    [
+      flowType,
+      getLastAiMessage,
+      saveUserMessage,
+      dispatch,
+      state.messages,
+      sendChatbotAnswer,
+      submitGuidedAnswer,
+    ],
   );
 
+  /**
+   * Handle date selection
+   */
   const handleDateSelect = useCallback(
     async (date: Date) => {
       const lastAi = await getLastAiMessage();
@@ -205,19 +229,21 @@ export const useChatActions = ({
       }
 
       const formattedDate = formatDateForApi(date);
-
       await saveUserMessage(formattedDate, lastAi.id);
-      dispatch({ type: "SET_LOADING", payload: true });
 
-      await sendAnswer({
-        flowInstanceId: lastAi.flowInstanceId,
-        nodeId: lastAi.id,
-        freeText: formattedDate,
-      });
+      if (isGuidedFlow && submitGuidedAnswer) {
+        await submitGuidedAnswer({
+          nodeId: lastAi.id,
+          freeText: formattedDate,
+        });
+      }
     },
-    [getLastAiMessage, saveUserMessage, sendAnswer, dispatch],
+    [getLastAiMessage, saveUserMessage, isGuidedFlow, submitGuidedAnswer],
   );
 
+  /**
+   * Handle "not pregnant" selection
+   */
   const handleNotPregnantSelect = useCallback(async () => {
     const lastAi = await getLastAiMessage();
     if (!lastAi) {
@@ -226,14 +252,14 @@ export const useChatActions = ({
     }
 
     await saveUserMessage("I'm not pregnant yet", lastAi.id);
-    dispatch({ type: "SET_LOADING", payload: true });
 
-    await sendAnswer({
-      flowInstanceId: lastAi.flowInstanceId,
-      nodeId: lastAi.id,
-      freeText: NOT_PREGNANT_VALUE,
-    });
-  }, [getLastAiMessage, saveUserMessage, sendAnswer, dispatch]);
+    if (isGuidedFlow && submitGuidedAnswer) {
+      await submitGuidedAnswer({
+        nodeId: lastAi.id,
+        freeText: NOT_PREGNANT_VALUE,
+      });
+    }
+  }, [getLastAiMessage, saveUserMessage, isGuidedFlow, submitGuidedAnswer]);
 
   return {
     handleOptionSelect,

@@ -6,13 +6,15 @@ interface ICustomDatePickerProps {
     setShow: Dispatch<SetStateAction<boolean>>;
     selectedDate: Date | null;
     onSelect: (date: Date) => void;
+    minimumDate?: boolean;
 }
 
 const CustomDatePicker = ({
     show,
     setShow,
     selectedDate,
-    onSelect
+    onSelect,
+    minimumDate = false
 }: ICustomDatePickerProps) => {
 
     const handleChange = (event: DateTimePickerEvent, date?: Date) => {
@@ -31,6 +33,7 @@ const CustomDatePicker = ({
                     mode="date"
                     display="default"
                     onChange={handleChange}
+                    minimumDate={minimumDate ? new Date() : undefined}
                 />
             )}
         </Fragment>

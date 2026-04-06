@@ -1,31 +1,45 @@
 import React from 'react';
-import { Dimensions, Image, Linking, Text, TouchableOpacity } from 'react-native';
+import { Image, Text, TouchableOpacity, View } from 'react-native';
 import { globalStyles } from '../../public/styles';
 import { IUserProduct } from '../../types/product.types';
 
-const { width } = Dimensions.get('window');
-
-const ItemProduct = ({ item }: { item: IUserProduct }) => {
+const ItemProduct = ({ item, navigation }: { item: IUserProduct, navigation: any }) => {
     return (
-        <TouchableOpacity
-            onPress={() => Linking.openURL(item.productAffiliateLink)}
-            activeOpacity={0.8}
-            style={[{
-                justifyContent: 'flex-start',
-                flex: 1,
-                maxWidth: (width - 55) / 2,
-            }]}>
-            <Image
-                source={{ uri: item.productImageURL }}
-                style={{ width: "100%", height: 160, borderRadius: 8 }}
-            />
+        <View
+            style={{
+                padding: 2,
+                width: '50%',
+                flexShrink: 1
+            }}
+        >
 
-            <Text
+            <TouchableOpacity
+                onPress={() => navigation.navigate("ProductDetails", { productId: item._id })}
+                activeOpacity={0.8}
                 style={[{
-                    marginVertical: 3
-                }, globalStyles.fontRegular]}
-            >{item.productName}</Text>
-        </TouchableOpacity>
+                    justifyContent: 'flex-start',
+                    flex: 1,
+                    width: '100%',
+                    borderRadius: 6,
+                    overflow: 'hidden',
+                    boxShadow: '0 0 4px 0 rgba(0, 0, 0, 0.25)',
+
+                }]}>
+                <Image
+                    source={{ uri: item.productImageURL }}
+                    style={{ width: "100%", height: 160, borderRadius: 8 }}
+                />
+
+                <Text
+                    style={[{
+                        marginVertical: 8,
+                        marginHorizontal: 5,
+                        textAlign: "center",
+                        fontSize: 16
+                    }, globalStyles.fontRegular]}
+                >{item.productName}</Text>
+            </TouchableOpacity>
+        </View>
     )
 }
 

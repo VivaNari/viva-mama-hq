@@ -1,69 +1,66 @@
-import messaging, { FirebaseMessagingTypes } from '@react-native-firebase/messaging'
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
-import { useNavigation } from '@react-navigation/native'
-import React, { useEffect, useState } from 'react'
-import { FlatList, ScrollView, Text, View } from 'react-native'
-import LinearGradient from 'react-native-linear-gradient'
-import Toast from 'react-native-toast-message'
+import Lucide from '@react-native-vector-icons/lucide'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import React, { useCallback, useEffect, useState } from 'react'
+import { FlatList, ScrollView, Text, TouchableOpacity, View } from 'react-native'
+import { getActiveConsultations } from '../api/getActiveConsultatons'
 import { getUserContents } from '../api/getUserContents'
 import { getUserProducts } from '../api/getUserProducts'
 import { ArticleCard } from '../components/ArticleCard'
-import DashboardCard from '../components/dashboard/DashboardCard'
 import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
+import ItemProduct from '../components/products/ItemProduct'
 import { useAuth } from '../context/AuthContext'
 import { chatDB } from '../db/sqlite'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
+import { IUserActiveConsultations, IUserActiveConsultationsResponse } from '../types/consultation.types'
 import { IUserContent, IUserContentresponse } from '../types/content.types'
 import { IUserAllData } from '../types/dashboard.types'
 import { IUserProduct, IUserProductResponse } from '../types/product.types'
-import { FLProductItem } from './Products'
+import { syncUserData } from '../utils/syncUserData'
 
 const Dashboard = () => {
     const navigation = useNavigation<any>();
-    const [vivaScore, setVivaScore] = useState<string | null>(null);
     const [userData, setUserdata] = useState<IUserAllData>();
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
     const [productsData, setProductsData] = useState<IUserProduct[]>([]);
-    const { userId } = useAuth();
+    const [userActiveConsultationsData, setUserActiveConsultationsData] = useState<IUserActiveConsultations[]>([]);
+    const { userId, userToken } = useAuth();
 
-    useEffect(() => {
-        if (!userId) return;
-        (async () => {
-            try {
-                const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
-                console.log("getUserDataFromSQLite in Dashboard.tsx ==>> ", getUserDataFromSQLite);
-                if (getUserDataFromSQLite) {
-                    setUserdata(getUserDataFromSQLite.data);
+    useFocusEffect(
+        useCallback(() => {
+            if (!userId) return;
+            (async () => {
+                try {
+
+                    let getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+
+                    // Fallback: If no data in SQLite, try to sync from API
+                    if (!getUserDataFromSQLite && userToken) {
+                        console.log("[DASHBOARD] No local data, attempting fallback sync...");
+                        await syncUserData(userToken);
+                        getUserDataFromSQLite = await chatDB.getUserData(userId as string);
+                    }
+
+                    if (getUserDataFromSQLite) {
+                        setUserdata(getUserDataFromSQLite.data);
+                    }
+
+                    const getContents: IUserContentresponse = await getUserContents();
+                    setUserContentsData(getContents.data);
+
+                    const getProducts: IUserProductResponse = await getUserProducts();
+                    setProductsData(getProducts.data);
+
+                    const getuserActiveConsultations: IUserActiveConsultationsResponse = await getActiveConsultations();
+                    setUserActiveConsultationsData(getuserActiveConsultations.data);
+                } catch (error) {
+                    console.error("Error loading dashboard data:", error);
                 }
+            })()
+        }, [userId, userToken]))
 
-                const getContents: IUserContentresponse = await getUserContents();
-                setUserContentsData(getContents.data);
 
-                const getProducts: IUserProductResponse = await getUserProducts();
-                setProductsData(getProducts.data);
-            } catch (error) {
-                console.error("Error loading dashboard data:", error);
-            }
-        })()
-    }, [userId])
-
-    useEffect(() => {
-        (async function () {
-            // forground message received
-            messaging().onMessage(async (remoteMessage: FirebaseMessagingTypes.RemoteMessage) => {
-                console.log("remoteMessage.data inside Dashboard.tsx ==>> ", remoteMessage.data);
-                setVivaScore(remoteMessage.data?.score as string);
-                Toast.show({
-                    type: 'success',
-                    text1: remoteMessage.notification?.title,
-                    text2: remoteMessage.notification?.body,
-                    position: 'bottom'
-                });
-            });
-        })()
-    }, [])
 
     const username = userData?.user.onboarding_data.preferred_name ?
         userData.user.onboarding_data.preferred_name.split(" ")[0] :
@@ -88,105 +85,110 @@ const Dashboard = () => {
                     <View
                     >
 
-                        <DashboardMotherTab userData={userData as IUserAllData} score={Number(vivaScore)} />
+                        <DashboardMotherTab userData={userData as IUserAllData} userActiveConsultationsData={userActiveConsultationsData} />
 
                     </View>
 
                     {/* View to show at every tab */}
                     <View
                     >
-                        <View>
-                            {/* <Text
+                        {
+                            userContentsData.length > 0 && (
+                                <View>
+                                    {/* <Text
                                 style={[{
                                     fontSize: 20,
                                 }, globalStyles.fontBold]}
                             >
                                 Contents
                             </Text> */}
-                            <FlatList
-                                data={userContentsData.slice(1, 5)}
-                                keyExtractor={(item) => item._id.toString()}
-                                renderItem={({ item }) => (
-                                    <ArticleCard
-                                        key={item._id.toString()}
-                                        item={item}
-
-                                    />
-                                )}
-                                scrollEnabled={false}
-                                nestedScrollEnabled={false}
-                                columnWrapperStyle={{
-                                    justifyContent: 'space-between',
-                                    alignItems: 'flex-end',
-                                }}
-                                numColumns={2}
-                                ListHeaderComponent={
                                     <FlatList
-                                        data={userContentsData.slice(0, 1)}
+                                        data={userContentsData.slice(1, 5)}
                                         keyExtractor={(item) => item._id.toString()}
                                         renderItem={({ item }) => (
                                             <ArticleCard
                                                 key={item._id.toString()}
                                                 item={item}
-                                                width='full'
+
                                             />
                                         )}
                                         scrollEnabled={false}
                                         nestedScrollEnabled={false}
+                                        columnWrapperStyle={{
+                                            justifyContent: 'space-between',
+                                            alignItems: 'flex-end',
+                                        }}
+                                        numColumns={2}
+                                        ListHeaderComponent={
+                                            <FlatList
+                                                data={userContentsData.slice(0, 1)}
+                                                keyExtractor={(item) => item._id.toString()}
+                                                renderItem={({ item }) => (
+                                                    <ArticleCard
+                                                        key={item._id.toString()}
+                                                        item={item}
+                                                        width='full'
+                                                    />
+                                                )}
+                                                scrollEnabled={false}
+                                                nestedScrollEnabled={false}
+                                            />
+                                        }
+                                        style={{
+                                            paddingTop: 20
+                                        }}
                                     />
-                                }
-                                style={{
-                                    paddingTop: 20
-                                }}
-                            />
-                            <View>
-                                <GradientButtonWithSlightRadius
-                                    title='See More'
-                                    onPress={() => navigation.navigate("Community")}
-                                />
-                            </View>
-                        </View>
+                                    <View>
+                                        <GradientButtonWithSlightRadius
+                                            title='See all Contents'
+                                            onPress={() => navigation.navigate("Content")}
+                                        />
+                                    </View>
+                                </View>
+                            )
+                        }
 
-                        <DashboardCard
-                            style={{
-                                marginTop: 30
-                            }}
-                        >
-                            <Text
-                                style={[{
-                                    fontSize: 20
-                                }, globalStyles.fontBold]}
-                            >
-                                Suggested Products
-                            </Text>
-                            <FlatList
-                                data={productsData.slice(0, 6)}
-                                renderItem={FLProductItem}
-                                keyExtractor={(item: IUserProduct) => item._id}
-                                numColumns={2}
-                                columnWrapperStyle={{ gap: 10, marginBottom: 20, justifyContent: 'space-between' }}
-                                nestedScrollEnabled={false}
-                                scrollEnabled={false}
-                                style={{
-                                    paddingTop: 20
-                                }}
-                            />
-                            <View>
-                                <GradientButtonWithSlightRadius
-                                    title='See More'
-                                    onPress={() => navigation.navigate("Products")}
-                                />
-                            </View>
-                        </DashboardCard>
+                        {
+                            productsData.length > 0 && (
+
+                                <View
+                                    style={{
+                                        marginTop: 30
+                                    }}
+                                >
+                                    <Text
+                                        style={[{
+                                            fontSize: 20
+                                        }, globalStyles.fontBold]}
+                                    >
+                                        Suggested Products
+                                    </Text>
+                                    <FlatList
+                                        data={productsData.slice(0, 6)}
+                                        renderItem={({ item }) => <ItemProduct item={item} navigation={navigation} />}
+                                        keyExtractor={(item: IUserProduct) => item._id}
+                                        numColumns={2}
+                                        columnWrapperStyle={{ gap: 10, marginBottom: 20, justifyContent: 'space-between' }}
+                                        nestedScrollEnabled={false}
+                                        scrollEnabled={false}
+                                        style={{
+                                            paddingTop: 20
+                                        }}
+                                    />
+                                    <View>
+                                        <GradientButtonWithSlightRadius
+                                            title='See More'
+                                            onPress={() => navigation.navigate("Products")}
+                                        />
+                                    </View>
+                                </View>
+                            )
+                        }
                     </View>
                 </View>
             </ScrollView>
-            <LinearGradient
-                onTouchEnd={() => navigation.navigate("Experts")}
-                colors={[colors.primary, colors.secondary]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                onMagicTap={() => { }}
+            <TouchableOpacity
+                onPress={() => navigation.navigate("Experts")}
                 style={{
                     borderRadius: 40,
                     height: 70,
@@ -197,19 +199,23 @@ const Dashboard = () => {
                     position: "absolute",
                     bottom: 5,
                     right: 10,
+                    backgroundColor: colors.darkPurple,
+                    borderWidth: 3,
+                    borderColor: colors.lightPurple
                 }}
             >
-                <MaterialDesignIcons name='account-box-plus-outline' color={colors.white} size={22} />
+                <Lucide name='phone-call' color={colors.white} size={22} />
                 <Text
                     style={[{
-                        fontSize: 10,
+                        fontSize: 12,
                         textAlign: 'center',
                         color: colors.white,
-                    }, globalStyles.fontRegular]}
+                        letterSpacing: 0.5
+                    }, globalStyles.fontSemiBold]}
                 >
-                    Call an Expert
+                    Expert
                 </Text>
-            </LinearGradient>
+            </TouchableOpacity>
         </View>
     )
 }

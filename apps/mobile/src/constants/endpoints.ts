@@ -1,10 +1,13 @@
-import { API_VERSION } from "@env";
+import { API_VERSION, BASE_API_URL as RN_BASE_API_URL } from "@env";
 
 // Use environment variable in production, fallback for development
-export const BASE_API_URL = "https://3724805dfc83.ngrok-free.app";
+// export const BASE_API_URL =
+// "https://2170-2401-4900-88cf-7887-4d4f-f31c-6b56-b85f.ngrok-free.app";
+export const BASE_API_URL = "http://192.168.1.11:4000";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
-
+export const GUIDED_FLOW_START = "/api/v1/chat/checkin/start";
+export const GUIDED_FLOW_ANSWER = "/api/v1/chat/checkin/answer";
 /**
  * Generates the SSE chat session URL
  * Note: Token is passed as query param for SSE authentication
@@ -62,10 +65,25 @@ export const USER_CONTENTS = `${API_VERSION_URL}/contents`;
 export const EXPERTS = `${API_VERSION_URL}/experts`;
 export const USER_PRODUCTS = `${API_VERSION_URL}/products`;
 export const USER_REQUEST_CALLBACK = `${API_VERSION_URL}/callback-request`;
+export const USER_ACTIVE_CONSULTATIONS = `${API_VERSION_URL}/pending-consultations`;
+export const API_UPDATE_FCM_TOKEN = `${API_VERSION_URL}/user/update-fcm-token`;
+export const SUBMIT_CONSULTATION_REVIEW = `${API_VERSION_URL}/consultation-review`;
+export const API_UPDATE_USER_DATA = `${API_VERSION_URL}/user/update-user-data`;
+
+// Bookmark endpoints
+export const ADD_AI_MESSAGE_BOOKMARK = `${API_VERSION_URL}/ai-message-bookmarks`;
+export const GET_AI_MESSAGE_BOOKMARKS = `${API_VERSION_URL}/ai-message-bookmarks`;
 
 export const USER_CONTENT_URL = (articleId: string): string => {
   return `${API_VERSION_URL}/contents/${articleId}`;
 };
+export const USER_PRODUCT_URL = (productId: string): string => {
+  return `${API_VERSION_URL}/products/${productId}`;
+};
 export const USER_EXPERT_URL = (expertId: string): string => {
   return `${API_VERSION_URL}/expert/${expertId}`;
 };
+
+//Support Endpoint
+
+export const API_CREATE_SUPPORT = `${API_VERSION_URL}/support`;

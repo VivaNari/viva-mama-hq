@@ -5,8 +5,10 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import SplashScreen from 'react-native-splash-screen';
 import Toast from 'react-native-toast-message';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { AuthProvider } from './src/context/AuthContext';
 import CounterProvider from './src/context/CounterContext';
+import { BottomSheetProvider } from './src/components/bottomSheet/AppBottomSheet';
 import { chatDB } from './src/db/sqlite';
 import RootNavigator from './src/navigators/RootNavigator';
 import { syncUserData } from './src/utils/syncUserData';
@@ -58,11 +60,15 @@ function AppContent() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <CounterProvider>
-          <RootNavigator />
-        </CounterProvider>
-      </AuthProvider>
+      <BottomSheetModalProvider>
+        <AuthProvider>
+          <CounterProvider>
+            <BottomSheetProvider>
+              <RootNavigator />
+            </BottomSheetProvider>
+          </CounterProvider>
+        </AuthProvider>
+      </BottomSheetModalProvider>
     </GestureHandlerRootView>
   );
 }

@@ -95,6 +95,7 @@ export interface ChatState {
   selectedMultiOptions: Set<string>;
   connectionStatus: "connecting" | "connected" | "disconnected" | "error";
   errorMessage: string | null;
+  bookMarkedMessages: string[];
 }
 
 export type ChatAction =
@@ -112,7 +113,10 @@ export type ChatAction =
   | { type: "CLEAR_MULTI_OPTIONS" }
   | { type: "SET_CONNECTION_STATUS"; payload: ChatState["connectionStatus"] }
   | { type: "SET_ERROR"; payload: string | null }
-  | { type: "RESET" };
+  | { type: "RESET" }
+  | { type: "RESET_ERROR" }
+  | { type: "TOGGLE_BOOKMARK"; payload: string }
+  | { type: "SET_BOOKMARKED_MESSAGES"; payload: string[] };
 
 // ============================================
 // Navigation Types
@@ -148,6 +152,7 @@ export interface UseChatMessagesReturn {
 // ============================================
 
 export interface ChatBubbleProps {
+  isFirst: boolean;
   message: IChatMessage;
   isLast: boolean;
   isAnimating: boolean;
@@ -158,6 +163,8 @@ export interface ChatBubbleProps {
   onDatePickerOpen: () => void;
   onNotPregnantSelect: () => void;
   onAnimationComplete?: () => void;
+  onBookmarkPress: (id: string) => void;
+  isBookmarked?: boolean;
 }
 
 export interface ChatInputBarProps {

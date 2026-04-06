@@ -29,6 +29,8 @@ const Experts = ({ navigation }: { navigation: { navigate: any } }) => {
                 columnWrapperStyle={{
                     justifyContent: 'space-between',
                     alignItems: 'flex-end',
+                    gap: 10,
+                    marginBottom: 10
                 }}
                 // style={{}}
                 numColumns={2}

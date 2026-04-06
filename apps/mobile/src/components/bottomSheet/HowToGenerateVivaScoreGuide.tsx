@@ -7,7 +7,7 @@ const HowToGenerateVivaScoreGuide = () => {
         <View>
             <Text
                 style={[{
-                    fontSize: 16,
+                    fontSize: 18,
                     textAlign: 'center'
 
                 }, globalStyles.fontBold]}
@@ -36,7 +36,7 @@ const HowToGenerateVivaScoreGuide = () => {
 
             <Text
                 style={[{
-                    fontSize: 12,
+                    fontSize: 16,
                     textAlign: 'justify'
 
 

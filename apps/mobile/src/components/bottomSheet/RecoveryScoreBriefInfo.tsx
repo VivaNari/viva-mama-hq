@@ -2,21 +2,21 @@ import { View, Text } from 'react-native'
 import React from 'react'
 import { globalStyles } from '../../public/styles'
 import GradientButtonWithSlightRadius from '../GradientButtonWithSlightRadius'
-import { useNavigation } from '@react-navigation/native'
 
 const RecoveryScoreBriefInfo = ({
     significance,
-    briefInfo
+    briefInfo,
+    navigation
 }: {
     significance: string
     briefInfo: string
+    navigation: any
 }) => {
-    const navigation = useNavigation<any>();
     return (
         <View>
             <Text
                 style={[{
-                    fontSize: 16,
+                    fontSize: 18,
                     textAlign: 'center'
 
                 }, globalStyles.fontBold]}
@@ -28,7 +28,7 @@ const RecoveryScoreBriefInfo = ({
 
             <Text
                 style={[{
-                    fontSize: 13,
+                    fontSize: 16,
                     textAlign: 'justify'
 
 
@@ -38,7 +38,7 @@ const RecoveryScoreBriefInfo = ({
             </Text>
             <Text
                 style={[{
-                    fontSize: 12,
+                    fontSize: 16,
                     textAlign: 'justify'
 
 
