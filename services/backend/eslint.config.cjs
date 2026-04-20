@@ -11,7 +11,7 @@ module.exports = [
     {
         files: ["**/*.ts", "**/*.js"],
 
-        ignores: ["dist", "node_modules"],
+        ignores: ["dist", "node_modules", "load-tests/**"],
 
         languageOptions: {
             parser: tsParser,

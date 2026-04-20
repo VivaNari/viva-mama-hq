@@ -99,6 +99,6 @@ router.get(
  *   - isExpired: boolean
  *   - progress: { answered: number, total: number } | null
  */
-router.get("/status", authMiddleware, weeklyCheckinController.getCheckinStatus);
+router.get("/status", authMiddleware(), weeklyCheckinController.getCheckinStatus);
 
 export default router;
