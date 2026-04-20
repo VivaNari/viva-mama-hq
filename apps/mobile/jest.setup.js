@@ -22,8 +22,11 @@ jest.mock('@react-native-community/datetimepicker', () => {
 // -----------------------------
 jest.mock('@react-native-vector-icons/material-design-icons', () => {
   const React = require('react');
+  const MaterialDesignIcons = (props) => React.createElement('Icon', props);
   return {
-    MaterialDesignIcons: (props) => React.createElement('Icon', props),
+    __esModule: true,
+    default: MaterialDesignIcons,
+    MaterialDesignIcons,
   };
 });
 
