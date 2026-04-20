@@ -28,22 +28,24 @@ uvicorn
 slowapi
 chardet
 
+pypdf
 
 
 
 
-Phase 1
 
-A,B,C,D = read information
+# Phase 1
 
-Prompt -> Prompt + A,B,C,D -> Output (Cons - Overpersonalized)
+# A,B,C,D = read information
 
-Prompt -> Agent -> prompt + A,B -> Output (Cons - Underpersonalized) (Agentic AI)
+# Prompt -> Prompt + A,B,C,D -> Output (Cons - Overpersonalized)
+
+# Prompt -> Agent -> prompt + A,B -> Output (Cons - Underpersonalized) (Agentic AI)
 
 
-Phase 2
-Tool: Booking -> Press a button -> API call -> DB update
+# Phase 2
+# Tool: Booking -> Press a button -> API call -> DB update
 
-Prompt -> Agent -> Booking Tool -> output (Agentic AI)
+# Prompt -> Agent -> Booking Tool -> output (Agentic AI)
 
 

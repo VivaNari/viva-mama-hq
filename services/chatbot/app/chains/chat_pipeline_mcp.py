@@ -26,7 +26,7 @@ Production Features:
 - Prompt size validation (Issue #15)
 - Structured response models (Issue #18)
 
-Author: Viva Mama Team
+Author: VivaMama Team
 """
 
 from __future__ import annotations
@@ -73,31 +73,38 @@ MAX_REQUESTS_PER_USER_PER_MINUTE = 20
 MAX_REQUESTS_PER_IP_PER_MINUTE = 50
 
 # System prompt with comprehensive guardrails
-SYSTEM_PROMPT = """You are a compassionate postpartum wellness assistant for Viva Mama. Your answers must be warm AND brief.
+SYSTEM_PROMPT = """You are a compassionate postpartum wellness assistant for VivaMama. Your answers must be warm, aesthetic, AND highly structured.
 
-=== ANSWER LENGTH (STRICT) ===
-Target: 4-5 sentences (80-100 words)
+=== ANSWER STYLE & STRUCTURE ===
+Target: Concise, empathetic, and highly scannable answers that look premium.
 Structure:
-1. First sentence: Empathetic acknowledgment (1 sentence)
-2. Core answer: Direct, helpful guidance (2-3 sentences)
-3. Optional: When to seek help if relevant (1 sentence)
+1. First sentence: Empathetic acknowledgment (1 sentence).
+2. Core answer: Direct, helpful, action-oriented guidance. ALWAYS use bullet points, bold text, and appropriate formatting to make information instantly readable.
+3. For lists/plans: If asked for a diet plan, exercises, or guidelines, use a highly structured format (e.g., meal-by-meal breakdown, step-by-step list, or pros/cons logic).
 
-NEVER exceed 5 sentences unless it's a safety-critical emergency.
+Emoji Usage:
+- Use relevant emojis sparingly to add warmth and scannability (e.g., 🤱, 🍼, 🥗, 💪, ✅, ⚠️).
+- Place emojis at the start of bullet points or after empathetic sentences to make the response feel friendly and aesthetic.
+- Do NOT over-cluster emojis; keep it professional yet compassionate.
+
+Do NOT use a strict sentence limit if complex structured advice is needed. Avoid long, bloated block paragraphs at all costs. Use concise bullet points to deliver information efficiently.
 
 === RELEVANCE GATE ===
 Postpartum/breastfeeding/newborn/recovery question?
-- YES → Answer warmly in 4-5 sentences
+- YES → Answer warmly and structurally
 - NO → "I'm here to support your postpartum wellness journey. How does this relate to your recovery or baby care?"
 
 === MEDICAL BOUNDARIES ===
 - No diagnosis, prescriptions, lab interpretation, or treatment plans
 - Emergency symptoms → "This needs immediate medical attention. Please contact emergency services or visit the nearest hospital right away."
 
-=== REFERRAL LANGUAGE (CRITICAL) ===
-When the user needs professional medical guidance, ALWAYS say:
-✅ "Consider reaching out to our Viva Mama medical experts"
-✅ "Our Viva Mama medical team can help with this"
-✅ "Connect with our Viva Mama experts for personalized guidance"
+=== MASTER REFERRAL RULES (CRITICAL) ===
+1. **The Once-Only Rule (UNIVERSAL)**: NEVER recommend or name the same VivaMama expert more than once in an entire response. This applies across all sections (Body, Products, and closing).
+2. **Consult First**: Always scan the === VIVAMAMA EXPERT DIRECTORY === for specific matches (e.g., Supplements -> Dietitian; Gynae concerns -> Obstetrician).
+3. **Format**: Use: "Connect with our VivaMama expert **[Name], [Speciality]**, for personalized guidance."
+4. **How to Book**: If an expert is recommended, YOU MUST add: "To book a consultation, go to the **Experts** section in the app and click on their name to connect." This booking info also follows the Once-Only Rule.
+5. **Fallback**: ONLY if no directory expert matches, use: "Connect with our VivaMama medical experts."
+6. **Emergencies**: For emergencies (heavy bleeding, pain), bypass all directory tools and direct to emergency services immediately.
 
 NEVER say:
 ❌ "Contact your healthcare provider"
@@ -107,6 +114,29 @@ NEVER say:
 
 Exception: TRUE EMERGENCIES (heavy bleeding, chest pain, suicidal thoughts, etc.)
 → Direct to emergency services or hospital immediately
+
+=== PRODUCTS REFERRAL (CRITICAL) ===
+Suggest products from the === VIVAMAMA PRODUCTS DIRECTORY === ONLY using the structured format below.
+
+1. **NO PRE-DESCRIPTIONS**: Do not explain or list product "guidelines" or "status" in your general body text. Go straight to the Product Section.
+2. **Mandatory Header**: You MUST start the product section with this exact phrase:
+   "Check these products that can help you; you can buy them by going to the **Products** area of our app:"
+
+3. **Unified Output (The Only Way to Suggest Products)**: 
+   For each product, output exactly one block like this:
+   ✅ "You may find **[ProductName]** helpful with the price range between of ([PriceRange]). **Safety Status**: [SafetyFlag]."
+   
+   - **IF Safety Flag is 'Doctor Approval Required'**: 
+     - IF the relevant expert for this product HAS NOT been named yet in this response: 
+       - APPEND: "Professional clearance is needed for this. We recommend consulting with our VivaMama expert **[Expert Name], [Speciality]**. To book your consultation, head to the **Experts** section in the app and click on their name to connect."
+     - IF the relevant expert HAS already been named (e.g., for a previous product or in the body):
+       - APPEND: "Professional clearance is needed for this. Please discuss this with **[Expert Name]** during your consultation." (Do NOT repeat the title or booking info).
+   
+   - **IF product is for a specific timeframe (Valid: Week X-Y)**:
+     - IF User is BEFORE `validWeekStart`: Immediately APPEND: "⚠️ **Wait Required**: This is safety-rated starting at **Week [validWeekStart]**. Since you are currently at **Week [UserWeek]**, please wait exactly **[validWeekStart - UserWeek] more weeks** before using this."
+     - IF User is within or after range: Mention the ideal usage window as a supportive note.
+
+4. **Integration**: If a product requires an expert consult, do NOT mention that expert in your general body. Handle ALL product-related expert referrals WITHIN this product list to avoid duplication.
 
 === PERSONALIZATION WITH NAME ===
 If USER CONTEXT includes the user's name:
@@ -128,8 +158,8 @@ If no name is available, proceed normally without it.
 
 === RESPONSE FORMULA ===
 Sentence 1: Validate feelings + optional name ("I hear how difficult this is, [Name]")
-Sentences 2-4: Give clear, actionable guidance
-Sentence 5 (if needed): When to escalate ("Consider reaching out to our Viva Mama medical experts if...")
+Body: Give clear, actionable guidance using formatting and bullet points for readability.
+Closing: IF any specific expert OR product-related expert was recommended in the Body, do NOT repeat any referral here. IF NO specific expert was relevant but medical symptoms were addressed, suggest: "Consider reaching out to our VivaMama medical experts if..."
 
 === BANNED PHRASES (create bloat) ===
 ❌ "It's important to note that"
@@ -138,7 +168,7 @@ Sentence 5 (if needed): When to escalate ("Consider reaching out to our Viva Mam
 ❌ "Additionally"
 ❌ "Furthermore"
 ❌ "In addition to this"
-❌ "Contact your healthcare provider" (use Viva Mama experts instead)
+❌ "Contact your healthcare provider" (use VivaMama experts instead)
 ❌ Repeating the question back
 ❌ Background explanations
 
@@ -154,42 +184,33 @@ Don't summarize everything in the context.
 
 === EXAMPLES ===
 
-❌ BAD (too long, no empathy, wrong referral):
+❌ BAD (too long, no empathy, block paragraph):
 "Postpartum bleeding, known as lochia, is a normal physiological process that occurs after childbirth. In the initial days following delivery, you can expect heavy bleeding that is similar to a heavy menstrual period. It's important to monitor the amount and characteristics of your bleeding carefully. If you find yourself soaking through a pad in less than an hour, passing large clots, or experiencing severe abdominal pain, these could be signs of complications. You should contact your healthcare provider immediately in these cases."
 
-✅ GOOD (empathetic, concise, uses name, correct referral):
-"I know postpartum bleeding can feel overwhelming, Priya, especially when it's heavy. This is called lochia and it's completely normal in the first few days - similar to a heavy period that gradually decreases over 4-6 weeks. Contact emergency services immediately if you soak a pad in under an hour or pass large clots. For ongoing concerns, reach out to our Viva Mama medical experts."
+✅ GOOD (empathetic, structured, uses name):
+"I know postpartum bleeding can feel overwhelming, Priya, especially when it's heavy. 
+This is called lochia and it's completely normal in the first few days:
+* **What to expect:** It's similar to a heavy period that gradually decreases over 4-6 weeks.
+* **When to seek help:** Contact emergency services immediately if you soak a pad in under an hour or pass large clots. 
+
+For ongoing concerns, reach out to our VivaMama medical experts."
 
 ---
 
-❌ BAD (too long, generic referral):
+❌ BAD (too long, generic referral, unstructured):
 "Improving breast milk supply is a common concern for many new mothers, and there are several evidence-based strategies you can try. The most important thing is to breastfeed or pump frequently - ideally every 2-3 hours - because milk production works on a supply and demand basis. Make sure you're staying well-hydrated throughout the day and eating nutritious meals. If you've tried these approaches for a couple of weeks and still aren't seeing improvement, consult with your doctor or a lactation consultant."
 
-✅ GOOD (empathetic, concise, uses name, correct referral):
-"I hear your concern, Sarah - low supply worries are so stressful when you're trying your best. Feed or pump every 2-3 hours to signal your body to make more milk, and make sure baby has a good latch. Stay hydrated and get enough calories. If supply doesn't improve after 2 weeks, our Viva Mama medical experts can provide personalized support."
+✅ GOOD (empathetic, structured, uses name):
+"I hear your concern, Sarah - low supply worries are so stressful when you're trying your best. 
+Here are the best ways to boost supply:
+* **Frequent feeding:** Feed or pump every 2-3 hours to signal your body to make more milk.
+* **Good latch:** Ensure baby has a deep, effective latch.
+* **Take care of you:** Stay hydrated and get enough calories.
 
----
-
-❌ BAD (name overused):
-"Hi Riya! Riya, I understand your concern. Let me help you, Riya. Riya, you should try..."
-
-✅ GOOD (name used naturally once):
-"You're working so hard, Riya, and low supply can feel discouraging. The key is frequent feeding (every 2-3 hours) to tell your body to make more milk. Check that baby's latch is good and you're staying hydrated. If things don't improve in 2 weeks, our Viva Mama medical experts can give personalized guidance."
-
----
-
-EMERGENCY EXAMPLE:
-
-Q: "I'm having severe chest pain and shortness of breath"
-
-✅ CORRECT (emergency = hospital, not Viva Mama):
-"This needs immediate medical attention. Please call emergency services or go to the nearest hospital right away. Chest pain and breathing difficulty require urgent evaluation."
-
-❌ WRONG (don't send emergencies to Viva Mama experts):
-"Contact our Viva Mama medical experts immediately about your chest pain."
+Since you're experiencing lactation concerns, consider reaching out to our VivaMama expert [Name], [Speciality], for personalized guidance."
 
 === YOUR TASK ===
-Answer the user's question in 4-5 sentences. Be warm but brief. Use their name occasionally (if available) for a personal touch. Direct to Viva Mama medical experts for non-emergency medical guidance.
+Answer the user's question in a highly structured, emotionally validating, and action-oriented way. Follow the Referral Rules and Response Formula strictly.
 """
 # ============================================
 # STRUCTURED RESPONSE MODELS (Issue #18)
@@ -200,6 +221,8 @@ class UserContextResult:
     """Structured user context from MCP"""
     profile_context: str
     recovery_context: str
+    expert_directory: str
+    products_directory: str
     has_profile: bool
     has_recovery: bool
     error: Optional[str] = None
@@ -626,6 +649,8 @@ async def fetch_user_context(
     context_result = UserContextResult(
         profile_context="",
         recovery_context="",
+        expert_directory="",
+        products_directory="",
         has_profile=False,
         has_recovery=False,
         error=None,
@@ -704,6 +729,28 @@ async def fetch_user_context(
                         logger.error(f"[{request_id}] Recommendations fetch error: {type(e).__name__}")
                         if not context_result.error:
                             context_result.error = "Recommendations fetch failed"
+                    
+                    # Fetch expert directory
+                    try:
+                        expert_result = await session.call_tool(
+                            name="get_all_experts",
+                            arguments={"format_for_prompt": True}
+                        )
+                        if expert_result.content:
+                            context_result.expert_directory = expert_result.content[0].text
+                    except Exception as e:
+                        logger.warning(f"[{request_id}] Expert directory fetch error: {str(e)}")
+                    
+                    # Fetch products directory
+                    try:
+                        products_result = await session.call_tool(
+                            name="get_all_products",
+                            arguments={"format_for_prompt": True}
+                        )
+                        if products_result.content:
+                            context_result.products_directory = products_result.content[0].text
+                    except Exception as e:
+                        logger.warning(f"[{request_id}] Products directory fetch error: {str(e)}")
         
         # Calculate fetch time
         context_result.fetch_time_ms = (time.time() - start_time) * 1000
@@ -738,6 +785,8 @@ async def fetch_user_context(
         return UserContextResult(
             profile_context="",
             recovery_context="",
+            expert_directory="",
+            products_directory="",
             has_profile=False,
             has_recovery=False,
             error="Service timeout",  # Issue #11: Safe message
@@ -753,6 +802,8 @@ async def fetch_user_context(
         return UserContextResult(
             profile_context="",
             recovery_context="",
+            expert_directory="",
+            products_directory="",
             has_profile=False,
             has_recovery=False,
             error="Service unavailable",  # Issue #11: Safe message
@@ -771,6 +822,8 @@ async def fetch_user_context(
         return UserContextResult(
             profile_context="",
             recovery_context="",
+            expert_directory="",
+            products_directory="",
             has_profile=False,
             has_recovery=False,
             error="Service error",  # Issue #11: Safe message
@@ -831,6 +884,8 @@ def build_prompt(
     system_prompt: str,
     profile_context: str,
     recovery_context: str,
+    expert_directory: str,
+    products_directory: str,
     has_profile: bool,
     has_recovery: bool,
     history_block: str,
@@ -844,6 +899,18 @@ def build_prompt(
     Issue #15: Validate prompt size and truncate if needed
     """
     prompt_parts = [system_prompt, "\n\n"]
+
+    # --- Expert Directory (Reference for referrals) ---
+    if expert_directory:
+        prompt_parts.append("=== VIVAMAMA EXPERT DIRECTORY ===\n")
+        prompt_parts.append(expert_directory)
+        prompt_parts.append("\n\n")
+
+    # --- Products Directory (Reference for products) ---
+    if products_directory:
+        prompt_parts.append("=== VIVAMAMA PRODUCTS DIRECTORY ===\n")
+        prompt_parts.append(products_directory)
+        prompt_parts.append("\n\n")
 
     # --- User Context (conditionally usable) ---
     if has_profile and profile_context:
@@ -885,12 +952,13 @@ def build_prompt(
     # --- Hard output constraint (recency-biased) ---
     prompt_parts.append(
         "STRICT OUTPUT RULE:\n"
-        "- Default to 4–6 sentences.\n"
-        "- Exceed this only if brevity would cause misunderstanding or harm.\n"
-        "- No explanations unless required.\n"
+        "- Default to concise, highly scannable answers.\n"
+        "- Use bullet points, bold text, and structured lists whenever helpful.\n"
+        "- Ignore strict sentence limits if structure (like diet plans or exercises) requires more space.\n"
     )
 
     final_prompt = "".join(prompt_parts)
+
 
     # --- Size guard ---
     if len(final_prompt) > MAX_PROMPT_LENGTH:
@@ -899,6 +967,8 @@ def build_prompt(
         )
         final_prompt = final_prompt[:MAX_PROMPT_LENGTH] + "\n[... truncated ...]"
 
+    print(f"[{request_id}] Final prompt [SOUVIK]: {final_prompt}", file=sys.stdout)
+    
     return final_prompt
 
 
@@ -912,7 +982,8 @@ async def chat_once(
     user_id: Optional[str] = None,
     session_id: Optional[str] = None,
     ip_address: Optional[str] = None,
-    history_window: int = 4,
+    history_window: int = 8,
+    model: Optional[str] = None,
 ) -> ChatResponse:
     """
     Process a single chat message with full production features.
@@ -994,7 +1065,7 @@ async def chat_once(
         )
     
     # Issue #17: Use async memory operations
-    memory = RedisSessionMemory(window_size=6)
+    memory = RedisSessionMemory(window_size=8)
     session_id = memory.ensure_session_id(session_id)
     
     # Issue #12: Validate user_id
@@ -1136,6 +1207,8 @@ async def chat_once(
         SYSTEM_PROMPT,
         user_context.profile_context,
         user_context.recovery_context,
+        user_context.expert_directory,
+        user_context.products_directory,
         user_context.has_profile,
         user_context.has_recovery,
         history_block,
@@ -1152,7 +1225,7 @@ async def chat_once(
     
     try:
         # Get LLM from production client (has metrics, error handling, etc.)
-        llm = get_llm()
+        llm = get_llm(model)        
         
         # Issue #9: Run LLM in executor to avoid blocking
         loop = asyncio.get_event_loop()
@@ -1304,7 +1377,7 @@ def get_mcp_circuit_breaker_status() -> Dict[str, Any]:
 def chat_once_name_detector(
     user_text: str,
     session_id: Optional[str] = None,
-    history_window: int = 4,
+    history_window: int = 8,
 ) -> Dict[str, Any]:
     """
     Detect if user's message contains their name.

@@ -87,16 +87,28 @@ class TimeoutStrategy(Enum):
     LONG = 60       # For complex, detailed responses
 
 
-# Issue #7: Token pricing (Groq pricing as of Dec 2024)
+# Issue #7: Token pricing (Groq pricing as of FEB 2026)
 # Note: Update these values when Groq changes pricing
 TOKEN_PRICING = {
     "llama-3.3-70b-versatile": {
         "input": 0.59 / 1_000_000,   # $0.59 per 1M input tokens
         "output": 0.79 / 1_000_000,  # $0.79 per 1M output tokens
     },
+    "gpt-oss-20b": {
+        "input": 0.075 / 1_000_000,   # $0.075 per 1M input tokens
+        "output": 0.30 / 1_000_000,  # $0.30 per 1M output tokens
+    },
+    "qwen3-32b": {
+        "input": 0.29 / 1_000_000,   # $0.29 per 1M input tokens
+        "output": 0.59 / 1_000_000,  # $0.59 per 1M output tokens
+    },
+    "llama-4-maverick-17b": {
+        "input": 0.20 / 1_000_000,   # $0.20 per 1M input tokens
+        "output": 0.60 / 1_000_000,  # $0.60 per 1M output tokens
+    },
     "llama-3.1-70b-versatile": {
-        "input": 0.59 / 1_000_000,
-        "output": 0.79 / 1_000_000,
+        "input": 0.59 / 1_000_000,   # $0.59 per 1M input tokens
+        "output": 0.79 / 1_000_000,  # $0.79 per 1M output tokens
     },
     "llama-3.1-8b-instant": {
         "input": 0.05 / 1_000_000,   # $0.05 per 1M input tokens
@@ -579,7 +591,7 @@ def _calculate_cost(model: str, input_tokens: int, output_tokens: int) -> float:
 # PUBLIC API (Issue #1-12 integrated)
 # ============================================
 
-def get_llm() -> BaseChatModel:
+def get_llm(model: str = settings.llm_model) -> BaseChatModel:
     """
     Get the main LLM client for chat responses.
     
@@ -601,7 +613,7 @@ def get_llm() -> BaseChatModel:
         print(response.content)
     """
     return _client_manager.get_client(
-        model=settings.llm_model,
+        model=model,
         temperature=0.2,  # Issue #8: Slightly warm for natural conversation
         timeout=TimeoutStrategy.NORMAL.value,  # Issue #3: 30 seconds for normal ops
         max_retries=2

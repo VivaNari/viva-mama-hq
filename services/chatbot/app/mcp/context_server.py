@@ -57,6 +57,14 @@ from app.mcp.tools.get_active_recommendations_tool import (
     get_active_recommendations,
     format_recommendations_for_prompt
 )
+from app.mcp.tools.get_experts_tool import (
+    get_all_experts,
+    format_experts_for_prompt
+)
+from app.mcp.tools.get_products_tool import (
+    get_all_products,
+    format_products_for_prompt
+)
 
 
 # =========================================================
@@ -141,6 +149,40 @@ async def list_tools() -> List[types.Tool]:
                 "required": ["user_id"]
             }
         ),
+        types.Tool(
+            name="get_all_experts",
+            description=(
+                "Fetch the complete directory of active VivaMama experts and their specialities. "
+                "Use this to provide users with specific professional recommendations based on their needs."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "format_for_prompt": {
+                        "type": "boolean",
+                        "description": "If true, return formatted natural language string instead of JSON",
+                        "default": True
+                    }
+                }
+            }
+        ),
+        types.Tool(
+            name="get_all_products",
+            description=(
+                "Fetch the complete directory of active VivaMama products and their details. "
+                "Use this to provide users with specific product recommendations based on their needs."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "format_for_prompt": {
+                        "type": "boolean",
+                        "description": "If true, return formatted natural language string instead of JSON",
+                        "default": True
+                    }
+                }
+            }
+        ),
     ]
 
 
@@ -175,6 +217,12 @@ async def call_tool(
         
         elif name == "get_active_recommendations":
             return await _handle_get_active_recommendations(arguments)
+        
+        elif name == "get_all_experts":
+            return await _handle_get_all_experts(arguments)
+        
+        elif name == "get_all_products":
+            return await _handle_get_all_products(arguments)
         
         else:
             # Unknown tool
@@ -274,6 +322,67 @@ async def _handle_get_active_recommendations(arguments: Dict[str, Any]) -> List[
         result_text = json.dumps(recommendations, indent=2, default=str)
     
     print(f"[MCP] Recommendations fetched (found={recommendations.get('found', False)}, count={recommendations.get('count', 0)})", file=sys.stderr)
+    
+    return [types.TextContent(
+        type="text",
+        text=result_text
+    )]
+
+
+async def _handle_get_all_experts(arguments: Dict[str, Any]) -> List[types.TextContent]:
+    """
+    Handle the get_all_experts tool call.
+    
+    Args:
+        arguments: {"format_for_prompt": bool}
+        
+    Returns:
+        TextContent with either JSON experts data or formatted string
+    """
+    format_for_prompt = arguments.get("format_for_prompt", True)
+    
+    print(f"[MCP] Fetching all experts", file=sys.stderr)
+    
+    # Call our existing tool
+    experts_data = get_all_experts()
+    
+    # Return formatted or raw
+    if format_for_prompt:
+        result_text = format_experts_for_prompt(experts_data)
+    else:
+        result_text = json.dumps(experts_data, indent=2)
+    
+    print(f"[MCP] Experts fetched successfully (count={experts_data.get('count', 0)})", file=sys.stderr)
+    
+    return [types.TextContent(
+        type="text",
+        text=result_text
+    )]
+
+async def _handle_get_all_products(arguments: Dict[str, Any]) -> List[types.TextContent]:
+    """
+    Handle the get_all_products tool call.
+    
+    Args:
+        arguments: {"format_for_prompt": bool}
+        
+    Returns:
+        TextContent with either JSON experts data or formatted string
+    """
+    format_for_prompt = arguments.get("format_for_prompt", True)
+    
+    print(f"[MCP] Fetching all products", file=sys.stderr)
+    
+    # Call our existing tool
+    products_data = get_all_products()
+    
+    # Return formatted or raw
+    if format_for_prompt:
+        result_text = format_products_for_prompt(products_data)
+    else:
+        result_text = json.dumps(products_data, indent=2)
+    
+    print(f"[MCP] Products fetched successfully (count={products_data.get('count', 0)})", file=sys.stderr)
     
     return [types.TextContent(
         type="text",

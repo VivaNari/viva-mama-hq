@@ -52,6 +52,7 @@ class ChatRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=2000, description="User's message")
     user_id: Optional[str] = Field(None, description="User's MongoDB ObjectId for personalization")
     session_id: Optional[str] = Field(None, description="Conversation session ID")
+    model: Optional[str] = Field(None, description="Model to use for chat")
 
 class ChatResponse(BaseModel):
     """Chat response with metadata"""
@@ -194,12 +195,12 @@ async def chat_endpoint(
     )
 
     start = time.time()
-    logger.info(f"hi hi hi hi hi {req}")
     try:
         result = await chat_once(
             req.query,
             user_id=req.user_id, 
-            session_id=req.session_id
+            session_id=req.session_id,
+            model=req.model if req.model else settings.llm_model
         )
         
         elapsed = time.time() - start

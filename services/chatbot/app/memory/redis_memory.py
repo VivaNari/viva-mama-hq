@@ -235,7 +235,7 @@ class RedisSessionMemory:
     This version uses Redis Lists consistently to avoid WRONGTYPE errors.
     """
 
-    def __init__(self, window_size: int = 6):
+    def __init__(self, window_size: int = 8):
         """
         Initialize memory manager.
         

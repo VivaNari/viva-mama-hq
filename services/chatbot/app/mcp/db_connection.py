@@ -162,6 +162,36 @@ def get_users_collection() -> Collection:
     return db["users"]
 
 
+def get_experts_collection() -> Collection:
+    """
+    Get the 'experts' collection.
+    
+    This collection stores expert profiles and their specialties.
+    Schema reference: src/models/schema/expert.schema.ts
+    
+    Key fields used by chatbot:
+    - name: Expert's name
+    - title: Expert's title
+    - specialties: List of specialties (e.g., "lactation", "physical", "emotional")
+    """
+    db = get_database()
+    return db["experts"]
+
+def get_products_collection() -> Collection:
+    """
+    Get the 'products' collection.
+    
+    This collection stores product information and their details.
+    
+    Key fields used by chatbot:
+    - name: Product name
+    - description: Product description
+    - price: Product price
+    """
+    db = get_database()
+    return db["products"]
+
+
 def get_recommendation_history_collection() -> Collection:
     """
     Get the 'recommendation_history' collection.

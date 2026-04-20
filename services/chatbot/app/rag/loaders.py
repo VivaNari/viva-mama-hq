@@ -46,7 +46,7 @@ from datetime import datetime
 import chardet
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from langchain_community.document_loaders import TextLoader
+from langchain_community.document_loaders import TextLoader, PyPDFLoader
 from langchain_core.documents import Document
 
 # Configure logging (4)
@@ -65,7 +65,8 @@ SUPPORTED_FILE_TYPES = {
     ".txt": "text",
     ".md": "text",
     ".markdown": "text",
-    # Could add more: ".pdf": "pdf", ".docx": "word"
+    ".pdf": "pdf",
+    # Could add more: ".docx": "word"
 }
 
 # Global statistics for monitoring (6)
@@ -309,8 +310,13 @@ def load_single_file(
             for enc in encodings_to_try:
                 try:
                     # (1) Comprehensive error handling around file loading
-                    loader = TextLoader(str(file_path), encoding=enc)
-                    file_docs = loader.load()
+                    if file_path.suffix.lower() == ".pdf":
+                        loader = PyPDFLoader(str(file_path))
+                        file_docs = loader.load()
+                    else:
+                        # Keep the existing TextLoader logic for .txt and .md
+                        loader = TextLoader(str(file_path), encoding=enc)
+                        file_docs = loader.load()
                     
                     # (14) Validate return value
                     if not file_docs or not isinstance(file_docs, list):
