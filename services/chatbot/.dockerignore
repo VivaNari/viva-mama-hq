@@ -36,7 +36,6 @@ venv_mcp/
 .vscode/
 
 # Project Specific
-data/
 .local_vector_store/
 *.ipynb
 *.zip

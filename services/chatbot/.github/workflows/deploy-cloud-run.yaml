@@ -1,0 +1,119 @@
+name: Deploy to UAT Cloud Run
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Docker image tag to deploy
+        required: false
+        default: latest
+      service_name:
+        description: Cloud Run service name
+        required: false
+        default: rag-chatbot
+      runtime_service_account:
+        description: Runtime service account ID (without domain)
+        required: false
+        default: rag-chatbot-sa
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GCP_REGION: asia-south1
+  IMAGE_NAME: rag-chatbot
+  MONGODB_DATABASE: viva_mama
+  MONGODB_USERNAME: admin
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+          project_id: ${{ secrets.UAT_PROJECT_ID }}
+
+      - name: Setup gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Set image URI and deployment variables
+        run: |
+          TAG="${{ github.event.inputs.image_tag || 'latest' }}"
+          SERVICE_NAME="${{ github.event.inputs.service_name }}"
+          PROJECT_ID="${{ secrets.UAT_PROJECT_ID }}"
+          SA_ID="${{ github.event.inputs.runtime_service_account }}"
+          IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_PROJECT_ID }}/${{ secrets.SHARED_ARTIFACT_REPO_NAME }}/${IMAGE_NAME}"
+          RUNTIME_SA="${SA_ID}@${PROJECT_ID}.iam.gserviceaccount.com"
+          DB_VM_IP="${{ secrets.BACKEND_DATABASE_VM_IP }}"
+
+          echo "TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "SERVICE_NAME=${SERVICE_NAME}" >> "$GITHUB_ENV"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+          echo "RUNTIME_SA=${RUNTIME_SA}" >> "$GITHUB_ENV"
+          echo "DB_VM_IP=${DB_VM_IP}" >> "$GITHUB_ENV"
+
+      - name: Build database URIs from backend secrets
+        run: |
+          MONGO_PASSWORD=$(gcloud secrets versions access latest \
+            --secret="MONGODB_PASSWORD" \
+            --project="${{ secrets.UAT_PROJECT_ID }}")
+          REDIS_PASSWORD=$(gcloud secrets versions access latest \
+            --secret="REDIS_PASSWORD" \
+            --project="${{ secrets.UAT_PROJECT_ID }}")
+
+          echo "::add-mask::${MONGO_PASSWORD}"
+          echo "::add-mask::${REDIS_PASSWORD}"
+
+          MONGODB_URI="mongodb://${MONGODB_USERNAME}:${MONGO_PASSWORD}@${DB_VM_IP}:27017/${MONGODB_DATABASE}?authSource=admin"
+          REDIS_URL="redis://:${REDIS_PASSWORD}@${DB_VM_IP}:6379/0"
+
+          echo "::add-mask::${MONGODB_URI}"
+          echo "::add-mask::${REDIS_URL}"
+
+          echo "MONGODB_URI=${MONGODB_URI}" >> "$GITHUB_ENV"
+          echo "REDIS_URL=${REDIS_URL}" >> "$GITHUB_ENV"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${SERVICE_NAME}" \
+            --image="${IMAGE_URI}:${TAG}" \
+            --region="${GCP_REGION}" \
+            --platform=managed \
+            --project="${{ secrets.UAT_PROJECT_ID }}" \
+            --service-account="${RUNTIME_SA}" \
+            --allow-unauthenticated \
+            --port=8001 \
+            --memory=1Gi \
+            --cpu=1 \
+            --min-instances=0 \
+            --max-instances=5 \
+            --set-secrets="GROQ_API_KEY=GROQ_API_KEY:latest,API_KEY=RAG_API_KEY:latest" \
+            --set-env-vars="ENV=production,PRODUCTS_SOURCE=mcp,MONGODB_DATABASE=${MONGODB_DATABASE},MONGODB_URI=${MONGODB_URI},REDIS_URL=${REDIS_URL}"
+
+      - name: Verify health endpoint
+        run: |
+          SERVICE_URL=$(gcloud run services describe "${SERVICE_NAME}" \
+            --region="${GCP_REGION}" \
+            --project="${{ secrets.UAT_PROJECT_ID }}" \
+            --format='value(status.url)')
+
+          echo "service_url=${SERVICE_URL}" >> "$GITHUB_OUTPUT"
+
+          for i in {1..15}; do
+            STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${SERVICE_URL}/admin/health" || echo "000")
+            if [ "${STATUS_CODE}" = "200" ] || [ "${STATUS_CODE}" = "503" ]; then
+              echo "Health endpoint reachable with status ${STATUS_CODE}"
+              exit 0
+            fi
+
+            echo "Attempt ${i}: health endpoint returned ${STATUS_CODE}, retrying..."
+            sleep 10
+          done
+
+          echo "Service health endpoint did not become reachable in time"
+          exit 1
