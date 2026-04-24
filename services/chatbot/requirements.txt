@@ -22,3 +22,30 @@ faiss-cpu
 
 # MCP SDK (adapter is optional; included for future)
 mcp
+pymongo==4.6.1
+fastapi
+uvicorn
+slowapi
+chardet
+
+pypdf
+
+
+
+
+
+# Phase 1
+
+# A,B,C,D = read information
+
+# Prompt -> Prompt + A,B,C,D -> Output (Cons - Overpersonalized)
+
+# Prompt -> Agent -> prompt + A,B -> Output (Cons - Underpersonalized) (Agentic AI)
+
+
+# Phase 2
+# Tool: Booking -> Press a button -> API call -> DB update
+
+# Prompt -> Agent -> Booking Tool -> output (Agentic AI)
+
+

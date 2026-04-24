@@ -1,0 +1,60 @@
+name: Build Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Docker image tag
+        required: false
+        default: latest
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GCP_REGION: asia-south1
+  IMAGE_NAME: rag-chatbot
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+          project_id: ${{ secrets.SHARED_ARTIFACT_PROJECT_ID }}
+
+      - name: Setup gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+
+      - name: Set image tag
+        run: |
+          TAG="${{ github.event.inputs.image_tag || github.sha }}"
+          echo "TAG=${TAG}" >> "$GITHUB_ENV"
+
+      - name: Build Docker image
+        run: |
+          IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_PROJECT_ID }}/${{ secrets.SHARED_ARTIFACT_REPO_NAME }}/${IMAGE_NAME}"
+          docker build \
+            -t "${IMAGE_URI}:${TAG}" \
+            -t "${IMAGE_URI}:latest" \
+            .
+
+      - name: Push Docker images
+        run: |
+          IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_PROJECT_ID }}/${{ secrets.SHARED_ARTIFACT_REPO_NAME }}/${IMAGE_NAME}"
+          docker push "${IMAGE_URI}:${TAG}"
+          docker push "${IMAGE_URI}:latest"

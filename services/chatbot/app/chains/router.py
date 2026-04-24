@@ -48,3 +48,6 @@ def route_intent(text: str) -> str:
             return "PRODUCT_QUERY"
 
     return "WELLNESS_INFO"
+
+
+                              
