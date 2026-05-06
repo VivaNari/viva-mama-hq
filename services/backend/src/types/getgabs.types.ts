@@ -13,3 +13,11 @@ export interface ExpertConsultationWhatsAppParams {
     userId: string;
     userEmailOrPhone: string;
 }
+
+/**
+ * Parameters required to send OTP on WhatsApp through GetGabs template API.
+ */
+export interface OTPWhatsAppParams {
+    to: string;
+    otp: string;
+}
