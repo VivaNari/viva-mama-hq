@@ -15,8 +15,15 @@ import { generateJWT } from "../../utils/functions/generateJWT";
 import BaseService from "../base.service";
 import { decode, encode } from "../crypto/crypto.service";
 import { addMinutesToDate } from "../date/date.service";
+import { sendWhatsappMessageForOTP } from "../getgabs/sendWhatsappMessageForOTP";
 
 const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+
+/**
+ * Identifies testing phone numbers that contain the same digit 6+ times consecutively.
+ * @param phoneNumber - User mobile number.
+ */
+const isTestingPhoneNumber = (phoneNumber: string): boolean => /(\d)\1{5,}/.test(phoneNumber);
 
 export default class UserService extends BaseService<IUser> {
     constructor() {
@@ -88,24 +95,16 @@ export default class UserService extends BaseService<IUser> {
 
             const fullPhoneNumber = `${country_code}${mobile_number}`;
 
-            const ok = "as";
-            // await sendSMS(
-            //     fullPhoneNumber,
-            //     `Your VivaMama OTP is ${OTP}. It expires in 10 minutes.`,
-            // );
+            await sendWhatsappMessageForOTP({
+                to: fullPhoneNumber.replace("+", ""),
+                otp: OTP,
+            });
 
-            if (ok) {
-                return res.status(200).json({
-                    message: "OTP sent successfully",
-                    success: true,
-                    verification_key,
-                });
-            } else {
-                return res.status(500).json({
-                    message: "Failed to send OTP",
-                    success: false,
-                });
-            }
+            return res.status(200).json({
+                message: "OTP sent successfully",
+                success: true,
+                verification_key,
+            });
         } catch (error: any) {
             console.error("sendOTPToPhone error:", error);
             return res.status(500).json({
@@ -136,7 +135,9 @@ export default class UserService extends BaseService<IUser> {
             if (otpDoc.expiration_time < new Date())
                 return res.status(400).json({ message: "OTP expired" });
 
-            if (otp !== "123456") return res.status(400).json({ message: "Incorrect OTP" });
+            const isTestUser = isTestingPhoneNumber(mobile_number);
+            const isOtpValidForUser = isTestUser ? otp === "123456" : otp === otpDoc.otp;
+            if (!isOtpValidForUser) return res.status(400).json({ message: "Incorrect OTP" });
 
             otpDoc.verified = true;
             await otpDoc.save();
