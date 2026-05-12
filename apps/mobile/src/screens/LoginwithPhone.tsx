@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     TextInput,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { OtpInput } from 'react-native-otp-entry';
@@ -14,16 +15,32 @@ import LinearGradient from 'react-native-linear-gradient';
 import { colors } from '../public/assets/colors';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useAuth } from '../context/AuthContext';
+import { useNavigation } from '@react-navigation/native';
+import { useAuth, CURRENT_VERSIONS } from '../context/AuthContext';
 import { IRequestOtpResponse } from '../types/auth.types';
 
 const LoginwithPhone = () => {
+    const navigation = useNavigation<any>();
     const [isSentOtp, setIsSentOtp] = useState(false);
     const [phoneNumber, setPhoneNumber] = useState<string>('');
     const [otp, setOTP] = useState<string>('');
     const [verificationKey, setVerificationKey] = useState<string>('');
     const [getLoading, setLoading] = useState<boolean>(false);
+    const [isConsentChecked, setIsConsentChecked] = useState<boolean>(false);
     const { requestPhoneOTP, verifyPhoneOTP } = useAuth();
+
+    const PRIVACY_POLICY_URL = 'https://vivamama.in/privacy-policy/';
+    const TERMS_OF_USE_URL = 'https://vivamama.in/terms-and-conditions/';
+
+    const handlePhoneChange = (text: string) => {
+        const cleaned = text.replace(/[^0-9]/g, '');
+        if (cleaned.length <= 10) {
+            setPhoneNumber(cleaned);
+        }
+    };
+
+    const isPhoneValid = phoneNumber.length === 10;
+
     return (
         <SafeAreaView style={{ flex: 1 }}>
             <ScrollView style={{ backgroundColor: "white" }}>
@@ -46,13 +63,48 @@ const LoginwithPhone = () => {
                             <View>
                                 <TextInput
                                     inputMode="tel"
+                                    keyboardType="phone-pad"
+                                    maxLength={10}
                                     selectionColor={colors.darkPurple}
                                     placeholderTextColor={colors.black}
                                     placeholder={'Enter Phone Number'}
                                     style={[globalStyles.input, globalStyles.fontSemiBold, { backgroundColor: colors.lightGray, borderWidth: 1, borderColor: colors.darkPurple, color: colors.purple }]}
-                                    onChangeText={setPhoneNumber}
+                                    onChangeText={handlePhoneChange}
                                     value={phoneNumber}
                                 />
+
+                                {/* Consent Checkbox */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20, paddingHorizontal: 5 }}>
+                                    <TouchableOpacity
+                                        onPress={() => setIsConsentChecked(!isConsentChecked)}
+                                        style={{ marginRight: 10 }}
+                                    >
+                                        <MaterialDesignIcons
+                                            name={isConsentChecked ? "checkbox-marked" : "checkbox-blank-outline"}
+                                            size={24}
+                                            color={colors.darkPurple}
+                                        />
+                                    </TouchableOpacity>
+                                    <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                                        <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
+                                            I agree to the{' '}
+                                        </Text>
+                                        <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
+                                            <Text style={[globalStyles.fontSemiBold, { fontSize: 13, color: colors.darkPurple, textDecorationLine: 'underline' }]}>
+                                                Privacy Policy
+                                            </Text>
+                                        </TouchableOpacity>
+                                        <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
+                                            {' '}and{' '}
+                                        </Text>
+                                        <TouchableOpacity onPress={() => Linking.openURL(TERMS_OF_USE_URL)}>
+                                            <Text style={[globalStyles.fontSemiBold, { fontSize: 13, color: colors.darkPurple, textDecorationLine: 'underline' }]}>
+                                                Terms of Use
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+
                                 <TouchableOpacity
                                     onPress={async () => {
                                         try {
@@ -69,9 +121,14 @@ const LoginwithPhone = () => {
                                             setLoading(false);
                                         }
                                     }}
-                                    style={{ flex: 1, marginTop: 30, backgroundColor: colors.darkPurple, borderRadius: 40 }}
+                                    style={{
+                                        flex: 1,
+                                        marginTop: 30,
+                                        backgroundColor: (isPhoneValid && isConsentChecked) ? colors.darkPurple : colors.gray,
+                                        borderRadius: 40
+                                    }}
                                     activeOpacity={0.8}
-                                    disabled={getLoading}
+                                    disabled={getLoading || !isPhoneValid || !isConsentChecked}
                                 >
                                     <View
 
@@ -144,7 +201,11 @@ const LoginwithPhone = () => {
                                 <TouchableOpacity
                                     onPress={async () => {
                                         setLoading(true);
-                                        await verifyPhoneOTP(phoneNumber, otp, verificationKey);
+                                        const consents = [
+                                            { type: 'privacy_policy', version: CURRENT_VERSIONS.PRIVACY_POLICY },
+                                            { type: 'terms_of_use', version: CURRENT_VERSIONS.TERMS_OF_USE }
+                                        ];
+                                        await verifyPhoneOTP(phoneNumber, otp, verificationKey, consents);
                                         setLoading(false);
                                     }}
                                     style={{ flex: 1, marginTop: 30, backgroundColor: colors.darkPurple, borderRadius: 40, borderWidth: 1, borderColor: colors.darkPurple }}
