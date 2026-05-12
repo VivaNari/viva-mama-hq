@@ -83,6 +83,11 @@ export interface IUser {
         billingCycle: string | null;
         expiryDate: Date | null;
     };
+    consents: {
+        type: "privacy_policy" | "terms_of_use";
+        version: string;
+        acceptedAt: Date;
+    }[];
 }
 
 export interface IGoogleLoginPayload {

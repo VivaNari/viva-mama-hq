@@ -191,6 +191,22 @@ const userSchema = new Schema<IUser>(
                 default: null,
             },
         },
+        consents: {
+            type: [
+                {
+                    type: {
+                        type: String,
+                        enum: ["privacy_policy", "terms_of_use"],
+                    },
+                    version: String,
+                    acceptedAt: {
+                        type: Date,
+                        default: Date.now,
+                    },
+                },
+            ],
+            default: [],
+        },
     },
     {
         timestamps: true,
