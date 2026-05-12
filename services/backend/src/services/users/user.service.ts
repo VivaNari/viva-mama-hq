@@ -117,7 +117,8 @@ export default class UserService extends BaseService<IUser> {
 
     verifyOTP = async (req: Request, res: Response) => {
         try {
-            const { verification_key, otp, mobile_number, country_code, FCM_token } = req.body;
+            const { verification_key, otp, mobile_number, country_code, FCM_token, consents } =
+                req.body;
             if (!verification_key || !otp || !mobile_number || !country_code)
                 return res.status(400).json({ message: "Missing required fields" });
 
@@ -149,11 +150,25 @@ export default class UserService extends BaseService<IUser> {
                     mobile_number,
                     country_code,
                     FCM_token,
+                    consents: consents || [],
                 });
                 console.log("First-time user created:", user._id);
+            } else if (consents && consents.length > 0) {
+                // Update consents if provided
+                user = await UserModel.findByIdAndUpdate(
+                    user._id,
+                    {
+                        $push: { consents: { $each: consents } },
+                    },
+                    { new: true },
+                );
             }
 
-            const jwt = generateJWT(user);
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            const jwt = generateJWT(user as any);
 
             return res.status(200).json({
                 message: "OTP verified successfully",
@@ -171,31 +186,37 @@ export default class UserService extends BaseService<IUser> {
 
     googleAuth = async (req: Request, res: Response) => {
         try {
-            const { idToken, FCM_token } = req.body;
+            const { idToken, FCM_token, consents } = req.body;
 
             const ticket = await client.verifyIdToken({ idToken });
             const payload = ticket.getPayload() as IGoogleLoginPayload;
 
             const { name, email, picture } = payload;
 
-            const user = await UserModel.findOneAndUpdate(
-                { email: email },
-                {
-                    $set: {
-                        user_name: name,
-                        profile_picture: picture,
-                        email: email,
-                        FCM_token: FCM_token,
-                    },
+            const updateData: any = {
+                $set: {
+                    user_name: name,
+                    profile_picture: picture,
+                    email: email,
+                    FCM_token: FCM_token,
                 },
-                {
-                    upsert: true,
-                    new: true,
-                    setDefaultsOnInsert: true,
-                },
-            );
+            };
 
-            const jwt = generateJWT(user);
+            if (consents && consents.length > 0) {
+                updateData.$push = { consents: { $each: consents } };
+            }
+
+            const user = await UserModel.findOneAndUpdate({ email: email }, updateData, {
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert: true,
+            });
+
+            if (!user) {
+                return res.status(404).json({ message: "User could not be created/found" });
+            }
+
+            const jwt = generateJWT(user as any);
 
             return res.status(200).json({
                 message: "Logged in successfully",
