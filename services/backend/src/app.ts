@@ -3,6 +3,7 @@ import express from "express";
 import router from "./api/v1/routes";
 import childRouter from "./api/v1/routes/childs/child.route";
 import userRouter from "./api/v1/routes/users/user.route";
+import vivaClubRouter from "./api/v1/routes/vivaClub/vivaClub.route";
 import { correlationIdMiddleware } from "./middlewares/correlationId.middleware";
 import errorHandler from "./middlewares/errorHandler.middleware";
 import { requestLoggerMiddleware } from "./middlewares/requestLogger.middleware";
@@ -25,6 +26,7 @@ app.get("/health", (_, res) => {
 
 app.use("/api/v1", userRouter);
 app.use("/api/v1", childRouter);
+app.use("/api/v1/viva-club", vivaClubRouter);
 app.use("/api/v1", router);
 
 app.use(errorHandler);
