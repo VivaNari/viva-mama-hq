@@ -73,9 +73,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.viva_nari_app"
+    namespace "com.vivamama"
     defaultConfig {
-        applicationId "com.viva_nari_app"
+        applicationId "com.vivamama"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 3

@@ -5,10 +5,42 @@ import { globalStyles } from '../public/styles'
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
 import { useNavigation } from '@react-navigation/native'
+import apiClientInterceptor from '../api/apiClientInterceptor'
+import { API_VIVA_CLUB_CREATE_POST } from '../constants/endpoints'
+import Toast from 'react-native-toast-message'
 
 const CreatePost = () => {
     const [postText, setPostText] = useState<string>("")
+    const [loading, setLoading] = useState<boolean>(false)
     const navigation = useNavigation<any>();
+
+    const handlePost = async () => {
+        if (!postText.trim()) return;
+
+        try {
+            setLoading(true);
+            await apiClientInterceptor().post(API_VIVA_CLUB_CREATE_POST, {
+                content: postText,
+                mediaUrls: []
+            });
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'Post published successfully!'
+            });
+            navigation.navigate("VivaClub");
+        } catch (error) {
+            console.error("Failed to create post", error);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: 'Failed to publish post'
+            });
+        } finally {
+            setLoading(false);
+        }
+    }
+
     return (
         <SafeAreaView
             style={globalStyles.container}
@@ -19,19 +51,19 @@ const CreatePost = () => {
                         flexDirection: 'row',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-
                     }}
                 >
                     <MaterialDesignIcons
                         onPress={() => navigation.goBack()}
-                        name='eyedropper-remove'
-                        size={20}
+                        name='close'
+                        size={24}
                     />
                     <GradientButtonWithSlightRadius
                         fullRounded={true}
-                        title='Post'
-                        onPress={() => { }}
+                        title={loading ? 'Posting...' : 'Post'}
+                        onPress={handlePost}
                         fullWidth={false}
+                        disabled={loading || !postText.trim()}
                     />
                 </View>
 

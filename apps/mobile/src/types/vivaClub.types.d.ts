@@ -1,20 +1,26 @@
 export interface IUser {
-  name: string;
-  avatar: number;
+  _id: string;
+  user_name: string;
+  profile_picture?: string;
+  avatar?: any; // Fallback for dummy data
 }
 
 export interface IComment {
+  _id: string;
   user: IUser;
   content: string;
+  createdAt: string;
 }
 
 export interface IVivaClubPost {
-  id: number;
+  _id: string;
   user: IUser;
   content: string;
   isLiked: boolean;
-  isBookMarked: boolean;
-  totalLikes: string;
-  publishedDateTime: string;
-  comments: IComment[];
+  totalLikes: number;
+  commentCount: number;
+  mediaUrls: string[];
+  createdAt: string;
+  updatedAt: string;
+  comments?: IComment[];
 }
