@@ -2,7 +2,7 @@ import { API_VERSION, BASE_API_URL as RN_BASE_API_URL } from "@env";
 
 // Use environment variable in production, fallback for development
 // export const BASE_API_URL =
-//   "https://nodejs-api-323430318910.asia-south1.run.app";
+  // "https://nodejs-api-323430318910.asia-south1.run.app";
 export const BASE_API_URL = "http://localhost:4000";
 
 export const API_VERSION_URL = `/api/${API_VERSION}`;
@@ -87,3 +87,11 @@ export const USER_EXPERT_URL = (expertId: string): string => {
 //Support Endpoint
 
 export const API_CREATE_SUPPORT = `${API_VERSION_URL}/support`;
+
+// Viva Club Endpoints
+const VIVA_CLUB_BASE = `${API_VERSION_URL}/viva-club`;
+export const API_VIVA_CLUB_POSTS = `${VIVA_CLUB_BASE}/posts`;
+export const API_VIVA_CLUB_CREATE_POST = `${VIVA_CLUB_BASE}/posts`;
+export const API_VIVA_CLUB_POST_DETAILS = (id: string) => `${VIVA_CLUB_BASE}/posts/${id}`;
+export const API_VIVA_CLUB_ADD_COMMENT = (id: string) => `${VIVA_CLUB_BASE}/posts/${id}/comments`;
+export const API_VIVA_CLUB_TOGGLE_LIKE = (id: string) => `${VIVA_CLUB_BASE}/posts/${id}/like`;

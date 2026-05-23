@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, FlatList, Text, View } from 'react-native'
+import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { getUserContents } from '../api/getUserContents'
 import { ArticleCard } from '../components/ArticleCard'
@@ -8,13 +8,44 @@ import { useAuth } from '../context/AuthContext'
 import { globalStyles } from '../public/styles'
 import { IUserContent, IUserContentresponse } from '../types/content.types'
 import { colors } from '../public/assets/colors'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import apiClientInterceptor from '../api/apiClientInterceptor'
+import { API_VIVA_CLUB_POSTS } from '../constants/endpoints'
+import { IVivaClubPost } from '../types/vivaClub.types'
+import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
+import LinearGradient from 'react-native-linear-gradient'
 
 const ArticleContent = () => {
     const [searchData, setSearchData] = useState<string>("");
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [lastPost, setLastPost] = useState<IVivaClubPost | null>(null);
+    const [loadingPost, setLoadingPost] = useState<boolean>(false);
 
+    const navigation = useNavigation<any>();
     const { userId } = useAuth();
+
+    const fetchLastPost = async () => {
+        try {
+            setLoadingPost(true);
+            const { data } = await apiClientInterceptor().get(`${API_VIVA_CLUB_POSTS}?page=1&limit=1`);
+            if (data.data.posts && data.data.posts.length > 0) {
+                setLastPost(data.data.posts[0]);
+            } else {
+                setLastPost(null);
+            }
+        } catch (error) {
+            console.error("Error fetching last post:", error);
+        } finally {
+            setLoadingPost(false);
+        }
+    };
+
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchLastPost();
+        }, [])
+    );
 
     useEffect(() => {
         const fetchData = async () => {
@@ -82,6 +113,41 @@ const ArticleContent = () => {
                 )}
                 ListHeaderComponent={
                     <>
+                        {/* Community Section */}
+                        <View style={{ marginBottom: 20 }}>
+                            <Text style={[globalStyles.fontBold, { fontSize: 18, color: colors.darkPurple, marginBottom: 10 }]}>Community Feed</Text>
+                            {loadingPost ? (
+                                <ActivityIndicator size="small" color={colors.purple} />
+                            ) : lastPost ? (
+                                <View>
+                                    <FLVivaClubPostItem item={lastPost} navigation={navigation} isFromCommunityScreen={true} />
+                                    <TouchableOpacity
+                                        onPress={() => navigation.navigate("VivaClub")}
+                                        style={{ marginTop: 5, alignSelf: 'flex-end' }}
+                                    >
+                                        <Text style={[globalStyles.fontSemiBold, { color: colors.darkPurple, textDecorationLine: 'underline' }]}>View All Community Posts</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : (
+                                <View style={{ padding: 15, backgroundColor: colors.lightGray, borderRadius: 10, alignItems: 'center' }}>
+                                    <Text style={[globalStyles.fontRegular, { color: colors.black, marginBottom: 10 }]}>No community post is available for you</Text>
+                                    <LinearGradient
+                                        colors={[colors.darkPurple, colors.purple]}
+                                        start={{ x: 0, y: 0 }}
+                                        end={{ x: 1, y: 0 }}
+                                        style={{ borderRadius: 20 }}
+                                    >
+                                        <TouchableOpacity
+                                            onPress={() => navigation.navigate("CreatePost")}
+                                            style={{ paddingHorizontal: 20, paddingVertical: 10 }}
+                                        >
+                                            <Text style={[globalStyles.fontSemiBold, { color: colors.white }]}>Create a Community Post</Text>
+                                        </TouchableOpacity>
+                                    </LinearGradient>
+                                </View>
+                            )}
+                        </View>
+
                         {/* Search */}
                         <View style={{}}>
                             <SearchInput setSearchData={setSearchData} marginBottom={5} />
