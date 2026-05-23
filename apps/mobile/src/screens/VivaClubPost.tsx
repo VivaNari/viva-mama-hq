@@ -1,25 +1,89 @@
-import { useNavigation } from '@react-navigation/native'
-import React from 'react'
-import { FlatList, Text } from 'react-native'
+import React, { useEffect, useState, useCallback } from 'react'
+import { FlatList, Text, ActivityIndicator, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
-import { vivaClubData } from '../data/vivaClubData'
 import { globalStyles } from '../public/styles'
 import LinearGradient from 'react-native-linear-gradient'
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons'
 import { colors } from '../public/assets/colors'
+import apiClientInterceptor from '../api/apiClientInterceptor'
+import { API_VIVA_CLUB_POSTS } from '../constants/endpoints'
+import { IVivaClubPost } from '../types/vivaClub.types'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 
 const VivaClubPost = () => {
     const navigation = useNavigation<any>();
+    const [posts, setPosts] = useState<IVivaClubPost[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(true);
+
+    const fetchPosts = async (pageNum: number, isRefresh = false) => {
+        if (loading) return;
+        try {
+            setLoading(true);
+            const { data } = await apiClientInterceptor().get(`${API_VIVA_CLUB_POSTS}?page=${pageNum}&limit=10`);
+            const newPosts = data.data.posts;
+
+            if (isRefresh) {
+                setPosts(newPosts);
+            } else {
+                setPosts(prev => [...prev, ...newPosts]);
+            }
+
+            setHasMore(pageNum < data.data.pagination.totalPages);
+        } catch (error) {
+            console.error("Failed to fetch posts", error);
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            fetchPosts(1, true);
+            setPage(1);
+        }, [])
+    );
+
+    const handleRefresh = () => {
+        setRefreshing(true);
+        setPage(1);
+        fetchPosts(1, true);
+    };
+
+    const handleLoadMore = () => {
+        if (hasMore && !loading) {
+            const nextPage = page + 1;
+            setPage(nextPage);
+            fetchPosts(nextPage);
+        }
+    };
+
+    const renderFooter = () => {
+        if (!loading) return null;
+        return (
+            <View style={{ paddingVertical: 20 }}>
+                <ActivityIndicator size="small" color={colors.darkPurple} />
+            </View>
+        );
+    };
+
     return (
         <SafeAreaView
             style={[globalStyles.container, { position: 'relative', paddingVertical: 5 }]}
         >
             <FlatList
-                keyExtractor={(item) => item.id.toString()}
-                data={vivaClubData}
-                renderItem={({ item }) => FLVivaClubPostItem({ item, navigation })}
-                scrollEnabled
+                keyExtractor={(item) => item._id}
+                data={posts}
+                renderItem={({ item }) => <FLVivaClubPostItem item={item} navigation={navigation} />}
+                onRefresh={handleRefresh}
+                refreshing={refreshing}
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={renderFooter}
                 showsVerticalScrollIndicator={false}
             />
 

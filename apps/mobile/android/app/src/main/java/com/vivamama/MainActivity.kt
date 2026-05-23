@@ -1,4 +1,4 @@
-package com.viva_nari_app
+package com.vivamama
 
 import android.os.Bundle;
 import com.facebook.react.ReactActivity

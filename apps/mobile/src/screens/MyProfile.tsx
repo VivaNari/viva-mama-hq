@@ -38,7 +38,7 @@ const MyProfile = () => {
     };
 
     const openStoreFallback = () => {
-        const GOOGLE_PACKAGE_NAME = 'com.viva_nari_app';
+        const GOOGLE_PACKAGE_NAME = 'com.vivamama';
         const url = Platform.OS === 'ios'
             ? `itms-apps://itunes.apple.com/app/viewContentsUserReviews/idYOUR_APPLE_ID?action=write-review`
             : `market://details?id=${GOOGLE_PACKAGE_NAME}`;

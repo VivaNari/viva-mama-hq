@@ -14,6 +14,11 @@ import { getMessaging } from '@react-native-firebase/messaging';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+export const CURRENT_VERSIONS = {
+  PRIVACY_POLICY: "1.0.0",
+  TERMS_OF_USE: "1.0.0",
+};
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -108,25 +113,32 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(false);
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (consents?: any[]) => {
     try {
+      console.log("Google Sign in called ")
       await GoogleSignin.hasPlayServices();
       await GoogleSignin.signOut(); // Ensure fresh sign-in each time
 
-      const data = await GoogleSignin.signIn() as { data: { idToken: string } };
-      console.log("[AUTHCONTEXT] Google Sign-In Data:", data.data.idToken);
+      const data = await GoogleSignin.signIn();
+      console.log("[AUTHCONTEXT] Google Sign-In raw data:", JSON.stringify(data, null, 2));
+
+      // Handling both old and new API structures just in case
+      const idToken = (data as any)?.data?.idToken || (data as any)?.idToken;
+
+      if (!idToken) {
+        throw new Error("Google Sign-In failed: No idToken received");
+      }
+
+      console.log("[AUTHCONTEXT] idToken found:", idToken);
 
       const { data: response } = await apiClientInterceptor().post(API_GOOGLE_LOGIN, {
-        idToken: data.data.idToken,
+        idToken: idToken,
         FCM_token: FCMToken,
+        consents: consents,
       }, {
         headers: { 'Content-Type': 'application/json' },
       });
 
-      console.log("idToken & FCM_token", {
-        idToken: data.data.idToken,
-        FCM_token: FCMToken,
-      })
       const { token, message, is_onboarded }: AuthResponse = response;
 
       Toast.show({
@@ -151,15 +163,19 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setUserId(decodedUserId);
 
     } catch (error: any) {
+      console.error("[AUTHCONTEXT] signInWithGoogle Error details:", error);
+
       if (error.code === statusCodes.SIGN_IN_CANCELLED) {
         console.log("[AUTHCONTEXT] User cancelled Google Sign-in");
         return;
       }
 
+      const errorMessage = error.response?.data?.message || error.message || 'An error occurred during Google Sign-In.';
+
       Toast.show({
         type: 'error',
         text1: 'Error',
-        text2: error.response.data.message || 'An error occurred.',
+        text2: errorMessage,
         position: 'bottom'
       });
       console.error('[AUTHCONTEXT] Google Sign-In Error:', error);
@@ -193,14 +209,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const verifyPhoneOTP = async (phone: string, otp: string, verification_key: string) => {
+  const verifyPhoneOTP = async (phone: string, otp: string, verification_key: string, consents?: any[]) => {
     try {
       const { data, status } = await apiClientInterceptor().post(`${API_VERIFY_OTP}`, {
         mobile_number: phone,
         country_code: '+91',
         otp,
         verification_key,
-        FCM_token: FCMToken
+        FCM_token: FCMToken,
+        consents: consents,
       }, {
         headers: { 'Content-Type': 'application/json' },
       });

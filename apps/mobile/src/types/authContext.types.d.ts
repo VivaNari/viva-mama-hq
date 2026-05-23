@@ -22,12 +22,13 @@ export interface AuthContextType {
   isLoading: boolean;
   onboardingStatus: OnboardingStatus;
   isFullyOnboarded: () => boolean;
-  signInWithGoogle: () => Promise<void>;
+  signInWithGoogle: (consents?: any[]) => Promise<void>;
   requestPhoneOTP: (phoneNumber: string) => Promise<any>;
   verifyPhoneOTP: (
     phone: string,
     otp: string,
     verification_key: string,
+    consents?: any[],
   ) => Promise<void>;
   signOut: () => Promise<void>;
   completeQuestionnaire: () => Promise<void>;
