@@ -68,7 +68,7 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
         console.log("[recentCheckindata] =>>>>", recentCheckindata)
     }, [recentCheckindata])
 
-    const { open } = useBottomSheet();
+    const { open, close } = useBottomSheet();
     const shake = useSharedValue(0);
     const rotate = useSharedValue(0);
 
@@ -276,6 +276,7 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                                                         significance={userData.significance[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.significance]}
                                                         briefInfo={userData.recoveryScoreBriefInfo[recentCheckindata[0].zone.toLowerCase() as keyof typeof userData.recoveryScoreBriefInfo]}
                                                         navigation={navigation}
+                                                        onClose={close}
                                                     />
                                                 )}
                                             >
@@ -314,6 +315,11 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                                         </Animated.View>
                                     )
                                 }
+
+                                <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, textAlign: 'center', marginTop: 5, marginBottom: 10 }]}>
+                                    This score is for personal reflection only. It is not a medical assessment. Always consult a qualified healthcare professional for medical advice.
+                                </Text>
+
                                 {/* {
                                     score && (
 
@@ -377,7 +383,7 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                                             </View> : null}
                                         </TouchableOpacity>
 
-                                        <TouchableOpacity
+                                        {/* <TouchableOpacity
                                             activeOpacity={0.8}
                                             // onPress={() => {
                                             //     navigation.navigate("ChatWithVivaAI", {
@@ -435,7 +441,7 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                                             >
                                                 Log your Sleep
                                             </Text>
-                                        </TouchableOpacity>
+                                        </TouchableOpacity> */}
                                     </View>
 
                                 }
@@ -515,6 +521,9 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
 
 
                 <CareManagerCard />
+                <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, marginTop: 5, marginBottom: 15, textAlign: "center" }]}>
+                    The Care Manager is a support coordinator, not a clinician. For medical questions, please consult a qualified healthcare professional.
+                </Text>
 
                 {/* Consult an Expert */}
 
@@ -549,7 +558,10 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                                         fontWeight: '600',
                                     }, globalStyles.fontBold]}
                                 >
-                                    Consult an expert
+                                    Connect with a healthcare professional
+                                </Text>
+                                <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, marginTop: 5 }]}>
+                                    The consultation will be conducted by an independent healthcare professional. Any clinical advice, diagnosis, or treatment is provided by them, not by VivaMama. Please share relevant information clearly during the consultation.
                                 </Text>
                             </View>
                         </View>

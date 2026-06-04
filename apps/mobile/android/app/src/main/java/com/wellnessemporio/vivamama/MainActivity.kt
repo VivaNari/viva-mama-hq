@@ -1,4 +1,4 @@
-package com.vivamama
+package com.wellnessemporio.vivamama
 
 import android.os.Bundle;
 import com.facebook.react.ReactActivity

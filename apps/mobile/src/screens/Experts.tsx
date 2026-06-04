@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { getExperts } from '../api/getExperts'
 import VivaBuddyRequestCall from '../components/VivaBuddyRequestCall'
 import { globalStyles } from '../public/styles'
+import { colors } from '../public/assets/colors'
 import { IExpert, IExpertResponse } from '../types/expert.types'
 import ExpertItem from '../components/experts/FLExpertItem'
 
@@ -41,6 +42,9 @@ const Experts = ({ navigation }: { navigation: { navigate: any } }) => {
                         }}
                     >
                         <VivaBuddyRequestCall />
+                        <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, marginTop: 5, marginBottom: 15, textAlign: "center" }]}>
+                            The Care Manager is a support coordinator, not a clinician. For medical questions, please consult a qualified healthcare professional.
+                        </Text>
 
                         <View
                             style={{
@@ -53,7 +57,10 @@ const Experts = ({ navigation }: { navigation: { navigate: any } }) => {
                                     fontWeight: '600',
                                 }, globalStyles.fontBold]}
                             >
-                                Consult the doctor
+                                Connect with a healthcare professional
+                            </Text>
+                            <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, marginTop: 5 }]}>
+                                The consultation will be conducted by an independent healthcare professional. Any clinical advice, diagnosis, or treatment is provided by them, not by VivaMama. Please share relevant information clearly during the consultation.
                             </Text>
                         </View>
                     </View>

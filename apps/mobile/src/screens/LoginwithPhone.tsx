@@ -27,6 +27,7 @@ const LoginwithPhone = () => {
     const [verificationKey, setVerificationKey] = useState<string>('');
     const [getLoading, setLoading] = useState<boolean>(false);
     const [isConsentChecked, setIsConsentChecked] = useState<boolean>(false);
+    const [isAgeConsentChecked, setIsAgeConsentChecked] = useState<boolean>(false);
     const { requestPhoneOTP, verifyPhoneOTP } = useAuth();
 
     const PRIVACY_POLICY_URL = 'https://vivamama.in/privacy-policy/';
@@ -105,6 +106,25 @@ const LoginwithPhone = () => {
                                     </View>
                                 </View>
 
+                                {/* Age Consent Checkbox */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, paddingHorizontal: 5 }}>
+                                    <TouchableOpacity
+                                        onPress={() => setIsAgeConsentChecked(!isAgeConsentChecked)}
+                                        style={{ marginRight: 10 }}
+                                    >
+                                        <MaterialDesignIcons
+                                            name={isAgeConsentChecked ? "checkbox-marked" : "checkbox-blank-outline"}
+                                            size={24}
+                                            color={colors.darkPurple}
+                                        />
+                                    </TouchableOpacity>
+                                    <View style={{ flex: 1 }}>
+                                        <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
+                                            I confirm that I am 18 years of age or older.
+                                        </Text>
+                                    </View>
+                                </View>
+
                                 <TouchableOpacity
                                     onPress={async () => {
                                         try {
@@ -124,11 +144,11 @@ const LoginwithPhone = () => {
                                     style={{
                                         flex: 1,
                                         marginTop: 30,
-                                        backgroundColor: (isPhoneValid && isConsentChecked) ? colors.darkPurple : colors.gray,
+                                        backgroundColor: (isPhoneValid && isConsentChecked && isAgeConsentChecked) ? colors.darkPurple : colors.gray,
                                         borderRadius: 40
                                     }}
                                     activeOpacity={0.8}
-                                    disabled={getLoading || !isPhoneValid || !isConsentChecked}
+                                    disabled={getLoading || !isPhoneValid || !isConsentChecked || !isAgeConsentChecked}
                                 >
                                     <View
 

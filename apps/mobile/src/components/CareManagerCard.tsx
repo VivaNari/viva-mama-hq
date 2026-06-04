@@ -8,12 +8,15 @@ import { requestCallback } from '../api/requestCallback';
 import { chatDB } from '../db/sqlite';
 import { IRequestCallbackResponse } from '../types/careManager.types';
 import { useAuth } from '../context/AuthContext';
+import CustomDatePicker from './CustomDatePicker';
 
 const CareManagerCard = () => {
     const [careManagerId, setCareManagerId] = useState<string>();
     const { userId } = useAuth();
 
     const [loading, setLoading] = useState<boolean>(false);
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
     useEffect(() => {
         if (!userId) return;
         (async () => {
@@ -27,6 +30,49 @@ const CareManagerCard = () => {
             }
         })()
     }, [userId])
+
+    const handleDateSelected = async (date: Date) => {
+        setSelectedDate(date);
+        setShowDatePicker(false);
+
+        // Call the API after date is selected
+        if (careManagerId) {
+            try {
+                setLoading(true);
+                const requestcallbackResponse = await requestCallback(
+                    careManagerId,
+                    date.toISOString()
+                ) as IRequestCallbackResponse;
+                if (requestcallbackResponse.success) {
+                    Toast.show({
+                        type: 'success',
+                        text1: 'Success!',
+                        text2: 'Your request has been registered and you will receive a call back within 24 hours!',
+                        position: 'bottom',
+                    });
+                    setSelectedDate(null);
+                } else {
+                    Toast.show({
+                        type: 'error',
+                        text1: 'Error!',
+                        text2: 'Something went wrong!',
+                        position: 'bottom',
+                    });
+                }
+            } catch (error) {
+                console.log(error);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Error!',
+                    text2: 'Something went wrong! ' + error,
+                    position: 'bottom',
+                });
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
     return (
         <View
             style={{
@@ -73,7 +119,7 @@ const CareManagerCard = () => {
                         >
 
                             <Text style={[globalStyles.fontRegular, { fontSize: 16, color: colors.darkGray, textAlign: 'center' }]}>
-                                Hey mama! I’m your dedicated care manager—whenever you’re feeling low, overwhelmed, or need support, you can request a call anytime. I’m here to help.
+                                Hey mama! I'm your dedicated care manager whenever you need support or want to talk to someone who understands, you can request a call anytime. I'm here to help.
                             </Text>
                         </View>
                     </View>
@@ -93,46 +139,22 @@ const CareManagerCard = () => {
                                 opacity: loading ? 0.5 : 1
                             }}
                             disabled={loading}
-                            onPress={async () => {
+                            onPress={() => {
                                 if (careManagerId) {
-                                    try {
-                                        setLoading(true);
-                                        const requestcallbackResponse = await requestCallback(careManagerId) as IRequestCallbackResponse;
-                                        if (requestcallbackResponse.success) {
-                                            Toast.show({
-                                                type: 'success',
-                                                text1: 'Success!',
-                                                text2: 'Your request has been registered and you will receive a call back within 24 hours!',
-                                                position: 'bottom',
-
-                                            });
-                                        } else {
-                                            Toast.show({
-                                                type: 'error',
-                                                text1: 'Error!',
-                                                text2: 'Something went wrong!',
-                                                position: 'bottom',
-
-                                            });
-                                        }
-                                    } catch (error) {
-                                        console.log(error);
-                                        Toast.show({
-                                            type: 'error',
-                                            text1: 'Error!',
-                                            text2: 'Something went wrong! ' + error,
-                                            position: 'bottom',
-
-                                        });
-                                    } finally {
-                                        setLoading(false);
-                                    }
+                                    setShowDatePicker(true);
                                 }
                             }}
                         />
                     </View>
                 </View>
             </View>
+            <CustomDatePicker
+                show={showDatePicker}
+                setShow={setShowDatePicker}
+                selectedDate={selectedDate}
+                onSelect={handleDateSelected}
+                minimumDate={true}
+            />
         </View>
     );
 };
