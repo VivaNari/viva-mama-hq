@@ -530,7 +530,7 @@ const ChatWithVivaAI: React.FC = () => {
                         </View>
                         <View style={[styles.vivaIntroContainer, { flexShrink: 1, flex: 1 }]}>
                             <Text style={[styles.vivaIntroText, globalStyles.fontBold]}>Viva, your personal assistant</Text>
-                            {isChatbotFlow && (
+                            {/* {isChatbotFlow && (
                                 <TouchableOpacity
                                     style={styles.modelPill}
                                     onPress={() => setModelSelectorVisible(true)}
@@ -540,7 +540,7 @@ const ChatWithVivaAI: React.FC = () => {
                                     </Text>
                                     <Lucide name="chevron-down" size={12} color={colors.darkPurple} />
                                 </TouchableOpacity>
-                            )}
+                            )} */}
                         </View>
                         {/* Navigate Back */}
                         {
@@ -627,6 +627,9 @@ const ChatWithVivaAI: React.FC = () => {
                         onDatePickerOpen={handleDatePickerOpen}
                         onMultiSelectSubmit={handleMultiSubmit}
                     />
+                    <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, textAlign: 'center', paddingBottom: 10, paddingTop: 5, paddingHorizontal: 10 }]}>
+                        Viva provides educational information only. For medical advice, consult a qualified healthcare professional.
+                    </Text>
                 </View>
 
                 <CustomDatePicker
@@ -635,12 +638,12 @@ const ChatWithVivaAI: React.FC = () => {
                     selectedDate={selectedDate}
                     onSelect={handleDateSelected}
                 />
-                <ModelSelector
+                {/* <ModelSelector
                     visible={modelSelectorVisible}
                     onClose={() => setModelSelectorVisible(false)}
                     onSelect={setSelectedModel}
                     selectedModelId={selectedModel}
-                />
+                /> */}
             </KeyboardAvoidingView>
         </SafeAreaView>
     );

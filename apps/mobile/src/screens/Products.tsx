@@ -43,6 +43,11 @@ const Products = () => {
 
     return (
         <SafeAreaView style={globalStyles.container}>
+            <View style={{ backgroundColor: colors.pageBG, padding: 10, paddingVertical: 8, marginBottom: 10, borderRadius: 8, borderWidth: 1, borderColor: '#eee' }}>
+                <Text style={[globalStyles.fontRegular, { fontSize: 11, color: colors.darkGray, textAlign: 'center' }]}>
+                    VivaMama participates in the Amazon Associates Program. Product suggestions are for convenience only and are not medical recommendations. Please consult a qualified healthcare professional regarding any product that may affect your health, especially while breastfeeding or taking medication.
+                </Text>
+            </View>
             <View>
                 <SearchInput setSearchData={setSearchData} />
             </View>

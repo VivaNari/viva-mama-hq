@@ -1,5 +1,5 @@
 import MaterialDesignIcons from "@react-native-vector-icons/material-design-icons";
-import { TouchableOpacity, Text, View } from "react-native";
+import { TouchableOpacity, Text, View, Linking } from "react-native";
 import { colors } from "../../public/assets/colors";
 import { ISettingsMenu } from "../../types/myProfile.types";
 import { globalStyles } from "../../public/styles";
@@ -9,7 +9,13 @@ const ProfileSettingsMenu = ({ item, navigation, isFirst, isLast }: { item: ISet
     return (
         <TouchableOpacity
             activeOpacity={0.4}
-            onPress={() => navigation.navigate(`${item.componentName}`)}
+            onPress={() => {
+                if (item.componentName.startsWith('http')) {
+                    Linking.openURL(item.componentName);
+                } else {
+                    navigation.navigate(item.componentName);
+                }
+            }}
             style={{
                 flexDirection: "row",
                 gap: 5,

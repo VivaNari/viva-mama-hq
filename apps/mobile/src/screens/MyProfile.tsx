@@ -2,7 +2,7 @@ import InAppReview from 'react-native-in-app-review'
 import Lucide from '@react-native-vector-icons/lucide'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import React, { useCallback, useState } from 'react'
-import { FlatList, Image, Text, TouchableOpacity, View, Linking, Platform } from 'react-native'
+import { FlatList, Image, Text, TouchableOpacity, View, Linking, Platform, Modal } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import ProfileSettingsMenu from '../components/profile/ProfileSettingsMenu'
 import { useAuth } from '../context/AuthContext'
@@ -18,6 +18,7 @@ const MyProfile = () => {
     const { signOut } = useAuth();
     const [getLoading, setLoading] = useState<boolean>(false);
     const [userData, setUserdata] = useState<IUserAllData>();
+    const [showDisclaimerModal, setShowDisclaimerModal] = useState<boolean>(false);
     const { userId, userToken } = useAuth();
 
     const handleInAppReview = () => {
@@ -38,7 +39,7 @@ const MyProfile = () => {
     };
 
     const openStoreFallback = () => {
-        const GOOGLE_PACKAGE_NAME = 'com.vivamama';
+        const GOOGLE_PACKAGE_NAME = 'com.wellnessemporio.vivamama';
         const url = Platform.OS === 'ios'
             ? `itms-apps://itunes.apple.com/app/viewContentsUserReviews/idYOUR_APPLE_ID?action=write-review`
             : `market://details?id=${GOOGLE_PACKAGE_NAME}`;
@@ -70,6 +71,41 @@ const MyProfile = () => {
 
     return (
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.white }}>
+            {/* Disclaimer Modal */}
+            <Modal
+                visible={showDisclaimerModal}
+                transparent={true}
+                animationType="fade"
+            >
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                    <View style={{ width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 20, gap: 15 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text style={[globalStyles.fontBold, { fontSize: 20, color: colors.darkPurple, flex: 1 }]}>Medical Disclaimer</Text>
+                            <TouchableOpacity onPress={() => setShowDisclaimerModal(false)}>
+                                <Lucide name="x" size={24} color={colors.black} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
+                            VivaMama is a postpartum wellness and education companion. It is not a medical device and does not diagnose, treat, cure, or prevent any medical condition.
+                        </Text>
+                        <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
+                            Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.
+                        </Text>
+                        <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
+                            In an emergency, contact your doctor or local emergency services immediately.
+                        </Text>
+
+                        <TouchableOpacity
+                            onPress={() => setShowDisclaimerModal(false)}
+                            style={{ padding: 12, borderRadius: 30, backgroundColor: colors.darkPurple, marginTop: 10 }}
+                        >
+                            <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.white }]}>Close</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
             <FlatList
                 data={settingsMenu}
                 renderItem={({ item, index }) => {
@@ -117,7 +153,7 @@ const MyProfile = () => {
                             >
                                 <View>
                                     <Image
-                                        source={require("../public/assets/images/avatar_ai.jpg")}
+                                        source={require("../public/assets/images/avatar_mom.png")}
                                         style={{
                                             height: 70,
                                             width: 70,
@@ -125,6 +161,7 @@ const MyProfile = () => {
                                             borderWidth: 2,
                                             borderColor: colors.purple,
                                         }}
+                                        resizeMode='contain'
                                     />
 
                                 </View>
@@ -227,6 +264,64 @@ const MyProfile = () => {
 
                         }}
                     >
+                        <TouchableOpacity
+                            activeOpacity={0.4}
+                            onPress={() => setShowDisclaimerModal(true)}
+                            style={{
+                                flexDirection: "row",
+                                gap: 5,
+                                alignItems: 'center',
+                                justifyContent: 'flex-start',
+                                paddingVertical: 10,
+                                borderTopLeftRadius: 8,
+                                borderTopRightRadius: 8,
+                                borderBottomLeftRadius: 8,
+                                borderBottomRightRadius: 8,
+                            }}
+                        >
+                            <Lucide name={"shield-alert"} size={20} color={colors.darkGray} />
+                            <View
+                                style={{
+                                    flex: 1,
+                                }}
+                            >
+                                <Text
+                                    style={[{
+                                        fontSize: 16,
+                                        flex: 1,
+                                        marginLeft: 10
+                                    }, globalStyles.fontSemiBold]}
+                                >
+                                    Medical Disclaimer
+                                </Text>
+                                <Text
+                                    style={[{
+                                        fontSize: 14,
+                                        paddingBottom: 12,
+                                        borderBottomWidth: 1,
+                                        borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+                                        flex: 1,
+                                        marginLeft: 10,
+                                        color: colors.darkGray
+                                    }, globalStyles.fontRegular]}
+                                >
+                                    Important health and usage information
+                                </Text>
+                            </View>
+                            <View
+                                style={{
+                                    padding: 5,
+                                    height: 30,
+                                    width: 30,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    backgroundColor: colors.pageBG,
+                                    borderRadius: '50%',
+                                }}
+                            >
+                                <Lucide name={'chevron-right'} size={20} color={colors.darkPurple} />
+                            </View>
+                        </TouchableOpacity>
                         <TouchableOpacity
                             activeOpacity={0.4}
                             onPress={handleInAppReview}
@@ -360,7 +455,7 @@ const MyProfile = () => {
                             }}
                         >
                             <Text
-                                onPress={() => navigation.navigate('TermsOfUse' as any)}
+                                onPress={() => Linking.openURL('https://vivamama.in/terms-and-conditions/')}
                                 style={[{
                                     fontSize: 12,
                                     color: colors.darkPurple,
@@ -381,7 +476,7 @@ const MyProfile = () => {
                             </Text>
 
                             <Text
-                                onPress={() => navigation.navigate('PrivacyPolicy' as any)}
+                                onPress={() => Linking.openURL('https://vivamama.in/privacy-policy/')}
                                 style={[{
                                     fontSize: 12,
                                     color: colors.darkPurple,

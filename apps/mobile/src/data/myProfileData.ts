@@ -22,14 +22,14 @@ export const settingsMenu: ISettingsMenu[] = [
   {
     title: "Privacy Policy",
     icon: "book-open-text",
-    componentName: "PrivacyPolicy",
-    description: "View terms of service and privacy policies.",
+    componentName: "https://vivamama.in/privacy-policy/",
+    description: "Learn how we protect and manage your data.",
   },
   {
     title: "Terms of Use",
     icon: "book-open-text",
-    componentName: "TermsOfUse",
-    description: "View terms of service and privacy policies.",
+    componentName: "https://vivamama.in/terms-and-conditions/",
+    description: "Review the rules and guidelines.",
   },
   {
     title: "Support",

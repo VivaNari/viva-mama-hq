@@ -85,6 +85,13 @@ const VivaClubPost = () => {
                 onEndReachedThreshold={0.5}
                 ListFooterComponent={renderFooter}
                 showsVerticalScrollIndicator={false}
+                ListHeaderComponent={
+                    <View style={{ backgroundColor: colors.pageBG, padding: 10, paddingVertical: 8, marginBottom: 10, borderRadius: 8, borderWidth: 1, borderColor: '#eee' }}>
+                        <Text style={[globalStyles.fontRegular, { fontSize: 11, color: colors.darkGray, textAlign: 'center' }]}>
+                            Posts share personal experiences only. They are not medical advice. For any health concern, please consult a qualified healthcare professional.
+                        </Text>
+                    </View>
+                }
             />
 
             <LinearGradient

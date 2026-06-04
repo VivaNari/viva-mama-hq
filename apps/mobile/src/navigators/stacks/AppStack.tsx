@@ -15,12 +15,10 @@ import FeedingLog from '../../screens/FeedingLog';
 import FullReport from '../../screens/FullReport';
 import MyProfile from '../../screens/MyProfile';
 import Notifications from '../../screens/Notifications';
-import PrivacyPolicy from '../../screens/PrivacyPolicy';
 import Products from '../../screens/Products';
 import RecommendationDetails from '../../screens/RecommendationDetails';
 import Recommendations from '../../screens/Recommendations';
 import SubCategoryArticles from '../../screens/SubCategoryArticles';
-import TermsOfUse from '../../screens/TermsOfUse';
 import VaccinationLog from '../../screens/VaccinationLog';
 import VivaClubPost from '../../screens/VivaClubPost';
 import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
@@ -32,6 +30,7 @@ import ConsultationRating from '../../screens/ConsultationRating';
 import BookmarkedMessages from '../../screens/BookmarkedMessages';
 import AboutVivaMama from '../../screens/AboutVivaMama';
 import Support from '../../screens/Support';
+import AboutRecoveryScore from '../../screens/AboutRecoveryScore';
 
 const Stack = createNativeStackNavigator();
 
@@ -227,22 +226,6 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Terms of Use',
-                }}
-                name="TermsOfUse"
-                component={TermsOfUse}
-            />
-            <Stack.Screen
-                options={{
-                    headerShown: true,
-                    title: 'Privacy Policy',
-                }}
-                name="PrivacyPolicy"
-                component={PrivacyPolicy}
-            />
-            <Stack.Screen
-                options={{
-                    headerShown: true,
                     title: 'About VivaMama',
                 }}
                 name="AboutVivaMama"
@@ -280,6 +263,14 @@ const AppStack = () => {
                 }}
                 name="ConsultationRating"
                 component={ConsultationRating}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'About Viva Recovery Score',
+                }}
+                name="AboutRecoveryScore"
+                component={AboutRecoveryScore}
             />
         </Stack.Navigator>
     );

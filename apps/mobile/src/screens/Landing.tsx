@@ -15,6 +15,9 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
     const [getLoading, setLoading] = useState<boolean>(false);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
     const [isConsentChecked, setIsConsentChecked] = useState<boolean>(false);
+    const [isAgeConsentChecked, setIsAgeConsentChecked] = useState<boolean>(false);
+    const [showDisclaimerModal, setShowDisclaimerModal] = useState<boolean>(false);
+    const [selectedLoginMethod, setSelectedLoginMethod] = useState<'google' | 'phone' | null>(null);
 
     const PRIVACY_POLICY_URL = 'https://vivamama.in/privacy-policy/';
     const TERMS_OF_USE_URL = 'https://vivamama.in/terms-and-conditions/';
@@ -41,16 +44,71 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
         }
     };
 
+    const proceedWithLogin = (method: 'google' | 'phone') => {
+        if (method === 'google') {
+            setIsModalVisible(true);
+        } else {
+            navigation.navigate("LoginWithPhone");
+        }
+    };
+
+    const handleLoginClick = (method: 'google' | 'phone') => {
+        setSelectedLoginMethod(method);
+        setShowDisclaimerModal(true);
+    };
+
+    const handleAcceptDisclaimer = () => {
+        setShowDisclaimerModal(false);
+        if (selectedLoginMethod) {
+            proceedWithLogin(selectedLoginMethod);
+        }
+    };
+
     return (
         <SafeAreaView style={{
             flex: 1
         }}>
             <ScrollView style={{ flex: 1, paddingBottom: 20, paddingHorizontal: 20 }} contentContainerStyle={{ justifyContent: "space-between", flexGrow: 1 }}>
+                {/* Disclaimer Modal */}
+                <Modal
+                    visible={showDisclaimerModal}
+                    transparent={true}
+                    animationType="fade"
+                >
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                        <View style={{ width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 20, gap: 15 }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={[globalStyles.fontBold, { fontSize: 20, color: colors.darkPurple, flex: 1 }]}>Before You Begin</Text>
+                                <TouchableOpacity onPress={() => setShowDisclaimerModal(false)}>
+                                    <MaterialDesignIcons name="close" size={24} color={colors.black} />
+                                </TouchableOpacity>
+                            </View>
+
+                            <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
+                                VivaMama is a postpartum wellness and education companion. It is not a medical device and does not diagnose, treat, cure, or prevent any medical condition.
+                            </Text>
+                            <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
+                                Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.
+                            </Text>
+                            <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
+                                In an emergency, contact your doctor or local emergency services immediately.
+                            </Text>
+
+                            <TouchableOpacity
+                                onPress={handleAcceptDisclaimer}
+                                style={{ padding: 12, borderRadius: 30, backgroundColor: colors.darkPurple, marginTop: 10 }}
+                            >
+                                <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.white }]}>I Understand</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </Modal>
+
                 {/* Consent Modal */}
                 <Modal
                     visible={isModalVisible}
                     transparent={true}
-                    animationType="slide"
+                    animationType="fade"
                 >
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
                         <View style={{ width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 20, gap: 20 }}>
@@ -90,6 +148,24 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                 </View>
                             </View>
 
+                            <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5 }}>
+                                <TouchableOpacity
+                                    onPress={() => setIsAgeConsentChecked(!isAgeConsentChecked)}
+                                    style={{ marginRight: 10 }}
+                                >
+                                    <MaterialDesignIcons
+                                        name={isAgeConsentChecked ? "checkbox-marked" : "checkbox-blank-outline"}
+                                        size={24}
+                                        color={colors.darkPurple}
+                                    />
+                                </TouchableOpacity>
+                                <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
+                                    <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
+                                        I confirm that I am 18 years of age or older.
+                                    </Text>
+                                </View>
+                            </View>
+
                             <View style={{ flexDirection: 'row', gap: 10 }}>
                                 <TouchableOpacity
                                     onPress={() => setIsModalVisible(false)}
@@ -99,8 +175,8 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={handleGoogleLogin}
-                                    disabled={!isConsentChecked || getLoading}
-                                    style={{ flex: 1, padding: 12, borderRadius: 30, backgroundColor: isConsentChecked ? colors.darkPurple : colors.gray }}
+                                    disabled={!isConsentChecked || !isAgeConsentChecked || getLoading}
+                                    style={{ flex: 1, padding: 12, borderRadius: 30, backgroundColor: (isConsentChecked && isAgeConsentChecked) ? colors.darkPurple : colors.gray }}
                                 >
                                     <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.white }]}>Continue</Text>
                                 </TouchableOpacity>
@@ -132,7 +208,7 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                     <TouchableOpacity
                         style={{ flex: 1, backgroundColor: colors.darkPurple, borderRadius: 40 }}
                         activeOpacity={0.8}
-                        onPress={() => setIsModalVisible(true)}
+                        onPress={() => handleLoginClick('google')}
                         disabled={getLoading}
 
                     >
@@ -165,9 +241,7 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                     <TouchableOpacity
                         style={{ flex: 1, borderRadius: 40, borderWidth: 1.5, backgroundColor: colors.lightPurple, borderColor: colors.darkPurple }}
                         activeOpacity={0.8}
-                        onPress={() => {
-                            navigation.navigate("LoginWithPhone")
-                        }}
+                        onPress={() => handleLoginClick('phone')}
                     >
                         <View
                             style={{
