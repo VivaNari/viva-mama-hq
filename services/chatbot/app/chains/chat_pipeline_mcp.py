@@ -939,7 +939,9 @@ def build_prompt(
 
     # --- RAG context ---
     prompt_parts.append(
-        "=== KNOWLEDGE BASE CONTEXT (use only if directly relevant) ===\n"
+        "=== KNOWLEDGE BASE CONTEXT ===\n"
+        "STRICT RULE: Answer ONLY using the information provided below. "
+        "Do not draw on general knowledge outside this context.\n"
     )
     prompt_parts.append(rag_context if rag_context else "None")
     prompt_parts.append("\n\n")
@@ -1192,9 +1194,49 @@ async def chat_once(
             service_level = ServiceLevel.MINIMAL
     
     # ============================================================
+    # SUPERVISED MODE GATE: no RAG context → skip LLM entirely
+    # ============================================================
+
+    if not used_rag:
+        logger.info(
+            f"[{request_id}] Supervised mode: no RAG context found "
+            f"(score={best_score:.3f}), returning fallback response"
+        )
+        fallback_answer = (
+            "I'm sorry, I don't have specific information about that in my "
+            "knowledge base right now. For personalised guidance on your "
+            "postpartum wellness journey, please reach out to our VivaMama "
+            "medical experts through the **Experts** section in the app."
+        )
+        await loop.run_in_executor(None, memory.append, session_id, "user", safe_text)
+        await loop.run_in_executor(None, memory.append, session_id, "assistant", fallback_answer)
+        timings["total"] = (time.time() - request_start_time) * 1000
+        _metrics.record_request(
+            success=True, service_level=service_level.value, timings=timings
+        )
+        return ChatResponse(
+            request_id=request_id,
+            session_id=session_id,
+            answer=fallback_answer,
+            intent="NO_RAG_CONTEXT",
+            used_rag=False,
+            rag_best_score=round(float(best_score), 3),
+            user_context=user_context,
+            redaction=redaction_report,
+            scope=scope_notes,
+            escalation_banner=None,
+            memory_turns=await loop.run_in_executor(
+                None, memory.get_last_n, session_id, history_window
+            ),
+            timing=timings,
+            service_level=service_level.value,
+            final_prompt=""
+        )
+
+    # ============================================================
     # BUILD ENRICHED PROMPT
     # ============================================================
-    
+
     # Format conversation history
     history_block = ""
     for t in prior_turns:
