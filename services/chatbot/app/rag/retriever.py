@@ -219,7 +219,7 @@ class RAGRetriever:
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
         score_threshold: Optional[float] = None,
-        distance_metric: str = "cosine"  # Issue #11: Explicit metric
+        distance_metric: str = "l2"  # Issue #11: Explicit metric — matches FAISS default (LangChain builds L2 index)
     ):
         """
         Initialize the retriever.
