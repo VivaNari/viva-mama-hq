@@ -2,7 +2,7 @@
  * Shared k6 configuration helpers.
  *
  * Environment:
- * - BASE_URL — API origin (default http://localhost:3000)
+ * - BASE_URL — API origin (default http://localhost:4000)
  * - VUS — virtual users when not using K6_STAGES (default 5)
  * - DURATION — test length when not using K6_STAGES (default 30s)
  * - K6_STAGES — optional JSON array of { duration, target } for ramping
@@ -12,7 +12,7 @@
  * @returns {string} Normalized base URL without trailing slash
  */
 export function getBaseUrl() {
-    const raw = __ENV.BASE_URL || "http://localhost:3000";
+    const raw = __ENV.BASE_URL || "http://localhost:4000";
     return raw.replace(/\/$/, "");
 }
 
