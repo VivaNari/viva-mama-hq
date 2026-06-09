@@ -49,3 +49,5 @@ be.zip
 
 # Lock files (optional - keep package-lock.json)
 # package-lock.json
+
+exports

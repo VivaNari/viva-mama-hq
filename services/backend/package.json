@@ -17,6 +17,8 @@
         "format:check": "prettier . --check",
         "k6:login": "k6 run load-tests/k6/login.js",
         "k6:checkin": "k6 run load-tests/k6/weekly-checkin-onboarding.js",
+        "k6:products": "k6 run load-tests/k6/products.js",
+        "k6:vivaclub": "k6 run load-tests/k6/viva-club.js",
         "prepare": "husky"
     },
     "lint-staged": {
