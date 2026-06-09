@@ -275,6 +275,8 @@ class ValidationService {
             slug: flowSlug,
             status: "PUBLISHED",
         });
+        console.log("🚀 ~ validation.service.ts:278 ~ VivaCheckinValidationService ~ validateSSERequest ~ flowDefinition:", flowSlug)
+
 
         if (!flowDefinition) {
             return {
@@ -295,8 +297,12 @@ class ValidationService {
 
         // 5. Handle different states
         if (existingInstance) {
-            // Check expiration first
+            // Check expiration first.
+            // The 7-day expiry only applies to weekly check-ins. This endpoint is a
+            // shared guided-flow engine (onboarding uses it too), so non-check-in
+            // flows must never be expired here.
             if (
+                flowSlug === WEEKLY_CHECKIN_SLUG &&
                 this.isExpired(existingInstance) &&
                 existingInstance.state !== FlowInstanceStateEnum.COMPLETED
             ) {
@@ -487,8 +493,10 @@ class ValidationService {
             };
         }
 
-        // 5. Check expiration (only for new answers)
-        if (this.isExpired(flowInstance)) {
+        // 5. Check expiration (only for new answers, and only for the check-in flow).
+        // Onboarding answers also flow through this endpoint, so gate on the
+        // instance's own slug to avoid expiring non-check-in flows.
+        if (flowInstance.flowSlug === WEEKLY_CHECKIN_SLUG && this.isExpired(flowInstance)) {
             await this.markAsExpired(flowInstance);
             return {
                 isValid: false,

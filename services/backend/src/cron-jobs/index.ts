@@ -1,7 +1,7 @@
 import cron from "node-cron";
 // import { startOrContinueConversation } from "./startOrContinueConversation";
 // import { calculateCurrentPostpartumWeek } from "./calculateCurrentPostpartumWeekForAllUsers";
-// import { currentWeekAndPreviousUpcomingDueDaysCalculator } from "./currentWeekAndPreviousUpcomingDueDaysCalculator";
+import { currentWeekAndPreviousUpcomingDueDaysCalculator } from "./currentWeekAndPreviousUpcomingDueDaysCalculator";
 import { logsReminders } from "./logsReminders";
 import { dailyVivaInteraction } from "./dailyVivaInteraction";
 import { weeklyContentNotification } from "./weeklyContentNotification";
@@ -20,11 +20,11 @@ export const initScheduledJobs = () => {
     //     calculateCurrentPostpartumWeek();
     // });
 
-    // Calculate the week and update users due days in one cron job
-    cron.schedule("*/30 * * * * *", () => {
-        // console.log("Calculating current week with the previous and upcoming due days for checkin");
-        // currentWeekAndPreviousUpcomingDueDaysCalculator();
-        // startCallbackStatusCron();
+    // Advance each user's postpartum week, create the next weekly check-in
+    // instance, update due days, and fire the "check-in due" notification.
+    // Runs daily at 9:00 AM.
+    cron.schedule("0 9 * * *", () => {
+        currentWeekAndPreviousUpcomingDueDaysCalculator();
     });
 
     // 1. Logs Reminders (Every day at 10:00 AM)
