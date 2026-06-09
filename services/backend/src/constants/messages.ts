@@ -56,6 +56,13 @@ export const messages = {
     SUPPORT_RESOLVED_SUCCESS: "Support resolved successfully",
     SUPPORT_ID_NOT_PROVIDED: "Support id not provided",
     SUPPORT_NOT_FOUND: "Support not found",
+    MOOD_LOG_SAVED_SUCCESS: "Mood log saved successfully",
+    MOOD_LOG_FETCH_SUCCESS: "Mood logs fetched successfully",
+    MOOD_LOG_DELETED_SUCCESS: "Mood log deleted successfully",
+    MOOD_LOG_NOT_FOUND: "Mood log not found",
+    MOOD_LOG_INVALID_DATE: "logDate must be a valid date in YYYY-MM-DD format",
+    MOOD_LOG_FUTURE_NOT_ALLOWED: "Cannot log a mood for a future date",
+    MOOD_LOG_BEFORE_JOIN: "Cannot log a mood for a date before you joined the platform",
 };
 
 export const notificationMessages = {

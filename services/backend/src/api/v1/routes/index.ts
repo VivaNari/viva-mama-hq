@@ -16,6 +16,7 @@ import consultationReviewRouter from "./consultation-reviews/consultation-review
 import weeklyCheckinV1Router from "./weekly-checkin-v1.routes";
 import aiBookmarkRouter from "./ai-message-bookmarks/ai-message-bookmark.route";
 import supportRouter from "./support/support.route";
+import moodLogRouter from "./mood-logs/mood-log.route";
 
 const router = Router();
 
@@ -36,5 +37,6 @@ router.use(consultationReviewRouter);
 router.use(weeklyCheckinV1Router);
 router.use(aiBookmarkRouter);
 router.use(supportRouter);
+router.use(moodLogRouter);
 
 export default router;
