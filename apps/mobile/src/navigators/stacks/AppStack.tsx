@@ -31,6 +31,7 @@ import BookmarkedMessages from '../../screens/BookmarkedMessages';
 import AboutVivaMama from '../../screens/AboutVivaMama';
 import Support from '../../screens/Support';
 import AboutRecoveryScore from '../../screens/AboutRecoveryScore';
+import MoodLog from '../../screens/MoodLog';
 
 const Stack = createNativeStackNavigator();
 
@@ -271,6 +272,14 @@ const AppStack = () => {
                 }}
                 name="AboutRecoveryScore"
                 component={AboutRecoveryScore}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: 'Mood Log',
+                }}
+                name="MoodLog"
+                component={MoodLog}
             />
         </Stack.Navigator>
     );
