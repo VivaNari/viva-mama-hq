@@ -383,13 +383,11 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                                             </View> : null}
                                         </TouchableOpacity>
 
-                                        {/* <TouchableOpacity
+                                        <TouchableOpacity
                                             activeOpacity={0.8}
-                                            // onPress={() => {
-                                            //     navigation.navigate("ChatWithVivaAI", {
-                                            //         flowSlug: "mood-log-v1",
-                                            //     });
-                                            // }}
+                                            onPress={() => {
+                                                navigation.navigate("MoodLog");
+                                            }}
                                             style={{
                                                 flexDirection: "row",
                                                 borderRadius: 30,
@@ -413,7 +411,7 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                                             </Text>
                                         </TouchableOpacity>
 
-                                        <TouchableOpacity
+                                        {/* <TouchableOpacity
                                             activeOpacity={0.8}
                                             // onPress={() => {
                                             //     navigation.navigate("ChatWithVivaAI", {
