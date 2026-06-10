@@ -8,44 +8,44 @@ import { useAuth } from '../context/AuthContext'
 import { globalStyles } from '../public/styles'
 import { IUserContent, IUserContentresponse } from '../types/content.types'
 import { colors } from '../public/assets/colors'
-// import { useNavigation, useFocusEffect } from '@react-navigation/native'
-// import apiClientInterceptor from '../api/apiClientInterceptor'
-// import { API_VIVA_CLUB_POSTS } from '../constants/endpoints'
-// import { IVivaClubPost } from '../types/vivaClub.types'
-// import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
-// import LinearGradient from 'react-native-linear-gradient'
+import { useNavigation, useFocusEffect } from '@react-navigation/native'
+import apiClientInterceptor from '../api/apiClientInterceptor'
+import { API_VIVA_CLUB_POSTS } from '../constants/endpoints'
+import { IVivaClubPost } from '../types/vivaClub.types'
+import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
+import LinearGradient from 'react-native-linear-gradient'
 
 const ArticleContent = () => {
     const [searchData, setSearchData] = useState<string>("");
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
-    // const [lastPost, setLastPost] = useState<IVivaClubPost | null>(null);
-    // const [loadingPost, setLoadingPost] = useState<boolean>(false);
+    const [lastPost, setLastPost] = useState<IVivaClubPost | null>(null);
+    const [loadingPost, setLoadingPost] = useState<boolean>(false);
 
-    // const navigation = useNavigation<any>();
+    const navigation = useNavigation<any>();
     const { userId } = useAuth();
 
-    // const fetchLastPost = async () => {
-    //     try {
-    //         setLoadingPost(true);
-    //         const { data } = await apiClientInterceptor().get(`${API_VIVA_CLUB_POSTS}?page=1&limit=1`);
-    //         if (data.data.posts && data.data.posts.length > 0) {
-    //             setLastPost(data.data.posts[0]);
-    //         } else {
-    //             setLastPost(null);
-    //         }
-    //     } catch (error) {
-    //         console.error("Error fetching last post:", error);
-    //     } finally {
-    //         setLoadingPost(false);
-    //     }
-    // };
+    const fetchLastPost = async () => {
+        try {
+            setLoadingPost(true);
+            const { data } = await apiClientInterceptor().get(`${API_VIVA_CLUB_POSTS}?page=1&limit=1`);
+            if (data.data.posts && data.data.posts.length > 0) {
+                setLastPost(data.data.posts[0]);
+            } else {
+                setLastPost(null);
+            }
+        } catch (error) {
+            console.error("Error fetching last post:", error);
+        } finally {
+            setLoadingPost(false);
+        }
+    };
 
-    // useFocusEffect(
-    //     React.useCallback(() => {
-    //         fetchLastPost();
-    //     }, [])
-    // );
+    useFocusEffect(
+        React.useCallback(() => {
+            fetchLastPost();
+        }, [])
+    );
 
     useEffect(() => {
         const fetchData = async () => {
@@ -123,7 +123,7 @@ const ArticleContent = () => {
                         </View>
 
                         {/* Community Section */}
-                        {/* <View style={{ marginBottom: 20 }}>
+                        <View style={{ marginBottom: 20 }}>
                             <Text style={[globalStyles.fontBold, { fontSize: 18, color: colors.darkPurple, marginBottom: 10 }]}>Community Feed</Text>
                             {loadingPost ? (
                                 <ActivityIndicator size="small" color={colors.purple} />
@@ -155,7 +155,7 @@ const ArticleContent = () => {
                                     </LinearGradient>
                                 </View>
                             )}
-                        </View> */}
+                        </View>
 
                         {/* Search */}
                         <View style={{}}>

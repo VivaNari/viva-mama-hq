@@ -38,6 +38,10 @@ const ExpertDetails = () => {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
+    useEffect(() => {
+        console.log("RAZORPAY_API_KEY123", RAZORPAY_API_KEY);
+    }, [RAZORPAY_API_KEY]);
+
     const bookConsultation = async () => {
         try {
             setLoading({

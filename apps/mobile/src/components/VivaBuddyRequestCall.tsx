@@ -1,6 +1,6 @@
 import Lucide from '@react-native-vector-icons/lucide'
 import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native'
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native'
 import Toast from 'react-native-toast-message'
 import { requestCallback } from '../api/requestCallback'
 import { useAuth } from '../context/AuthContext'
@@ -44,13 +44,17 @@ const VivaBuddyRequestCall = () => {
                     date.toISOString()
                 ) as IRequestCallbackResponse;
                 if (requestcallbackResponse.success) {
-                    Toast.show({
-                        type: 'success',
-                        text1: 'Success!',
-                        text2: 'Your request has been registered and you will receive a call back within 24 hours!',
-                        position: 'bottom',
-                    });
-                    setSelectedDate(null); // Reset date after successful request
+                    // Toast.show({
+                    //     type: 'success',
+                    //     text1: 'Success!',
+                    //     text2: 'Your request has been registered and you will receive a call back within 24 hours!',
+                    //     position: 'bottom',
+                    // });
+                    Alert.alert(
+                        'Success!',
+                        `Your request has been registered and you will receive a call back on ${date.toDateString()}!`,
+                        [{ text: 'OK', onPress: () => setSelectedDate(null) }]
+                    );
                 } else {
                     Toast.show({
                         type: 'error',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
@@ -44,13 +44,17 @@ const CareManagerCard = () => {
                     date.toISOString()
                 ) as IRequestCallbackResponse;
                 if (requestcallbackResponse.success) {
-                    Toast.show({
-                        type: 'success',
-                        text1: 'Success!',
-                        text2: 'Your request has been registered and you will receive a call back within 24 hours!',
-                        position: 'bottom',
-                    });
-                    setSelectedDate(null);
+                    // Toast.show({
+                    //     type: 'success',
+                    //     text1: 'Success!',
+                    //     text2: 'Your request has been registered and you will receive a call back within 24 hours!',
+                    //     position: 'bottom',
+                    // });
+                    Alert.alert(
+                        'Success!',
+                        `Your request has been registered and you will receive a call back on ${date.toDateString()}!`,
+                        [{ text: 'OK', onPress: () => setSelectedDate(null) }]
+                    );
                 } else {
                     Toast.show({
                         type: 'error',

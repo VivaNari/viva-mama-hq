@@ -7,6 +7,7 @@ interface ICustomDatePickerProps {
     selectedDate: Date | null;
     onSelect: (date: Date) => void;
     minimumDate?: boolean;
+    maximumDate?: Date;
 }
 
 const CustomDatePicker = ({
@@ -14,7 +15,8 @@ const CustomDatePicker = ({
     setShow,
     selectedDate,
     onSelect,
-    minimumDate = false
+    minimumDate = false,
+    maximumDate
 }: ICustomDatePickerProps) => {
 
     const handleChange = (event: DateTimePickerEvent, date?: Date) => {
@@ -34,6 +36,7 @@ const CustomDatePicker = ({
                     display="default"
                     onChange={handleChange}
                     minimumDate={minimumDate ? new Date() : undefined}
+                    maximumDate={maximumDate}
                 />
             )}
         </Fragment>
