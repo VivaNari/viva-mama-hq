@@ -5,7 +5,12 @@ import {
   NodeType,
   InputMode,
 } from "../types/chat.types";
-import { DELIVERY_DATE_NODE_ID, NONE_OPTION_VALUES } from "../constants/chat";
+import {
+  DELIVERY_DATE_NODE_ID,
+  DOB_NODE_ID,
+  MIN_AGE_YEARS,
+  NONE_OPTION_VALUES,
+} from "../constants/chat";
 
 /**
  * Type guard to check if a message is an AI message
@@ -50,6 +55,22 @@ export const isMultiSelectMessage = (message: IChatMessage): boolean => {
  */
 export const isDeliveryDateNode = (message: IChatMessage): boolean => {
   return isAiMessage(message) && message.id === DELIVERY_DATE_NODE_ID;
+};
+
+/**
+ * Check if message is the date-of-birth node
+ */
+export const isDobNode = (message: IChatMessage): boolean => {
+  return isAiMessage(message) && message.id === DOB_NODE_ID;
+};
+
+/**
+ * Latest date of birth allowed for a user to be at least MIN_AGE_YEARS old today.
+ */
+export const getMaxDateOfBirth = (minAgeYears = MIN_AGE_YEARS): Date => {
+  const date = new Date();
+  date.setFullYear(date.getFullYear() - minAgeYears);
+  return date;
 };
 
 /**

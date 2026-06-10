@@ -1,6 +1,6 @@
 import { useRoute } from '@react-navigation/native';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Image, ScrollView, Text, TextInput, TouchableOpacity, View, ActivityIndicator } from 'react-native';
+import { FlatList, Image, ScrollView, Text, TextInput, TouchableOpacity, View, ActivityIndicator, KeyboardAvoidingView, Keyboard, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem';
 import { colors } from '../public/assets/colors';
@@ -64,6 +64,21 @@ const VivaClubPostDetails = () => {
     const [commentText, setCommentText] = useState("");
     const [loading, setLoading] = useState(true);
     const [commenting, setCommenting] = useState(false);
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
+
+    useEffect(() => {
+        const showSubscription = Keyboard.addListener('keyboardDidShow', () => {
+            setKeyboardVisible(true);
+        });
+        const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+            setKeyboardVisible(false);
+        });
+
+        return () => {
+            showSubscription.remove();
+            hideSubscription.remove();
+        };
+    }, []);
 
     const fetchPostDetails = async () => {
         try {
@@ -108,6 +123,12 @@ const VivaClubPostDetails = () => {
 
     return (
         <SafeAreaView style={{ flex: 1 }}>
+            <KeyboardAvoidingView
+                behavior={isKeyboardVisible ? 'padding' : undefined}
+                style={{ flex: 1 }}
+                keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+                enabled={true}
+            >
             <View style={[globalStyles.container, { paddingVertical: 5, flex: 1 }]}>
                 <FlatList
                     keyExtractor={(item) => item._id}
@@ -152,6 +173,7 @@ const VivaClubPostDetails = () => {
                     )}
                 </TouchableOpacity>
             </View>
+            </KeyboardAvoidingView>
         </SafeAreaView>
     )
 }

@@ -16,6 +16,10 @@ export const NAVIGATION_DELAY_MS = 3000;
 // ============================================
 
 export const DELIVERY_DATE_NODE_ID = "delivery_date";
+export const DOB_NODE_ID = "dob";
+
+// Minimum age (in years) a user must be to register a date of birth.
+export const MIN_AGE_YEARS = 18;
 
 // ============================================
 // Special Values

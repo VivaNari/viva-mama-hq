@@ -109,7 +109,7 @@ const IndividualRecoveryCard = ({
                         )
                     }
 
-                    {
+                    {/* {
                         data.recommendation.goingWell && (
                             <View
                                 style={{
@@ -136,7 +136,7 @@ const IndividualRecoveryCard = ({
                                 </Text>
                             </View>
                         )
-                    }
+                    } */}
 
                     {
                         data.recommendation.next && data.recommendation.next.length > 0 && (
@@ -167,7 +167,7 @@ const IndividualRecoveryCard = ({
                         )
                     }
 
-                    {
+                    {/* {
                         data.recommendation.needsHelp && (
                             <View
                                 style={{
@@ -194,7 +194,7 @@ const IndividualRecoveryCard = ({
                                 </Text>
                             </View>
                         )
-                    }
+                    } */}
 
                     {
                         data.recommendation.celebrate && data.recommendation.celebrate.length > 0 && (

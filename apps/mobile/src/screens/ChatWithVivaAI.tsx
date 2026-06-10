@@ -44,7 +44,8 @@ import {
     shouldClearHistoryOnComplete,
     shouldSaveHistory,
 } from '../utils/flowTypeResolver';
-import { determineInputMode, isAiMessage } from '../utils/messageHelpers';
+import { determineInputMode, isAiMessage, isDobNode, getMaxDateOfBirth } from '../utils/messageHelpers';
+import { MIN_AGE_YEARS } from '../constants/chat';
 import { chatLogger } from '../utils/logger';
 import { globalStyles } from '../public/styles';
 import { syncUserData } from '../utils/syncUserData';
@@ -128,6 +129,14 @@ const ChatWithVivaAI: React.FC = () => {
             return [];
         }
         return lastMessage.options;
+    }, [lastMessage]);
+
+    // For the date-of-birth question, cap the picker so the user must be at
+    // least MIN_AGE_YEARS old; undefined for any other date question.
+    const datePickerMaximumDate = useMemo(() => {
+        return lastMessage && isDobNode(lastMessage)
+            ? getMaxDateOfBirth()
+            : undefined;
     }, [lastMessage]);
 
     const handleFlowComplete = useCallback(
@@ -264,11 +273,23 @@ const ChatWithVivaAI: React.FC = () => {
 
     const handleDateSelected = useCallback(
         (date: Date) => {
+            // Guard the date-of-birth question against under-age dates, in case the
+            // native picker's maximumDate is bypassed on any platform.
+            if (lastMessage && isDobNode(lastMessage) && date > getMaxDateOfBirth()) {
+                setShowDatePicker(false);
+                Toast.show({
+                    type: 'error',
+                    text1: 'Invalid date of birth',
+                    text2: `You must be at least ${MIN_AGE_YEARS} years old.`,
+                    position: 'bottom',
+                });
+                return;
+            }
             setSelectedDate(date);
             setShowDatePicker(false);
             handleDateSelect(date);
         },
-        [handleDateSelect]
+        [handleDateSelect, lastMessage]
     );
 
     const handleMultiOptionToggle = useCallback(
@@ -637,6 +658,7 @@ const ChatWithVivaAI: React.FC = () => {
                     setShow={setShowDatePicker}
                     selectedDate={selectedDate}
                     onSelect={handleDateSelected}
+                    maximumDate={datePickerMaximumDate}
                 />
                 {/* <ModelSelector
                     visible={modelSelectorVisible}
