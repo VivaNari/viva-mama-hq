@@ -134,7 +134,7 @@ export enum DeliveryOutcomeEnum {
 }
 
 export enum PastMedicationEnum {
-    PCOD = "pcod",
+    PMOS = "pmos",
     ANEMIA = "history_anemia",
     THYROID = "history_thyroid",
     DIABETES = "history_diabetes",

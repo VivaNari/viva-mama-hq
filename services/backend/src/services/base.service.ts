@@ -28,7 +28,6 @@ class BaseService<T> {
         populate,
         selectedKeys,
     }: FindOptions<T>): Promise<T[]> => {
-        console.log("filter", filter);
         let query = this.model.find(filter);
 
         if (sort) {

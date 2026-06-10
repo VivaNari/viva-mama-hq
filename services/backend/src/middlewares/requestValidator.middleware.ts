@@ -9,10 +9,9 @@ const requestValidator = (schema: Schema) => {
                     error: "Request body is missing",
                 });
             }
-            console.log(await schema.validateAsync(req.body));
+            await schema.validateAsync(req.body);
             next();
         } catch (errors: any) {
-            console.log(errors);
             return res.status(400).json({
                 error: errors,
             });
