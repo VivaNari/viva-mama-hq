@@ -1,0 +1,46 @@
+import { Schema } from "mongoose";
+import { generalSchemaOptions } from "../../constants/model";
+import { IExpert } from "../../types/expert.types";
+
+const expertSchema: Schema<IExpert> = new Schema<IExpert>(
+    {
+        name: {
+            type: String,
+            required: true,
+        },
+        speciality: {
+            type: String,
+            required: true,
+        },
+        qualification: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        yearsOfExperience: {
+            type: Number,
+            required: true,
+        },
+        bio: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        photograph: {
+            type: String,
+            required: true,
+        },
+        remuneration: {
+            type: Number,
+            required: true,
+        },
+        isActive: {
+            type: Boolean,
+            required: true,
+            default: true,
+        },
+    },
+    generalSchemaOptions,
+);
+
+export default expertSchema;

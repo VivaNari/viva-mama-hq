@@ -1,0 +1,232 @@
+import { Request, Response } from "express";
+import { OAuth2Client } from "google-auth-library";
+import { StatusCodes } from "http-status-codes";
+import env from "../../config/env";
+import { NNWomanRecoveryScoreText } from "../../constants/NNWomenRecoveryScoreText";
+import { caremanager } from "../../constants/careManager";
+import { messages } from "../../constants/messages";
+import { recoveryScoreBriefInfo } from "../../constants/recoveryScoreBriefInfo";
+import { significance } from "../../constants/significance";
+import OTPModel from "../../models/opt.model";
+import UserModel from "../../models/user.model";
+import { IGoogleLoginPayload, IUser } from "../../types";
+import sendResponse from "../../utils/commonFunctions/sendResponse";
+import { generateJWT } from "../../utils/functions/generateJWT";
+import BaseService from "../base.service";
+import { decode, encode } from "../crypto/crypto.service";
+import { addMinutesToDate } from "../date/date.service";
+import { sendWhatsappMessageForOTP } from "../getgabs/sendWhatsappMessageForOTP";
+
+const client = new OAuth2Client(env.GOOGLE_CLIENT_ID);
+
+/**
+ * Identifies testing phone numbers that contain the same digit 6+ times consecutively.
+ * @param phoneNumber - User mobile number.
+ */
+const isTestingPhoneNumber = (phoneNumber: string): boolean => /(\d)\1{5,}/.test(phoneNumber);
+
+export default class UserService extends BaseService<IUser> {
+    constructor() {
+        super(UserModel);
+    }
+
+    getUserbyAuthToken = async (req: Request, res: Response) => {
+        try {
+            if (!req.user) {
+                throw new Error(messages.USER_FETCH_FAILED);
+            }
+            const user = await UserModel.findById(req.user._id).lean();
+            let np_weeks;
+            if (user?.user_category === "NP") {
+                const now = new Date();
+                const due = new Date(user.onboarding_data.delivery_date as Date);
+
+                const diffMs = due.getTime() - now.getTime();
+
+                if (diffMs <= 0) return 0; // already delivered or due today
+
+                const weeks = diffMs / (1000 * 60 * 60 * 24 * 7);
+                np_weeks = Math.ceil(weeks); // round up (medical-friendly)
+            }
+            sendResponse({
+                data: {
+                    user: { ...user, np_weeks },
+                    significance,
+                    recoveryScoreBriefInfo,
+                    NNWomanRecoveryScoreText,
+                    caremanager,
+                },
+                message: messages.USER_FETCHED_SUCCESSFULLY,
+                response: res,
+                statusCode: StatusCodes.OK,
+                success: true,
+            });
+        } catch (err) {
+            throw err;
+        }
+    };
+
+    sendOTPToPhone = async (req: Request, res: Response) => {
+        try {
+            const { mobile_number, country_code, FCM_token } = req.body;
+            if (!mobile_number || !country_code) {
+                return res
+                    .status(400)
+                    .json({ message: "Country code and mobile number are required" });
+            }
+
+            const OTP = Math.floor(100000 + Math.random() * 900000).toString();
+            const now = Date.now();
+            const expirationTime = addMinutesToDate(now, 10);
+
+            const otpDoc = await OTPModel.create({
+                otp: OTP,
+                expiration_time: expirationTime,
+            });
+
+            const payload = {
+                otp_id: otpDoc._id,
+                check: mobile_number,
+                timestamp: Date.now(),
+                message: "OTP sent successfully",
+            };
+
+            const verification_key = await encode(JSON.stringify(payload));
+
+            const fullPhoneNumber = `${country_code}${mobile_number}`;
+
+            await sendWhatsappMessageForOTP({
+                to: fullPhoneNumber.replace("+", ""),
+                otp: OTP,
+            });
+
+            return res.status(200).json({
+                message: "OTP sent successfully",
+                success: true,
+                verification_key,
+            });
+        } catch (error: any) {
+            console.error("sendOTPToPhone error:", error);
+            return res.status(500).json({
+                message: "Failed to send OTP",
+                success: false,
+                error: error.message,
+            });
+        }
+    };
+
+    verifyOTP = async (req: Request, res: Response) => {
+        try {
+            const { verification_key, otp, mobile_number, country_code, FCM_token, consents } =
+                req.body;
+            if (!verification_key || !otp || !mobile_number || !country_code)
+                return res.status(400).json({ message: "Missing required fields" });
+
+            const decoded = await decode(verification_key);
+            const data = JSON.parse(decoded);
+
+            if (data.check !== mobile_number)
+                return res.status(400).json({ message: "OTP not sent to this number" });
+
+            const otpDoc = await OTPModel.findById(data.otp_id);
+            if (!otpDoc) return res.status(400).json({ message: "Invalid verification key" });
+
+            if (otpDoc.verified) return res.status(400).json({ message: "OTP already used" });
+
+            if (otpDoc.expiration_time < new Date())
+                return res.status(400).json({ message: "OTP expired" });
+
+            const isTestUser = isTestingPhoneNumber(mobile_number);
+            const isOtpValidForUser = isTestUser ? otp === "123456" : otp === otpDoc.otp;
+            if (!isOtpValidForUser) return res.status(400).json({ message: "Incorrect OTP" });
+
+            otpDoc.verified = true;
+            await otpDoc.save();
+
+            let user = await UserModel.findOne({ mobile_number });
+
+            if (!user) {
+                user = await UserModel.create({
+                    mobile_number,
+                    country_code,
+                    FCM_token,
+                    consents: consents || [],
+                });
+                console.log("First-time user created:", user._id);
+            } else if (consents && consents.length > 0) {
+                // Update consents if provided
+                user = await UserModel.findByIdAndUpdate(
+                    user._id,
+                    {
+                        $push: { consents: { $each: consents } },
+                    },
+                    { new: true },
+                );
+            }
+
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
+
+            const jwt = generateJWT(user as any);
+
+            return res.status(200).json({
+                message: "OTP verified successfully",
+                token: jwt,
+                is_onboarded: user.is_onboarded,
+                user: user,
+            });
+        } catch (error: any) {
+            console.error("verifyOTP error:", error);
+            return res
+                .status(500)
+                .json({ message: "OTP verification failed", error: error.message });
+        }
+    };
+
+    googleAuth = async (req: Request, res: Response) => {
+        try {
+            const { idToken, FCM_token, consents } = req.body;
+
+            const ticket = await client.verifyIdToken({ idToken });
+            const payload = ticket.getPayload() as IGoogleLoginPayload;
+
+            const { name, email, picture } = payload;
+
+            const updateData: any = {
+                $set: {
+                    user_name: name,
+                    profile_picture: picture,
+                    email: email,
+                    FCM_token: FCM_token,
+                },
+            };
+
+            if (consents && consents.length > 0) {
+                updateData.$push = { consents: { $each: consents } };
+            }
+
+            const user = await UserModel.findOneAndUpdate({ email: email }, updateData, {
+                upsert: true,
+                new: true,
+                setDefaultsOnInsert: true,
+            });
+
+            if (!user) {
+                return res.status(404).json({ message: "User could not be created/found" });
+            }
+
+            const jwt = generateJWT(user as any);
+
+            return res.status(200).json({
+                message: "Logged in successfully",
+                token: jwt,
+                is_onboarded: user.is_onboarded,
+                user: user,
+            });
+        } catch (error) {
+            console.error("Google Sign-In Error:", error);
+            res.status(401).json({ message: "Invalid Google token." });
+        }
+    };
+}
