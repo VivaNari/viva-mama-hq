@@ -145,11 +145,26 @@ These were intentionally **not** done in this pass and are safe follow-ups:
 - **Python dependency manifests are dual**: `pyproject.toml` + `uv.lock` (canonical)
   and `requirements.txt` (for the Docker image's CPU-only PyTorch wheels). Keep in
   sync via `uv export`.
-- **Lint/format overrides**: `apps/mobile` (RN ESLint preset) and `services/backend`
-  (own flat config + 4-space Prettier) retain per-package configs to avoid
-  reformatting ~800 inherited files. New/shared code uses the root config.
-- **Inherited tech debt** left as-is: removed accidental backend deps (`npm`, `i`,
-  `http`); dual implementations remain (`weekly-checkin` v0/v1, `ChatWithVivaAIOld`,
-  `Services copy.tsx`).
+- **Lint passes on a pragmatic baseline.** To avoid rewriting ~800 inherited
+  files, real problems are errors but inherited-debt rules are **warnings**
+  (`backend` 0 errors / 38 warnings, `mobile` 0 errors / 50 warnings). The backend
+  uses the root ESLint config; the RN app keeps its framework preset (those rules
+  downgraded) plus the RN ESLint plugins it needs under pnpm; Ruff is scoped to
+  pyflakes + import order (`F`, `I`) and the chatbot was auto-fixed clean.
+  Tightening to full strictness/formatting is a tracked follow-up.
+- **Mobile `tsc` is not gated yet** — the RN app has ~20 pre-existing type errors
+  (mock data, type-def typos, legacy `Services copy.tsx` / `ChatWithVivaAIOld.tsx`).
+  It builds via Metro/Babel (no type-check); re-enabling strict `tsc` is a follow-up.
+- **Backend type fixes applied.** Minimal, runtime-preserving fixes were needed for
+  the backend to compile cleanly under `tsc` (Express 5 `req.params`/`req.query`
+  string casts in 5 controllers; a pino transport return type). Their original CI
+  ran tests but never `tsc`, so these errors pre-dated the migration.
+- **Inherited tech debt** otherwise left as-is: removed accidental backend deps
+  (`npm`, `i`, `http`); dual implementations remain (`weekly-checkin` v0/v1,
+  `ChatWithVivaAIOld`, `Services copy.tsx`).
+- **Verified locally:** `pnpm install`, `turbo build` + `typecheck` (contracts +
+  backend), `turbo lint` (all 4), `ruff check` (chatbot), and `gitleaks` (history +
+  tree, 0 leaks). **Not run here:** Docker image builds (no daemon) and the test
+  suites (need service containers / a Groq key) — both are wired into CI.
 - **The chatbot answers from the LLM's own knowledge until a corpus is ingested**
   (see `data/SOURCES.md`).
