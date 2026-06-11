@@ -1,0 +1,53 @@
+{
+  "migIndex": 1,
+  "data": [
+    {
+      "path": "src/public/assets/fonts/LexendBold.ttf",
+      "sha1": "c3006fdc382624dd82e1fdec223e432d1c5efed2"
+    },
+    {
+      "path": "src/public/assets/fonts/YsabeauInfantRegular.ttf",
+      "sha1": "7dc7765c6267ab072b3ab07132e5290ae3bc7647"
+    },
+    {
+      "path": "src/public/assets/fonts/YsabeauInfantLight.ttf",
+      "sha1": "083a0adffb64e02c08321e2277cdd33715fe1dd2"
+    },
+    {
+      "path": "src/public/assets/fonts/LexendExtraBold.ttf",
+      "sha1": "b122c62f12996016805a82b14f2359b68d9f7611"
+    },
+    {
+      "path": "src/public/assets/fonts/YsabeauInfantMedium.ttf",
+      "sha1": "1355b6c3a25c962a2540b0febc2b0a994ffbe86f"
+    },
+    {
+      "path": "src/public/assets/fonts/YsabeauInfantBold.ttf",
+      "sha1": "0757c7f575483f2ceb8f72a7e0592cb5077ee538"
+    },
+    {
+      "path": "src/public/assets/fonts/LexendRegular.ttf",
+      "sha1": "6b1a67df80ac5b837be9112bf27e6c718ed36c08"
+    },
+    {
+      "path": "src/public/assets/fonts/YsabeauInfantExtraBold.ttf",
+      "sha1": "1937a5f0586195eb5d4111017ce91948f5e53b8e"
+    },
+    {
+      "path": "src/public/assets/fonts/YsabeauInfantSemiBold.ttf",
+      "sha1": "636b6bce0867b2accf16406e4c89ee1799122e43"
+    },
+    {
+      "path": "src/public/assets/fonts/LexendLight.ttf",
+      "sha1": "68eaa46bda17b37e57df8dc2f2db9e546e5b15a8"
+    },
+    {
+      "path": "src/public/assets/fonts/LexendMedium.ttf",
+      "sha1": "ecb541adfb5e827e3de237308772e103a553544d"
+    },
+    {
+      "path": "src/public/assets/fonts/LexendSemiBold.ttf",
+      "sha1": "6a67f0e2d1549f7a69c8caa2bbc04abe61e15bc9"
+    }
+  ]
+}

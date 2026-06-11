@@ -1,0 +1,588 @@
+import SQLite, { SQLiteDatabase } from "react-native-sqlite-storage";
+import { IUserDataResponse } from "../types/dashboard.types";
+import { IUser } from "../types/user.types";
+import {
+  IDBAiMessage,
+  IDBChatMessage,
+  IDBChatMessageRow,
+  IDBUserMessage,
+} from "../types/vivaAi.types";
+
+SQLite.DEBUG(false);
+SQLite.enablePromise(true);
+
+class ChatDatabase {
+  private database: SQLiteDatabase | null = null;
+  private dbName = "chat_history.db";
+
+  async init(): Promise<void> {
+    try {
+      if (this.database) {
+        console.log("Database already initialized");
+        return;
+      }
+
+      this.database = await SQLite.openDatabase({
+        name: this.dbName,
+        location: "default",
+      });
+
+      console.log("Database opened successfully");
+      await this.createTables();
+    } catch (error) {
+      console.error("Failed to initialize database:", error);
+      throw error;
+    }
+  }
+
+  private async createTables(): Promise<void> {
+    if (!this.database) {
+      throw new Error("Database not initialized");
+    }
+
+    const createTableQuery = `
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                flow_slug TEXT NOT NULL,
+                message_type TEXT NOT NULL,
+                message_id TEXT,
+                flow_instance_id TEXT,
+                uuid TEXT,
+                text TEXT NOT NULL,
+                educational_message TEXT,
+                why_this_matters TEXT,
+                options TEXT,
+                node_type TEXT,
+                timestamp INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            );
+        `;
+
+    const createIndexQueries = [
+      "CREATE INDEX IF NOT EXISTS idx_user_flow ON chat_messages(user_id, flow_slug);",
+      "CREATE INDEX IF NOT EXISTS idx_message_id ON chat_messages(message_id);",
+      "CREATE INDEX IF NOT EXISTS idx_timestamp ON chat_messages(timestamp);",
+    ];
+
+    const createUserTableQuery = `
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT NOT NULL,
+        user_data TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+
+    const createBookmarkTableQuery = `
+    CREATE TABLE IF NOT EXISTS bookmarks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        message_id TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    `;
+
+    try {
+      await this.database.executeSql(createTableQuery);
+      console.log("chat_messages table created");
+
+      await this.addColumnIfNotExists("chat_messages", "node_type", "TEXT");
+      await this.addColumnIfNotExists("chat_messages", "uuid", "TEXT");
+
+      await this.database.executeSql(createUserTableQuery);
+      console.log("users table created");
+
+      await this.database.executeSql(createBookmarkTableQuery);
+      console.log("Bookmarks table created");
+
+      await this.addColumnIfNotExists("bookmarks", "user_id", "TEXT");
+
+      for (const indexQuery of createIndexQueries) {
+        await this.database.executeSql(indexQuery);
+      }
+      console.log("Indexes created");
+    } catch (error) {
+      console.error("Failed to create tables:", error);
+      throw error;
+    }
+  }
+
+  async addColumnIfNotExists(
+    tableName: string,
+    columnName: string,
+    columnType: string,
+  ) {
+    const query = `PRAGMA table_info(${tableName});`;
+    const [result] = await this.database!.executeSql(query);
+
+    let exists = false;
+    for (let i = 0; i < result.rows.length; i++) {
+      if (result.rows.item(i).name === columnName) {
+        exists = true;
+        break;
+      }
+    }
+
+    if (!exists) {
+      const alterQuery = `ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${columnType};`;
+      await this.database!.executeSql(alterQuery);
+      console.log(`Added missing column '${columnName}'`);
+    } else {
+      console.log(`Column '${columnName}' already exists`);
+    }
+  }
+
+  async saveAiMessage(
+    userId: string,
+    flowSlug: string,
+    message: IDBAiMessage,
+  ): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+      INSERT INTO chat_messages (
+        user_id, flow_slug, message_type, message_id, flow_instance_id, uuid, 
+        text, educational_message, why_this_matters, options, node_type, timestamp
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    `;
+
+    const params = [
+      userId,
+      flowSlug,
+      "ai",
+      message.id,
+      message.flowInstanceId,
+      message.uuid,
+      message.text,
+      message.educationalMessage || null,
+      message.whyThisMatters || null,
+      JSON.stringify(message.options),
+      message.nodeType || null,
+      message.timestamp,
+    ];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log(`AI message saved: ${message.id}`);
+    } catch (error) {
+      console.error("Failed to save AI message:", error);
+      throw error;
+    }
+  }
+
+  async saveUserData(userId: string, userData: IUser): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            INSERT INTO users (
+                user_id, user_data, timestamp
+            ) VALUES (?, ?, ?);
+        `;
+
+    const params = [userId, JSON.stringify(userData), Date.now()];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log("User saved to sqlite");
+    } catch (error) {
+      console.error("Failed to save user:", error);
+      throw error;
+    }
+  }
+
+  async getUserData(userId: string): Promise<IUserDataResponse | null> {
+    if (!userId) {
+      console.log("Skipping getUserData: No userId provided");
+      return null;
+    }
+
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT user_data FROM users WHERE user_id = ?;
+        `;
+
+    const params = [userId];
+
+    try {
+      const [result] = await this.database!.executeSql(query, params);
+      if (result.rows.length === 0) {
+        console.log(`No user data found for userId: ${userId}`);
+        return null;
+      }
+      const userData = result.rows.item(0);
+      return JSON.parse(userData.user_data);
+    } catch (error) {
+      console.error("Failed to get user data:", error);
+      throw error;
+    }
+  }
+
+  async updateUserData(userId: string, userData: IUser): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            UPDATE users SET user_data = ?, timestamp = ? WHERE user_id = ?;
+        `;
+
+    const params = [JSON.stringify(userData), Date.now(), userId];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log("User data updated");
+    } catch (error) {
+      console.error("Failed to update user data:", error);
+      throw error;
+    }
+  }
+
+  async deleteUserData(userId: string): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            DELETE FROM users WHERE user_id = ?;
+        `;
+
+    try {
+      await this.database!.executeSql(query, [userId]);
+      console.log("User data deleted");
+    } catch (error) {
+      console.error("Failed to delete user data:", error);
+      throw error;
+    }
+  }
+
+  async CheckUserExists(userId: string): Promise<boolean> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT COUNT(*) as count FROM users WHERE user_id = ?;
+        `;
+
+    try {
+      const [result] = await this.database!.executeSql(query, [userId]);
+      const count = result.rows.item(0).count;
+      return count > 0;
+    } catch (error) {
+      console.error("Failed to check user existence:", error);
+      throw error;
+    }
+  }
+
+  async saveUserMessage(
+    userId: string,
+    flowSlug: string,
+    message: IDBUserMessage,
+  ): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            INSERT INTO chat_messages (
+                user_id, flow_slug, message_type, text, timestamp
+            ) VALUES (?, ?, ?, ?, ?);
+        `;
+
+    const params = [userId, flowSlug, "user", message.text, message.timestamp];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log("User message saved");
+    } catch (error) {
+      console.error("Failed to save user message:", error);
+      throw error;
+    }
+  }
+
+  async messageExists(
+    userId: string,
+    flowSlug: string,
+    messageId: string,
+  ): Promise<boolean> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT COUNT(*) as count FROM chat_messages 
+            WHERE message_id = ? AND flow_slug = ?;
+        `;
+
+    try {
+      const [result] = await this.database!.executeSql(query, [
+        messageId,
+        flowSlug,
+      ]);
+      const count = result.rows.item(0).count;
+      return count > 0;
+    } catch (error) {
+      console.error("❌ Failed to check message existence:", error);
+      return false;
+    }
+  }
+
+  async saveBookmark(messageId: string, userId: string): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            INSERT INTO bookmarks (
+                message_id, user_id, timestamp
+            ) VALUES (?, ?, ?);
+        `;
+
+    const params = [messageId, userId, Date.now()];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log("Bookmark saved");
+    } catch (error) {
+      console.error("Failed to save bookmark:", error);
+      throw error;
+    }
+  }
+
+  async deleteBookmark(messageId: string): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+        DELETE FROM bookmarks WHERE message_id = ?;
+    `;
+
+    const params = [messageId];
+
+    try {
+      await this.database!.executeSql(query, params);
+      console.log("Bookmark deleted");
+    } catch (error) {
+      console.error("Failed to delete bookmark:", error);
+      throw error;
+    }
+  }
+
+  async getBookmarkedMessages(userId: string): Promise<string[]> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT message_id FROM bookmarks 
+            WHERE user_id = ?;
+        `;
+
+    const params = [userId];
+
+    try {
+      const [result] = await this.database!.executeSql(query, params);
+      const bookmarkedMessages: string[] = [];
+
+      for (let i = 0; i < result.rows.length; i++) {
+        bookmarkedMessages.push(result.rows.item(i).message_id);
+      }
+
+      return bookmarkedMessages;
+    } catch (error) {
+      console.error("Failed to get bookmarked messages:", error);
+      throw error;
+    }
+  }
+
+  async getChatHistory(
+    userId: string,
+    flowSlug: string,
+  ): Promise<IDBChatMessage[]> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT * FROM chat_messages 
+            WHERE user_id = ? AND flow_slug = ? 
+            ORDER BY timestamp ASC;
+        `;
+
+    try {
+      const [result] = await this.database!.executeSql(query, [
+        userId,
+        flowSlug,
+      ]);
+      const messages: IDBChatMessage[] = [];
+
+      for (let i = 0; i < result.rows.length; i++) {
+        const row: IDBChatMessageRow = result.rows.item(i);
+
+        if (row.message_type === "ai") {
+          messages.push({
+            type: "ai",
+            id: row.message_id!,
+            flowInstanceId: row.flow_instance_id!,
+            text: row.text,
+            educationalMessage: row.educational_message || undefined,
+            whyThisMatters: row.why_this_matters || undefined,
+            options: row.options ? JSON.parse(row.options) : [],
+            nodeType: row.node_type as any,
+            timestamp: row.timestamp,
+            uuid: row.uuid,
+          });
+        } else {
+          messages.push({
+            type: "user",
+            text: row.text,
+            timestamp: row.timestamp,
+          });
+        }
+      }
+
+      console.log(`📚 Loaded ${messages.length} messages`);
+      return messages;
+    } catch (error) {
+      console.error("❌ Failed to get chat history:", error);
+      return [];
+    }
+  }
+
+  async clearChatHistoryV2(): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = "DELETE FROM chat_messages;";
+
+    try {
+      await this.database!.executeSql(query);
+      console.log("Chat history cleared");
+    } catch (error) {
+      console.error("Failed to clear chat history:", error);
+      throw error;
+    }
+  }
+
+  async clearChatHistory(userId: string, flowSlug: string): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query =
+      "DELETE FROM chat_messages WHERE user_id = ? AND flow_slug = ?;";
+
+    try {
+      await this.database!.executeSql(query, [userId, flowSlug]);
+      console.log("Chat history cleared");
+    } catch (error) {
+      console.error("Failed to clear chat history:", error);
+      throw error;
+    }
+  }
+
+  async getLastAiMessage(
+    userId: string,
+    flowSlug: string,
+  ): Promise<IDBAiMessage | null> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT * FROM chat_messages 
+            WHERE user_id = ? AND flow_slug = ? AND message_type = 'ai' 
+            ORDER BY timestamp DESC LIMIT 1;
+        `;
+
+    try {
+      const [result] = await this.database!.executeSql(query, [
+        userId,
+        flowSlug,
+      ]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row: IDBChatMessageRow = result.rows.item(0);
+      return {
+        type: "ai",
+        id: row.message_id!,
+        flowInstanceId: row.flow_instance_id!,
+        text: row.text,
+        educationalMessage: row.educational_message || undefined,
+        whyThisMatters: row.why_this_matters || undefined,
+        options: row.options ? JSON.parse(row.options) : [],
+        nodeType: row.node_type as any,
+        timestamp: row.timestamp,
+        uuid: row.uuid,
+      };
+    } catch (error) {
+      console.error("Failed to get last AI message:", error);
+      return null;
+    }
+  }
+
+  async getLastMessage(userId: string, flowSlug: string): Promise<any | null> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+            SELECT * FROM chat_messages 
+            WHERE user_id = ? AND flow_slug = ? 
+            ORDER BY timestamp DESC LIMIT 1;
+        `;
+
+    try {
+      const [result] = await this.database!.executeSql(query, [
+        userId,
+        flowSlug,
+      ]);
+
+      if (result.rows.length === 0) {
+        return null;
+      }
+
+      const row: IDBChatMessageRow = result.rows.item(0);
+      return {
+        type: row.message_type,
+        id: row.message_id!,
+        flowInstanceId: row.flow_instance_id!,
+        text: row.text,
+        educationalMessage: row.educational_message || undefined,
+        whyThisMatters: row.why_this_matters || undefined,
+        options: row.options ? JSON.parse(row.options) : [],
+        nodeType: row.node_type as any,
+        timestamp: row.timestamp,
+        uuid: row.uuid,
+      };
+    } catch (error) {
+      console.error("Failed to get last AI message:", error);
+      return null;
+    }
+  }
+
+  async close(): Promise<void> {
+    if (this.database) {
+      await this.database.close();
+      this.database = null;
+      console.log("Database closed");
+    }
+  }
+}
+
+// Export instance
+export const chatDB = new ChatDatabase();

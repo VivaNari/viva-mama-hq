@@ -1,0 +1,198 @@
+name: Android Release Build
+
+on:
+  push:
+    branches:
+      - uat
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Android Release
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # Step 3: Setup Java
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      # Step 4: Install dependencies
+      - name: Install npm dependencies
+        run: npm ci
+
+      # Step 5: Cache Gradle
+      - name: Cache Gradle Wrapper
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('android/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # Step 6: Make gradlew executable
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      # Step 7: Decode keystore
+      - name: Decode Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          echo $KEYSTORE_BASE64 | base64 -d > android/app/viva_nari.keystore
+
+      # Step 8: Decode google-services.json
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo $GOOGLE_SERVICES_JSON | base64 -d > android/app/google-services.json
+
+      # Step 9: Build Release APK
+      - name: Build Release APK
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon --stacktrace
+
+      # Step 10: Build Release AAB
+      - name: Build Release AAB
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          cd android
+          ./gradlew bundleRelease --no-daemon --stacktrace
+
+      # Step 11: Print build outputs
+      - name: List build outputs
+        run: |
+          echo "APK outputs:"
+          ls -lah android/app/build/outputs/apk/release/
+          echo "AAB outputs:"
+          ls -lah android/app/build/outputs/bundle/release/
+
+      # Step 12: Rename artifacts with version + timestamp
+      - name: Rename artifacts
+        run: |
+          VERSION_NAME=$(grep "versionName" android/app/build.gradle | awk '{print $2}' | tr -d '"')
+          VERSION_CODE=$(grep "versionCode" android/app/build.gradle | awk '{print $2}')
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          
+          cd android/app/build/outputs/apk/release/
+          for file in *.apk; do
+            newname="viva_nari_v${VERSION_NAME}_${VERSION_CODE}_${TIMESTAMP}_${file}"
+            mv "$file" "$newname"
+          done
+
+          cd ../../bundle/release/
+          for file in *.aab; do
+            newname="viva_nari_v${VERSION_NAME}_${VERSION_CODE}_${TIMESTAMP}_${file}"
+            mv "$file" "$newname"
+          done
+
+      # Step 13: Slack Notification - Artifacts Ready
+      - name: Notify Slack (Artifacts Ready)
+        if: success()
+        run: |
+          APK_LIST=$(ls android/app/build/outputs/apk/release/*.apk 2>/dev/null)
+          AAB_LIST=$(ls android/app/build/outputs/bundle/release/*.aab 2>/dev/null)
+
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"📦 *Artifacts Generated!*\n\n*APK Files:*\n$APK_LIST\n\n*AAB Files:*\n$AAB_LIST\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # Step 14: Upload APK
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-release
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 45
+
+      # Step 15: Upload AAB
+      - name: Upload AAB Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab-release
+          path: android/app/build/outputs/bundle/release/*.aab
+          retention-days: 45
+
+      # Step 16: Upload mapping files
+      - name: Upload ProGuard mapping files
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mapping-files
+          path: android/app/build/outputs/mapping/release/
+          retention-days: 90
+
+      # Step 17: Build summary
+      - name: Generate Build Summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      # Step 18: Slack Notification - Build Success
+      - name: Notify Slack (Success)
+        if: success()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🎉 *Android Release Build Succeeded!* 🚀\nBranch: *${{ github.ref_name }}*\nCommit: *${{ github.sha }}*\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # Step 19: Slack Notification - Build Failure
+      - name: Notify Slack (Failure)
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"❌ *Android Release Build Failed!* \nBranch: *${{ github.ref_name }}*\nCommit: *${{ github.sha }}*\nCheck GitHub Actions logs for details.\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # Step 20: Cleanup sensitive files
+      - name: Cleanup Keystore and Google Services File
+        if: always()
+        run: |
+          rm -f android/app/viva_nari.keystore
+          rm -f android/app/google-services.json
+
+      # Step 21: Upload build logs on failure
+      - name: Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            android/app/build/reports/
+            android/app/build/outputs/logs/
+          retention-days: 7
