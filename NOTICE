@@ -1,0 +1,15 @@
+VivaMama
+Copyright 2026 NexaNeura and the VivaMama contributors
+
+This product includes software developed as part of the VivaMama platform
+(https://github.com/NexaNeura/vivamama), licensed under the Apache License,
+Version 2.0.
+
+--------------------------------------------------------------------------------
+Third-party components are distributed under their own licenses; see each
+package's dependency manifest (package.json / pyproject.toml / requirements.txt)
+and the generated license reports in CI for details.
+
+The RAG chatbot's knowledge corpus (third-party research articles and clinical
+guidelines) is NOT included in this repository and is NOT covered by this
+license. See services/chatbot/data/SOURCES.md.

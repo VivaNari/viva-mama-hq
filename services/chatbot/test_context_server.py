@@ -4,21 +4,21 @@ Simple MCP Server Test
 Run from project root: python3 test_context_server.py
 """
 
-import sys
-import os
 import asyncio
+import os
+import sys
 
 # Add current directory to path
 sys.path.insert(0, os.getcwd())
 
 #from asyncio import tools
 from dotenv import load_dotenv
+
 load_dotenv()
 
+from app.mcp.db_connection import get_recommendation_history_collection, get_users_collection
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-
-from app.mcp.db_connection import get_users_collection, get_recommendation_history_collection
 
 
 async def test_mcp_server():
@@ -57,9 +57,9 @@ async def test_mcp_server():
     print(f"Server script: {server_script}")
     
     if not os.path.exists(server_script):
-        print(f"❌ Server script not found!")
+        print("❌ Server script not found!")
         print(f"   Current directory: {os.getcwd()}")
-        print(f"   Expected location: app/mcp/context_server.py")
+        print("   Expected location: app/mcp/context_server.py")
         print()
         print("Make sure you're running from the project root:")
         print("  cd /Users/rahul39duttagmail.com/nexaneura/rag_chatbot")

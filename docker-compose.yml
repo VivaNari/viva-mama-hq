@@ -1,0 +1,91 @@
+name: vivamama
+
+# Full local stack: MongoDB + Redis + backend API + RAG chatbot.
+#   1) cp services/backend/.env.example services/backend/.env   (fill in values)
+#   2) cp services/chatbot/.env.example  services/chatbot/.env   (set GROQ_API_KEY)
+#   3) docker compose up --build
+# The mobile app runs separately via Metro (see apps/mobile/README.md).
+
+services:
+  mongo:
+    image: mongo:6.0
+    restart: unless-stopped
+    ports:
+      - '${MONGO_PORT:-27017}:27017'
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      # Root context so the @vivamama/contracts workspace dependency resolves.
+      context: .
+      dockerfile: services/backend/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: services/backend/.env
+        required: false
+    environment:
+      NODE_ENV: production
+      PORT: '4000'
+      MONGO_URI: mongodb://mongo:27017/viva_mama
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      # To enable Firebase push, mount a service-account key (see volumes below)
+      # and uncomment:
+      # GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
+    ports:
+      - '${BACKEND_PORT:-4000}:4000'
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # volumes:
+    #   - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+
+  chatbot:
+    build:
+      context: services/chatbot
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - path: services/chatbot/.env
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MONGODB_URI: mongodb://mongo:27017
+      LOCAL_VECTOR_DIR: /app/.local_vector_store
+    ports:
+      - '${CHATBOT_PORT:-8001}:8001'
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+    volumes:
+      # Bring your own corpus (see services/chatbot/data/SOURCES.md) and persist the index.
+      - ./services/chatbot/data:/app/data
+      - chatbot_vector_store:/app/.local_vector_store
+
+volumes:
+  mongo_data:
+  redis_data:
+  chatbot_vector_store:

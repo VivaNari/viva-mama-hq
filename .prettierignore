@@ -1,0 +1,28 @@
+# Build outputs
+**/dist/
+**/build/
+**/lib/
+**/coverage/
+**/.turbo/
+
+# Dependencies & lockfiles
+**/node_modules/
+pnpm-lock.yaml
+**/package-lock.json
+**/*.lock
+
+# React Native native projects (managed by Gradle/Xcode/CocoaPods)
+apps/mobile/android/
+apps/mobile/ios/
+
+# Python service is formatted by Ruff, not Prettier
+services/chatbot/
+
+# Chatbot data corpus & generated artifacts
+**/data/
+**/.local_vector_store/
+
+# Misc
+**/*.min.js
+**/*.bundle
+CHANGELOG.md

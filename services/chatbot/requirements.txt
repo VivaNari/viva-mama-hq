@@ -1,8 +1,11 @@
+# VivaMama RAG chatbot — runtime dependencies (used by pip / the Docker image).
+# The canonical dev manifest is pyproject.toml (managed with uv); keep this file
+# in sync via:  uv export --no-dev --format requirements-txt > requirements.txt
+
 python-dotenv
 pydantic
 pydantic-settings
 structlog
-
 redis
 
 # LangChain core + community integrations + Groq
@@ -16,36 +19,13 @@ jinja2
 sentence-transformers
 faiss-cpu
 
-# (Optional) If you later use FastAPI service:
-# fastapi
-# uvicorn[standard]
-
-# MCP SDK (adapter is optional; included for future)
+# MCP SDK (optional adapter; included for future use)
 mcp
+
+# API + data access
 pymongo==4.6.1
 fastapi
-uvicorn
+uvicorn[standard]
 slowapi
 chardet
-
 pypdf
-
-
-
-
-
-# Phase 1
-
-# A,B,C,D = read information
-
-# Prompt -> Prompt + A,B,C,D -> Output (Cons - Overpersonalized)
-
-# Prompt -> Agent -> prompt + A,B -> Output (Cons - Underpersonalized) (Agentic AI)
-
-
-# Phase 2
-# Tool: Booking -> Press a button -> API call -> DB update
-
-# Prompt -> Agent -> Booking Tool -> output (Agentic AI)
-
-

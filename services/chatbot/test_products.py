@@ -1,6 +1,8 @@
 import asyncio
-from app.mcp.tools.get_products_tool import get_all_products
 import json
+
+from app.mcp.tools.get_products_tool import get_all_products
+
 
 async def test():
     print("Fetching products...")

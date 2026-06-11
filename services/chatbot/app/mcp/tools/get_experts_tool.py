@@ -1,5 +1,6 @@
-from typing import Any, Dict, List
 import logging
+from typing import Any, Dict
+
 from app.mcp.db_connection import get_experts_collection
 
 logger = logging.getLogger(__name__)

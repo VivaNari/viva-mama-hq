@@ -1,22 +1,22 @@
 from __future__ import annotations
-import time
-import secrets
-import logging
-import uuid
-from typing import Optional, List, Dict, Any
+
 import json
-from fastapi import FastAPI, HTTPException, Header, Depends, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+import logging
+import secrets
+import time
+import uuid
+from typing import Any, Dict, List, Optional
 
 from app.chains.chat_pipeline_mcp import chat_once, chat_once_name_detector
 from app.memory.redis_memory import RedisSessionMemory
 from app.settings import settings
-
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -95,7 +95,7 @@ def require_api_key(x_api_key: Optional[str] = Header(None)):
         
         # Use constant-time comparison to prevent timing attacks (2)
         if not secrets.compare_digest(x_api_key, API_KEY):
-            logger.warning(f"Authentication failed: Invalid API key")  # (6)
+            logger.warning("Authentication failed: Invalid API key")  # (6)
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid X-API-Key"

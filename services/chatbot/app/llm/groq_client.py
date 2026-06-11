@@ -37,17 +37,16 @@ Author: Viva Mama Team
 
 from __future__ import annotations
 
-import time
 import logging
-from typing import Optional, Dict, Any, List
-from datetime import datetime, timedelta
+import time
+from datetime import datetime
 from enum import Enum
-
-from langchain_groq import ChatGroq
-from langchain_core.language_models import BaseChatModel
-from groq import RateLimitError, APIError, APITimeoutError, APIConnectionError
+from typing import Any, Dict, List, Optional
 
 from app.settings import settings
+from groq import APIConnectionError, APIError, APITimeoutError, RateLimitError
+from langchain_core.language_models import BaseChatModel
+from langchain_groq import ChatGroq
 
 # Configure logging (Issue #4)
 logger = logging.getLogger(__name__)
@@ -300,7 +299,7 @@ class CircuitBreaker:
             
             return result
             
-        except Exception as e:
+        except Exception:
             self.failure_count += 1
             self.last_failure_time = datetime.now()
             
@@ -533,7 +532,7 @@ def _invoke_with_resilience(
         )
         
         raise RuntimeError(
-            f"Cannot connect to Groq API. Please check your internet connection."
+            "Cannot connect to Groq API. Please check your internet connection."
         ) from e
     
     except APIError as e:

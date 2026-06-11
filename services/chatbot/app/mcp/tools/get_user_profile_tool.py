@@ -19,11 +19,11 @@ This data allows the chatbot to:
 - Tailor responses to their specific situation
 """
 
-from typing import Dict, Any, Optional
 from datetime import datetime
-from bson import ObjectId
+from typing import Any, Dict
 
 from app.mcp.db_connection import get_users_collection
+from bson import ObjectId
 
 
 def calculate_postpartum_days(delivery_date: datetime) -> Dict[str, int]:
@@ -250,9 +250,9 @@ def format_profile_for_prompt(profile: Dict[str, Any]) -> str:
     delivery_type = profile.get("delivery_type", "").lower()
     if delivery_type:
         if delivery_type == "c-section":
-            parts.append(f"She had a cesarean section delivery.")
+            parts.append("She had a cesarean section delivery.")
         elif delivery_type == "vaginal":
-            parts.append(f"She had a vaginal delivery.")
+            parts.append("She had a vaginal delivery.")
         else:
             parts.append(f"Delivery type: {delivery_type}.")
     
@@ -282,7 +282,7 @@ def format_profile_for_prompt(profile: Dict[str, Any]) -> str:
     
     parity = profile.get("parity", "")
     if parity:
-        parts.append(f"She has had previous births.")
+        parts.append("She has had previous births.")
     else:
         parts.append("This is her first birth.")    
     

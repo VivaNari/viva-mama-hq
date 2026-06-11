@@ -6,20 +6,21 @@ Tests fetching the last 3 recommendations and formatting for the chatbot.
 Run: python3 tests/test_recommendations.py
 """
 
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(".env"))))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from app.mcp.tools.get_active_recommendations_tool import (
-    get_active_recommendations,
-    format_recommendations_for_prompt,
-    print_recommendations_summary
-)
 from app.mcp.db_connection import get_recommendation_history_collection
+from app.mcp.tools.get_active_recommendations_tool import (
+    format_recommendations_for_prompt,
+    get_active_recommendations,
+    print_recommendations_summary,
+)
 
 
 def test_recommendations_tool():
@@ -47,7 +48,7 @@ def test_recommendations_tool():
         
         user_id_str = str(user_id)
         
-        print(f"✅ Found user with recommendation history")
+        print("✅ Found user with recommendation history")
         print(f"   User ID: {user_id_str}")
         print()
         
@@ -59,7 +60,7 @@ def test_recommendations_tool():
         recs_data = get_active_recommendations(user_id_str, limit=3)
         
         if recs_data.get("found"):
-            print(f"✅ Successfully fetched recommendations!")
+            print("✅ Successfully fetched recommendations!")
             print(f"   Count: {recs_data['count']}")
             print(f"   Trend: {recs_data['trend']}")
             print()

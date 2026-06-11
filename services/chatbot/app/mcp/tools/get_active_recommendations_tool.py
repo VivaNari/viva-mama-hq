@@ -17,13 +17,12 @@ This allows the chatbot to:
 - Address ongoing concerns that span multiple weeks
 """
 
-from typing import Dict, Any, List, Optional
-from datetime import datetime
-from bson import ObjectId
+from typing import Any, Dict, List
 
 from app.mcp.db_connection import (
     get_recommendation_history_collection,
 )
+from bson import ObjectId
 
 
 def calculate_trend(recommendations: List[Dict[str, Any]]) -> str:

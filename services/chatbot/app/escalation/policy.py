@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Tuple, List
+
+from typing import List, Tuple
+
 RED_FLAGS: List[tuple[str, str, str]] = [
     ("soaking a pad an hour", "HIGH",   "Heavy bleeding can be dangerous after delivery."),
     ("passing large clots",    "HIGH",   "Heavy bleeding and clots need urgent assessment."),

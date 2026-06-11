@@ -27,7 +27,7 @@ export class SupportController {
 
     resolveSupport = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const id = req.params.id;
+            const id = req.params.id as string;
             if (!id) {
                 throw new Error(messages.SUPPORT_ID_NOT_PROVIDED);
             }

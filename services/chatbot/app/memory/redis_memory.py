@@ -33,17 +33,17 @@ Author: Viva Mama Team
 from __future__ import annotations
 
 import json
-import uuid
-import time
 import logging
-from typing import List, Dict, Any, Optional
-from datetime import datetime, timedelta
+import time
+import uuid
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
 
 import redis
-from redis.exceptions import RedisError, ConnectionError as RedisConnectionError
-
 from app.settings import settings
+from redis.exceptions import ConnectionError as RedisConnectionError
+from redis.exceptions import RedisError
 
 # Configure logging
 logger = logging.getLogger(__name__)

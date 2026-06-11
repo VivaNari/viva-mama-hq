@@ -1,19 +1,16 @@
 from __future__ import annotations
-from typing import Dict, Any, List, Optional
-import asyncio
+
 import ast
+from typing import Any, Dict, List, Optional
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-from app.settings import settings
+from app.chains.router import route_intent
+from app.escalation.policy import format_escalation_banner, scan_for_red_flags
+from app.guardrails.input_guard import enforce_scope, redact
 from app.llm.groq_client import get_llm
 from app.memory.redis_memory import RedisSessionMemory
-from app.guardrails.input_guard import redact, enforce_scope
-from app.escalation.policy import scan_for_red_flags, format_escalation_banner
-from app.chains.router import route_intent
 from app.rag.retriever import query_with_fallback
-
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 SYSTEM_PROMPT = (
     "You are a compassionate postpartum **wellness** assistant for educational purposes only.\n"

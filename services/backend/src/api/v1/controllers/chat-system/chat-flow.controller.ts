@@ -18,7 +18,7 @@ class ChatFlowController {
     handleSseConnection = (request: Request, response: Response, next: NextFunction) => {
         try {
             const req = request as AuthenticatedRequest;
-            const { slug } = req.params;
+            const slug = req.params.slug as string;
             const userId = req.user._id;
             const { flowType } = req.query;
 

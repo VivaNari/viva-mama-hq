@@ -1,0 +1,22 @@
+# Root Python lint + format config for services/chatbot.
+# Ruff's formatter is Black-compatible, so it covers both "Ruff" and "Black"
+# duties from a single tool. Run via `pnpm py:lint` / `pnpm py:format`.
+target-version = "py310"
+line-length = 100
+extend-exclude = [
+  "**/.venv",
+  "**/venv*",
+  "**/.local_vector_store",
+  "**/data",
+  "**/*.ipynb",
+]
+
+# Pragmatic baseline for the inherited Python code: lint for real problems
+# (pyflakes) + import order; defer opinionated style rules (E/W/B/UP) as a
+# tracked follow-up. Formatting is owned by `ruff format` (`pnpm py:format`).
+[lint]
+select = ["F", "I"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

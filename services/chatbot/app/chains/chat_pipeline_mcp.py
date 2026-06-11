@@ -31,30 +31,27 @@ Author: VivaMama Team
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import os
 import sys
-import asyncio
 import time
-import logging
-import hashlib
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
-from enum import Enum
 import uuid
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
+from app.escalation.policy import format_escalation_banner, scan_for_red_flags
+from app.guardrails.input_guard import enforce_scope, redact
+from app.llm.groq_client import get_llm
+from app.memory.redis_memory import RedisSessionMemory
+from app.rag.retriever import RAGRetriever
 
 # Issue #1: Import from production components
-from app.settings import settings
-from app.llm.groq_client import get_llm, get_llm_metrics
-from app.memory.redis_memory import RedisSessionMemory
-from app.guardrails.input_guard import redact, enforce_scope
-from app.escalation.policy import scan_for_red_flags, format_escalation_banner
-from app.chains.router import route_intent
-from app.rag.retriever import RAGRetriever
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 # Issue #1: Proper logging instead of print statements
 logger = logging.getLogger(__name__)
@@ -1425,7 +1422,6 @@ def chat_once_name_detector(
     Detect if user's message contains their name.
     (Kept for backwards compatibility)
     """
-    import json
     
     prompt = f"""
     You are a name-detection microservice.

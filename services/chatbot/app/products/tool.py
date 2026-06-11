@@ -1,7 +1,9 @@
 from __future__ import annotations
-from typing import List, Dict, Any
-from app.settings import settings
+
+from typing import Any, Dict, List
+
 from app.products.repo import search_local_products
+from app.settings import settings
 
 
 def search_products_tool(query: str, limit: int = 3) -> List[Dict[str, Any]]:

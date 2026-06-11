@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ── Detect which parts of the monorepo changed (path filtering) ────
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      js: ${{ steps.filter.outputs.js }}
+      chatbot: ${{ steps.filter.outputs.chatbot }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            js:
+              - 'apps/**'
+              - 'services/backend/**'
+              - 'packages/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - 'turbo.json'
+              - 'tsconfig.base.json'
+              - 'eslint.config.mjs'
+              - '.prettierrc.json'
+            chatbot:
+              - 'services/chatbot/**'
+              - 'ruff.toml'
+
+  # ── JS/TS workspaces: lint, typecheck, build, test (Turbo affected) ─
+  js:
+    needs: changes
+    if: ${{ needs.changes.outputs.js == 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:6.0
+        ports: ['27017:27017']
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    env:
+      TURBO_TELEMETRY_DISABLED: '1'
+      NODE_ENV: test
+      MONGO_URI: mongodb://localhost:27017/viva_mama_test
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Turbo --affected needs history to find the base ref
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Lint, typecheck, build, test (affected only)
+        run: pnpm turbo run lint typecheck build test --affected
+
+  # ── Python chatbot: Ruff lint + format check, pytest ───────────────
+  chatbot:
+    needs: changes
+    if: ${{ needs.changes.outputs.chatbot == 'true' }}
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+    defaults:
+      run:
+        working-directory: services/chatbot
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Lint (Ruff)
+        run: uvx ruff check .
+      - name: Format check (Ruff)
+        run: uvx ruff format --check .
+      - name: Install & test
+        env:
+          # Provide these as repo secrets to run tests that hit external services.
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY || 'gsk_ci_placeholder_key_value' }}
+          API_KEY: ci-placeholder-api-key
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          uv sync
+          uv run pytest -q
+
+  # ── Aggregate gate for branch protection ───────────────────────────
+  ci-ok:
+    needs: [js, chatbot]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required jobs succeeded (or were skipped)
+        run: |
+          for r in "${{ needs.js.result }}" "${{ needs.chatbot.result }}"; do
+            if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
+              echo "A required job failed: $r"; exit 1
+            fi
+          done
+          echo "All required jobs passed or were skipped."

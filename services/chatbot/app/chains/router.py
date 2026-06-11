@@ -14,8 +14,8 @@
 # ---------------------------------------------------------------------
 
 from __future__ import annotations
-import re
 
+import re
 
 # Words / phrases that usually mean the user is asking about products.
 # You can add many more over time.
