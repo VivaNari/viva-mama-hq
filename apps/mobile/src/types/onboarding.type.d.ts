@@ -14,12 +14,14 @@ export type AnswerValue = string | number | string[] | number[];
 
 export interface IPHQQuestion {
   question: string;
+  preQuestionText?: string;
+  postAnswerText?: string;
   answerType: AnswerType;
   isMultichoice: boolean;
   placeholder?: string;
   options: IPHQOption[];
   isRequired: boolean;
-  answer: AnswerValue; // can be string, number, or array
+  answer: AnswerValue;
   isEPHIData: boolean;
 }
 

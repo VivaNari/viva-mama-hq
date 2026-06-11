@@ -1,49 +1,81 @@
-import { StyleSheet } from 'react-native';
-import { colors } from '../assets/colors';
+import { StyleSheet } from "react-native";
+import { colors } from "../assets/colors";
+import { EFontWeight, getFontFamily } from "../../utils/fontFamily";
 
 export const globalStyles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.white,
+  },
+  chatContainer: {
+    flex: 1,
+    paddingHorizontal: 12,
+    backgroundColor: colors.pageBG,
+    marginBottom: 10,
   },
   headingxl: {
-    fontWeight: 600,
-    fontStyle: 'normal',
+    fontStyle: "normal",
     fontSize: 20,
-    textAlign: 'center',
+    textAlign: "center",
   },
   input: {
     padding: 10,
     borderRadius: 5,
     borderBottomWidth: 1,
-    borderBottomColor: colors.secondary,
+    borderBottomColor: colors.purple,
     marginVertical: 8,
     color: colors.white,
     height: 52,
-    backgroundColor: '#9C9C9C',
-    justifyContent: 'center',
+    backgroundColor: "#9C9C9C",
+    justifyContent: "center",
+    fontSize: 16,
   },
   inputHovered: {
     padding: 10,
     borderRadius: 4,
     borderBottomWidth: 2,
-    borderBlockColor: colors.primary,
+    borderBlockColor: colors.darkPurple,
     marginVertical: 8,
-    color: colors.primary,
+    color: colors.darkPurple,
     backgroundColor: colors.offWhite,
     height: 52,
-    justifyContent: 'center',
+    justifyContent: "center",
   },
   inputSelected: {
     padding: 10,
     borderRadius: 4,
     borderBottomWidth: 2,
-    borderBlockColor: colors.primary,
+    borderBlockColor: colors.darkPurple,
     marginVertical: 8,
-    color: colors.primary,
-    backgroundColor: colors.primary,
+    color: colors.darkPurple,
+    backgroundColor: colors.darkPurple,
     height: 52,
-    justifyContent: 'center',
+    justifyContent: "center",
+  },
+  card: {
+    borderWidth: 2,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+    padding: 20,
+    marginVertical: 10,
+    borderRadius: 10,
+  },
+  fontLight: {
+    fontFamily: getFontFamily(EFontWeight.LIGHT),
+  },
+  fontRegular: {
+    fontFamily: getFontFamily(EFontWeight.REGULAR),
+  },
+  fontMedium: {
+    fontFamily: getFontFamily(EFontWeight.MEDIUM),
+  },
+  fontBold: {
+    fontFamily: getFontFamily(EFontWeight.BOLD),
+  },
+  fontExtraBold: {
+    fontFamily: getFontFamily(EFontWeight.EXTRABOLD),
+  },
+  fontSemiBold: {
+    fontFamily: getFontFamily(EFontWeight.SEMIBOLD),
   },
 });

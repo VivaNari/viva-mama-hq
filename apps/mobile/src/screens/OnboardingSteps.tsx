@@ -43,7 +43,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                 }}
             >
                 <LinearGradient
-                    colors={[colors.primary, colors.secondary]}
+                    colors={[colors.darkPurple, colors.purple]}
                     style={{
                         height: 10,
                         borderRadius: 10,
@@ -55,8 +55,8 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                 {
                     currentStep == 1 && (
                         <View>
-                            <Text style={onboardingStyles.welcomeText}>Welcome</Text>
-                            <Text style={onboardingStyles.welcomeTextCaption}>to Viva nari</Text>
+                            <Text style={[onboardingStyles.welcomeText, globalStyles.fontRegular]}>Welcome</Text>
+                            <Text style={[onboardingStyles.welcomeTextCaption, globalStyles.fontRegular]}>to Viva Nari</Text>
                         </View>
                     )
                 }
@@ -96,7 +96,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                         style={{ marginVertical: 20, height: 45, width: 45 }}
                     >
                         <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
+                            colors={[colors.darkPurple, colors.purple]}
                             style={{
                                 height: "100%",
                                 width: "100%",
@@ -118,7 +118,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                         style={{ marginVertical: 20, height: 45, width: 45 }}
                     >
                         <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
+                            colors={[colors.darkPurple, colors.purple]}
                             style={{
                                 height: "100%",
                                 width: "100%",
@@ -137,7 +137,7 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                         style={{ marginVertical: 20, height: 45, width: 45 }}
                     >
                         <LinearGradient
-                            colors={[colors.primary, colors.secondary]}
+                            colors={[colors.darkPurple, colors.purple]}
                             style={{
                                 height: "100%",
                                 width: "100%",
