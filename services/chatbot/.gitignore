@@ -1,0 +1,4 @@
+.ipynb_checkpoints
+.local_vector_store
+.DS_Store
+venv_mcp/
