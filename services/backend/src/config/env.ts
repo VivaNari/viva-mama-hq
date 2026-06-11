@@ -28,6 +28,9 @@ const env = {
     GETGABS_API_KEY: process.env.GETGABS_API_KEY as string,
     GETGABS_CAMPAIGN_ID: process.env.GETGABS_CAMPAIGN_ID as string,
     GETGABS_SENDER: process.env.GETGABS_SENDER as string,
+    // Base URL of the ONIX BPP adapter's caller endpoint. Local docker: http://localhost:8082
+    // (the onix-bpp container's published port). In prod set to the adapter's Cloud Run URL.
+    BECKN_BPP_CALLER_URL: process.env.BECKN_BPP_CALLER_URL || "http://localhost:8082",
     isDevelopment(): boolean {
         return env.NODE_ENV === "development";
     },
