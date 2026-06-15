@@ -1,0 +1,46 @@
+[project]
+name = "vivamama-chatbot"
+version = "0.1.0"
+description = "VivaMama RAG chatbot — FastAPI + LangChain + FAISS retrieval-augmented maternal-health assistant."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "Apache-2.0" }
+dependencies = [
+  "python-dotenv",
+  "pydantic",
+  "pydantic-settings",
+  "structlog",
+  "redis",
+  "langchain==1.0.3",
+  "langchain-core",
+  "langchain-community",
+  "langchain-groq",
+  "jinja2",
+  "sentence-transformers",
+  "faiss-cpu",
+  "mcp",
+  "pymongo==4.6.1",
+  "fastapi",
+  "uvicorn[standard]",
+  "slowapi",
+  "chardet",
+  "pypdf",
+]
+
+[dependency-groups]
+dev = [
+  "ruff>=0.8",
+  "pytest>=8",
+]
+
+[tool.uv]
+# This is an application, not a distributable library — don't try to build/install it.
+package = false
+
+[tool.pytest.ini_options]
+# Only the curated suite under tests/ runs by default. The top-level test_*.py
+# files are manual integration probes that require live Redis/Mongo/Groq.
+testpaths = ["tests"]
+pythonpath = ["."]
+
+# Lint/format config lives in the repo-root ruff.toml (shared across the monorepo).

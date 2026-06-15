@@ -1,0 +1,18 @@
+{
+  "name": "@vivamama/chatbot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VivaMama RAG chatbot — Python (FastAPI + LangChain + FAISS) retrieval-augmented assistant grounded in a maternal-health corpus. This package.json is a thin wrapper so Turborepo/pnpm can orchestrate the Python tooling (uv) uniformly with the JS workspaces.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "setup": "uv sync",
+    "dev": "uv run uvicorn app.api.main:app --reload --host 0.0.0.0 --port 8001",
+    "lint": "uvx ruff check .",
+    "lint:fix": "uvx ruff check --fix .",
+    "format": "uvx ruff format .",
+    "format:check": "uvx ruff format --check .",
+    "test": "uv run pytest",
+    "ingest": "uv run python ingest_data.py",
+    "clean": "rm -rf .ruff_cache .pytest_cache .local_vector_store"
+  }
+}

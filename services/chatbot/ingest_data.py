@@ -1,6 +1,7 @@
+import logging
+
 from app.rag.loaders import load_documents
 from app.rag.retriever import RAGRetriever
-import logging
 
 # Set up logging to see progress
 logging.basicConfig(level=logging.INFO)

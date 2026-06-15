@@ -1,0 +1,70 @@
+# ──────────────────────────────────────────────────────────────────────────
+# VivaMama monorepo — root .gitignore
+# Per-package .gitignore files (apps/mobile, services/*) add language-specific
+# rules on top of this.
+# ──────────────────────────────────────────────────────────────────────────
+
+# Dependencies
+node_modules/
+.pnp.*
+.yarn/*
+
+# Build outputs
+dist/
+build/
+lib/
+out/
+*.tsbuildinfo
+
+# Turbo / tooling caches
+.turbo/
+.cache/
+*.log
+coverage/
+.nyc_output/
+
+# Environment & secrets — NEVER commit real values (use .env.example)
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+**/serviceAccount*.json
+**/*ServiceAccountKey*.json
+google-services.json
+GoogleService-Info.plist
+
+# Python (services/chatbot)
+__pycache__/
+*.py[cod]
+.venv/
+venv*/
+.python-version
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.ipynb_checkpoints/
+
+# RAG chatbot generated artifacts & knowledge corpus (see services/chatbot/data/SOURCES.md)
+**/.local_vector_store/
+services/chatbot/data/*
+!services/chatbot/data/.gitkeep
+!services/chatbot/data/SOURCES.md
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.shared.json
+
+# Archives / build artifacts that should never be committed
+*.zip
+*.tgz
+apps/mobile/**/*.jsbundle
+apps/mobile/**/index.android.bundle

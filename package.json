@@ -1,0 +1,50 @@
+{
+  "name": "vivamama",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VivaMama — open-source postpartum & maternal-health platform (mobile app, core API, RAG chatbot).",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/NexaNeura/vivamama.git"
+  },
+  "packageManager": "pnpm@8.9.0",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=8"
+  },
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rimraf node_modules/.cache .turbo",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "py:lint": "uv run --project services/chatbot ruff check services/chatbot",
+    "py:format": "uv run --project services/chatbot ruff format services/chatbot",
+    "py:test": "uv run --project services/chatbot pytest services/chatbot",
+    "stack:up": "docker compose up --build",
+    "stack:down": "docker compose down -v",
+    "changeset": "changeset",
+    "version-packages": "changeset version"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.27.11",
+    "@types/node": "^22.10.5",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "rimraf": "^6.0.1",
+    "turbo": "^2.3.3",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.20.0"
+  }
+}

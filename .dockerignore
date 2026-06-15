@@ -1,0 +1,27 @@
+# Keep the Docker build context lean (used by the root-context backend image).
+**/node_modules/
+**/.git/
+**/.turbo/
+**/dist/
+**/build/
+**/coverage/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.local_vector_store/
+
+# React Native native projects are never needed in a server image.
+apps/mobile/android/
+apps/mobile/ios/
+
+# Never ship secrets or the knowledge corpus.
+**/.env
+**/.env.*
+!**/.env.example
+**/*ServiceAccountKey*.json
+services/chatbot/data/*
+!services/chatbot/data/.gitkeep
+!services/chatbot/data/SOURCES.md
+
+# Cruft
+**/.DS_Store
+*.log

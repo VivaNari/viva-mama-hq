@@ -6,21 +6,22 @@ This tests the get_user_profile function with real data from your MongoDB.
 Run: python3 tests/test_user_profile.py
 """
 
-import sys
 import os
+import sys
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
-from app.mcp.tools.get_user_profile_tool import (
-    get_user_profile,
-    format_profile_for_prompt,
-    print_user_profile
-)
 from app.mcp.db_connection import get_users_collection
+from app.mcp.tools.get_user_profile_tool import (
+    format_profile_for_prompt,
+    get_user_profile,
+    print_user_profile,
+)
 
 
 def test_user_profile_tool():
@@ -43,7 +44,7 @@ def test_user_profile_tool():
         user_id = str(sample_user.get("_id"))
         user_int_id = sample_user.get("user_id")
         
-        print(f"✅ Found a test user in database")
+        print("✅ Found a test user in database")
         print(f"   MongoDB _id: {user_id}")
         if user_int_id:
             print(f"   User ID: {user_int_id}")

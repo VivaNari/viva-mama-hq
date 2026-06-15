@@ -1,0 +1,24 @@
+# Normalize line endings to LF across platforms.
+* text=auto eol=lf
+
+# Binary assets — never diff or normalize.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.ttf binary
+*.otf binary
+*.keystore binary
+*.jar binary
+
+# Generated / vendored — collapse in diffs and exclude from language stats.
+pnpm-lock.yaml linguist-generated=true -diff
+**/package-lock.json linguist-generated=true -diff
+apps/mobile/android/gradle/** linguist-vendored
+apps/mobile/ios/Pods/** linguist-vendored
+
+# Shell scripts always LF + executable-friendly.
+*.sh text eol=lf

@@ -8,17 +8,17 @@ This package contains:
 """
 
 from app.mcp.db_connection import (
-    get_mongo_client,
-    get_database,
-    get_users_collection,
-    get_recommendation_history_collection,
-    get_recommendations_collection,
-    get_flow_instances_collection,
-    get_flow_responses_collection,
-    get_conversations_collection,
-    get_messages_collection,
     check_database_health,
     close_connection,
+    get_conversations_collection,
+    get_database,
+    get_flow_instances_collection,
+    get_flow_responses_collection,
+    get_messages_collection,
+    get_mongo_client,
+    get_recommendation_history_collection,
+    get_recommendations_collection,
+    get_users_collection,
 )
 
 __all__ = [

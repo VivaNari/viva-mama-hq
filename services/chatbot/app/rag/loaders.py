@@ -37,16 +37,17 @@ Author: Viva Mama Team
 """
 
 from __future__ import annotations
-import os
+
 import hashlib
 import logging
-from typing import List, Dict, Any, Optional, Set, Callable
-from pathlib import Path
-from datetime import datetime
-import chardet
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Set
 
-from langchain_community.document_loaders import TextLoader, PyPDFLoader
+import chardet
+from langchain_community.document_loaders import PyPDFLoader, TextLoader
 from langchain_core.documents import Document
 
 # Configure logging (4)
@@ -295,7 +296,6 @@ def load_single_file(
         return None
     
     # (11) Retry logic for transient failures
-    last_exception = None
     
     for attempt in range(RETRY_ATTEMPTS + 1):
         try:
@@ -356,10 +356,9 @@ def load_single_file(
                     continue
             
             # If we get here, all encodings failed
-            raise ValueError(f"Could not decode file with any supported encoding")
+            raise ValueError("Could not decode file with any supported encoding")
             
         except Exception as e:
-            last_exception = e
             
             if attempt < RETRY_ATTEMPTS:
                 # (11) Retry on failure
@@ -651,7 +650,7 @@ def load_documents(
     file_types = [ft.lower() if ft.startswith(".") else f".{ft.lower()}" 
                   for ft in file_types]
     
-    logger.info(f"Configuration:")
+    logger.info("Configuration:")
     logger.info(f"  Folder: {folder_path}")
     logger.info(f"  File types: {', '.join(file_types)}")
     logger.info(f"  Recursive: {recursive}")
@@ -705,7 +704,7 @@ def load_documents(
     logger.info("=" * 60)
     logger.info("Document loading completed")
     logger.info("=" * 60)
-    logger.info(f"Results:")
+    logger.info("Results:")
     logger.info(f"  Files found: {_load_stats['total_files_found']}")
     logger.info(f"  Files loaded: {_load_stats['total_files_loaded']}")
     logger.info(f"  Files failed: {_load_stats['total_files_failed']}")

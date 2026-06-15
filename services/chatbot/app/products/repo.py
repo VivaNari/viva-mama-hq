@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import List
+
 from app.products.models import Product
 
 DEMO_PRODUCTS: List[Product] = [

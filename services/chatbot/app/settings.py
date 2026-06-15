@@ -26,12 +26,13 @@ Usage:
 Author: Viva Mama Team
 """
 
-from pydantic import field_validator, Field, ValidationError
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Optional, Literal
-from enum import Enum
-import sys
 import logging
+import sys
+from enum import Enum
+from typing import Optional
+
+from pydantic import Field, ValidationError, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Configure logging for settings module
 logger = logging.getLogger(__name__)
@@ -237,8 +238,8 @@ class Settings(BaseSettings):
         # Groq keys should start with 'gsk_'
         if not v.startswith("gsk_"):
             logger.warning(
-                f"GROQ_API_KEY does not start with 'gsk_'. "
-                f"This may not be a valid Groq API key."
+                "GROQ_API_KEY does not start with 'gsk_'. "
+                "This may not be a valid Groq API key."
             )
         
         return v

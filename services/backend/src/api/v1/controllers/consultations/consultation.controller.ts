@@ -38,7 +38,7 @@ export class ConsultationController {
     completeConsultation = async (request: Request, response: Response, next: NextFunction) => {
         try {
             const userId = request.user._id;
-            const { id } = request.params;
+            const id = request.params.id as string;
             if (!id) {
                 throw new Error(messages.CONSULTATION_ID_NOT_PROVIDED);
             }

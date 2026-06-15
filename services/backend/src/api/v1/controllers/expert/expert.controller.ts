@@ -56,7 +56,7 @@ export class ExpertController {
         }
         try {
             const expert: IExpert = (await this.expertService.findById({
-                _id: request.params.id,
+                _id: request.params.id as string,
             })) as IExpert;
             sendResponse({
                 data: expert,

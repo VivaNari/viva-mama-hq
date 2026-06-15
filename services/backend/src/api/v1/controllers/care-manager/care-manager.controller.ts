@@ -61,7 +61,7 @@ export class CareManagerController {
         }
         try {
             const careManager: ICareManager = (await this.careManagerService.findById({
-                _id: request.params.id,
+                _id: request.params.id as string,
             })) as ICareManager;
             sendResponse({
                 data: careManager,

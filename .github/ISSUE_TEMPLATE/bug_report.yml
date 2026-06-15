@@ -1,0 +1,52 @@
+name: 🐛 Bug report
+description: Report a problem with the mobile app, backend, or chatbot.
+labels: ['bug', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for filing a bug! Please **do not** include secrets, tokens, or real
+        user/patient data. For security vulnerabilities, see SECURITY.md instead.
+  - type: dropdown
+    id: package
+    attributes:
+      label: Affected package
+      options:
+        - 'apps/mobile (@vivamama/mobile)'
+        - 'services/backend (@vivamama/backend)'
+        - 'services/chatbot (@vivamama/chatbot)'
+        - 'packages/contracts (@vivamama/contracts)'
+        - 'tooling / CI / repo'
+        - "I'm not sure"
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Node/Python version, device/emulator, package version or commit SHA.
+    validations:
+      required: false
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: Paste relevant logs (redact secrets) or attach screenshots.
+      render: shell

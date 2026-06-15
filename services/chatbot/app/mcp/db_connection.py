@@ -15,12 +15,11 @@ so the MCP server is reading from your single source of truth.
 """
 
 from typing import Optional
-import os
-from pymongo import MongoClient
-from pymongo.database import Database
-from pymongo.collection import Collection
-from app.settings import settings
 
+from app.settings import settings
+from pymongo import MongoClient
+from pymongo.collection import Collection
+from pymongo.database import Database
 
 # Global connection objects - these will be initialized once and reused
 _mongo_client: Optional[MongoClient] = None

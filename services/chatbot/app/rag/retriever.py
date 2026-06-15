@@ -39,22 +39,20 @@ Author: Viva Mama Team
 
 from __future__ import annotations
 
-import os
-import json
 import hashlib
+import json
 import logging
 import time
-from typing import List, Optional, Dict, Any, Tuple
-from pathlib import Path
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from dataclasses import dataclass, asdict
-
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_core.documents import Document
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.settings import settings
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Configure logging (Issue #5)
 logger = logging.getLogger(__name__)

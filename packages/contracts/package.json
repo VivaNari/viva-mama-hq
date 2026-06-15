@@ -1,0 +1,28 @@
+{
+  "name": "@vivamama/contracts",
+  "version": "0.1.0",
+  "description": "Shared API contract for VivaMama — the canonical endpoint registry and core domain types used by the backend, mobile app, and chatbot.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "echo \"(no unit tests yet for @vivamama/contracts)\" && exit 0",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.2"
+  }
+}

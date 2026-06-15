@@ -2,7 +2,6 @@ import { Router } from "express";
 import authMiddleware from "../../../../middlewares/authorization.middleware";
 import requestValidator from "../../../../middlewares/requestValidator.middleware";
 import { ExpertController } from "../../controllers/expert/expert.controller";
-// eslint-disable-next-line import/no-unresolved
 import createExpertValidator from "../../validators/experts/expert.validator";
 
 const expertRouter = Router();

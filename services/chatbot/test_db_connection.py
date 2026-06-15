@@ -9,8 +9,8 @@ Usage:
     python3 run_test.py
 """
 
-import sys
 import os
+import sys
 
 # Print current working directory for debugging
 print(f"Current directory: {os.getcwd()}")
@@ -58,7 +58,7 @@ try:
     
     print("Importing settings...")
     from app.settings import settings
-    print(f"✅ Successfully imported settings")
+    print("✅ Successfully imported settings")
     print(f"   MongoDB URI: {settings.mongodb_uri[:30]}...")  # Show first 30 chars
     print(f"   Database: {settings.mongodb_database}")
     print()

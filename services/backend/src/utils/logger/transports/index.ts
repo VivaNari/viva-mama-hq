@@ -3,7 +3,7 @@ import pino, { type transport } from "pino";
 import { createPrettyTransport } from "./pretty.transport";
 import env from "../../../config/env";
 
-export function getTransports(): pino.ThreadStream | pino.DestinationStream {
+export function getTransports(): ReturnType<typeof pino.transport> | pino.DestinationStream {
     const targets: any[] = [];
 
     if (env.isDevelopment() || env.LOG_PRETTY_PRINT) {

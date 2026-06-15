@@ -23,11 +23,9 @@ Usage:
             result = await session.call_tool("get_user_profile", {"user_id": "123"})
 """
 
-import sys
 import os
+import sys
 
-import sys
-import os
 # CRITICAL: Add project root to Python path
 # The test script passes the project root via PYTHONPATH environment variable
 # But just in case, we also try to calculate it from __file__
@@ -41,31 +39,22 @@ if pythonpath and pythonpath not in sys.path:
 # If imports fail, we'll see an error and can debug further
 print(f"[MCP] sys.path[0]: {sys.path[0]}", file=sys.stderr)
 
-from typing import Any, Dict, List
 import json
+from typing import Any, Dict, List
 
-from mcp.server import Server
-from mcp.server.stdio import stdio_server
-from mcp import types
+from app.mcp.tools.get_active_recommendations_tool import (
+    format_recommendations_for_prompt,
+    get_active_recommendations,
+)
+from app.mcp.tools.get_experts_tool import format_experts_for_prompt, get_all_experts
+from app.mcp.tools.get_products_tool import format_products_for_prompt, get_all_products
 
 # Import our context tools
-from app.mcp.tools.get_user_profile_tool import (
-    get_user_profile,
-    format_profile_for_prompt
-)
-from app.mcp.tools.get_active_recommendations_tool import (
-    get_active_recommendations,
-    format_recommendations_for_prompt
-)
-from app.mcp.tools.get_experts_tool import (
-    get_all_experts,
-    format_experts_for_prompt
-)
-from app.mcp.tools.get_products_tool import (
-    get_all_products,
-    format_products_for_prompt
-)
+from app.mcp.tools.get_user_profile_tool import format_profile_for_prompt, get_user_profile
 
+from mcp import types
+from mcp.server import Server
+from mcp.server.stdio import stdio_server
 
 # =========================================================
 # MCP SERVER INITIALIZATION
@@ -341,7 +330,7 @@ async def _handle_get_all_experts(arguments: Dict[str, Any]) -> List[types.TextC
     """
     format_for_prompt = arguments.get("format_for_prompt", True)
     
-    print(f"[MCP] Fetching all experts", file=sys.stderr)
+    print("[MCP] Fetching all experts", file=sys.stderr)
     
     # Call our existing tool
     experts_data = get_all_experts()
@@ -371,7 +360,7 @@ async def _handle_get_all_products(arguments: Dict[str, Any]) -> List[types.Text
     """
     format_for_prompt = arguments.get("format_for_prompt", True)
     
-    print(f"[MCP] Fetching all products", file=sys.stderr)
+    print("[MCP] Fetching all products", file=sys.stderr)
     
     # Call our existing tool
     products_data = get_all_products()

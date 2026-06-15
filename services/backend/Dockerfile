@@ -1,53 +1,36 @@
-# Stage 1: Build stage
-FROM node:20-alpine AS builder
+# syntax=docker/dockerfile:1
+#
+# Monorepo-aware build. Build context is the REPOSITORY ROOT (see
+# docker-compose.yml) so the workspace dependency @vivamama/contracts resolves.
+#   docker build -f services/backend/Dockerfile -t vivamama-backend .
+#
+# ── Stage 1: Build the workspace (backend + its deps) ──────────────
+FROM node:20-alpine AS build
+RUN corepack enable && corepack prepare pnpm@8.9.0 --activate
+WORKDIR /repo
 
-WORKDIR /app
+# Copy the whole workspace (root .dockerignore keeps this lean).
+COPY . .
 
-# Copy package files
-COPY package*.json ./
+# Install only @vivamama/backend and its dependency graph (incl. contracts),
+# then build contracts -> backend (Turbo/pnpm orders this via the `...` selector).
+RUN pnpm install --frozen-lockfile --filter "@vivamama/backend..." \
+ && pnpm --filter "@vivamama/backend..." run build \
+ && pnpm prune --prod || true
 
-# Install ALL dependencies (including devDependencies for building)
-RUN npm ci --legacy-peer-deps
-
-# Copy TypeScript config and source code
-COPY tsconfig.json ./
-COPY VivaMamaServiceAccountKey.json ./
-COPY src ./src
-
-# Build TypeScript to JavaScript
-RUN npm run build
-
-# Stage 2: Production stage
-FROM node:20-alpine
-
-# Create non-root user for security
+# ── Stage 2: Runtime ───────────────────────────────────────────────
+FROM node:20-alpine AS runtime
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
+WORKDIR /repo
+COPY --from=build --chown=nodejs:nodejs /repo /repo
 
-WORKDIR /app
+# The Firebase service-account key is NOT in the image. Supply credentials at
+# runtime via Application Default Credentials: mount a key and set
+# GOOGLE_APPLICATION_CREDENTIALS (see docker-compose.yml), or use the GCP
+# runtime service account on Cloud Run. See src/config/firebase.ts.
 
-# Copy package files
-COPY package*.json ./
-
-# Install only production dependencies
-# RUN npm ci --legacy-peer-deps --only=production && npm cache clean --force
-RUN npm config set ignore-scripts true \
-    && npm ci --legacy-peer-deps --only=production \
-    && npm cache clean --force
-
-# Copy built JavaScript files from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/build ./build
-
-# Copy Firebase service account key
-COPY --chown=nodejs:nodejs VivaMamaServiceAccountKey.json ./
-
-# Switch to non-root user
 USER nodejs
-
-# Expose port (adjust if your app uses different port)
-EXPOSE 8080
-
-# Set environment to production
+WORKDIR /repo/services/backend
 ENV NODE_ENV=production
-
-# Run the app from build directory
+EXPOSE 4000
 CMD ["node", "build/index.js"]

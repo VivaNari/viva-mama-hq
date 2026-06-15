@@ -1,10 +1,12 @@
 from __future__ import annotations
-from typing import Dict, Any, List
+
+from typing import Any, Dict, List
+
 import httpx
 
+from mcp import types
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
-from mcp import types
 
 # =========================================================
 # MCP SERVER SETUP

@@ -1,0 +1,37 @@
+name: ✨ Feature request
+description: Suggest an idea or improvement.
+labels: ['enhancement', 'triage']
+body:
+  - type: dropdown
+    id: package
+    attributes:
+      label: Area
+      options:
+        - 'apps/mobile'
+        - 'services/backend'
+        - 'services/chatbot'
+        - 'packages/contracts'
+        - 'tooling / CI / docs'
+        - 'cross-cutting'
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / motivation
+      description: What problem does this solve? Who benefits?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

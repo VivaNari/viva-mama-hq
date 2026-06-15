@@ -29,9 +29,10 @@ Author: Viva Mama Team
 """
 
 from __future__ import annotations
-import re
+
 import logging
-from typing import Tuple, Dict, Any
+import re
+from typing import Any, Dict, Tuple
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -355,7 +356,7 @@ def enforce_scope(text: str) -> Tuple[str, Dict[str, Any]]:
     if is_medical:
         notes["blocked"] = True
         notes["matched"].extend(medical_patterns)
-        logger.info(f"Medical scope violation: reframing query")
+        logger.info("Medical scope violation: reframing query")
         return MEDICAL_REFUSAL, notes
     
     # LAYER 2: Check for prompt injection
@@ -368,7 +369,7 @@ def enforce_scope(text: str) -> Tuple[str, Dict[str, Any]]:
     
     # All regex checks passed - proceed to main LLM
     # (Main LLM will handle topic relevance as part of its system prompt)
-    logger.debug(f"Input passed guardrails checks, proceeding to main LLM")
+    logger.debug("Input passed guardrails checks, proceeding to main LLM")
     return text, notes
 
 
