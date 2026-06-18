@@ -23,7 +23,7 @@ faiss-cpu
 mcp
 
 # API + data access
-pymongo==4.6.1
+pymongo==4.17.0
 fastapi
 uvicorn[standard]
 slowapi

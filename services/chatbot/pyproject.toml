@@ -19,7 +19,7 @@ dependencies = [
   "sentence-transformers",
   "faiss-cpu",
   "mcp",
-  "pymongo==4.6.1",
+  "pymongo==4.17.0",
   "fastapi",
   "uvicorn[standard]",
   "slowapi",
