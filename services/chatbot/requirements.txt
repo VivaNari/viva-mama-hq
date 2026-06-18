@@ -9,7 +9,7 @@ structlog
 redis
 
 # LangChain core + community integrations + Groq
-langchain==1.0.3
+langchain==1.3.9
 langchain-core
 langchain-community
 langchain-groq
