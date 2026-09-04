@@ -83,6 +83,44 @@ export const apiRoutes = {
     comments: (id: string) => `${v}/viva-club/posts/${id}/comments`,
     toggleLike: (id: string) => `${v}/viva-club/posts/${id}/like`,
   },
+
+  /**
+   * Staff-only surface consumed by the admin console (`apps/admin`).
+   *
+   * Mounted at `/api/v1/admin` in the backend's `app.ts`. Every path except
+   * `auth.login` sits behind `adminAuthMiddleware`, which requires a SUPER_ADMIN
+   * claim *and* re-checks the role in the database — a patient's token is signed
+   * with the same secret and would otherwise pass.
+   */
+  admin: {
+    auth: {
+      login: `${v}/admin/auth/login`,
+      me: `${v}/admin/auth/me`,
+    },
+
+    consultations: `${v}/admin/consultations`,
+    /** PATCH — sets the agreed 30-minute start, which unlocks the patient's Join button. */
+    confirmConsultationTime: (id: string) => `${v}/admin/consultations/${id}/confirm-time`,
+    completeConsultation: (id: string) => `${v}/admin/consultations/${id}/completed`,
+    markConsultationUnhandled: (id: string) => `${v}/admin/consultations/${id}/unhandled`,
+
+    /** Moderation queue for reported user-generated content. */
+    reports: `${v}/admin/reports`,
+    actionReport: (id: string) => `${v}/admin/reports/${id}`,
+
+    organizations: `${v}/admin/organizations`,
+    organizationById: (id: string) => `${v}/admin/organizations/${id}`,
+
+    referralPrograms: `${v}/admin/referral-programs`,
+    referralProgramById: (id: string) => `${v}/admin/referral-programs/${id}`,
+    /** POST only — additive; the validator refuses PATCH on a seat pool. */
+    addReferralProgramSeats: (id: string) => `${v}/admin/referral-programs/${id}/seats`,
+    referralProgramUsage: (id: string) => `${v}/admin/referral-programs/${id}/usage`,
+
+    referralRedemptions: `${v}/admin/referral-redemptions`,
+    retryRedemptionGrant: (id: string) => `${v}/admin/referral-redemptions/${id}/retry-grant`,
+    revokeRedemption: (id: string) => `${v}/admin/referral-redemptions/${id}`,
+  },
 } as const;
 
 export type ApiRoutes = typeof apiRoutes;

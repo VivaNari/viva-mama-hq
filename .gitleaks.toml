@@ -1,0 +1,29 @@
+# VivaMama — gitleaks configuration
+#
+# CI runs gitleaks over the full history on every push and PR
+# (.github/workflows/security.yml). This file starts from the upstream default
+# rule set and adds narrowly-scoped allowlists for verified false positives.
+#
+# Rules for adding an entry here:
+#   1. Prove it is not a secret (read the file, not just the finding).
+#   2. Scope the entry as tightly as possible — path AND rule, never a bare
+#      global regex that could mask a real leak elsewhere.
+#   3. Say why, in a comment, so the next person does not have to re-derive it.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = """
+  scripts/diagnose-play-api.ts documents what each Play Developer API status
+  code means. The prose "the key itself was rejected: wrong/disabled key ..."
+  trips the generic-api-key heuristic, which reads the words after "key ...:"
+  as a high-entropy value. The script holds no credential: it loads
+  PLAY_DEVELOPER_SA_KEY_JSON from the environment at runtime and explicitly
+  never prints the private key.
+  """
+  paths = ['''services/backend/scripts/diagnose-play-api\.ts''']
+  regexes = ['''key itself was rejected''']

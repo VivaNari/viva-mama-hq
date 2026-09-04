@@ -1,7 +1,7 @@
 export const colors = {
   lightPurple: "#E3E2F4",
   purple: "#6F6AC4",
-  darkPurple: "#4B1EAA",
+  darkPurple: "#6814db",
   pageBG: "#f5f5f5",
   // pageBG: '#fffafa',
   primary: "#0A2463",

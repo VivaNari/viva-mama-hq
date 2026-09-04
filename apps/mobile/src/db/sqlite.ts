@@ -459,6 +459,31 @@ class ChatDatabase {
     }
   }
 
+  /**
+   * Empties every local table.
+   *
+   * Account deletion has to leave nothing behind on the device, and the existing
+   * helpers each clear a single table — `clearChatHistoryV2` only `chat_messages`,
+   * `deleteUserData` only `users` — which would strand bookmarked AI messages
+   * (health content) in local storage after the account was erased server-side.
+   *
+   * Deliberately best-effort per table: a failure on one must not stop the rest, or a
+   * single locked table would leave the remainder of the user's data on the phone.
+   */
+  async wipeAllLocalData(): Promise<void> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    for (const table of ["chat_messages", "bookmarks", "users"]) {
+      try {
+        await this.database!.executeSql(`DELETE FROM ${table};`);
+      } catch (error) {
+        console.error(`Failed to clear local table ${table}:`, error);
+      }
+    }
+  }
+
   async clearChatHistoryV2(): Promise<void> {
     if (!this.database) {
       await this.init();
@@ -489,6 +514,47 @@ class ChatDatabase {
     } catch (error) {
       console.error("Failed to clear chat history:", error);
       throw error;
+    }
+  }
+
+  /**
+   * True when the stored history belongs to a DIFFERENT flow instance than the one
+   * just started.
+   *
+   * Chat history is keyed by (user, flowSlug) only — it carries no notion of which week
+   * it belongs to — and it is cleared only when a check-in is COMPLETED. So a check-in
+   * abandoned halfway through week 3 leaves its questions in the table; open the app in
+   * week 4 and they are rendered above the new week's question, still carrying tappable
+   * options. Answering one posts an old nodeId against the new week's instance and the
+   * server rejects it as the wrong question.
+   */
+  async hasHistoryFromOtherFlowInstance(
+    userId: string,
+    flowSlug: string,
+    flowInstanceId: string,
+  ): Promise<boolean> {
+    if (!this.database) {
+      await this.init();
+    }
+
+    const query = `
+      SELECT 1 FROM chat_messages
+      WHERE user_id = ? AND flow_slug = ?
+        AND flow_instance_id IS NOT NULL
+        AND flow_instance_id != ?
+      LIMIT 1;
+    `;
+
+    try {
+      const [results] = await this.database!.executeSql(query, [
+        userId,
+        flowSlug,
+        flowInstanceId,
+      ]);
+      return results.rows.length > 0;
+    } catch (error) {
+      console.error('Failed to check history flow instance:', error);
+      return false;
     }
   }
 

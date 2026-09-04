@@ -36,7 +36,11 @@ venv_mcp/
 .vscode/
 
 # Project Specific
-.local_vector_store/
+# NOTE: .local_vector_store/ is intentionally NOT ignored — CI produces the
+# prebuilt FAISS index there and the runtime stage COPYs it into the image.
+# Documents must never enter the image build context (they live in GCS only):
+data/
+data_new/
 *.ipynb
 *.zip
 *.csv

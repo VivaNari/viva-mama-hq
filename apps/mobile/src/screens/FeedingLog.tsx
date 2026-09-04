@@ -262,7 +262,7 @@ const FeedingLogScreen: React.FC = () => {
     );
 
     return (
-        <SafeAreaView style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1 }} edges={['bottom', 'left', 'right']}>
             <View
                 style={[globalStyles.container, { flex: 0 }]}
 

@@ -1,5 +1,6 @@
 import Lucide from '@react-native-vector-icons/lucide';
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,8 +8,9 @@ import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 
 const AboutVivaMama = () => {
+    const { t } = useTranslation();
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
             <ScrollView showsVerticalScrollIndicator={false}>
                 {/* Hero Section */}
                 <LinearGradient
@@ -24,7 +26,7 @@ const AboutVivaMama = () => {
                             resizeMode="contain"
                         />
                     </View>
-                    <Text style={[styles.heroTitle, globalStyles.fontBold]}>Our Story</Text>
+                    <Text style={[styles.heroTitle, globalStyles.fontBold]}>{t('about.ourStory')}</Text>
                     <View style={styles.heroOverlay} />
                 </LinearGradient>
 
@@ -35,9 +37,9 @@ const AboutVivaMama = () => {
                         <View style={styles.iconCircle}>
                             <Lucide name="heart" size={24} color={colors.purple} />
                         </View>
-                        <Text style={[styles.sectionTitle, globalStyles.fontBold]}>Our Mission</Text>
+                        <Text style={[styles.sectionTitle, globalStyles.fontBold]}>{t('about.ourMission')}</Text>
                         <Text style={[styles.sectionText, globalStyles.fontRegular]}>
-                            VivaMama is here to support you through pregnancy and after birth with clear, reliable, and personalized guidance. Every feature is designed to help you understand your changing body, care for yourself, and know when to seek help.
+                            {t('about.missionText')}
                         </Text>
                     </View>
 
@@ -46,9 +48,9 @@ const AboutVivaMama = () => {
                         <View style={styles.iconCircle}>
                             <Lucide name="shield-check" size={24} color={colors.purple} />
                         </View>
-                        <Text style={[styles.sectionTitle, globalStyles.fontBold]}>Trusted & Private</Text>
+                        <Text style={[styles.sectionTitle, globalStyles.fontBold]}>{t('about.trustedPrivate')}</Text>
                         <Text style={[styles.sectionText, globalStyles.fontRegular]}>
-                            Our AI is built using trusted medical information and is supervised by experts, so you receive safe and responsible support. Your privacy always comes first.
+                            {t('about.trustText')}
                         </Text>
                     </View>
 
@@ -57,16 +59,16 @@ const AboutVivaMama = () => {
                         <View style={styles.iconCircle}>
                             <Lucide name="sparkles" size={24} color={colors.purple} />
                         </View>
-                        <Text style={[styles.sectionTitle, globalStyles.fontBold]}>Built by Moms, for Moms</Text>
+                        <Text style={[styles.sectionTitle, globalStyles.fontBold]}>{t('about.builtByMoms')}</Text>
                         <Text style={[styles.sectionText, globalStyles.fontRegular]}>
-                            Created by Wellness Emporio and founded by a doctor mom who has walked this journey herself, VivaMama offers 24/7 guidance, weekly check-ins, recovery tracking, expert consultations, and ongoing care support so you feel confident and cared for every step of the way.
+                            {t('about.originsText')}
                         </Text>
                     </View>
 
                     {/* Footer Info */}
                     <View style={styles.footer}>
-                        <Text style={[styles.versionText, globalStyles.fontRegular]}>Version 1.0.0</Text>
-                        <Text style={[styles.copyrightText, globalStyles.fontRegular]}>© {new Date().getFullYear()} Wellness Emporio. All rights reserved.</Text>
+                        <Text style={[styles.versionText, globalStyles.fontRegular]}>{t('about.version')}</Text>
+                        <Text style={[styles.copyrightText, globalStyles.fontRegular]}>{t('about.copyright', { year: new Date().getFullYear() })}</Text>
                     </View>
                 </View>
             </ScrollView>

@@ -2,6 +2,7 @@ import Lucide from "@react-native-vector-icons/lucide";
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import React, { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     Dimensions,
@@ -16,6 +17,8 @@ import LinearGradient from "react-native-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Share from 'react-native-share';
 import { getUserContentById } from "../api/getUserContentById";
+import { AnalyticsEvent, dwellBucket, recordError, track } from "../analytics";
+import { useLanguage } from "../context/LanguageContext";
 import { colors } from "../public/assets/colors.ts";
 import { globalStyles } from "../public/styles";
 import { ContentDetailsStyles } from "../public/styles/contentStyles";
@@ -31,14 +34,16 @@ const extractYoutubeVideoId = (url: string) => {
 
 const ArticleVideo = ({ url }: { url: string }) => {
     const [playing, setPlaying] = React.useState(false);
+    const videoId = extractYoutubeVideoId(url);
 
     const onStateChange = React.useCallback((state: string) => {
         if (state === "ended") {
             setPlaying(false);
+            track(AnalyticsEvent.VIDEO_COMPLETED, { content_id: videoId ?? url });
+        } else if (state === "playing") {
+            track(AnalyticsEvent.VIDEO_STARTED, { content_id: videoId ?? url });
         }
-    }, []);
-
-    const videoId = extractYoutubeVideoId(url);
+    }, [videoId, url]);
 
     if (!videoId) return null;
 
@@ -58,12 +63,13 @@ const renderContentBody = (article: IUserContent) => {
     if (!article?.contentBody?.length) return null;
 
 
-    return article.contentBody.map((item) => {
+    return article.contentBody.map((item, index) => {
+        const key = item._id || `body-${index}`;
         switch (item.contentType) {
             case ContentBodyTypeEnum.HEADING:
                 return (
                     <Text
-                        key={item._id}
+                        key={key}
                         style={[ContentDetailsStyles.heading, globalStyles.fontBold]}
                     >
                         {item.body}
@@ -73,7 +79,7 @@ const renderContentBody = (article: IUserContent) => {
             case ContentBodyTypeEnum.SUBHEADING:
                 return (
                     <Text
-                        key={item._id}
+                        key={key}
                         style={[ContentDetailsStyles.subHeading, globalStyles.fontMedium]}
                     >
                         {item.body}
@@ -83,7 +89,7 @@ const renderContentBody = (article: IUserContent) => {
             case ContentBodyTypeEnum.PARAGRAPH:
                 return (
                     <Text
-                        key={item._id}
+                        key={key}
                         style={[ContentDetailsStyles.content, globalStyles.fontRegular]}
                     >
                         {item.body}
@@ -92,8 +98,8 @@ const renderContentBody = (article: IUserContent) => {
 
             case ContentBodyTypeEnum.VIDEO:
                 return (
-                    <View style={{ height: 220, marginBottom: 20, borderRadius: 10, overflow: 'hidden' }}>
-                        <ArticleVideo key={item._id} url={item.body} />
+                    <View key={key} style={{ height: 220, marginBottom: 20, borderRadius: 10, overflow: 'hidden' }}>
+                        <ArticleVideo url={item.body} />
                     </View>
 
                 );
@@ -108,6 +114,8 @@ const renderContentBody = (article: IUserContent) => {
 const { height } = Dimensions.get("window");
 
 const ArticleDetails = () => {
+    const { t } = useTranslation();
+    const { language } = useLanguage();
     const route = useRoute<any>();
     const navigation = useNavigation();
     const { articleId } = route.params;
@@ -117,11 +125,38 @@ const ArticleDetails = () => {
     useEffect(() => {
         (async () => {
             setLoading(true);
-            const getContentById: IUserContentresponse = await getUserContentById(articleId);
-            setArticle(getContentById.data[0]);
-            setLoading(false);
+            try {
+                const getContentById: IUserContentresponse = await getUserContentById(articleId);
+                setArticle(getContentById.data);
+                track(AnalyticsEvent.ARTICLE_OPENED, { article_id: articleId });
+            } catch (error) {
+                // Previously uncaught: the spinner never cleared and the user was
+                // stuck on a loading screen with no way to know it had failed.
+                recordError(error, 'ArticleDetails.getUserContentById', {
+                    article_id: articleId,
+                });
+            } finally {
+                setLoading(false);
+            }
         })()
-    }, [articleId])
+    }, [articleId, language])
+
+    /**
+     * How long the article was actually open, reported on the way out.
+     *
+     * Bucketed rather than exact — the question worth answering is "did anyone
+     * read this or bounce off it", and a precise dwell time on a specific health
+     * article is more identifying than it is useful.
+     */
+    useEffect(() => {
+        const openedAt = Date.now();
+        return () => {
+            track(AnalyticsEvent.ARTICLE_READ_COMPLETED, {
+                article_id: articleId,
+                dwell_bucket: dwellBucket(Date.now() - openedAt),
+            });
+        };
+    }, [articleId]);
 
     if (loading) {
         return (
@@ -136,7 +171,7 @@ const ArticleDetails = () => {
                 <Text
                     style={[globalStyles.fontRegular]}
                 >
-                    Article not found.
+                    {t('articleDetails.notFound')}
                 </Text>
             </SafeAreaView>
         );
@@ -176,24 +211,37 @@ const ArticleDetails = () => {
                     <Text style={[ContentDetailsStyles.title, globalStyles.fontBold, { marginBottom: 8 }]}>
                         {article.featuredTitle}
                     </Text>
-                    <Text style={[ContentDetailsStyles.author, globalStyles.fontRegular, { marginBottom: 15 }]}>
-                        {
-                            article.reviewers.length > 0 && (
-                                <>
-                                    Reviewed by {article.reviewers.map((author) => author.name).join(", ")}
-                                    {" "} | {" "}
-                                </>
-                            )
-                        }
-                        Written by {article.authors.map((author) => author.name).join(", ")}
-                    </Text>
+                    {
+                        (article.authors.length > 0 || article.reviewers?.length > 0) && (
+
+                            <Text style={[ContentDetailsStyles.author, globalStyles.fontRegular, { marginBottom: 15 }]}>
+                                {
+                                    article.reviewers.length > 0 && (
+                                        <>
+                                            {t('articleDetails.reviewedBy', { names: article.reviewers.map((author) => author.name).join(", ") })}
+                                            {" "} | {" "}
+                                        </>
+                                    )
+                                }
+                                {
+                                    article.authors.length > 0 && (
+                                        <>
+                                            {t('articleDetails.writtenBy', { names: article.authors.map((author) => author.name).join(", ") })}
+                                        </>
+                                    )
+                                }
+                            </Text>
+                        )
+                    }
 
                     {/* Action Buttons */}
                     <View style={ContentDetailsStyles.actions}>
                         <TouchableOpacity
                             style={ContentDetailsStyles.iconButton}
                             onPress={() => {
-                                const shareMessage = article.contentBody
+                                // contentBody is absent on locked articles — the server
+                                // strips it rather than trusting the UI to hide it.
+                                const shareMessage = (article.contentBody ?? [])
                                     .filter(item => item.contentType !== ContentBodyTypeEnum.IMAGE)
                                     .map(item => item.body)
                                     .join('\n\n');
@@ -203,6 +251,16 @@ const ArticleDetails = () => {
                                 })
                                     .then((res) => {
                                         console.log(res);
+                                        // The sheet resolves on dismissal too, flagged by
+                                        // `dismissedAction` — so tracking every resolve
+                                        // would count abandoned taps as shares. There is
+                                        // no target-app field on the result, hence no
+                                        // `method`.
+                                        if (res?.dismissedAction) return;
+                                        track(AnalyticsEvent.SHARE, {
+                                            content_type: 'article',
+                                            item_id: articleId,
+                                        });
                                     })
                                     .catch((err) => {
                                         err && console.log(err);

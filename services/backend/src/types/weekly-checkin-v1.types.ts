@@ -1,7 +1,11 @@
+import { FlowInstanceStateEnum } from "./chat.types";
+
 export type WeeklyCheckinStartParams = {
     userId: string;
     week: number;
     flowSlug?: string;
+    /** Raw language hint from the request; resolved against user.preferred_language. */
+    lang?: string;
 };
 
 export type WeeklyCheckinAnswerParams = {
@@ -9,9 +13,14 @@ export type WeeklyCheckinAnswerParams = {
     flowInstanceId: string;
     nodeId: string;
     week: number;
+    /** Legacy identity: option scores. Ambiguous when options share a score. */
     selectedKeys?: number[];
+    /** Preferred identity: option `value` tokens, unique within a node. */
+    selectedValues?: string[];
     freeText?: string;
     idempotencyKey: string;
+    /** Raw language hint from the request; resolved against user.preferred_language. */
+    lang?: string;
 };
 
 export type WeeklyCheckinQuestionPayload = {
@@ -47,6 +56,9 @@ export type WeeklyCheckinResponse = {
         progress: WeeklyCheckinProgress | null;
         state?: string;
         nextNodeId?: string;
+        // Set when a flow is terminated early for a special outcome (e.g. "still_birth")
+        // so the client can render a tailored terminal screen instead of normal completion.
+        terminationReason?: string;
     };
 };
 
@@ -122,13 +134,9 @@ export type CurrentStateResponse = {
 // State Enums
 // ============================================
 
-export enum WeeklyCheckinStateEnum {
-    PENDING = "PENDING",
-    ACTIVE = "ACTIVE",
-    COMPLETED = "COMPLETED",
-    EXPIRED = "EXPIRED",
-    ABORTED = "ABORTED",
-}
+/** Alias of FlowInstanceStateEnum — see the note on WeeklyCheckinState in chat.types.ts. */
+export const WeeklyCheckinStateEnum = FlowInstanceStateEnum;
+export type WeeklyCheckinStateEnum = FlowInstanceStateEnum;
 
 export type WeeklyCheckinValidation = {
     isValid: boolean;

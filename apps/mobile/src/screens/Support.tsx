@@ -1,5 +1,6 @@
 import Lucide from '@react-native-vector-icons/lucide';
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -16,15 +17,17 @@ import { createSupport } from '../api/createSupport';
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
+import { AnalyticsEvent, recordError, track } from '../analytics';
 
 const SUPPORT_CATEGORIES = [
-    { id: 'technical', label: 'Technical Issue', icon: 'monitor' },
-    { id: 'medical', label: 'Medical Query', icon: 'stethoscope' },
-    { id: 'feedback', label: 'Feedback', icon: 'message-square' },
-    { id: 'other', label: 'Other', icon: 'headset' },
+    { id: 'technical', label: 'support.categoryTechnical', icon: 'monitor' },
+    { id: 'medical', label: 'support.categoryMedical', icon: 'stethoscope' },
+    { id: 'feedback', label: 'support.categoryFeedback', icon: 'message-square' },
+    { id: 'other', label: 'support.categoryOther', icon: 'headset' },
 ];
 
 const Support = () => {
+    const { t } = useTranslation();
     const [selectedCategory, setSelectedCategory] = useState('technical');
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -33,8 +36,8 @@ const Support = () => {
         if (!message.trim()) {
             Toast.show({
                 type: 'error',
-                text1: 'Required',
-                text2: 'Please enter a message before submitting.',
+                text1: t('support.requiredTitle'),
+                text2: t('support.enterMessage'),
                 position: 'bottom'
             });
             return;
@@ -47,25 +50,29 @@ const Support = () => {
             if (response.success) {
                 Toast.show({
                     type: 'success',
-                    text1: 'Submitted',
-                    text2: 'Your support request has been received. We will get back to you soon!',
+                    text1: t('support.submittedTitle'),
+                    text2: t('support.submittedMessage'),
                     position: 'bottom'
                 });
+                // Not the category and not the message — a support ticket from a
+                // maternal-health app routinely contains clinical detail.
+                track(AnalyticsEvent.SUPPORT_REQUEST_SUBMITTED);
                 setMessage('');
             } else {
                 Toast.show({
                     type: 'error',
-                    text1: 'Error',
-                    text2: response.message || 'Failed to submit support request.',
+                    text1: t('common.error'),
+                    text2: response.message || t('support.submitFailed'),
                     position: 'bottom'
                 });
             }
         } catch (error) {
             console.error("Error submitting support:", error);
+            recordError(error, 'Support.handleSubmit');
             Toast.show({
                 type: 'error',
-                text1: 'Error',
-                text2: 'Something went wrong. Please try again later.',
+                text1: t('common.error'),
+                text2: t('support.genericError'),
                 position: 'bottom'
             });
         } finally {
@@ -74,7 +81,7 @@ const Support = () => {
     };
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={{ flex: 1 }}
@@ -89,15 +96,15 @@ const Support = () => {
                         <View style={styles.iconCircle}>
                             <Lucide name="headset" size={32} color={colors.purple} />
                         </View>
-                        <Text style={[styles.title, globalStyles.fontBold]}>How can we help?</Text>
+                        <Text style={[styles.title, globalStyles.fontBold]}>{t('support.howCanWeHelp')}</Text>
                         <Text style={[styles.subtitle, globalStyles.fontRegular]}>
-                            Choose a category and tell us what you need. Our team will get back to you as soon as possible.
+                            {t('support.subtitle')}
                         </Text>
                     </View>
 
                     {/* Category Selection */}
                     <View style={styles.section}>
-                        <Text style={[styles.sectionLabel, globalStyles.fontSemiBold]}>Select Category</Text>
+                        <Text style={[styles.sectionLabel, globalStyles.fontSemiBold]}>{t('support.selectCategory')}</Text>
                         <View style={styles.categoryContainer}>
                             {SUPPORT_CATEGORIES.map((cat) => (
                                 <TouchableOpacity
@@ -120,7 +127,7 @@ const Support = () => {
                                         globalStyles.fontMedium,
                                         selectedCategory === cat.id && styles.categoryLabelActive
                                     ]}>
-                                        {cat.label}
+                                        {t(cat.label)}
                                     </Text>
                                 </TouchableOpacity>
                             ))}
@@ -129,11 +136,11 @@ const Support = () => {
 
                     {/* Message Input */}
                     <View style={styles.section}>
-                        <Text style={[styles.sectionLabel, globalStyles.fontSemiBold]}>Your Message</Text>
+                        <Text style={[styles.sectionLabel, globalStyles.fontSemiBold]}>{t('support.yourMessage')}</Text>
                         <View style={styles.inputContainer}>
                             <TextInput
                                 style={[styles.textInput, globalStyles.fontRegular]}
-                                placeholder="Describe your issue or query here..."
+                                placeholder={t('support.messagePlaceholder')}
                                 placeholderTextColor={colors.darkGray}
                                 multiline
                                 numberOfLines={6}
@@ -146,7 +153,7 @@ const Support = () => {
 
                     <GradientButtonWithSlightRadius
                         onPress={handleSubmit}
-                        title="Submit Request"
+                        title={t('support.submitRequest')}
                         fullRounded
                         disabled={loading}
                     />
@@ -154,7 +161,7 @@ const Support = () => {
                     {/* Contact Info */}
                     <View style={styles.footer}>
                         <Text style={[styles.footerText, globalStyles.fontRegular]}>
-                            You can also reach us at:
+                            {t('support.reachUsAt')}
                         </Text>
                         <Text style={[styles.contactEmail, globalStyles.fontSemiBold]}>
                             connect@vivamama.in

@@ -3,7 +3,6 @@ import { Schema } from "mongoose";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
-import conversationModel from "../../models/conversation.model";
 import UserModel from "../../models/user.model";
 
 import {
@@ -22,9 +21,18 @@ import {
     FlowInstanceStateEnum,
     MessageRoleEnum,
     MessageTypeEnum,
+    FlowLanguage,
+    DEFAULT_FLOW_LANGUAGE,
 } from "../../types/chat.types";
-import { IUser } from "../../types/user.types";
-import { WEEKLY_CHECKIN_SLUG, WEEKLY_CHECKIN_MESSAGES } from "../../constants/chat";
+import { resolveLanguage } from "../../utils/i18n/localizeFlowDefinition";
+import { IUser, DeliveryOutcomeEnum } from "../../types/user.types";
+import { ESubscriptionTier } from "../../types/subscription.types";
+import {
+    WEEKLY_CHECKIN_SLUG,
+    WEEKLY_CHECKIN_MESSAGES,
+    getFlowCompletionMessage,
+    getStillBirthAckMessage,
+} from "../../constants/chat";
 
 // Import SRP services
 import { validationService } from "./validation.service";
@@ -36,6 +44,7 @@ import NotificationService from "./notification.service";
 import { getUuid } from "../../utils/commonFunctions/uuid";
 import logger from "../../utils/logger";
 import ChatFlowService from "../chat-system/chat-flow.service";
+import { getOrCreateFlowConversation } from "../chat-system/flow-conversation.service";
 
 /**
  * Question response format
@@ -135,7 +144,9 @@ class WeeklyCheckinService {
                 };
             }
 
-            logger.info({ userId, week, flowSlug }, "Starting weekly check-in");
+            const lang = resolveLanguage(params.lang, user.preferred_language);
+
+            logger.info({ userId, week, flowSlug, lang }, "Starting weekly check-in");
 
             // 2. Validate and get/create flow instance
             const validation = await validationService.validateSSERequest(user, week, flowSlug);
@@ -150,9 +161,10 @@ class WeeklyCheckinService {
 
             const flowInstance = validation.flowInstance;
 
-            // 3. Get flow definition
+            // 3. Get flow definition (localized for the user's language)
             const flowDefinition = await this.flowService.getFlowDefinitionById(
                 flowInstance.flowDefId.toString(),
+                lang,
             );
 
             if (!flowDefinition) {
@@ -231,15 +243,23 @@ class WeeklyCheckinService {
      * Process user's answer and return next question
      */
     async processAnswer(params: WeeklyCheckinAnswerParams): Promise<WeeklyCheckinResponse> {
-        const { userId, flowInstanceId, nodeId, week, selectedKeys, idempotencyKey } = params;
+        const {
+            userId,
+            flowInstanceId,
+            nodeId,
+            week,
+            selectedKeys,
+            selectedValues,
+            idempotencyKey,
+        } = params;
         let { freeText } = params;
 
         try {
             // 1. Validate inputs
-            if (!selectedKeys?.length && !freeText) {
+            if (!selectedValues?.length && !selectedKeys?.length && !freeText) {
                 return {
                     success: false,
-                    message: "Either selectedKeys or freeText must be provided",
+                    message: "Either selectedValues, selectedKeys or freeText must be provided",
                 };
             }
 
@@ -248,6 +268,8 @@ class WeeklyCheckinService {
             if (!user) {
                 return { success: false, message: "User not found" };
             }
+
+            const lang = resolveLanguage(params.lang, user.preferred_language);
 
             // 3. Validate request (includes idempotency check)
             const validation = await validationService.validateAnswerRequest(
@@ -266,10 +288,11 @@ class WeeklyCheckinService {
                 };
             }
 
-            // 4. Get flow definition
+            // 4. Get flow definition (localized for the user's language)
             const flowInstance = validation.flowInstance!;
             const flowDefinition = await this.flowService.getFlowDefinitionById(
                 flowInstance.flowDefId.toString(),
+                lang,
             );
 
             if (!flowDefinition) {
@@ -340,6 +363,7 @@ class WeeklyCheckinService {
                 currentNode,
                 {
                     selectedKeys,
+                    selectedValues,
                     freeText,
                     idempotencyKey,
                 },
@@ -387,6 +411,7 @@ class WeeklyCheckinService {
                 currentNode.id,
                 selectedKeys,
                 freeText,
+                selectedValues,
             );
 
             if (!saveResult.success) {
@@ -397,6 +422,22 @@ class WeeklyCheckinService {
             const updatedUser = await UserModel.findById(userId);
             if (!updatedUser) {
                 return { success: false, message: "User not found after update" };
+            }
+
+            // 7b. Grief-sensitive early exit: if the user reported a stillbirth on the
+            // delivery-outcome question, stop the questionnaire and offer support instead
+            // of asking the remaining questions.
+            if (
+                nodeId === "delivery_outcome" &&
+                updatedUser.onboarding_data?.delivery_outcome === DeliveryOutcomeEnum.STILL_BIRTH
+            ) {
+                return await this.terminateOnStillBirth(
+                    updatedUser,
+                    flowInstance,
+                    flowDefinition,
+                    week,
+                    lang,
+                );
             }
 
             // 8. Move to next node
@@ -410,7 +451,13 @@ class WeeklyCheckinService {
 
             // 9. Handle flow completion or next question
             if (!nextNodeId) {
-                return await this.completeCheckin(updatedUser, flowInstance, flowDefinition, week);
+                return await this.completeCheckin(
+                    updatedUser,
+                    flowInstance,
+                    flowDefinition,
+                    week,
+                    lang,
+                );
             }
 
             // 10. Get next question
@@ -434,6 +481,7 @@ class WeeklyCheckinService {
                     updatedInstance,
                     flowDefinition,
                     week,
+                    lang,
                 );
             }
 
@@ -588,8 +636,15 @@ class WeeklyCheckinService {
         flowInstance: IFlowInstance,
         flowDefinition: IFlowDefinition,
         week: number,
+        lang: FlowLanguage,
     ): Promise<WeeklyCheckinResponse> {
         const userId = user._id.toString();
+
+        // Onboarding and weekly check-in share this completion path; pick the
+        // right localized "thank you" by flow slug.
+        const completionKey =
+            flowInstance.flowSlug === "weekly-checkin-v1" ? "CHECK_IN" : "ONBOARDING";
+        const thankYouText = getFlowCompletionMessage(completionKey, lang);
 
         // 1. Update flow instance state
         flowInstance.cursorNodeId = null;
@@ -602,18 +657,19 @@ class WeeklyCheckinService {
             userId: user._id,
             role: MessageRoleEnum.ASSITANT,
             type: MessageTypeEnum.GUIDED,
-            text: WEEKLY_CHECKIN_MESSAGES.THANK_YOU,
+            text: thankYouText,
             guided: null,
         });
         if (flowInstance.flowSlug === "weekly-checkin-v1") {
-            // 3. Update user's upcoming checkin due days
-            await UserModel.findByIdAndUpdate(userId, {
-                $set: {
-                    "current_weekdays.upcoming_checkin_due_days": 7,
-                },
-            });
+            // Deliberately does NOT touch current_weekdays. The due-day counters are pure
+            // functions of the delivery date now, so completing a check-in cannot change
+            // them. This used to force upcoming_checkin_due_days to 7, which was simply
+            // the wrong number — finishing on day 3 left the dashboard claiming the next
+            // check-in was 7 days away when it was 4 — until the next nightly run
+            // recomputed it. Whether a check-in is outstanding is carried by the
+            // instance's own state, which the line above has just set to COMPLETED.
 
-            // 4. Publish score job with retry
+            // 3. Publish score job with retry
             await this.scorePublisherService.publishScoreJob(
                 userId,
                 flowInstance._id.toString(),
@@ -632,10 +688,7 @@ class WeeklyCheckinService {
 
         return {
             success: true,
-            message:
-                flowInstance.flowSlug === "weekly-checkin-v1"
-                    ? WEEKLY_CHECKIN_MESSAGES.THANK_YOU
-                    : "Thank you! That gives me a clear picture of your health, support, and daily life. I will now build your personalised recovery plan",
+            message: thankYouText,
             data: {
                 flowInstanceId: flowInstance._id.toString(),
                 week,
@@ -643,6 +696,74 @@ class WeeklyCheckinService {
                 nextQuestion: null,
                 progress: await this.getProgress(flowInstance._id.toString(), flowDefinition),
                 state: WeeklyCheckinStateEnum.COMPLETED,
+            },
+        };
+    }
+
+    /**
+     * Terminate onboarding early after a reported stillbirth.
+     *
+     * Stops the questionnaire, marks onboarding complete, and auto-enrolls the
+     * user in the free plan (skipping the subscription step) so the client can
+     * route them straight to expert/AI support. Returns a tailored terminal
+     * response flagged with terminationReason = "still_birth".
+     */
+    private async terminateOnStillBirth(
+        user: IUser,
+        flowInstance: IFlowInstance,
+        flowDefinition: IFlowDefinition,
+        week: number,
+        lang: FlowLanguage,
+    ): Promise<WeeklyCheckinResponse> {
+        const userId = user._id.toString();
+        const ackText = getStillBirthAckMessage(lang);
+
+        // 1. Terminate the flow instance.
+        flowInstance.cursorNodeId = null;
+        flowInstance.state = FlowInstanceStateEnum.COMPLETED;
+        await (flowInstance as any).save();
+
+        // 2. Save the acknowledgement message.
+        await messageModel.create({
+            conversationId: flowInstance.conversationId,
+            userId: user._id,
+            role: MessageRoleEnum.ASSITANT,
+            type: MessageTypeEnum.GUIDED,
+            text: ackText,
+            guided: null,
+        });
+
+        // 3. Complete onboarding + drop the user on the free tier (skip the subscription
+        //    step). Mirrors PaymentService.selectFreePlan's snapshot shape. Dotted paths
+        //    so `hasUsedTrial` survives.
+        await UserModel.findByIdAndUpdate(userId, {
+            $set: {
+                "is_onboarded.is_questionnaire_completed": true,
+                "is_onboarded.is_subscription_completed": true,
+                "onboarding_data.onboarded_at": new Date(),
+                "subscription.tier": ESubscriptionTier.FREE,
+                "subscription.status": null,
+                "subscription.planCode": null,
+                "subscription.currentPeriodEnd": null,
+            },
+        });
+
+        logger.info(
+            { userId, week, flowInstanceId: flowInstance._id },
+            "Onboarding terminated on stillbirth",
+        );
+
+        return {
+            success: true,
+            message: ackText,
+            data: {
+                flowInstanceId: flowInstance._id.toString(),
+                week,
+                isCompleted: true,
+                nextQuestion: null,
+                progress: await this.getProgress(flowInstance._id.toString(), flowDefinition),
+                state: WeeklyCheckinStateEnum.COMPLETED,
+                terminationReason: "still_birth",
             },
         };
     }
@@ -725,7 +846,11 @@ class WeeklyCheckinService {
     /**
      * Get current state for resuming a check-in
      */
-    async getCurrentState(userId: string, week: number): Promise<CurrentStateResponse> {
+    async getCurrentState(
+        userId: string,
+        week: number,
+        lang?: string,
+    ): Promise<CurrentStateResponse> {
         const user = await UserModel.findById(userId);
         if (!user) {
             return {
@@ -738,7 +863,11 @@ class WeeklyCheckinService {
             };
         }
 
-        const flowDefinition = await this.flowService.getFlowDefinition();
+        const resolvedLang = resolveLanguage(lang, user.preferred_language);
+        const flowDefinition = await this.flowService.getFlowDefinition(
+            WEEKLY_CHECKIN_SLUG,
+            resolvedLang,
+        );
         if (!flowDefinition) {
             return {
                 hasActiveCheckin: false,
@@ -861,29 +990,15 @@ class WeeklyCheckinService {
     }
 
     /**
-     * Get or create check-in conversation
+     * Get or create the check-in conversation.
+     *
+     * Delegates so the tag and title match every other creation path — this copy used to
+     * title it "Check-in" while the on-demand path used "Weekly Check-in", so which name
+     * a user ended up with depended on which code created her row first.
      */
     private async getOrCreateConversation(user: IUser): Promise<Schema.Types.ObjectId> {
-        let conversation = await conversationModel.findOne({
-            userId: user._id,
-            chatMode: "GUIDED_ONLY",
-            "meta.tags": "check-in",
-        });
-
-        if (!conversation) {
-            conversation = await conversationModel.create({
-                userId: user._id,
-                title: "Check-in",
-                chatMode: "GUIDED_ONLY",
-                lastMessageAt: new Date(),
-                meta: {
-                    channel: "App",
-                    tags: ["check-in"],
-                },
-            });
-        }
-
-        return conversation._id;
+        const conversation = await getOrCreateFlowConversation(user, WEEKLY_CHECKIN_SLUG);
+        return conversation._id as Schema.Types.ObjectId;
     }
 
     // ============================================

@@ -1,9 +1,28 @@
+import React from "react";
+import { useTranslation } from "react-i18next";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { colors } from "../../public/assets/colors";
 import { globalStyles } from "../../public/styles";
+import { useSubscriptionContext } from "../../context/SubscriptionContext";
 import { IExpert } from "../../types/expert.types";
+import { isInPersonOnlyExpert } from "../../utils/expertRules";
 
+/**
+ * One expert in the directory.
+ *
+ * The credit badge renders only for a user who actually holds credits. For everyone else
+ * every expert is pay-per-session, so marking each card would add a row of noise to the
+ * one screen that most needs to stay scannable — the distinction is shown exactly when it
+ * can change which expert she taps.
+ */
 const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigate: any } }) => {
+    const { t } = useTranslation();
+    const { entitlements } = useSubscriptionContext();
+    const expertCredits = entitlements?.credits?.expert ?? 0;
+    // Absent means an older server; fail closed and call it pay-per-session.
+    const creditsApply = item.is_empanelled_expert === true;
+    const inPersonOnly = isInPersonOnlyExpert(item);
+
     return (
         <View
             style={{
@@ -44,12 +63,40 @@ const ExpertItem = ({ item, navigation }: { item: IExpert, navigation: { navigat
                         {item.speciality}
                     </Text>
                 </View>
-                <View
-                    style={styles.experienceBadge}
-                >
-                    <Text style={[styles.experienceText, globalStyles.fontBold]}>
-                        {item.yearsOfExperience}+ Years
-                    </Text>
+                <View style={styles.badgeRow}>
+                    <View style={styles.experienceBadge}>
+                        <Text style={[styles.experienceText, globalStyles.fontBold]}>
+                            {t('experts.yearsExperience', { years: item.yearsOfExperience })}
+                        </Text>
+                    </View>
+
+                    {/* An in-person-only doctor is never priced: her badge states how she
+                        consults, and it shows regardless of credits because it is the one
+                        thing that changes what tapping the card leads to. */}
+                    {inPersonOnly ? (
+                        <View style={styles.creditBadge}>
+                            <Text
+                                style={[styles.creditBadgeText, globalStyles.fontBold]}
+                                numberOfLines={1}
+                            >
+                                {t('experts.inPersonOnlyBadge')}
+                            </Text>
+                        </View>
+                    ) : expertCredits > 0 ? (
+                        <View style={creditsApply ? styles.creditBadge : styles.feeBadge}>
+                            <Text
+                                style={[
+                                    creditsApply ? styles.creditBadgeText : styles.feeBadgeText,
+                                    globalStyles.fontBold,
+                                ]}
+                                numberOfLines={1}
+                            >
+                                {creditsApply
+                                    ? t('experts.creditsApply')
+                                    : t('experts.ownFee')}
+                            </Text>
+                        </View>
+                    ) : null}
                 </View>
             </TouchableOpacity>
         </View>
@@ -77,23 +124,53 @@ const styles = StyleSheet.create({
         height: '100%',
 
     },
+    // Wraps so a two-badge row still fits a half-width card on a narrow screen.
+    badgeRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 6,
+        marginLeft: 10,
+        marginRight: 10,
+        marginTop: 10,
+        marginBottom: 10,
+    },
     experienceBadge: {
         paddingHorizontal: 6,
         paddingVertical: 4,
         borderRadius: 20,
-        color: colors.lightPurple,
         borderWidth: 1,
         borderColor: colors.darkPurple,
         alignContent: "center",
         backgroundColor: colors.lightPurple,
-        width: 75,
-        marginLeft: 10,
-        marginTop: 10,
-        marginBottom: 10
     },
     experienceText: {
         color: colors.purple,
         fontSize: 12
+    },
+    // Tone carries the meaning before the words are read: green is "your plan covers
+    // this", neutral grey is "this one is on you".
+    creditBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        borderRadius: 20,
+        backgroundColor: colors.greenBadgeBG,
+        flexShrink: 1,
+    },
+    creditBadgeText: {
+        color: colors.greenBadgeText,
+        fontSize: 11,
+    },
+    feeBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 4,
+        borderRadius: 20,
+        backgroundColor: colors.lightGray,
+        flexShrink: 1,
+    },
+    feeBadgeText: {
+        color: colors.darkGray,
+        fontSize: 11,
     },
     name: {
         fontSize: 16,

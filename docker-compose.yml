@@ -62,6 +62,10 @@ services:
     #   - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
 
   chatbot:
+    # NOTE: the image bakes the ~2.3 GB BAAI/bge-m3 embedding model into a
+    # cache-stable layer so it is never fetched at request time. The first build
+    # is correspondingly slow; subsequent ones reuse the layer. Set MODEL_GCS_URI
+    # to load the model from a bucket at start-up instead.
     build:
       context: services/chatbot
       dockerfile: Dockerfile

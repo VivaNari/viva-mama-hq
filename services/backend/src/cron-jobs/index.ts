@@ -1,44 +1,75 @@
 import cron from "node-cron";
-// import { startOrContinueConversation } from "./startOrContinueConversation";
-// import { calculateCurrentPostpartumWeek } from "./calculateCurrentPostpartumWeekForAllUsers";
-import { currentWeekAndPreviousUpcomingDueDaysCalculator } from "./currentWeekAndPreviousUpcomingDueDaysCalculator";
+import { pregnancyTransition } from "./pregnancyTransition";
+import { weekProgression } from "./weekProgression";
+import { checkinNotification } from "./checkinNotification";
 import { logsReminders } from "./logsReminders";
 import { dailyVivaInteraction } from "./dailyVivaInteraction";
 import { weeklyContentNotification } from "./weeklyContentNotification";
+import { subscriptionLifecycle } from "./subscriptionLifecycle";
+import { consultationReminders } from "./consultationReminders";
+import env from "../config/env";
+import logger from "../utils/logger";
+
+/**
+ * Schedules are expressed in IST, matching Cloud Scheduler's timezone in prod. The jobs
+ * themselves compute from IST calendar days regardless of when they fire, so a late or
+ * repeated run changes freshness, never correctness.
+ */
+const IST_TIMEZONE = "Asia/Kolkata";
 
 export const initScheduledJobs = () => {
-    // cron.schedule("0 8 * * *", () => {
-    //     startOrContinueConversation();
-    // }); // run at everyday 8AM
+    // In prod/uat these jobs are driven by Cloud Scheduler hitting the HTTP
+    // endpoints at /api/v1/internal/jobs/* — in-process node-cron does not fire
+    // reliably on Cloud Run (the instance scales to zero between requests, and
+    // multiple instances would each run their own copy). Only enable the
+    // in-process scheduler for local development.
+    if (!env.ENABLE_IN_PROCESS_CRON) {
+        logger.info("In-process cron disabled; jobs are driven by Cloud Scheduler");
+        return;
+    }
 
-    // cron.schedule("*/10 * * * * *", () => {
-    //     startOrContinueConversation();
-    // }); // run at every 2 minutes for development
+    logger.info("In-process cron enabled (development mode)");
 
-    // cron.schedule("0 8 * * *", () => {
-    //     console.log("Calculating postpartum weeks for all users...");
-    //     calculateCurrentPostpartumWeek();
-    // });
+    const schedule = (expression: string, job: () => Promise<unknown>, name: string) =>
+        cron.schedule(
+            expression,
+            () => {
+                job().catch((error) => logger.error({ error, name }, "Scheduled job failed"));
+            },
+            { timezone: IST_TIMEZONE },
+        );
 
-    // Advance each user's postpartum week, create the next weekly check-in
-    // instance, update due days, and fire the "check-in due" notification.
-    // Runs daily at 9:00 AM.
-    cron.schedule("0 9 * * *", () => {
-        currentWeekAndPreviousUpcomingDueDaysCalculator();
-    });
+    // 00:05 — flip NP users to PP once their delivery date arrives, so the week job
+    // below already sees them as postpartum on the same night.
+    schedule("5 0 * * *", pregnancyTransition, "pregnancy-transition");
 
-    // 1. Logs Reminders (Every day at 10:00 AM)
-    cron.schedule("0 10 * * *", () => {
-        logsReminders();
-    });
+    // 00:15 — advance everyone's week and open the current week's check-in. No pushes.
+    schedule("15 0 * * *", weekProgression, "week-progression");
 
-    // 2. Daily Viva Interaction (Every day at 9:00 AM)
-    cron.schedule("0 9 * * *", () => {
-        dailyVivaInteraction();
-    });
+    // 18:00 — nudge open, unfinished check-ins. Deliberately hours after the rollover.
+    schedule("0 18 * * *", checkinNotification, "checkin-notification");
 
-    // 3. Weekly Content Notification (Every Sunday at 10:00 AM)
-    cron.schedule("0 10 * * 0", () => {
-        weeklyContentNotification();
-    });
+    // 10:00 — mood/sleep log reminders.
+    schedule("0 10 * * *", logsReminders, "logs-reminders");
+
+    // 09:00 — daily Viva interaction prompt.
+    schedule("0 9 * * *", dailyVivaInteraction, "daily-viva-interaction");
+
+    // Sundays 10:00 — weekly content digest.
+    schedule("0 10 * * 0", weeklyContentNotification, "weekly-content-notification");
+
+    // 02:00 — retire lapsed trials and terms, expire unconsumed credits, send boundary
+    // reminders. Access control does not depend on this running; see subscriptionLifecycle.ts.
+    schedule("0 2 * * *", subscriptionLifecycle, "subscription-lifecycle");
+
+    // Every 5 minutes — pre-call reminders at 1 hour and 15 minutes before a confirmed
+    // consultation. The only sub-daily job here: the 15-minute reminder cannot be served
+    // by a job that wakes once a day, and the interval is what bounds how late a
+    // reminder can be. See consultationReminders.ts.
+    // To fire it on demand rather than waiting for a tick, run
+    // `npm run job:consultation-reminders`. Pinning this expression to a chosen minute
+    // is not a reliable way to test: the schedule is read once at startup, so an edit
+    // only takes effect after a restart, and a run landing exactly on T-15 sits on the
+    // boundary of "not yet due".
+    schedule("*/5 * * * *", consultationReminders, "consultation-reminders");
 };

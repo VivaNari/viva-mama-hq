@@ -84,8 +84,19 @@ export interface IMessage {
         nodeId: string;
         optionKey: string;
     } | null;
+    suggestedExperts?: ISuggestedExpert[];
     createdAt: Date;
     updatedAt: Date;
+}
+
+/**
+ * An expert the AI named in its answer, resolved to a real, visible expert so the
+ * app can deep-link straight to their details screen.
+ */
+export interface ISuggestedExpert {
+    expertId: Schema.Types.ObjectId | string;
+    name: string;
+    speciality?: string;
 }
 
 export enum FlowDefinitionStatusEnum {
@@ -155,6 +166,44 @@ export interface INotificationTemplates {
     body: string;
 }
 
+// ============================================
+// i18n
+// ============================================
+
+export enum FlowLanguageEnum {
+    EN = "en",
+    HI = "hi",
+}
+
+export type FlowLanguage = FlowLanguageEnum.EN | FlowLanguageEnum.HI;
+
+export const DEFAULT_FLOW_LANGUAGE: FlowLanguage = FlowLanguageEnum.EN;
+
+/**
+ * Translation bundle for a single non-default language.
+ * Keyed by stable identifiers (nodeId, option.value, outcome.key,
+ * notification type) — NEVER by array index — so structure can evolve
+ * without invalidating translations. Any field may be omitted, in which
+ * case the base (English) value is served.
+ */
+export interface IFlowTranslationBundle {
+    name?: string;
+    notificationTemplates?: Record<string, { title?: string; body?: string }>;
+    nodes?: Record<
+        string,
+        {
+            text?: string;
+            educationalMessage?: string;
+            whyThisMatters?: string;
+            indicator?: string;
+            options?: Record<string, string>; // option.value -> localized label
+        }
+    >;
+    outcomes?: Record<string, { title?: string; summary?: string; recommendations?: string[] }>;
+}
+
+export type IFlowTranslations = Partial<Record<FlowLanguage, IFlowTranslationBundle>>;
+
 export interface IFlowDefinition {
     _id: Schema.Types.ObjectId;
     slug: string; // e.g. "breastfeeding-pain-v1"
@@ -172,6 +221,7 @@ export interface IFlowDefinition {
         recommendations: string[];
         nextAction: string | null;
     }>;
+    translations?: IFlowTranslations;
     createdBy: Schema.Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
@@ -284,12 +334,21 @@ export type AILLMResponse = {
     timestamp: number;
     response: Record<string, unknown>;
     nodeType?: FlowNodeType;
+    /** Drives the "Connect" button in the chat bubble. Empty means no button. */
+    suggestedExperts?: ISuggestedExpert[];
 };
 
 export type AnswerData = {
     type: AnswerTypeEnum;
     freeText: string | null;
+    /** Scores of the selected options — drives scoring, elimination, sentinels. */
     selectedKeys: number[] | null;
+    /**
+     * `value` tokens of the selected options. Unique per node, so unlike
+     * `selectedKeys` this identifies exactly what the user chose even when
+     * several options share a score.
+     */
+    selectedValues?: string[] | null;
 };
 
 export enum QuestionSourceEnum {
@@ -301,12 +360,20 @@ export enum QuestionSourceEnum {
 // Enums
 // ============================================
 
-export enum WeeklyCheckinState {
-    PENDING = "PENDING", // Triggered by cron, not started by user
-    ACTIVE = "ACTIVE", // User started the check-in
-    COMPLETED = "COMPLETED", // User finished
-    EXPIRED = "EXPIRED", // User didn't complete in time (optional)
-}
+/**
+ * Alias of FlowInstanceStateEnum, kept for the check-in call sites that read better
+ * with this name.
+ *
+ * It used to be a separate enum declaring a subset of the same string values, and the two
+ * were mixed inside single expressions (`$in: [WeeklyCheckinState.PENDING,
+ * FlowInstanceStateEnum.ACTIVE]`). Harmless at runtime, but it meant no single list of
+ * legal states existed. There is now exactly one.
+ *
+ * Meaning of each, for a check-in: PENDING = opened by the week job, never touched;
+ * ACTIVE = started, partly answered; COMPLETED = finished; EXPIRED = its week ended first.
+ */
+export const WeeklyCheckinState = FlowInstanceStateEnum;
+export type WeeklyCheckinState = FlowInstanceStateEnum;
 
 export enum WeeklyCheckinErrorType {
     FLOW_NOT_FOUND = "FLOW_NOT_FOUND",

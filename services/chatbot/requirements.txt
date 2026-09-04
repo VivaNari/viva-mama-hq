@@ -13,13 +13,23 @@ langchain==1.0.3
 langchain-core
 langchain-community
 langchain-groq
+# Vertex AI (Gemini) — default LLM provider; Groq kept as an env-flag fallback.
+langchain-google-vertexai
 jinja2
 
 # Embeddings + local vector store
 sentence-transformers
 faiss-cpu
 
-# MCP SDK (optional adapter; included for future use)
+# Downloads the embedding model from GCS at container boot (model is no longer
+# baked into the runtime image; see app/rag/model_provisioner.py).
+google-cloud-storage
+
+# (Optional) If you later use FastAPI service:
+# fastapi
+# uvicorn[standard]
+
+# MCP SDK (adapter is optional; included for future)
 mcp
 
 # API + data access

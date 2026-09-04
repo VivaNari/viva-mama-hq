@@ -30,6 +30,12 @@ const weeklyCheckinController = new WeeklyCheckinController();
  *     - nextQuestion: QuestionPayload | null
  *     - progress: { answered: number, total: number }
  */
+// NOT gated at the route level. This endpoint serves the onboarding questionnaire
+// (`onboarding-flow-v2`) as well as the weekly check-in (`weekly-checkin-v1`) — the app
+// starts both through it. A route-level guard locked new users out of onboarding, which
+// they have to complete before they could ever choose a tier.
+//
+// The entitlement check lives in the controller, where the flow slug is known.
 router
     .route("/chat/checkin/start")
     .post(authMiddleware("header"), weeklyCheckinController.startCheckin);

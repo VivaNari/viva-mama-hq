@@ -12,9 +12,19 @@ export default class ScoreEngineService {
         "27-52": { red: 93, yellow: 98, green: 99 },
     };
 
+    /**
+     * @param week The week the answers BELONG to — pass the flow instance's
+     *   `postpartumWeek`. It decides the threshold band, the category weights, and the
+     *   week the result is filed under, so reading it from `user.current_weekdays`
+     *   attributes the score to whenever the job happened to run rather than to the week
+     *   being reported on. Those differ whenever the week rolls over between a check-in
+     *   being answered and its score being processed. Falls back to the user's current
+     *   week only when no instance week is available.
+     */
     public static async calculateForUser(
         userId: string | Schema.Types.ObjectId,
         indicators: Indicators,
+        week?: number,
     ): Promise<ScoreResult> {
         const user = await UserModel.findById(userId)
             .select("current_weekdays is_breastfeeding_currently")
@@ -27,7 +37,7 @@ export default class ScoreEngineService {
 
         return this.calculate(
             indicators,
-            user.current_weekdays.weeks || 1,
+            week ?? user.current_weekdays.weeks ?? 1,
             user.is_breastfeeding_currently ?? true,
             String(userId),
         );

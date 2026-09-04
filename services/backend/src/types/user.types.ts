@@ -1,4 +1,7 @@
 import { Schema } from "mongoose";
+import { FlowLanguage } from "./chat.types";
+import { IUserSubscriptionSnapshot } from "./subscription.types";
+import { ICapabilityOverride } from "../services/entitlements/entitlement.config";
 
 declare global {
     // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -21,6 +24,11 @@ export enum ESex {
     OTHER = "Other",
 }
 
+export enum EUserRole {
+    USER = "USER",
+    SUPER_ADMIN = "SUPER_ADMIN",
+}
+
 export interface IJWTDecodedUser {
     _id: string;
     email: string | null;
@@ -30,12 +38,19 @@ export interface IJWTDecodedUser {
         is_subscription_completed: boolean;
     };
     user_id: number;
+    // Absent on tokens minted before roles existed. Treat missing as USER.
+    role?: EUserRole;
 }
 
 export interface IUser {
     _id: Schema.Types.ObjectId;
     user_id: number;
     user_category: EUserCategory;
+    role: EUserRole;
+    // bcrypt hash, staff accounts only (they sign in with `email` + this). Optional
+    // because the schema marks it `select: false` — it is absent from every read that
+    // doesn't ask for it by name, and only the admin login path ever does.
+    password?: string | null;
     email: string;
     mobile_number: string | null;
     country_code: string | null;
@@ -49,7 +64,14 @@ export interface IUser {
     referral_code: string | null;
     referred_user_id: number | null;
     referred_user_object_id: Schema.Types.ObjectId | null;
+    expert_referral_code: string | null;
+    referred_by_expert_id: Schema.Types.ObjectId | null;
+    referred_by_organization_id: Schema.Types.ObjectId | null;
+    referral_program_id: Schema.Types.ObjectId | null;
+    /** Per-user narrowings of the tier matrix. Never widens — see `resolveRule`. */
+    entitlement_overrides: ICapabilityOverride[];
     FCM_token: string;
+    preferred_language: FlowLanguage;
     current_weekdays: {
         weeks: number | null;
         days: number | null;
@@ -69,6 +91,12 @@ export interface IUser {
         pregnancy_conditions: PregnancyConditionEnum[] | [];
         delivery_type: DeliveryTypeEnum | null;
         delivery_outcome: DeliveryOutcomeEnum | null;
+        /**
+         * How she is feeding her baby. Asked only of postpartum mothers, so it stays
+         * null for NP and NN — and for everyone who onboarded before the question
+         * existed. It is what `is_breastfeeding_currently` is derived from.
+         */
+        feeding_method: FeedingMethodEnum | null;
         past_medications: PastMedicationEnum[] | [];
         current_medications: CurrentMedicationEnum[] | [];
         tobacco_use: TobaccoUseEnum | null;
@@ -77,14 +105,13 @@ export interface IUser {
         parity: ParityEnum | null;
         onboarded_at: Date | null;
     };
-    subscription: {
-        plan: string | null;
-        status: string | null;
-        billingCycle: string | null;
-        expiryDate: Date | null;
-    };
+    subscription: IUserSubscriptionSnapshot;
+    /** Viva Club: users this account has blocked. */
+    blockedUsers: Schema.Types.ObjectId[];
+    /** Viva Club: barred from posting and commenting by a reviewer. */
+    communityBanned: boolean;
     consents: {
-        type: "privacy_policy" | "terms_of_use";
+        type: "privacy_policy" | "terms_of_use" | "community_guidelines";
         version: string;
         acceptedAt: Date;
     }[];
@@ -131,6 +158,19 @@ export enum DeliveryTypeEnum {
 export enum DeliveryOutcomeEnum {
     LIVE_BIRTH = "live_birth",
     STILL_BIRTH = "still_birth",
+}
+
+/**
+ * How the mother is feeding her baby, captured in onboarding.
+ *
+ * MIXED counts as breastfeeding: `is_breastfeeding_currently` is derived as
+ * "anything but NOT_BREASTFEEDING", because the lactation check-in questions and the
+ * score engine are relevant to a mother who is partly breastfeeding.
+ */
+export enum FeedingMethodEnum {
+    ONLY_BREASTMILK = "only_breastmilk",
+    MIXED = "mixed",
+    NOT_BREASTFEEDING = "not_breastfeeding",
 }
 
 export enum PastMedicationEnum {

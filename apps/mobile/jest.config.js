@@ -15,6 +15,14 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
   },
 
+  // Binary assets are not JavaScript. Metro resolves them at build time, but Jest
+  // tries to parse them and fails — @react-native-vector-icons/lucide imports its own
+  // .ttf, so any component using an icon would take its whole suite down.
+  moduleNameMapper: {
+    '\\.(ttf|otf|woff|woff2|eot|png|jpg|jpeg|gif|webp|svg)$':
+      '<rootDir>/__mocks__/fileMock.js',
+  },
+
   // Transpile ESM packages inside node_modules
   transformIgnorePatterns: [
     'node_modules/(?!(' +

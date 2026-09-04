@@ -2,6 +2,7 @@
 import Lucide from "@react-native-vector-icons/lucide";
 import { useRoute, useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
     ActivityIndicator,
     Dimensions,
@@ -14,19 +15,24 @@ import {
     View
 } from "react-native";
 import LinearGradient from "react-native-linear-gradient";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { getUserProductById } from "../api/getUserProductById.ts";
+import { useLanguage } from "../context/LanguageContext";
 import { colors } from "../public/assets/colors.ts";
 import { globalStyles } from "../public/styles";
 import { IUserProduct, IUserProductResponse } from "../types/product.types";
 import GradientButtonWithSlightRadius from "../components/GradientButtonWithSlightRadius.tsx";
+import { AnalyticsEvent, recordError, track } from "../analytics";
 
 const { height } = Dimensions.get("window");
 
 const ProductDetails = () => {
+    const { t } = useTranslation();
+    const { language } = useLanguage();
     const route = useRoute<any>();
     const navigation = useNavigation();
     const { productId } = route.params;
+    const insets = useSafeAreaInsets();
     const [product, setProduct] = useState<IUserProduct | null>(null);
     const [loading, setLoading] = useState<boolean>(false);
 
@@ -35,21 +41,28 @@ const ProductDetails = () => {
             setLoading(true);
             try {
                 const getProductById: IUserProductResponse = await getUserProductById(productId);
-                setProduct(getProductById.data[0]);
+                setProduct(getProductById.data);
+                track(AnalyticsEvent.VIEW_ITEM, {
+                    item_id: productId,
+                    item_name: (getProductById.data as any)?.productName,
+                });
             } catch (error) {
                 console.error("Error fetching product:", error);
+                recordError(error, 'ProductDetails.getUserProductById', {
+                    product_id: productId,
+                });
             } finally {
                 setLoading(false);
             }
         })()
-    }, [productId])
+    }, [productId, language])
 
     if (loading) {
         return (
             <SafeAreaView style={[styles.safeArea, styles.centerContainer]}>
                 <ActivityIndicator size="large" color={colors.purple} />
                 <Text style={[styles.loadingText, globalStyles.fontRegular]}>
-                    Fetching product details...
+                    {t('productDetails.fetching')}
                 </Text>
             </SafeAreaView>
         );
@@ -60,17 +73,20 @@ const ProductDetails = () => {
             <SafeAreaView style={[styles.safeArea, styles.centerContainer]}>
                 <Lucide name="package-x" size={64} color="#ccc" />
                 <Text style={[styles.notFoundText, globalStyles.fontSemiBold]}>
-                    Product not found
+                    {t('productDetails.notFound')}
                 </Text>
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButtonInline}>
-                    <Text style={[styles.backButtonText, globalStyles.fontMedium]}>Go Back</Text>
+                    <Text style={[styles.backButtonText, globalStyles.fontMedium]}>{t('common.goBack')}</Text>
                 </TouchableOpacity>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={styles.safeArea}>
+        // Bottom edge is excluded deliberately: the footer below is absolutely
+        // positioned and applies insets.bottom itself, so letting SafeAreaView pad the
+        // container as well would inset the CTA twice under enforced edge-to-edge.
+        <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
@@ -116,8 +132,8 @@ const ProductDetails = () => {
                     {/* Price & Primary Info Card */}
                     <View style={styles.priceCard}>
                         <View>
-                            <Text style={[styles.sectionLabel, globalStyles.fontMedium]}>Price Range</Text>
-                            <Text style={[styles.priceText, globalStyles.fontBold]}>Rs. {product.productPriceRange}</Text>
+                            <Text style={[styles.sectionLabel, globalStyles.fontMedium]}>{t('productDetails.priceRange')}</Text>
+                            <Text style={[styles.priceText, globalStyles.fontBold]}>{t('productDetails.price', { price: product.productPriceRange })}</Text>
                         </View>
                         <View style={[styles.safetyBadge, { backgroundColor: colors.greenBadgeBG }]}>
                             <Lucide
@@ -140,10 +156,10 @@ const ProductDetails = () => {
                         <Lucide name="calendar" size={22} color={colors.purple} />
                         <View style={styles.weekInfo}>
                             <Text style={[styles.weekLabel, globalStyles.fontSemiBold]}>
-                                Recommended for Week {product.validWeekStart} - {product.validWeekEnd}
+                                {t('productDetails.recommendedWeek', { start: product.validWeekStart, end: product.validWeekEnd })}
                             </Text>
                             <Text style={[styles.weekSubtext, globalStyles.fontRegular]}>
-                                Tailored for your current stage of motherhood
+                                {t('productDetails.tailored')}
                             </Text>
                         </View>
                     </View>
@@ -152,7 +168,7 @@ const ProductDetails = () => {
                     <View style={styles.detailCard}>
                         <View style={styles.cardHeader}>
                             <Lucide name="badge-info" size={20} color={colors.purple} />
-                            <Text style={[styles.cardTitle, globalStyles.fontBold]}>Description</Text>
+                            <Text style={[styles.cardTitle, globalStyles.fontBold]}>{t('productDetails.description')}</Text>
                         </View>
                         <Text style={[styles.descriptionText, globalStyles.fontRegular]}>
                             {product.productDescription}
@@ -163,17 +179,26 @@ const ProductDetails = () => {
                     <View style={styles.disclaimerBox}>
                         <Lucide name="info" size={16} color={colors.darkGray} />
                         <Text style={[styles.disclaimerText, globalStyles.fontRegular]}>
-                            Prices and availability are subject to change on the affiliate website.
+                            {t('productDetails.priceDisclaimer')}
                         </Text>
                     </View>
                 </View>
             </ScrollView>
 
             {/* Bottom Action */}
-            <View style={styles.footer}>
+            <View style={[styles.footer, { paddingBottom: 20 + insets.bottom }]}>
+                {/* The affiliate link is absent on locked products, so there is nothing
+                    to open — the paywall replaces this button in P4. */}
                 <GradientButtonWithSlightRadius
-                    onPress={() => Linking.openURL(product.productAffiliateLink)}
-                    title="Buy at Amazon"
+                    onPress={() => {
+                        if (product.productAffiliateLink) {
+                            track(AnalyticsEvent.PRODUCT_LINK_OPENED, {
+                                item_id: productId,
+                            });
+                            Linking.openURL(product.productAffiliateLink);
+                        }
+                    }}
+                    title={t('productDetails.buyAtAmazon')}
                     fullRounded
                 />
             </View>

@@ -67,7 +67,8 @@ jest.mock(require.resolve("../src/models/mood-log.model"), () => {
         default: {
             find: (filter: any = {}) => {
                 let arr = Array.from(mockMoodStore.values());
-                if (filter.userId) arr = arr.filter((d) => String(d.userId) === String(filter.userId));
+                if (filter.userId)
+                    arr = arr.filter((d) => String(d.userId) === String(filter.userId));
                 if (filter.logDate && typeof filter.logDate === "object") {
                     const { $gte, $lte } = filter.logDate;
                     if ($gte) arr = arr.filter((d) => d.logDate.getTime() >= $gte.getTime());
@@ -152,7 +153,10 @@ describe("Mood Log API", () => {
         });
 
         it("updates the same day's log instead of creating a second (upsert)", async () => {
-            await auth(request(app).post("/api/v1/mood-logs")).send({ mood: 2, logDate: "2020-06-20" });
+            await auth(request(app).post("/api/v1/mood-logs")).send({
+                mood: 2,
+                logDate: "2020-06-20",
+            });
             const update = await auth(request(app).post("/api/v1/mood-logs")).send({
                 mood: 5,
                 logDate: "2020-06-20",
@@ -181,7 +185,9 @@ describe("Mood Log API", () => {
                 logDate: "2020-05-01",
             });
             expect(res.status).toBe(400);
-            expect(res.body.message).toBe("Cannot log a mood for a date before you joined the platform");
+            expect(res.body.message).toBe(
+                "Cannot log a mood for a date before you joined the platform",
+            );
         });
 
         it("rejects an impossible calendar date (passes regex, fails parse) with 400", async () => {
@@ -212,8 +218,14 @@ describe("Mood Log API", () => {
 
     describe("GET /api/v1/mood-logs", () => {
         it("returns the user's logs newest-first with a totalCount", async () => {
-            await auth(request(app).post("/api/v1/mood-logs")).send({ mood: 2, logDate: "2020-06-10" });
-            await auth(request(app).post("/api/v1/mood-logs")).send({ mood: 4, logDate: "2020-06-12" });
+            await auth(request(app).post("/api/v1/mood-logs")).send({
+                mood: 2,
+                logDate: "2020-06-10",
+            });
+            await auth(request(app).post("/api/v1/mood-logs")).send({
+                mood: 4,
+                logDate: "2020-06-12",
+            });
 
             const res = await auth(request(app).get("/api/v1/mood-logs"));
             expect(res.status).toBe(200);
@@ -222,10 +234,18 @@ describe("Mood Log API", () => {
         });
 
         it("honours the ?from&to calendar range filter", async () => {
-            await auth(request(app).post("/api/v1/mood-logs")).send({ mood: 2, logDate: "2020-06-10" });
-            await auth(request(app).post("/api/v1/mood-logs")).send({ mood: 4, logDate: "2020-06-20" });
+            await auth(request(app).post("/api/v1/mood-logs")).send({
+                mood: 2,
+                logDate: "2020-06-10",
+            });
+            await auth(request(app).post("/api/v1/mood-logs")).send({
+                mood: 4,
+                logDate: "2020-06-20",
+            });
 
-            const res = await auth(request(app).get("/api/v1/mood-logs?from=2020-06-15&to=2020-06-25"));
+            const res = await auth(
+                request(app).get("/api/v1/mood-logs?from=2020-06-15&to=2020-06-25"),
+            );
             expect(res.status).toBe(200);
             expect(res.body.data).toHaveLength(1);
             expect(res.body.data[0].logDate).toBe("2020-06-20");
@@ -234,20 +254,29 @@ describe("Mood Log API", () => {
 
     describe("DELETE /api/v1/mood-logs", () => {
         it("deletes an existing day's log (200)", async () => {
-            await auth(request(app).post("/api/v1/mood-logs")).send({ mood: 3, logDate: "2020-06-18" });
-            const res = await auth(request(app).delete("/api/v1/mood-logs")).send({ logDate: "2020-06-18" });
+            await auth(request(app).post("/api/v1/mood-logs")).send({
+                mood: 3,
+                logDate: "2020-06-18",
+            });
+            const res = await auth(request(app).delete("/api/v1/mood-logs")).send({
+                logDate: "2020-06-18",
+            });
             expect(res.status).toBe(200);
             expect(res.body.message).toBe("Mood log deleted successfully");
         });
 
         it("returns 404 when there is no log for that day", async () => {
-            const res = await auth(request(app).delete("/api/v1/mood-logs")).send({ logDate: "2020-06-19" });
+            const res = await auth(request(app).delete("/api/v1/mood-logs")).send({
+                logDate: "2020-06-19",
+            });
             expect(res.status).toBe(404);
             expect(res.body.message).toBe("Mood log not found");
         });
 
         it("rejects a malformed logDate via the Joi validator (400)", async () => {
-            const res = await auth(request(app).delete("/api/v1/mood-logs")).send({ logDate: "nope" });
+            const res = await auth(request(app).delete("/api/v1/mood-logs")).send({
+                logDate: "nope",
+            });
             expect(res.status).toBe(400);
         });
     });

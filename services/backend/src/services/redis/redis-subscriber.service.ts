@@ -2,6 +2,9 @@ import { REDIS_CHANNELS } from "./redis-publisher.service";
 import { redisSubscriber } from "../../config/redis.config";
 import ScoreRecommendationHandler from "../../handlers/score-recommendation.handler";
 import { sendPushNotification } from "../../utils/sendPushNotification";
+import UserModel from "../../models/user.model";
+import { getScoreReadyNotification } from "../../constants/chat";
+import { resolveLanguage } from "../../utils/i18n/localizeFlowDefinition";
 
 class RedisSubscriberService {
     private isInitialized = false;
@@ -77,11 +80,14 @@ class RedisSubscriberService {
             console.log(`   ID: ${result.recommendation.id}`);
             console.log(`   Message:\n${result.recommendation.message}`);
 
-            // Send the push notification to the user notifying that the score is generated.
+            // Send the push notification (in the user's language) notifying that
+            // the score is generated.
+            const user = await UserModel.findById(userId);
+            const notif = getScoreReadyNotification(resolveLanguage(user?.preferred_language));
             await sendPushNotification({
                 token: FCM_token,
-                title: "Your new Viva Score is available!",
-                body: "Tap to view your personalized recommendations and insights.",
+                title: notif.title,
+                body: notif.body,
                 data: {
                     score: result.score.finalScore.toString(),
                 },

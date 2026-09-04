@@ -10,15 +10,18 @@ import {
   ChatAction,
   ChatState,
 } from "../types/chat.types";
-import { NOT_PREGNANT_VALUE } from "../constants/chat";
+import { LMP_DATE_PREFIX, NOT_PREGNANT_VALUE } from "../constants/chat";
 import {
   formatDateForApi,
   getSelectedLabels,
   getSelectedScores,
+  getSelectedValues,
   isTextInputMessage,
   isDateInputMessage,
 } from "../utils/messageHelpers";
 import { chatLogger } from "../utils/logger";
+import { t } from "i18next";
+import { AnalyticsEvent, lengthBucket, track } from "../analytics";
 
 interface UseChatActionsProps {
   state: ChatState;
@@ -31,6 +34,7 @@ interface UseChatActionsProps {
   submitGuidedAnswer?: (payload: {
     nodeId: string;
     selectedKeys?: number[];
+    selectedValues?: string[];
     freeText?: string;
   }) => Promise<boolean>;
   selectedModel?: string; // New: Selected model for chatbot flow
@@ -73,6 +77,13 @@ export const useChatActions = ({
           conversationId: payload.conversationId,
           model: selectedModel || "qwen/qwen3-32b",
         });
+        // Only how long the message was, bucketed — never its text. What a user
+        // types to a maternal-health assistant is exactly what must not leave
+        // the device.
+        track(AnalyticsEvent.CHAT_MESSAGE_SENT, {
+          flow_type: flowType ?? undefined,
+          length_bucket: lengthBucket(payload.freeText?.length ?? 0),
+        });
         return true;
       } catch (error: any) {
         chatLogger.error("Failed to send chatbot answer", error);
@@ -81,6 +92,10 @@ export const useChatActions = ({
           text1: "Error",
           text2: error.response?.data?.message || "Failed to send message",
           position: "bottom",
+        });
+        track(AnalyticsEvent.CHAT_STREAM_FAILED, {
+          reason: String(error.response?.status ?? "network"),
+          flow_type: flowType ?? undefined,
         });
         dispatch({ type: "SET_LOADING", payload: false });
         return false;
@@ -105,6 +120,9 @@ export const useChatActions = ({
       if (isGuidedFlow && submitGuidedAnswer) {
         await submitGuidedAnswer({
           nodeId: lastAi.id,
+          // `value` identifies the option; `score` is only its weight and is
+          // ambiguous across options, so it is sent purely for older servers.
+          selectedValues: [option.value],
           selectedKeys: [option.score],
         });
       }
@@ -134,6 +152,7 @@ export const useChatActions = ({
 
       const selectedLabels = getSelectedLabels(selectedOptions, options);
       const selectedScores = getSelectedScores(selectedOptions, options);
+      const selectedValues = getSelectedValues(selectedOptions, options);
 
       await saveUserMessage(selectedLabels, lastAi.id);
       dispatch({ type: "CLEAR_MULTI_OPTIONS" });
@@ -141,6 +160,9 @@ export const useChatActions = ({
       if (isGuidedFlow && submitGuidedAnswer) {
         await submitGuidedAnswer({
           nodeId: lastAi.id,
+          // `value` identifies the options; `score` is only their weight and is
+          // ambiguous across options, so it is sent purely for older servers.
+          selectedValues,
           selectedKeys: selectedScores,
         });
       }
@@ -242,6 +264,32 @@ export const useChatActions = ({
   );
 
   /**
+   * Handle Last Menstrual Period (LMP) date selection.
+   * Sends the LMP date with a prefix so the backend derives the expected
+   * delivery date and marks the user as currently pregnant (NP).
+   */
+  const handleLmpDateSelect = useCallback(
+    async (date: Date) => {
+      const lastAi = await getLastAiMessage();
+      if (!lastAi) {
+        chatLogger.error("No AI message to respond to");
+        return;
+      }
+
+      const formattedDate = formatDateForApi(date);
+      await saveUserMessage(formattedDate, lastAi.id);
+
+      if (isGuidedFlow && submitGuidedAnswer) {
+        await submitGuidedAnswer({
+          nodeId: lastAi.id,
+          freeText: `${LMP_DATE_PREFIX}${formattedDate}`,
+        });
+      }
+    },
+    [getLastAiMessage, saveUserMessage, isGuidedFlow, submitGuidedAnswer],
+  );
+
+  /**
    * Handle "not pregnant" selection
    */
   const handleNotPregnantSelect = useCallback(async () => {
@@ -251,7 +299,7 @@ export const useChatActions = ({
       return;
     }
 
-    await saveUserMessage("I'm not pregnant yet", lastAi.id);
+    await saveUserMessage(t('chat.notPregnantYet'), lastAi.id);
 
     if (isGuidedFlow && submitGuidedAnswer) {
       await submitGuidedAnswer({
@@ -266,6 +314,7 @@ export const useChatActions = ({
     handleMultiSelectSubmit,
     handleTextSubmit,
     handleDateSelect,
+    handleLmpDateSelect,
     handleNotPregnantSelect,
   };
 };

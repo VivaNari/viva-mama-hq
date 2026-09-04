@@ -48,6 +48,9 @@ venv*/
 *.egg-info/
 .ipynb_checkpoints/
 
+# Firebase Hosting deploy cache (apps/admin)
+.firebase/
+
 # RAG chatbot generated artifacts & knowledge corpus (see services/chatbot/data/SOURCES.md)
 **/.local_vector_store/
 services/chatbot/data/*

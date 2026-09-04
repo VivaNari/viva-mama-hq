@@ -1,5 +1,6 @@
 import Lucide from '@react-native-vector-icons/lucide'
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { ImageBackground, Text, View } from 'react-native'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
@@ -12,6 +13,7 @@ const IndividualRecoveryCard = ({
     type: IndividualRecommendationEnum;
     data: ICheckInRecommendation["individualRecommendations"][IndividualRecommendationEnum.PHYSICAL] | ICheckInRecommendation["individualRecommendations"][IndividualRecommendationEnum.LACTATION] | ICheckInRecommendation["individualRecommendations"][IndividualRecommendationEnum.EMOTIONAL];
 }) => {
+    const { t } = useTranslation();
     return (
         <View
             style={{
@@ -48,7 +50,7 @@ const IndividualRecoveryCard = ({
 
                             }, globalStyles.fontBold]}
                         >
-                            {type === IndividualRecommendationEnum.PHYSICAL ? 'Physical Wellness' : type === IndividualRecommendationEnum.LACTATION ? 'Lactation Wellness' : 'Emotional Wellness'}
+                            {type === IndividualRecommendationEnum.PHYSICAL ? t('recovery.physicalWellness') : type === IndividualRecommendationEnum.LACTATION ? t('recovery.lactationWellness') : t('recovery.emotionalWellness')}
                         </Text>
                         <Text
                             style={[{
@@ -102,7 +104,7 @@ const IndividualRecoveryCard = ({
                                     flexShrink: 1,
                                     fontSize: 16
                                 }]}>
-                                    <Text style={globalStyles.fontBold}>Tips: </Text>
+                                    <Text style={globalStyles.fontBold}>{t('recovery.tipsLabel')}</Text>
                                     {data.recommendation.tips.join(', ')}
                                 </Text>
                             </View>
@@ -160,7 +162,7 @@ const IndividualRecoveryCard = ({
                                     flexShrink: 1,
                                     fontSize: 16
                                 }]}>
-                                    <Text style={globalStyles.fontBold}>Next: </Text>
+                                    <Text style={globalStyles.fontBold}>{t('recovery.nextLabel')}</Text>
                                     {data.recommendation.next.join(', ')}
                                 </Text>
                             </View>
@@ -218,7 +220,7 @@ const IndividualRecoveryCard = ({
                                     flexShrink: 1,
                                     fontSize: 16
                                 }]}>
-                                    <Text style={globalStyles.fontBold}>Celebrate: </Text>
+                                    <Text style={globalStyles.fontBold}>{t('recovery.celebrateLabel')}</Text>
                                     {data.recommendation.celebrate.join(', ')}
                                 </Text>
                             </View>

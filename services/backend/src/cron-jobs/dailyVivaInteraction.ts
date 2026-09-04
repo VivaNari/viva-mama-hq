@@ -21,7 +21,7 @@ export const dailyVivaInteraction = async (): Promise<void> => {
                 await sendPushNotification({
                     token: user.FCM_token,
                     title: "Ask Viva \uD83D\uDCAC",
-                    body: "Have a postpartum related question? Our chatbot Viva is here to help you every day! Tap to interact.",
+                    body: "Have a perinatal related question? Our chatbot Viva is here to help you every day! Tap to interact.",
                     data: {
                         type: "DAILY_VIVA_INTERACTION",
                     },

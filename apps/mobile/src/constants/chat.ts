@@ -18,6 +18,11 @@ export const NAVIGATION_DELAY_MS = 3000;
 export const DELIVERY_DATE_NODE_ID = "delivery_date";
 export const DOB_NODE_ID = "dob";
 
+// Synthetic node id for the grief-sensitive acknowledgement message shown when a
+// user reports a stillbirth. Distinct from the real "delivery_outcome" node so
+// the bubble can render dedicated support buttons.
+export const STILL_BIRTH_NODE_ID = "still_birth_support";
+
 // Minimum age (in years) a user must be to register a date of birth.
 export const MIN_AGE_YEARS = 18;
 
@@ -26,6 +31,14 @@ export const MIN_AGE_YEARS = 18;
 // ============================================
 
 export const NOT_PREGNANT_VALUE = "not_pragnent"; // Note: keeping original spelling for API compatibility
+
+// Termination reason returned by the backend when onboarding is ended early due
+// to a reported stillbirth.
+export const STILL_BIRTH_TERMINATION = "still_birth";
+
+// Prefix used to flag a Last Menstrual Period date submission on the
+// delivery_date node. Backend derives the expected delivery date from it.
+export const LMP_DATE_PREFIX = "lmp:";
 
 // ============================================
 // None Option Values (for multi-select)

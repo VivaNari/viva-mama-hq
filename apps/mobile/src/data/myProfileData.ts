@@ -1,46 +1,80 @@
 import { ISettingsMenu } from "../types/myProfile.types";
 
 export const settingsMenu: ISettingsMenu[] = [
+  // {
+  //   titleKey: "menu.addPartner",
+  //   icon: "user-round-plus",
+  //   componentName: "AddPartner",
+  //   descriptionKey: "menu.addPartnerDesc",
+  // },
+  // {
+  //   titleKey: "menu.notifications",
+  //   icon: "bell-ring",
+  //   componentName: "Notifications",
+  //   descriptionKey: "menu.notificationsDesc",
+  // },
+  // {
+  //   titleKey: "menu.settings",
+  //   icon: "cog",
+  //   componentName: "Settings",
+  //   descriptionKey: "menu.settingsDesc",
+  // },
   {
-    title: "Add Partner",
-    icon: "user-round-plus",
-    componentName: "AddPartner",
-    description: "Invite your partner to share your journey.",
+    titleKey: "menu.myConsultations",
+    icon: "calendar-clock",
+    componentName: "MyConsultations",
+    descriptionKey: "menu.myConsultationsDesc",
+  },
+  // Required by Play's Subscriptions policy: an app selling a subscription must offer an
+  // in-app way to manage and cancel it from account settings. The named violation is its
+  // absence, so this row has to be findable without hunting — hence near the top, rather
+  // than buried among the policy links.
+  {
+    titleKey: "menu.mySubscription",
+    icon: "credit-card",
+    componentName: "MySubscription",
+    descriptionKey: "menu.mySubscriptionDesc",
   },
   {
-    title: "Notifications",
-    icon: "bell-ring",
-    componentName: "Notifications",
-    description: "Stay updated with alerts and reminders.",
+    titleKey: "menu.language",
+    icon: "languages",
+    componentName: "",
+    action: "CHANGE_LANGUAGE",
+    descriptionKey: "menu.languageDesc",
   },
   {
-    title: "Settings",
-    icon: "cog",
-    componentName: "Settings",
-    description: "Manage your account and app preferences.",
-  },
-  {
-    title: "Privacy Policy",
+    titleKey: "menu.privacyPolicy",
     icon: "book-open-text",
     componentName: "https://vivamama.in/privacy-policy/",
-    description: "Learn how we protect and manage your data.",
+    descriptionKey: "menu.privacyPolicyDesc",
   },
   {
-    title: "Terms of Use",
+    titleKey: "menu.termsOfUse",
     icon: "book-open-text",
     componentName: "https://vivamama.in/terms-and-conditions/",
-    description: "Review the rules and guidelines.",
+    descriptionKey: "menu.termsOfUseDesc",
   },
   {
-    title: "Support",
+    titleKey: "menu.support",
     icon: "heart-handshake",
     componentName: "Support",
-    description: "Get help and reach out to our team.",
+    descriptionKey: "menu.supportDesc",
   },
   {
-    title: "About VivaMama",
+    titleKey: "menu.aboutVivaMama",
     icon: "info",
     componentName: "AboutVivaMama",
-    description: "Learn more about our mission and the app.",
+    descriptionKey: "menu.aboutVivaMamaDesc",
+  },
+  // Required by Play's User Data policy: an in-app path to delete the account and its
+  // data. Last in the list and styled destructively so it cannot be hit by accident
+  // while reaching for the row above it.
+  {
+    titleKey: "menu.deleteAccount",
+    icon: "trash-2",
+    componentName: "",
+    action: "DELETE_ACCOUNT",
+    descriptionKey: "menu.deleteAccountDesc",
+    destructive: true,
   },
 ];

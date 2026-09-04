@@ -2,9 +2,11 @@
 // (services/backend and packages/*).
 //
 // The React Native app (apps/mobile) keeps its framework-standard preset
-// (@react-native/eslint-config, eslintrc-style) as a necessary per-package
-// override; the Python service (services/chatbot) is linted by Ruff. Both are
-// ignored here. See CONTRIBUTING.md for the rationale.
+// (@react-native/eslint-config, eslintrc-style) and the admin console
+// (apps/admin) keeps its own flat config (React/perfectionist/import rules the
+// Node baseline has no use for) as necessary per-package overrides; the Python
+// service (services/chatbot) is linted by Ruff. All three are ignored here.
+// See CONTRIBUTING.md for the rationale.
 import tseslint from 'typescript-eslint';
 import prettier from 'eslint-config-prettier';
 import globals from 'globals';
@@ -19,6 +21,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.turbo/**',
       'apps/mobile/**', // React Native app self-lints (see apps/mobile/.eslintrc.js)
+      'apps/admin/**', // admin console self-lints (see apps/admin/eslint.config.mjs)
       'services/chatbot/**', // Python — linted by Ruff
       'services/backend/load-tests/**', // k6 scripts (non-standard globals)
       '**/*.config.js',

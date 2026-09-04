@@ -8,10 +8,7 @@ import { BecknRequest } from "../../types/beckn.types";
 // (local docker: http://localhost:8082, prod: the adapter's Cloud Run URL) so the
 // same code works everywhere. Errors are logged here, never thrown — the synchronous
 // ACK to the BAP has already been sent, so a callback failure must not crash the request.
-export const dispatchToBppCaller = async (
-    action: string,
-    payload: BecknRequest,
-): Promise<void> => {
+export const dispatchToBppCaller = async (action: string, payload: BecknRequest): Promise<void> => {
     const url = `${env.BECKN_BPP_CALLER_URL}/bpp/caller/${action}`;
     const transactionId = payload.context?.transactionId;
 

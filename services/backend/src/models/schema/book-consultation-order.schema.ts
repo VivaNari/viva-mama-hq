@@ -1,5 +1,7 @@
 import { Schema } from "mongoose";
 import { generalSchemaOptions } from "../../constants/model";
+import { EPreferredSlot } from "../../constants/consultation-slots";
+import { ConsultationTypeEnum } from "../../types/consultation.types";
 import {
     IBookConsultationOrder,
     TIBookConsultationOrderOrderStatus,
@@ -17,9 +19,20 @@ const bookConsultationOrderSchema: Schema<IBookConsultationOrder> =
             user_id: {
                 type: Schema.Types.ObjectId,
             },
-            expert_id: {
+            // Polymorphic: an expert or a care manager, resolved by consultation_type.
+            // Same dynamic-ref pattern as consultations.consultatorId.
+            consultant_id: {
                 type: Schema.Types.ObjectId,
-                ref: "experts",
+                ref: function (this: IBookConsultationOrder) {
+                    if (this.consultation_type === ConsultationTypeEnum.CARE_MANAGER)
+                        return "care_managers";
+                    return "experts";
+                },
+            },
+            consultation_type: {
+                type: String,
+                enum: Object.values(ConsultationTypeEnum),
+                default: ConsultationTypeEnum.EXPERT,
             },
             amount: {
                 type: Number,
@@ -42,6 +55,14 @@ const bookConsultationOrderSchema: Schema<IBookConsultationOrder> =
             },
             preferred_consultation_date: {
                 type: Date,
+            },
+            // Chosen before the payment sheet opens and parked here for the duration of
+            // the Razorpay round-trip, because the consultation that will carry it does
+            // not exist until the payment verifies.
+            preferred_slot: {
+                type: String,
+                enum: [...Object.values(EPreferredSlot), null],
+                default: null,
             },
         },
         generalSchemaOptions,

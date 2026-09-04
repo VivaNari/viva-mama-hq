@@ -168,3 +168,108 @@ These were intentionally **not** done in this pass and are safe follow-ups:
   suites (need service containers / a Groq key) — both are wired into CI.
 - **The chatbot answers from the LLM's own knowledge until a corpus is ingested**
   (see `data/SOURCES.md`).
+
+---
+
+# Second consolidation — September 2026
+
+The June migration was a snapshot. By September the three source repos had moved
+~130 commits ahead of it, and a fourth repo — the admin console — had never been
+imported at all. This pass brings all four current.
+
+## What changed
+
+| Component | Source branch | Graft commit | Commits replayed |
+| --- | --- | --- | --- |
+| `services/backend` | `feature/first-pilot-changes-play-billing` | `4be0b5c` | 50 |
+| `apps/admin` *(new)* | `feature/admin-panel` | — full history | 58 |
+| `services/chatbot` | `feature/chatbot-optimization` | `04dd43f` | 18 |
+| `apps/mobile` | `fix/first-pilot-changes-v2` | `1559b50` | 38 |
+
+Imports came from the current **feature-branch heads**, not `main` — that is where
+the work actually lives, and the admin console is non-functional without the
+backend's `/api/v1/admin/*` routes, which exist only on that branch.
+
+## Why a rebase, not a merge
+
+The monorepo was already published, with open Dependabot branches on `main`, so
+rewriting or force-pushing history was not an option. A plain merge was not an
+option either: June rewrote every source SHA with `git filter-repo`, so re-merging
+the sources would have replayed all 294 already-imported commits under fresh SHAs.
+
+Instead each source was re-scrubbed and re-rooted with the same `filter-repo`
+recipe, and only the post-graft commits were replayed with
+`git rebase --onto`. The rewrite proved deterministic: re-deriving the mobile
+graft produced `82b16d6`, byte-identical to the SHA June's migration produced, and
+`git merge-base --is-ancestor` confirms it sits on `main`.
+
+## Purged again
+
+The same classes of thing June removed had reaccumulated in the source repos:
+
+| Item | Where |
+| --- | --- |
+| `VivaMamaServiceAccountKey.json` — **live GCP key, tracked at HEAD** | backend |
+| `.env`, `src/.env` | backend |
+| `.env` — **tracked at HEAD** (Mongo URI, API key, Vertex project) | chatbot |
+| `data/**`, `lactmed.json`, `lactmed_data/` — ~260 MB third-party PDFs | chatbot |
+| `android/app/google-services.json` (+ `src/`) | mobile |
+| `index.android.bundle` — committed Metro artifact | mobile |
+| `yarn.lock` + `package-lock.json` — repo carried both; monorepo is pnpm-only | admin |
+| `.firebase/hosting.*.cache` — deploy artifact | admin |
+| `be.zip`, `apppp.txt`, `scratch.ts`, `'./logs',/*`, `.DS_Store` | backend |
+
+Pack sizes after: chatbot **261.80 MiB → 264.30 KiB**, admin 17.1 → 14.6 MB.
+
+**These credentials are still live in the source repos' history — rotate them at
+the provider.** Scrubbing this repo does not un-leak them.
+
+## Adaptations preserved through the replay
+
+Deliberate June decisions that replayed commits would otherwise have reverted:
+
+- `services/backend/src/config/firebase.ts` — Application Default Credentials, not
+  a committed key file. **Security-critical**; no replayed commit touches it.
+- `services/backend/Dockerfile` — root-context pnpm build, bakes no key.
+- `apps/mobile/metro.config.js` — monorepo-aware `watchFolders` / `nodeModulesPaths`.
+- `apps/mobile/src/constants/endpoints.ts` — `BASE_API_URL` from env. Replayed
+  commits repeatedly reintroduced the literal Cloud Run URL; each was rejected.
+- `@vivamama/*` package names, Apache-2.0 license fields, ESLint severity baselines.
+
+## Bugs found and fixed during the merge
+
+- **A duplicate `get_llm` import** (`services/chatbot/app/chains/`). Merging import
+  blocks left both `from app.llm.factory import get_llm` and
+  `from app.llm.groq_client import get_llm`; the second wins in Python, which would
+  have silently routed every call to Groq and made `LLM_PROVIDER` a no-op. Caught by
+  Ruff's `F811`, not by review.
+- **Seven Express 5 type errors** in the incoming admin/referral/consultation
+  handlers — `req.params` is `string | string[]`. These predate the monorepo: the
+  source repo's CI runs tests but never `tsc`.
+- **A gitleaks false positive**: `scripts/diagnose-play-api.ts` documents what each
+  Play Developer API status code means, and its plain-English description of a 401
+  reads to the `generic-api-key` heuristic as a high-entropy value following a
+  `key ...:` label. The script holds no credential — it loads the service-account
+  JSON from the environment and never prints it. Added `.gitleaks.toml` (the repo's
+  first) with an allowlist scoped to that single path and phrase, so it cannot mask
+  a real leak elsewhere.
+
+## Follow-ups still open
+
+- **`apps/mobile` has not been built.** Three new native modules
+  (`react-native-iap`, `react-native-nitro-modules`, `react-native-webview`) land on
+  a `node-linker=hoisted` layout that June never validated with a device build.
+  Static checks pass; that proves nothing about autolinking. **Run a real Android
+  build before trusting this.**
+- **Two admin screens still read fixtures** — `apps/admin/src/pages/content.tsx` and
+  `src/sections/mothers/view/mothers-view.tsx` import from `src/_mock`.
+  Consultations, moderation and auth are wired to the API.
+- **The monorepo tracks 70 `.pyc` files** under `services/chatbot` that the root
+  `.gitignore` already excludes — missed in June, untouched here.
+- **`ruff.toml` targets `py310`** while the chatbot Dockerfile now builds on 3.12.
+  Harmless (`pyproject` allows `>=3.10,<3.13`) but inconsistent.
+- **The chatbot image now bakes a ~2.3 GB embedding model.** Good for cold starts,
+  but it changes `docker compose up` and CI build times materially.
+- **`vivamama-devops` is still a separate repo** — 144 commits of Terraform/Ansible,
+  and the natural next member of this monorepo. Excluded here because its GCP
+  project configuration was not audited.

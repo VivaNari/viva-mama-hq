@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     View,
     TextInput,
@@ -32,12 +33,13 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     onDatePickerOpen,
     onMultiSelectSubmit,
 }) => {
+    const { t } = useTranslation();
     // Multi-select submit bar
     if (inputMode === 'multiSelect' && selectedOptionsCount > 0) {
         return (
             <View style={styles.container}>
                 <Text style={[styles.selectionText, globalStyles.fontMedium]}>
-                    {selectedOptionsCount} selected, click to submit
+                    {t('chat.selectedToSubmit', { count: selectedOptionsCount })}
                 </Text>
 
                 <TouchableOpacity
@@ -65,7 +67,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
 
     const isDateMode = inputMode === 'date';
     const isSendDisabled = inputText.trim().length === 0 || isLoading;
-    const placeholder = isDateMode ? 'Select a date' : 'Type your answer';
+    const placeholder = isDateMode ? t('chat.selectADate') : t('chat.typeAnswer');
 
     return (
         <View style={styles.container}>

@@ -7,8 +7,11 @@ import {
     IFlowInstance,
     IFlowNode,
     FlowInstanceStateEnum,
+    FlowLanguage,
+    DEFAULT_FLOW_LANGUAGE,
 } from "../../types/chat.types";
 import { EUserCategory, IUser } from "../../types";
+import { localizeFlowDefinition } from "../../utils/i18n/localizeFlowDefinition";
 import {
     ELIMINATION_INDICATORS,
     BREASTFEEDING_DEPENDENT_INDICATORS,
@@ -42,18 +45,28 @@ class FlowService {
     /**
      * Get published flow definition by slug
      */
-    async getFlowDefinition(slug: string = WEEKLY_CHECKIN_SLUG): Promise<IFlowDefinition | null> {
-        return flowDefinitionModel.findOne({
-            slug,
-            status: "PUBLISHED",
-        });
+    async getFlowDefinition(
+        slug: string = WEEKLY_CHECKIN_SLUG,
+        lang: FlowLanguage = DEFAULT_FLOW_LANGUAGE,
+    ): Promise<IFlowDefinition | null> {
+        const flowDefinition = await flowDefinitionModel
+            .findOne({
+                slug,
+                status: "PUBLISHED",
+            })
+            .sort({ version: -1, createdAt: -1 });
+        return flowDefinition ? localizeFlowDefinition(flowDefinition, lang) : null;
     }
 
     /**
      * Get flow definition by ID
      */
-    async getFlowDefinitionById(flowDefId: string): Promise<IFlowDefinition | null> {
-        return flowDefinitionModel.findById(flowDefId);
+    async getFlowDefinitionById(
+        flowDefId: string,
+        lang: FlowLanguage = DEFAULT_FLOW_LANGUAGE,
+    ): Promise<IFlowDefinition | null> {
+        const flowDefinition = await flowDefinitionModel.findById(flowDefId);
+        return flowDefinition ? localizeFlowDefinition(flowDefinition, lang) : null;
     }
 
     /**

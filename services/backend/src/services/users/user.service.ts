@@ -4,12 +4,26 @@ import { StatusCodes } from "http-status-codes";
 import env from "../../config/env";
 import { NNWomanRecoveryScoreText } from "../../constants/NNWomenRecoveryScoreText";
 import { caremanager } from "../../constants/careManager";
+import { CARE_MANAGER_DEFAULT_REMUNERATION } from "../../constants/care-manager";
 import { messages } from "../../constants/messages";
+import careManagerModel from "../../models/care-manager.model";
 import { recoveryScoreBriefInfo } from "../../constants/recoveryScoreBriefInfo";
 import { significance } from "../../constants/significance";
 import OTPModel from "../../models/opt.model";
 import UserModel from "../../models/user.model";
-import { IGoogleLoginPayload, IUser } from "../../types";
+import flowInstanceModel from "../../models/flowInstance.model";
+import { WEEKLY_CHECKIN_SLUG } from "../../constants/chat";
+import { FlowInstanceStateEnum } from "../../types/chat.types";
+import { EUserCategory } from "../../types/user.types";
+import {
+    calculatePostpartumState,
+    daysLeftToAnswer,
+    isCheckinEligibleWeek,
+    MAX_CHECKIN_WEEK,
+} from "../../utils/functions/postpartumWeek";
+import { entitlementService } from "../entitlements/entitlement.service";
+import { ESubscriptionTier } from "../../types/subscription.types";
+import { EUserRole, IGoogleLoginPayload, IUser } from "../../types";
 import sendResponse from "../../utils/commonFunctions/sendResponse";
 import { generateJWT } from "../../utils/functions/generateJWT";
 import BaseService from "../base.service";
@@ -30,31 +44,129 @@ export default class UserService extends BaseService<IUser> {
         super(UserModel);
     }
 
+    /**
+     * The check-in that is open for the user's current week, if any.
+     *
+     * Open means the instance exists and is not finished — PENDING (created by the week
+     * job, never opened) or ACTIVE (started, partly answered). Returns null once she
+     * completes it, which is what flips the dashboard from "complete your check-in" to
+     * "next check-in in N days".
+     */
+    private resolveActiveCheckin = async (
+        user: IUser | null,
+    ): Promise<{ week: number; state: string; daysLeft: number } | null> => {
+        const deliveryDate = user?.onboarding_data?.delivery_date;
+        if (!user || !deliveryDate) return null;
+
+        // Postpartum only, questionnaire finished, and inside the window the start
+        // endpoint will actually accept (weeks 1-52).
+        if (user.user_category !== EUserCategory.PP) return null;
+        if (!user.is_onboarded?.is_questionnaire_completed) return null;
+
+        const state = calculatePostpartumState(deliveryDate as Date);
+        if (!isCheckinEligibleWeek(state)) return null;
+
+        // FREE has no check-in entitlement. resolveTier is date-lazy and reads the
+        // snapshot already on `user`, so this costs no extra query.
+        if (entitlementService.resolveTier(user) === ESubscriptionTier.FREE) return null;
+
+        const instance = await flowInstanceModel
+            .findOne({
+                userId: user._id,
+                flowSlug: WEEKLY_CHECKIN_SLUG,
+                postpartumWeek: state.weeks,
+            })
+            .select("state postpartumWeek")
+            .lean();
+
+        // Already done, or its week lapsed before she got to it.
+        if (
+            instance &&
+            instance.state !== FlowInstanceStateEnum.PENDING &&
+            instance.state !== FlowInstanceStateEnum.ACTIVE
+        ) {
+            return null;
+        }
+
+        // No row yet is still OPEN, not closed. Two real cases reach here: the nightly job
+        // has not run for this week, and — the one that actually costs money — she
+        // upgraded from FREE partway through the week, so no instance was ever created
+        // for her. Reporting null would have left a paying user staring at a disabled
+        // button until midnight. The start endpoint creates the instance on demand.
+        return {
+            week: state.weeks,
+            state: instance?.state ?? FlowInstanceStateEnum.PENDING,
+            daysLeft: daysLeftToAnswer(state),
+        };
+    };
+
+    /**
+     * True once she is past the end of the 52-week programme.
+     *
+     * The app hides the check-in section entirely on this rather than testing the week
+     * number itself — the ceiling lives in one place on the server, so extending the
+     * programme later is a server change, not an app-store release.
+     *
+     * Distinct from `active_checkin === null`, which also means "already done this week"
+     * and should still show the countdown to the next one.
+     */
+    private isCheckinProgrammeOver = (user: IUser | null): boolean => {
+        const deliveryDate = user?.onboarding_data?.delivery_date;
+        if (!user || !deliveryDate || user.user_category !== EUserCategory.PP) return false;
+
+        const state = calculatePostpartumState(deliveryDate as Date);
+        return state.mode === "postpartum" && state.weeks > MAX_CHECKIN_WEEK;
+    };
+
     getUserbyAuthToken = async (req: Request, res: Response) => {
         try {
             if (!req.user) {
                 throw new Error(messages.USER_FETCH_FAILED);
             }
             const user = await UserModel.findById(req.user._id).lean();
-            let np_weeks;
-            if (user?.user_category === "NP") {
-                const now = new Date();
-                const due = new Date(user.onboarding_data.delivery_date as Date);
 
-                const diffMs = due.getTime() - now.getTime();
+            // `np_weeks` is weeks REMAINING until the due date — a different quantity
+            // from the gestational age in current_weekdays.weeks. The NP dashboard reads
+            // it for "your baby is coming in N weeks".
+            //
+            // This used to `return 0` when the due date had passed, which returned from
+            // the handler without ever sending a response: the request simply hung.
+            let np_weeks = 0;
+            const deliveryDate = user?.onboarding_data?.delivery_date;
 
-                if (diffMs <= 0) return 0; // already delivered or due today
-
-                const weeks = diffMs / (1000 * 60 * 60 * 24 * 7);
-                np_weeks = Math.ceil(weeks); // round up (medical-friendly)
+            if (user?.user_category === EUserCategory.NP && deliveryDate) {
+                np_weeks = calculatePostpartumState(deliveryDate as Date).npWeeksRemaining;
             }
+            // Whether a check-in is open right now, and for how much longer.
+            //
+            // The due-day counters alone cannot answer this — they are pure date maths and
+            // say nothing about whether she already completed it. Without this the app can
+            // only guess, which is why the dashboard button was gated on
+            // `upcoming_checkin_due_days === 0` and so unlocked for exactly one day a week
+            // instead of the whole week.
+            const active_checkin = await this.resolveActiveCheckin(user);
+            const checkin_programme_ended = this.isCheckinProgrammeOver(user);
+
+            // The app needs the counsellor's fee to render "Pay ₹99" and to open a
+            // Razorpay order when the user has no credit. Read from the document rather
+            // than shipped as a constant, so changing a rate is a DB edit; the constant
+            // remains the fallback for the window before the backfill has run.
+            const careManagerDoc = await careManagerModel
+                .findById(caremanager.id)
+                .select("remuneration")
+                .lean();
+
             sendResponse({
                 data: {
-                    user: { ...user, np_weeks },
+                    user: { ...user, np_weeks, active_checkin, checkin_programme_ended },
                     significance,
                     recoveryScoreBriefInfo,
                     NNWomanRecoveryScoreText,
-                    caremanager,
+                    caremanager: {
+                        ...caremanager,
+                        remuneration:
+                            careManagerDoc?.remuneration ?? CARE_MANAGER_DEFAULT_REMUNERATION,
+                    },
                 },
                 message: messages.USER_FETCHED_SUCCESSFULLY,
                 response: res,
@@ -143,7 +255,12 @@ export default class UserService extends BaseService<IUser> {
             otpDoc.verified = true;
             await otpDoc.save();
 
-            let user = await UserModel.findOne({ mobile_number });
+            // Same exclusion as the Google path: a staff account must never be
+            // reachable through patient login, whatever it happens to hold.
+            let user = await UserModel.findOne({
+                mobile_number,
+                role: { $ne: EUserRole.SUPER_ADMIN },
+            });
 
             if (!user) {
                 user = await UserModel.create({
@@ -206,11 +323,21 @@ export default class UserService extends BaseService<IUser> {
                 updateData.$push = { consents: { $each: consents } };
             }
 
-            const user = await UserModel.findOneAndUpdate({ email: email }, updateData, {
-                upsert: true,
-                new: true,
-                setDefaultsOnInsert: true,
-            });
+            // Staff accounts are keyed on this same `email` field. Without the role
+            // exclusion, signing in here with an administrator's address would resolve
+            // to their document and mint a token carrying role SUPER_ADMIN — the admin
+            // password would be bypassable through Google. Excluded, this upserts a
+            // separate ordinary account instead, which the admin-only partial index on
+            // `email` permits.
+            const user = await UserModel.findOneAndUpdate(
+                { email: email, role: { $ne: EUserRole.SUPER_ADMIN } },
+                updateData,
+                {
+                    upsert: true,
+                    new: true,
+                    setDefaultsOnInsert: true,
+                },
+            );
 
             if (!user) {
                 return res.status(404).json({ message: "User could not be created/found" });

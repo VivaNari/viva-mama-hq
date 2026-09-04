@@ -25,6 +25,42 @@ jest.mock("../src/utils/logger", () => ({
     },
 }));
 
+/**
+ * The controller checks the user's check-in entitlement before starting one, which needs
+ * both a flow-instance lookup and the entitlement service. Both are stubbed here so these
+ * stay controller unit tests — the gate's own behaviour is covered against a real
+ * database in entitlement.enforcement.test.ts.
+ *
+ * The lookup reads the instance's STATE, not merely whether a row exists. That
+ * distinction is the whole fix: the week job pre-creates every check-in in PENDING, so an
+ * existence check matched before the user had touched anything and the trial's
+ * single-use quota was never spent. `null` here means "no row yet", which is also a new
+ * check-in, so it spends the allowance.
+ */
+const flowInstanceFindOneMock = jest.fn().mockResolvedValue(null);
+jest.mock("../src/models/flowInstance.model", () => ({
+    __esModule: true,
+    default: {
+        findOne: (...args: unknown[]) => ({
+            select: () => ({ lean: () => flowInstanceFindOneMock(...args) }),
+        }),
+    },
+}));
+
+const consumeCapabilityMock = jest.fn().mockResolvedValue({
+    used: 1,
+    limit: null,
+    remaining: null,
+});
+const assertCapabilityMock = jest.fn().mockResolvedValue("PREMIUM");
+jest.mock("../src/services/entitlements/entitlement.service", () => ({
+    __esModule: true,
+    entitlementService: {
+        consumeCapability: (...args: unknown[]) => consumeCapabilityMock(...args),
+        assertCapability: (...args: unknown[]) => assertCapabilityMock(...args),
+    },
+}));
+
 import WeeklyCheckinController from "../src/api/v1/controllers/weekly-checkin-v1/weekly-checkin.controller";
 
 /**
@@ -52,6 +88,8 @@ describe("WeeklyCheckinController", () => {
 
     beforeEach(() => {
         jest.clearAllMocks();
+        // clearAllMocks wipes the implementation too; restore the "no instance yet" default.
+        flowInstanceFindOneMock.mockResolvedValue(null);
         controller = new WeeklyCheckinController();
     });
 
@@ -111,6 +149,148 @@ describe("WeeklyCheckinController", () => {
             });
             expect(res.status).toHaveBeenCalledWith(200);
             expect(res.json).toHaveBeenCalledWith(payload);
+        });
+
+        /**
+         * REGRESSION: this endpoint starts the onboarding questionnaire as well as the
+         * weekly check-in. Gating it wholesale locked new users out of onboarding — which
+         * they must finish before they can even choose a tier — with "weekly check-in is
+         * a premium feature". Only `weekly-checkin-v1` may be gated.
+         */
+        it("does not consume a check-in entitlement for the onboarding flow", async () => {
+            const payload: WeeklyCheckinResponse = {
+                success: true,
+                message: "ok",
+                data: {
+                    flowInstanceId: "fi-onb",
+                    week: 1,
+                    isCompleted: false,
+                    nextQuestion: null,
+                    progress: { answered: 0, total: 3 },
+                },
+            };
+            weeklyCheckinServiceMocks.startCheckin.mockResolvedValue(payload);
+            const req = {
+                user: { _id: { toString: () => "user-1" } },
+                body: { week: 1, flowSlug: "onboarding-flow-v2" },
+            } as unknown as Request;
+            const res = createMockResponse();
+
+            await controller.startCheckin(req, res);
+
+            expect(consumeCapabilityMock).not.toHaveBeenCalled();
+            expect(assertCapabilityMock).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(200);
+        });
+
+        it("does gate the weekly check-in flow", async () => {
+            weeklyCheckinServiceMocks.startCheckin.mockResolvedValue({
+                success: true,
+                message: "ok",
+                data: {
+                    flowInstanceId: "fi-1",
+                    week: 5,
+                    isCompleted: false,
+                    nextQuestion: null,
+                    progress: { answered: 0, total: 3 },
+                },
+            } as WeeklyCheckinResponse);
+            const req = {
+                user: { _id: { toString: () => "user-1" } },
+                body: { week: 5, flowSlug: WEEKLY_CHECKIN_SLUG },
+            } as unknown as Request;
+            const res = createMockResponse();
+
+            await controller.startCheckin(req, res);
+
+            expect(assertCapabilityMock).toHaveBeenCalled();
+        });
+
+        /**
+         * REGRESSION: the week job pre-creates every check-in in PENDING before the user
+         * has touched it. The gate used to ask `flowInstance.exists({userId, week})`,
+         * which that pre-created row satisfied — so `consumeCapability` was never called
+         * on the normal path and the trial's one-check-in-per-period limit did nothing at
+         * all. A trial user could do a check-in every week, indefinitely.
+         */
+        it("spends the allowance when the week job pre-created the check-in", async () => {
+            flowInstanceFindOneMock.mockResolvedValue({ state: "PENDING" });
+            weeklyCheckinServiceMocks.startCheckin.mockResolvedValue({
+                success: true,
+                message: "ok",
+                data: {
+                    flowInstanceId: "fi-1",
+                    week: 5,
+                    isCompleted: false,
+                    nextQuestion: null,
+                    progress: { answered: 0, total: 3 },
+                },
+            } as WeeklyCheckinResponse);
+            const req = {
+                user: { _id: { toString: () => "user-1" } },
+                body: { week: 5, flowSlug: WEEKLY_CHECKIN_SLUG },
+            } as unknown as Request;
+
+            await controller.startCheckin(req, createMockResponse());
+
+            expect(consumeCapabilityMock).toHaveBeenCalled();
+        });
+
+        /**
+         * The other half of the same fix: resuming a check-in she already started must
+         * not bill her twice. Losing connection mid-flow cannot cost a trial user her
+         * single allowance.
+         */
+        it("does not spend the allowance when resuming an ACTIVE check-in", async () => {
+            flowInstanceFindOneMock.mockResolvedValue({ state: "ACTIVE" });
+            weeklyCheckinServiceMocks.startCheckin.mockResolvedValue({
+                success: true,
+                message: "ok",
+                data: {
+                    flowInstanceId: "fi-1",
+                    week: 5,
+                    isCompleted: false,
+                    nextQuestion: null,
+                    progress: { answered: 1, total: 3 },
+                },
+            } as WeeklyCheckinResponse);
+            const req = {
+                user: { _id: { toString: () => "user-1" } },
+                body: { week: 5, flowSlug: WEEKLY_CHECKIN_SLUG },
+            } as unknown as Request;
+
+            await controller.startCheckin(req, createMockResponse());
+
+            expect(assertCapabilityMock).toHaveBeenCalled();
+            expect(consumeCapabilityMock).not.toHaveBeenCalled();
+        });
+
+        /**
+         * The lookup must be scoped by flow slug. Onboarding instances also carry a
+         * postpartumWeek, so an unscoped query could match one and skip the meter.
+         */
+        it("scopes the instance lookup to the check-in flow", async () => {
+            weeklyCheckinServiceMocks.startCheckin.mockResolvedValue({
+                success: true,
+                message: "ok",
+                data: {
+                    flowInstanceId: "fi-1",
+                    week: 5,
+                    isCompleted: false,
+                    nextQuestion: null,
+                    progress: { answered: 0, total: 3 },
+                },
+            } as WeeklyCheckinResponse);
+            const req = {
+                user: { _id: { toString: () => "user-1" } },
+                body: { week: 5, flowSlug: WEEKLY_CHECKIN_SLUG },
+            } as unknown as Request;
+
+            await controller.startCheckin(req, createMockResponse());
+
+            expect(flowInstanceFindOneMock).toHaveBeenCalledWith(
+                expect.objectContaining({ flowSlug: WEEKLY_CHECKIN_SLUG, postpartumWeek: 5 }),
+            );
         });
 
         it("passes custom flowSlug to the service", async () => {
@@ -241,7 +421,7 @@ describe("WeeklyCheckinController", () => {
             expect(res.json).toHaveBeenCalledWith({ error: "Invalid week parameter" });
         });
 
-        it("returns 400 when neither selectedKeys nor freeText is provided", async () => {
+        it("returns 400 when no selection or freeText is provided", async () => {
             const req = {
                 user: { _id: { toString: () => "user-1" } },
                 body: {
@@ -258,8 +438,48 @@ describe("WeeklyCheckinController", () => {
             expect(weeklyCheckinServiceMocks.processAnswer).not.toHaveBeenCalled();
             expect(res.status).toHaveBeenCalledWith(400);
             expect(res.json).toHaveBeenCalledWith({
-                error: "Either selectedKeys or freeText must be provided",
+                error: "Either selectedValues, selectedKeys or freeText must be provided",
             });
+        });
+
+        it("returns 400 when selectedValues is not an array", async () => {
+            const req = {
+                user: { _id: { toString: () => "user-1" } },
+                body: {
+                    flowInstanceId: "fi",
+                    nodeId: "n1",
+                    week: 5,
+                    selectedValues: "anemia",
+                },
+            } as unknown as Request;
+            const res = createMockResponse();
+
+            await controller.processAnswer(req, res);
+
+            expect(weeklyCheckinServiceMocks.processAnswer).not.toHaveBeenCalled();
+            expect(res.status).toHaveBeenCalledWith(400);
+            expect(res.json).toHaveBeenCalledWith({ error: "selectedValues must be an array" });
+        });
+
+        it("forwards selectedValues to the service", async () => {
+            weeklyCheckinServiceMocks.processAnswer.mockResolvedValue({ success: true });
+            const req = {
+                user: { _id: { toString: () => "user-1" } },
+                body: {
+                    flowInstanceId: "fi",
+                    nodeId: "pregnancy_conditions",
+                    week: 5,
+                    selectedValues: ["anemia"],
+                    selectedKeys: [0],
+                },
+            } as unknown as Request;
+            const res = createMockResponse();
+
+            await controller.processAnswer(req, res);
+
+            expect(weeklyCheckinServiceMocks.processAnswer).toHaveBeenCalledWith(
+                expect.objectContaining({ selectedValues: ["anemia"], selectedKeys: [0] }),
+            );
         });
 
         it("calls service and returns 200 on success", async () => {
@@ -387,7 +607,11 @@ describe("WeeklyCheckinController", () => {
 
             await controller.getCurrentState(req, res);
 
-            expect(weeklyCheckinServiceMocks.getCurrentState).toHaveBeenCalledWith("user-1", 5);
+            expect(weeklyCheckinServiceMocks.getCurrentState).toHaveBeenCalledWith(
+                "user-1",
+                5,
+                undefined,
+            );
             expect(res.status).toHaveBeenCalledWith(200);
             expect(res.json).toHaveBeenCalledWith(state);
         });

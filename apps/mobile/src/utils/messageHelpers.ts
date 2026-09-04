@@ -10,6 +10,7 @@ import {
   DOB_NODE_ID,
   MIN_AGE_YEARS,
   NONE_OPTION_VALUES,
+  STILL_BIRTH_NODE_ID,
 } from "../constants/chat";
 
 /**
@@ -62,6 +63,14 @@ export const isDeliveryDateNode = (message: IChatMessage): boolean => {
  */
 export const isDobNode = (message: IChatMessage): boolean => {
   return isAiMessage(message) && message.id === DOB_NODE_ID;
+};
+
+/**
+ * Check if message is the special stillbirth support node (grief-sensitive
+ * terminal message that offers expert/AI support buttons).
+ */
+export const isStillBirthNode = (message: IChatMessage): boolean => {
+  return isAiMessage(message) && message.id === STILL_BIRTH_NODE_ID;
 };
 
 /**
@@ -192,11 +201,26 @@ export const getSelectedLabels = (
 };
 
 /**
- * Extract scores from selected options
+ * Extract scores from selected options.
+ *
+ * NOTE: a score is a clinical weight, NOT an identifier — several options in a
+ * node routinely share one. Never use scores to tell the server which option was
+ * picked; use `getSelectedValues` for that.
  */
 export const getSelectedScores = (
   selectedIds: Set<string>,
   options: IOption[],
 ): number[] => {
   return getSelectedOptions(selectedIds, options).map(opt => opt.score);
+};
+
+/**
+ * Extract the `value` tokens of the selected options — the identity the server
+ * resolves answers by. Unique within a node, unlike `score`.
+ */
+export const getSelectedValues = (
+  selectedIds: Set<string>,
+  options: IOption[],
+): string[] => {
+  return getSelectedOptions(selectedIds, options).map(opt => opt.value);
 };

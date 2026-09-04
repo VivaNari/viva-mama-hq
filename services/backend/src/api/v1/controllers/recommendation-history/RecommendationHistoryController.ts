@@ -6,6 +6,8 @@ import { IRecommendationHistory } from "../../../../types/recommendation-history
 import { StatusCodes } from "http-status-codes";
 import { messages } from "../../../../constants/messages";
 import UserModel from "../../../../models/user.model";
+import { resolveLanguage } from "../../../../utils/i18n/localizeFlowDefinition";
+import { localizeRecommendationHistory } from "../../../../utils/i18n/localizeRecommendationHistory";
 
 export default class RecommendationhistoryController {
     private recommendationHistoryService: RecommendationHistoryService;
@@ -21,6 +23,7 @@ export default class RecommendationhistoryController {
             throw new Error(messages.USER_FETCH_FAILED);
         }
         const user = await UserModel.findById(request.user._id);
+        const lang = resolveLanguage(request.query.lang, user?.preferred_language);
 
         try {
             const instance: IRecommendationHistory[] = await this.recommendationHistoryService.find(
@@ -30,8 +33,9 @@ export default class RecommendationhistoryController {
                     populate: "recommendationId",
                 },
             );
+            const localized = instance.map((doc) => localizeRecommendationHistory(doc, lang));
             sendResponse({
-                data: instance,
+                data: localized,
                 statusCode: StatusCodes.OK,
                 success: true,
                 message: messages.RECOMMENDATION_RETRIEVED_SUCCESS,

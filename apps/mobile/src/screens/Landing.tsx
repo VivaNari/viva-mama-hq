@@ -1,5 +1,6 @@
 import { MaterialDesignIcons } from '@react-native-vector-icons/material-design-icons';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -7,10 +8,11 @@ import { useAuth } from '../context/AuthContext';
 import { colors } from '../public/assets/colors';
 import { globalStyles, landingStyles } from '../public/styles';
 
+import { Linking, Modal } from 'react-native';
 import { CURRENT_VERSIONS } from '../context/AuthContext';
-import { Modal, Linking } from 'react-native';
 
 const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
+    const { t } = useTranslation();
     const { signInWithGoogle } = useAuth();
     const [getLoading, setLoading] = useState<boolean>(false);
     const [isModalVisible, setIsModalVisible] = useState<boolean>(false);
@@ -35,8 +37,8 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
             console.error("Google sign-in cancelled or failed", e);
             Toast.show({
                 type: 'error',
-                text1: 'Error',
-                text2: "Google sign-in cancelled or failed!",
+                text1: t('common.error'),
+                text2: t('landing.googleSignInFailed'),
                 position: 'top'
             });
         } finally {
@@ -78,27 +80,27 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
                         <View style={{ width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 20, gap: 15 }}>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Text style={[globalStyles.fontBold, { fontSize: 20, color: colors.darkPurple, flex: 1 }]}>Before You Begin</Text>
+                                <Text style={[globalStyles.fontBold, { fontSize: 20, color: colors.darkPurple, flex: 1 }]}>{t('landing.disclaimerTitle')}</Text>
                                 <TouchableOpacity onPress={() => setShowDisclaimerModal(false)}>
                                     <MaterialDesignIcons name="close" size={24} color={colors.black} />
                                 </TouchableOpacity>
                             </View>
 
                             <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
-                                VivaMama is a postpartum wellness and education companion. It is not a medical device and does not diagnose, treat, cure, or prevent any medical condition.
+                                {t('landing.disclaimerBody1')}
                             </Text>
                             <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
-                                Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.
+                                {t('landing.disclaimerBody2')}
                             </Text>
                             <Text style={[globalStyles.fontRegular, { fontSize: 14, color: colors.black }]}>
-                                In an emergency, contact your doctor or local emergency services immediately.
+                                {t('landing.disclaimerBody3')}
                             </Text>
 
                             <TouchableOpacity
                                 onPress={handleAcceptDisclaimer}
                                 style={{ padding: 12, borderRadius: 30, backgroundColor: colors.darkPurple, marginTop: 10 }}
                             >
-                                <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.white }]}>I Understand</Text>
+                                <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.white }]}>{t('landing.understand')}</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
@@ -112,9 +114,9 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                 >
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)' }}>
                         <View style={{ width: '85%', backgroundColor: 'white', borderRadius: 20, padding: 20, gap: 20 }}>
-                            <Text style={[globalStyles.fontBold, { fontSize: 20, textAlign: 'center', color: colors.darkPurple }]}>User Agreement</Text>
+                            <Text style={[globalStyles.fontBold, { fontSize: 20, textAlign: 'center', color: colors.darkPurple }]}>{t('landing.userAgreement')}</Text>
                             <Text style={[globalStyles.fontRegular, { fontSize: 14, textAlign: 'center', color: colors.black }]}>
-                                Please review and agree to our terms before continuing with Google.
+                                {t('landing.consentIntro')}
                             </Text>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 5 }}>
@@ -130,19 +132,19 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                 </TouchableOpacity>
                                 <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
                                     <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
-                                        I agree to the{' '}
+                                        {t('auth.agreeTo')}
                                     </Text>
                                     <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
                                         <Text style={[globalStyles.fontSemiBold, { fontSize: 13, color: colors.darkPurple, textDecorationLine: 'underline' }]}>
-                                            Privacy Policy
+                                            {t('auth.privacyPolicy')}
                                         </Text>
                                     </TouchableOpacity>
                                     <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
-                                        {' '}and{' '}
+                                        {t('auth.and')}
                                     </Text>
                                     <TouchableOpacity onPress={() => Linking.openURL(TERMS_OF_USE_URL)}>
                                         <Text style={[globalStyles.fontSemiBold, { fontSize: 13, color: colors.darkPurple, textDecorationLine: 'underline' }]}>
-                                            Terms of Use
+                                            {t('auth.termsOfUse')}
                                         </Text>
                                     </TouchableOpacity>
                                 </View>
@@ -161,7 +163,7 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                 </TouchableOpacity>
                                 <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
                                     <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
-                                        I confirm that I am 18 years of age or older.
+                                        {t('auth.ageConfirm')}
                                     </Text>
                                 </View>
                             </View>
@@ -171,14 +173,14 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                     onPress={() => setIsModalVisible(false)}
                                     style={{ flex: 1, padding: 12, borderRadius: 30, borderWidth: 1, borderColor: colors.gray }}
                                 >
-                                    <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.gray }]}>Cancel</Text>
+                                    <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.gray }]}>{t('common.cancel')}</Text>
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     onPress={handleGoogleLogin}
                                     disabled={!isConsentChecked || !isAgeConsentChecked || getLoading}
                                     style={{ flex: 1, padding: 12, borderRadius: 30, backgroundColor: (isConsentChecked && isAgeConsentChecked) ? colors.darkPurple : colors.gray }}
                                 >
-                                    <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.white }]}>Continue</Text>
+                                    <Text style={[globalStyles.fontSemiBold, { textAlign: 'center', color: colors.white }]}>{t('common.continue')}</Text>
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -191,16 +193,17 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                 }}>
                     <Image
                         source={require('../public/assets/images/viva_logo.png')}
+                        resizeMode='contain'
                         style={{
-
+                            width: 250,
                         }}
                     />
                 </View>
 
                 {/* Welcome Text */}
                 <View>
-                    <Text style={[landingStyles.welcomeText, globalStyles.fontBold]}>Welcome, Mama</Text>
-                    <Text style={[landingStyles.welcomeCaption, globalStyles.fontRegular]}>Your complete companion for postpartum care and recovery.</Text>
+                    <Text style={[landingStyles.welcomeText, globalStyles.fontBold]}>{t('landing.welcome')}</Text>
+                    <Text style={[landingStyles.welcomeCaption, globalStyles.fontRegular]}>{t('landing.welcomeCaption')}</Text>
                 </View>
 
                 {/* Login Options */}
@@ -234,7 +237,7 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                     fontSize: 18
                                 }, globalStyles.fontSemiBold]}
                             >
-                                Continue with Google
+                                {t('landing.continueWithGoogle')}
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -263,7 +266,7 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                     fontSize: 18
                                 }, globalStyles.fontSemiBold]}
                             >
-                                Continue with Phone
+                                {t('landing.continueWithPhone')}
                             </Text>
                         </View>
                     </TouchableOpacity>
@@ -280,7 +283,7 @@ const Landing = ({ navigation }: { navigation: { navigate: any } }) => {
                                 ...globalStyles.fontRegular
                             }}
                         >
-                            Build Number: 014718012026
+                            Build Number: 093701092026
                         </Text>
                     </View>
                 </View>

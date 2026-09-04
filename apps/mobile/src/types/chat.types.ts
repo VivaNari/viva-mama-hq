@@ -32,6 +32,16 @@ export interface IOption {
   score: number;
 }
 
+/**
+ * An expert the AI recommended in its answer. Already validated server-side against
+ * the experts this user is allowed to see, so it is always safe to deep-link.
+ */
+export interface ISuggestedExpert {
+  expertId: string;
+  name: string;
+  speciality?: string;
+}
+
 export interface IAiMessage {
   type: "ai";
   id: string;
@@ -45,6 +55,8 @@ export interface IAiMessage {
   uuid: string;
   sessionId?: string;
   conversationId?: string;
+  /** Drives the "Connect" button under the bubble. Empty or absent means no button. */
+  suggestedExperts?: ISuggestedExpert[];
 }
 
 export interface IUserMessage {
@@ -73,6 +85,7 @@ export interface ISSEMessageData {
   message?: string;
   sessionId?: string;
   conversationId?: string;
+  suggestedExperts?: ISuggestedExpert[];
 }
 
 // ============================================
@@ -161,10 +174,20 @@ export interface ChatBubbleProps {
   onMultiOptionToggle: (option: IOption, allOptions: IOption[]) => void;
   selectedMultiOptions: Set<string>;
   onDatePickerOpen: () => void;
+  onLmpDatePickerOpen: () => void;
   onNotPregnantSelect: () => void;
+  onConsultExpert: () => void;
+  onChatWithViva: () => void;
   onAnimationComplete?: () => void;
   onBookmarkPress: (id: string) => void;
   isBookmarked?: boolean;
+  /**
+   * Flag this AI reply as offensive or harmful. Required by Play's AI-Generated
+   * Content policy: reporting model output must be possible without leaving the app.
+   */
+  onFlagPress?: (id: string) => void;
+  /** Opens the recommended expert's details screen. Omit to hide the button. */
+  onConnectExpert?: (expertId: string) => void;
 }
 
 export interface ChatInputBarProps {

@@ -39,16 +39,32 @@ describe("onboarding flow config (FLOW_SLUGS + flowTypeResolver)", () => {
     expect(shouldClearHistoryOnComplete(FlowType.ONBOARDING)).toBe(false);
   });
 
-  it("redirects onboarding completion to Services", () => {
+  // Was "Services". The referral step moved ahead of the plan catalog, because a code
+  // can attach a subscription and asking for it afterwards would have her pay for what
+  // it would have given her free. ReferralCode forwards to Services itself when no code
+  // is entered or the code grants nothing.
+  it("redirects onboarding completion to ReferralCode", () => {
     expect(getCompletionRedirect(FlowType.ONBOARDING)).toEqual({
-      screen: "Services",
+      screen: "ReferralCode",
       delay: 5000,
+    });
+  });
+
+  /**
+   * resolveFlowConfig honours a route slug, so an already-onboarded user handed the
+   * onboarding slug (an FCM deep link can supply one) runs that flow inside AppStack —
+   * where ReferralCode is not a registered route. Resetting to it there would throw.
+   */
+  it("sends an already-onboarded user home instead, where ReferralCode does not exist", () => {
+    expect(getCompletionRedirect(FlowType.ONBOARDING, true)).toEqual({
+      screen: "DashboardTabNavigator",
+      delay: 3000,
     });
   });
 
   it("uses onboarding completion copy from getCompletionMessage", () => {
     const { title, message } = getCompletionMessage(FlowType.ONBOARDING);
-    expect(title).toBe("Complete");
-    expect(message).toContain("onboarding");
+    expect(title).toBe("chat.completeTitle");
+    expect(message).toBe("chat.completeMessageOnboarding");
   });
 });

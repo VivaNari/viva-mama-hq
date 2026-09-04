@@ -1,7 +1,6 @@
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
 import logger from "../../utils/logger";
-import redisSubscriberService from "../redis/redis-subscriber.service";
 
 /**
  * Dead letter entry for failed jobs
@@ -88,23 +87,21 @@ class ScorePublisherService {
                 // Transform responses to indicators
                 const indicators = await this.transformToIndicators(flowInstanceId);
 
-                // Publish to Redis
+                // Publish and return. The subscriber — initialized at boot in index.ts —
+                // picks the job up and runs it off the request path.
+                //
+                // This used to publish AND then `await handleScoreProcess(...)` directly,
+                // which ran the whole pipeline twice for every check-in: once through
+                // pub/sub and once inline. That produced two recommendation_history rows
+                // and two "your score is ready" pushes per completion, and the awaited
+                // inline call is what made the final chat message hang while scoring,
+                // fetching a recommendation per language, and writing history.
                 await redisPublisherService.publishScoreJob(
                     userId,
                     indicators,
                     fcmToken,
                     flowInstanceId,
                 );
-
-                const message = JSON.stringify({
-                    userId,
-                    indicators,
-                    FCM_token: fcmToken,
-                    flowInstanceId,
-                    timestamp: new Date().toISOString(),
-                });
-
-                await redisSubscriberService.handleScoreProcess(message);
 
                 logger.info(
                     { userId, flowInstanceId, attempt: attempt + 1 },

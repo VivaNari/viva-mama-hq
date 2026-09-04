@@ -1,7 +1,12 @@
 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as React from 'react';
-import SubscriptionDetails from '../../components/SubscriptionDetails';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, View } from 'react-native';
+import { useLanguage } from '../../context/LanguageContext';
+import LanguageSelection from '../../screens/LanguageSelection';
+// The legacy hardcoded-plan screen is replaced by the server-driven catalog.
+import SubscriptionDetails from '../../screens/Subscription';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
 import AddPartner from '../../screens/AddPartner';
@@ -25,10 +30,15 @@ import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
 import { DashboardTabs } from '../tabs/DashboardTabs';
 import ChatWithVivaAi from '../../screens/ChatWithVivaAI';
 import ProductDetails from '../../screens/ProductDetails';
-import Services from '../../screens/Services copy';
+// The 'Services' route showed hardcoded plans and mock product data; it now renders
+// the same server-driven catalog as SubscriptionDetails.
+import Services from '../../screens/Subscription';
 import ConsultationRating from '../../screens/ConsultationRating';
+import MyConsultations from '../../screens/MyConsultations';
+import MySubscription from '../../screens/MySubscription';
 import BookmarkedMessages from '../../screens/BookmarkedMessages';
 import AboutVivaMama from '../../screens/AboutVivaMama';
+import AboutVivaAI from '../../screens/AboutVivaAI';
 import Support from '../../screens/Support';
 import AboutRecoveryScore from '../../screens/AboutRecoveryScore';
 import MoodLog from '../../screens/MoodLog';
@@ -36,8 +46,24 @@ import MoodLog from '../../screens/MoodLog';
 const Stack = createNativeStackNavigator();
 
 const AppStack = () => {
+    const { t } = useTranslation();
+    const { hasSelectedLanguage, isLanguageReady } = useLanguage();
+
+    // Wait for the saved-language read so we don't flash the dashboard before
+    // routing pre-feature users (who never chose) to the mandatory gate.
+    if (!isLanguageReady) {
+        return (
+            <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: colors.pageBG }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+        );
+    }
+
+    const initialRouteName = hasSelectedLanguage ? "DashboardTabNavigator" : "LanguageSelection";
+
     return (
         <Stack.Navigator
+            initialRouteName={initialRouteName}
             screenOptions={{
                 animation: "fade_from_bottom",
                 statusBarAnimation: "slide",
@@ -48,6 +74,14 @@ const AppStack = () => {
                 }
             }}
         >
+            {/* Mandatory gate for users who predate the feature and never chose
+                a language; replaces itself with the dashboard once chosen. */}
+            <Stack.Screen
+                name="LanguageSelection"
+                component={LanguageSelection}
+                options={{ headerShown: false }}
+                initialParams={{ mode: "gate", next: "DashboardTabNavigator" }}
+            />
 
             <Stack.Screen
                 name="DashboardTabNavigator"
@@ -57,7 +91,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: "Recommendations"
+                    title: t('nav.recommendations')
                 }}
                 name="Recommendations"
                 component={Recommendations}
@@ -65,7 +99,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: "Recommendation Detials"
+                    title: t('nav.recommendationDetails')
                 }}
                 name="RecommendationDetails"
                 component={RecommendationDetails}
@@ -73,7 +107,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: "Full Report"
+                    title: t('nav.fullReport')
                 }}
                 name="FullReport"
                 component={FullReport}
@@ -82,7 +116,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Suggested Products',
+                    title: t('nav.suggestedProducts'),
                 }}
                 name="Products"
                 component={Products}
@@ -99,7 +133,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Content',
+                    title: t('nav.content'),
                 }}
                 name="Content"
                 component={ArticleContent}
@@ -115,7 +149,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: "Bookmarked Messages"
+                    title: t('nav.bookmarkedMessages')
                 }}
                 name="BookmarkedMessages"
                 component={BookmarkedMessages}
@@ -123,15 +157,17 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Viva Club',
+                    title: t('nav.vivaClub'),
                 }}
                 name="VivaClub"
                 component={VivaClubPost}
             />
             <Stack.Screen
                 options={{
-                    headerShown: true,
-                    title: 'Viva Club Post',
+                    // The screen renders its own header so the comment box can sit inside a
+                    // KeyboardAvoidingView that spans the full window (same as ChatWithVivaAI).
+                    headerShown: false,
+                    title: t('nav.vivaClubPost'),
                 }}
                 name="VivaClubPostDetails"
                 component={VivaClubPostDetails}
@@ -139,7 +175,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Create Post',
+                    title: t('nav.createPost'),
                 }}
                 name="CreatePost"
                 component={CreatePost}
@@ -147,7 +183,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Articles',
+                    title: t('nav.articles'),
                 }}
                 name="CategoryArticles"
                 component={CategoryArticles}
@@ -155,7 +191,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Articles',
+                    title: t('nav.articles'),
                 }}
                 name="SubCategoryArticles"
                 component={SubCategoryArticles}
@@ -171,7 +207,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Expert Details',
+                    title: t('nav.expertDetails'),
                 }}
                 name="ExpertDetails"
                 component={ExpertDetails}
@@ -179,7 +215,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Subscription Details',
+                    title: t('nav.subscriptionDetails'),
                 }}
                 name="SubscriptionDetails"
                 component={SubscriptionDetails}
@@ -194,7 +230,7 @@ const AppStack = () => {
             />
             <Stack.Screen
                 options={{
-                    headerShown: false,
+                    headerShown: true,
                     title: 'My Profile',
                 }}
                 name="MyProfile"
@@ -203,7 +239,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Edit Profile',
+                    title: t('nav.editProfile'),
                 }}
                 name="EditProfile"
                 component={EditProfile}
@@ -211,7 +247,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Add Partner',
+                    title: t('nav.addPartner'),
                 }}
                 name="AddPartner"
                 component={AddPartner}
@@ -219,7 +255,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Notifications',
+                    title: t('nav.notifications'),
                 }}
                 name="Notifications"
                 component={Notifications}
@@ -227,7 +263,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'About VivaMama',
+                    title: t('nav.aboutVivaMama'),
                 }}
                 name="AboutVivaMama"
                 component={AboutVivaMama}
@@ -235,7 +271,14 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Support',
+                }}
+                name="AboutVivaAI"
+                component={AboutVivaAI}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: t('nav.support'),
                 }}
                 name="Support"
                 component={Support}
@@ -244,7 +287,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Feeding Log',
+                    title: t('nav.feedingLog'),
                 }}
                 name="FeedingLog"
                 component={FeedingLog}
@@ -252,7 +295,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Vaccination Log',
+                    title: t('nav.vaccinationLog'),
                 }}
                 name="VaccinationLog"
                 component={VaccinationLog}
@@ -260,7 +303,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Consultation Rating',
+                    title: t('nav.consultationRating'),
                 }}
                 name="ConsultationRating"
                 component={ConsultationRating}
@@ -268,7 +311,25 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'About Viva Recovery Score',
+                    title: t('nav.myConsultations'),
+                }}
+                name="MyConsultations"
+                component={MyConsultations}
+            />
+            {/* Registered here only, so the screen uses a literal `edges` array rather
+                than useScreenEdges — there is no second context for it to resolve. */}
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: t('nav.mySubscription'),
+                }}
+                name="MySubscription"
+                component={MySubscription}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: t('nav.aboutRecoveryScore'),
                 }}
                 name="AboutRecoveryScore"
                 component={AboutRecoveryScore}
@@ -276,7 +337,7 @@ const AppStack = () => {
             <Stack.Screen
                 options={{
                     headerShown: true,
-                    title: 'Mood Log',
+                    title: t('nav.moodLog'),
                 }}
                 name="MoodLog"
                 component={MoodLog}

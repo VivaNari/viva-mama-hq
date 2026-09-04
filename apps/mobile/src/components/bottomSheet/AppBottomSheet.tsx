@@ -1,9 +1,9 @@
-// AppBottomSheet.tsx
 import {
     BottomSheetModal,
     BottomSheetBackdrop,
-    BottomSheetView,
+    BottomSheetScrollView,
 } from '@gorhom/bottom-sheet'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import React, {
     createContext,
     useContext,
@@ -27,6 +27,7 @@ export const BottomSheetProvider = ({
 }) => {
     const bottomSheetRef = useRef<BottomSheetModal>(null)
     const [content, setContent] = useState<React.ReactNode>(null)
+    const insets = useSafeAreaInsets()
 
     const snapPoints = useMemo(() => ['50%', '75%'], [])
 
@@ -108,9 +109,18 @@ export const BottomSheetProvider = ({
                     console.log('[BottomSheet] onChange:', index)
                 }}
             >
-                <BottomSheetView style={{ padding: 20, minHeight: 200 }}>
+                {/* A sheet snapped to 50%/75% still reaches the bottom of the window, so
+                    its last content sits under the gesture bar without insets.bottom.
+                    20 is the design padding; the inset is added on top of it. */}
+                <BottomSheetScrollView
+                    contentContainerStyle={{
+                        padding: 20,
+                        paddingBottom: 20 + insets.bottom,
+                        minHeight: 200,
+                    }}
+                >
                     {content}
-                </BottomSheetView>
+                </BottomSheetScrollView>
             </BottomSheetModal>
         </BottomSheetContext.Provider>
     )

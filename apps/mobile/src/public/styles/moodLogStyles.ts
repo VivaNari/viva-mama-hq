@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
-import { colors } from '../assets/colors';
+import { StyleSheet } from "react-native";
+import { colors } from "../assets/colors";
 
 export const moodLogStyles = StyleSheet.create({
   screen: {
@@ -14,13 +14,17 @@ export const moodLogStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.white,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
+  // Horizontal list content container. Never give this `flex: 1` — it pins the
+  // content to the viewport width, so every date before today is laid out past the
+  // left edge with no scrollable extent to reach it. The range is always at least
+  // FALLBACK_DAYS_BACK long, so it overflows the screen and needs no flex at all.
   stripList: {
     paddingHorizontal: 12,
     gap: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   dateChip: {
     width: 54,
@@ -29,8 +33,8 @@ export const moodLogStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.lightGray,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   dateChipSelected: {
     backgroundColor: colors.SubscriptionOptionsBG,
@@ -70,8 +74,8 @@ export const moodLogStyles = StyleSheet.create({
     borderRadius: 22,
     marginRight: 12,
     marginLeft: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: colors.SubscriptionOptionsBG,
   },
 
@@ -86,34 +90,34 @@ export const moodLogStyles = StyleSheet.create({
   selectedDateLabel: {
     fontSize: 18,
     color: colors.text,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 4,
   },
   prompt: {
     fontSize: 14,
     color: colors.darkGray,
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 18,
   },
 
   // ---- Hero ----
   hero: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 8,
   },
   heroCircle: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 10,
   },
   heroEmoji: {
     fontSize: 52,
     lineHeight: 62,
-    textAlign: 'center',
-    textAlignVertical: 'center',
+    textAlign: "center",
+    textAlignVertical: "center",
     includeFontPadding: false,
   },
   heroLabel: {
@@ -124,28 +128,28 @@ export const moodLogStyles = StyleSheet.create({
     fontSize: 13,
     color: colors.darkGray,
     marginTop: 4,
-    textAlign: 'center',
+    textAlign: "center",
   },
 
   // ---- Scattered bubble cluster ----
   cluster: {
     height: 220,
     marginVertical: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
   },
   bubble: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginHorizontal: 4,
   },
   bubbleCircle: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 999,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
     backgroundColor: colors.white,
     shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
@@ -157,7 +161,7 @@ export const moodLogStyles = StyleSheet.create({
     fontSize: 11,
     color: colors.darkGray,
     marginTop: 6,
-    textAlign: "center"
+    textAlign: "center",
   },
   bubbleLabelSelected: {
     color: colors.darkPurple,
@@ -168,7 +172,7 @@ export const moodLogStyles = StyleSheet.create({
     marginTop: 20,
     borderRadius: 14,
     paddingVertical: 15,
-    alignItems: 'center',
+    alignItems: "center",
     backgroundColor: colors.darkPurple,
   },
   saveButtonDisabled: {
@@ -181,9 +185,9 @@ export const moodLogStyles = StyleSheet.create({
   deleteButton: {
     marginTop: 14,
     minHeight: 50,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     borderRadius: 14,
     paddingVertical: 13,
@@ -204,14 +208,14 @@ export const moodLogStyles = StyleSheet.create({
   // ---- Empty / loading ----
   centerFill: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     padding: 24,
   },
   emptyText: {
     fontSize: 14,
     color: colors.darkGray,
-    textAlign: 'center',
+    textAlign: "center",
     marginTop: 10,
   },
 });

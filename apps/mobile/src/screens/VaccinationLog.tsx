@@ -11,6 +11,7 @@ import { VACCINATION_DATA } from '../data/infantVacineData';
 import { globalStyles } from '../public/styles';
 import { styles } from '../public/styles/infantStyles';
 import { Tab, ToggleSwitchProps, VaccinationData, VaccineCardProps, VaccineStatus } from '../types/infantVaccine.types';
+import { AnalyticsEvent, track } from '../analytics';
 
 
 const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ vaccineName, status, onToggle }) => {
@@ -58,6 +59,10 @@ const VaccinationLogScreen: React.FC = () => {
     const [vaccinationData, setVaccinationData] = useState<VaccinationData>(VACCINATION_DATA);
 
     const handleToggle = (vaccineName: string, newStatus: VaccineStatus) => {
+        // The vaccine name and status are a child's medical record, so only the
+        // fact that the schedule was touched is logged. Worth logging even though
+        // this screen has no persistence yet: it shows whether anyone uses it.
+        track(AnalyticsEvent.VACCINATION_LOG_UPDATED);
         setVaccinationData((prevData) => {
             const updatedVaccines = prevData[activeTab].map((vaccine) =>
                 vaccine.name === vaccineName ? { ...vaccine, status: newStatus } : vaccine
@@ -69,7 +74,7 @@ const VaccinationLogScreen: React.FC = () => {
     const tabs: Tab[] = ['Birth', '6 Weeks', '10 Weeks'];
 
     return (
-        <SafeAreaView style={globalStyles.container}>
+        <SafeAreaView style={globalStyles.container} edges={['bottom', 'left', 'right']}>
 
             <View style={styles.tabContainer}>
                 {tabs.map((tab) => (

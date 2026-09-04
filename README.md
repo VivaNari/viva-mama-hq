@@ -28,10 +28,12 @@ round out the experience.
 flowchart LR
   subgraph Client
     M["📱 apps/mobile<br/>React Native + TS"]
+    A["🖥️ apps/admin<br/>React + Vite"]
   end
 
   subgraph Backend["services/backend — Node + TS (Express 5)"]
     API["REST + SSE API<br/>/api/v1"]
+    ADMIN["Admin API<br/>/api/v1/admin"]
     SCORE["Score &amp; Recommendation engines"]
   end
 
@@ -53,7 +55,9 @@ flowchart LR
   SHARED["📦 packages/contracts<br/>shared API + types"]
 
   M -- "HTTPS / SSE" --> API
+  A -- "HTTPS" --> ADMIN
   M -. "imports" .-> SHARED
+  A -. "imports" .-> SHARED
   API -. "imports" .-> SHARED
   API --> SCORE
   API --> MDB
@@ -68,6 +72,9 @@ flowchart LR
 
 - **apps/mobile** — the customer app (Android/iOS). Talks to the backend over HTTPS
   and Server-Sent Events (streamed chat/check-ins).
+- **apps/admin** — the staff operations console: consultation scheduling and the
+  content-moderation queue. A static React/Vite SPA against `/api/v1/admin/*`,
+  which is the one route group that enforces `SUPER_ADMIN`.
 - **services/backend** — the system of record: auth, onboarding, check-ins, the
   Score & Recommendation engines, payments, messaging, and chat orchestration.
 - **services/chatbot** — a retrieval-augmented assistant grounded in a
@@ -109,7 +116,8 @@ docker compose up --build
 ```
 
 This brings up MongoDB, Redis, the **backend** (`:4000`), and the **chatbot**
-(`:8001`). The mobile app runs separately (Metro/native — see below).
+(`:8001`). The two clients run separately: the mobile app via Metro/native and the
+admin console via Vite (`:3039`) — see below.
 
 ### Run a single service
 
@@ -118,10 +126,12 @@ This brings up MongoDB, Redis, the **backend** (`:4000`), and the **chatbot**
 | Backend | `cp services/backend/.env.example services/backend/.env` → `pnpm --filter @vivamama/backend dev` → http://localhost:4000/health |
 | Chatbot | `cp services/chatbot/.env.example services/chatbot/.env` → `cd services/chatbot && uv sync && uv run uvicorn app.api.main:app --reload --port 8001` |
 | Mobile | `cp apps/mobile/.env.example apps/mobile/.env` → `pnpm --filter @vivamama/mobile start` then `… android` / `… ios` |
+| Admin | `cp apps/admin/.env.example apps/admin/.env` → `pnpm --filter @vivamama/admin dev` → http://localhost:3039 |
 
 Each package has its own README with full details:
-[mobile](./apps/mobile/README.md) · [backend](./services/backend/README.md) ·
-[chatbot](./services/chatbot/README.md) · [contracts](./packages/contracts/README.md).
+[mobile](./apps/mobile/README.md) · [admin](./apps/admin/README.md) ·
+[backend](./services/backend/README.md) · [chatbot](./services/chatbot/README.md) ·
+[contracts](./packages/contracts/README.md).
 
 ## Repository layout
 

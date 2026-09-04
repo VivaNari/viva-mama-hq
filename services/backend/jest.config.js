@@ -19,6 +19,10 @@ module.exports = {
 
   testMatch: ["**/__tests__/**/*.test.ts"],
 
+  // Must be setupFiles, not setupFilesAfterEnv: src/config/env.ts snapshots process.env
+  // at import time, so anything running after the module graph loads is too late.
+  setupFiles: ["<rootDir>/__tests__/helpers/testEnv.ts"],
+
   detectOpenHandles: true,
 
 };

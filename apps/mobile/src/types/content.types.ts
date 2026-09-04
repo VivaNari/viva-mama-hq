@@ -32,14 +32,24 @@ export interface IUserContentresponse {
   data: IUserContent[];
   message: string;
 }
+export enum ContentGroupEnum {
+  GLOBAL_HEALTH = "GLOBAL_HEALTH",
+  WEEKLY_RECOVERY = "WEEKLY_RECOVERY",
+}
+
 export interface IUserContent {
   _id: string;
   featuredImage: string;
   featuredTitle: string;
-  category: UserCategoryEnum;
+  /** An article can serve several audiences, e.g. both PP and NP. */
+  category: UserCategoryEnum[];
+  contentGroup: ContentGroupEnum;
   authors: IExpert[];
   reviewers: IExpert[];
-  contentBody: IContentBody[];
+  /** Absent on locked items — the server strips the body rather than relying on the UI to hide it. */
+  contentBody?: IContentBody[];
+  /** Set by the server when the user's tier does not include this article. */
+  isLocked?: boolean;
 }
 
 export enum ContentBodyTypeEnum {

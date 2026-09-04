@@ -8,6 +8,21 @@ dotenv.config();
 
 import env from "../../config/env";
 
+/**
+ * Pino level -> Cloud Logging LogSeverity.
+ *
+ * Only the levels pino actually emits are listed; anything else falls back to DEFAULT
+ * rather than being dropped. https://cloud.google.com/logging/docs/reference/v2/rest/v2/LogEntry#LogSeverity
+ */
+const PINO_LEVEL_TO_CLOUD_SEVERITY: Record<string, string> = {
+    trace: "DEBUG",
+    debug: "DEBUG",
+    info: "INFO",
+    warn: "WARNING",
+    error: "ERROR",
+    fatal: "CRITICAL",
+};
+
 export function createPinoConfig(): LoggerOptions {
     const config: LoggerOptions = {
         name: env.SERVICE_NAME,
@@ -59,7 +74,21 @@ export function createPinoConfig(): LoggerOptions {
         if (config.level === "debug" || config.level === "trace") {
             config.level = "info";
         }
-        config.formatters!.level = (label: string) => ({ level: label });
+
+        // Cloud Logging reads the message from `message` and the level from `severity`.
+        // Pino's defaults are `msg` and a numeric `level`, so on Cloud Run every
+        // structured log rendered as a BLANK LINE in the log viewer and no severity
+        // filter ever matched. The entries were in Cloud Logging the whole time, just
+        // invisible in the default view — which is why a failing Play purchase looked
+        // like it produced no logs at all.
+        //
+        // messageKey is set here rather than in the base config so local development
+        // keeps pino's own conventions (and pino-pretty keeps working).
+        config.messageKey = "message";
+        config.formatters!.level = (label: string) => ({
+            level: label,
+            severity: PINO_LEVEL_TO_CLOUD_SEVERITY[label] ?? "DEFAULT",
+        });
     }
 
     if (env.isTest()) {

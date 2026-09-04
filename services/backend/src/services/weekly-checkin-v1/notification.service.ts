@@ -2,7 +2,8 @@ import admin from "../../config/firebase";
 import { sendPushNotification } from "../../utils/sendPushNotification";
 import { IFlowDefinition, IFlowInstance, IFlowNode } from "../../types/chat.types";
 import { IUser } from "../../types";
-import { WEEKLY_CHECKIN_NOTIFICATIONS, CHECKIN_SSE_EVENTS } from "../../constants/chat";
+import { getCheckinNotification, CHECKIN_SSE_EVENTS } from "../../constants/chat";
+import { resolveLanguage } from "../../utils/i18n/localizeFlowDefinition";
 import logger from "../../utils/logger";
 
 /**
@@ -40,10 +41,14 @@ class NotificationService {
         }
 
         try {
+            const copy = getCheckinNotification(
+                "NEW_CHECKIN",
+                resolveLanguage(user.preferred_language),
+            );
             await sendPushNotification({
                 token: user.FCM_token,
-                title: WEEKLY_CHECKIN_NOTIFICATIONS.NEW_CHECKIN.title,
-                body: WEEKLY_CHECKIN_NOTIFICATIONS.NEW_CHECKIN.body,
+                title: copy.title,
+                body: copy.body,
                 data: {
                     type: "WEEKLY_CHECKIN",
                     week: week.toString(),
@@ -77,10 +82,14 @@ class NotificationService {
         }
 
         try {
+            const copy = getCheckinNotification(
+                "REMINDER",
+                resolveLanguage(user.preferred_language),
+            );
             await sendPushNotification({
                 token: user.FCM_token,
-                title: WEEKLY_CHECKIN_NOTIFICATIONS.REMINDER.title,
-                body: WEEKLY_CHECKIN_NOTIFICATIONS.REMINDER.body,
+                title: copy.title,
+                body: copy.body,
                 data: {
                     type: "WEEKLY_CHECKIN_REMINDER",
                     week: week.toString(),
@@ -106,10 +115,14 @@ class NotificationService {
         }
 
         try {
+            const copy = getCheckinNotification(
+                "COMPLETED",
+                resolveLanguage(user.preferred_language),
+            );
             await sendPushNotification({
                 token: user.FCM_token,
-                title: WEEKLY_CHECKIN_NOTIFICATIONS.COMPLETED.title,
-                body: WEEKLY_CHECKIN_NOTIFICATIONS.COMPLETED.body,
+                title: copy.title,
+                body: copy.body,
                 data: {
                     type: "WEEKLY_CHECKIN_COMPLETED",
                     week: week.toString(),

@@ -28,14 +28,14 @@ export const logsReminders = async (): Promise<void> => {
                 });
 
                 // Send Sleep Log reminder
-                await sendPushNotification({
-                    token: user.FCM_token,
-                    title: "How did you sleep? \uD83D\uDE34",
-                    body: "We hope you had a restful night. Tap to track your sleep now.",
-                    data: {
-                        type: "SLEEP_LOG_REMINDER",
-                    },
-                });
+                // await sendPushNotification({
+                //     token: user.FCM_token,
+                //     title: "How did you sleep? \uD83D\uDE34",
+                //     body: "We hope you had a restful night. Tap to track your sleep now.",
+                //     data: {
+                //         type: "SLEEP_LOG_REMINDER",
+                //     },
+                // });
 
                 logger.info({ userId: user._id }, "Sent daily log reminders");
             } catch (error) {
