@@ -7,9 +7,13 @@ monorepo's working tree.
 **Question this answers:** does the monorepo contain what the individual repos
 contain, given that the individual repos run correctly today?
 
-**Short answer, re-checked 2026-09-04:** the *application code* is at parity,
+**Short answer, re-checked 2026-09-05:** the *application code* is at parity,
 and — after two passes that specifically hunted for gitignored-but-essential
 files (§1.5, §1.6) — so is everything the running app actually reads from disk.
+A fresh hash-by-hash re-comparison on 2026-09-05 (workflows and `.md` files
+excluded, per standing instruction that those are non-functional) found only
+14 backend / 3 chatbot / 6 admin / 7 mobile files differing, all listed in §3
+with a reason — everything else (over 1,250 files) is byte-identical to source.
 The one remaining gap is the *deployment automation*: no CI/CD workflow from any
 source repo exists here (§1.1).
 
@@ -312,25 +316,29 @@ comparisons in §3/§4 are still current as of this pass.
 
 Every content difference below is an intentional change, not drift.
 
-### `services/backend` — 13 files
+### `services/backend` — 14 files
 
 | File | Why it differs |
 | --- | --- |
-| `src/config/firebase.ts` | **Security.** Uses Application Default Credentials instead of importing a committed key file. Must not be reverted. |
+| `src/config/firebase.ts` | **Security.** Resolves credentials via `FIREBASE_SA_KEY_JSON` (Secret Manager) or ADC, instead of importing a committed key file. Must not be reverted — see §1.3b. |
+| `src/config/env.ts` | Purely additive: one new line reading `FIREBASE_SA_KEY_JSON` (added 2026-09-03 alongside firebase.ts, undocumented here until 2026-09-05). Nothing else in the file changed. |
 | `Dockerfile` | Root-context pnpm build so `@vivamama/contracts` resolves; bakes no key. |
 | `package.json` | `@vivamama/backend`, Apache-2.0, `contracts` workspace dep, `typecheck` script, no `husky` prepare. |
 | `src/utils/logger/transports/index.ts` | pino transport return-type fix so `tsc` passes. |
 | 9 controllers / routes | Express 5 types `req.params` as `string \| string[]`; casts added so `tsc --noEmit` passes. Affects `admin`, `referral-admin`, `care-manager`, `chat-flow`, `consultation`, `expert`, `support`, `users`, `expert.route`. |
 
-### `apps/mobile` — 5 files
+### `apps/mobile` — 7 files
 
 | File | Why it differs |
 | --- | --- |
 | `src/constants/endpoints.ts` | **Security.** `BASE_API_URL` read from env; the source hard-codes the production Cloud Run URL. |
 | `metro.config.js` | Monorepo-aware `watchFolders` + `nodeModulesPaths`. Required under pnpm. |
-| `package.json` | `@vivamama/mobile`; flat-config-disabled lint script. |
+| `package.json` | `@vivamama/mobile`; flat-config-disabled lint script; `react-native-reanimated` pinned to exact `4.2.1` (2026-09-05 — see below). |
 | `.eslintrc.js` | Inherited-debt rules downgraded to warnings. |
 | `README.md` | Monorepo paths and commands. |
+| `android/settings.gradle`, `android/app/build.gradle` | **Fixed 2026-09-05.** Both hard-coded `@react-native/gradle-plugin` and `react-native` at a path only correct for a standalone repo (`apps/mobile/node_modules/...`); under pnpm's `node-linker=hoisted` those packages live at the workspace root instead. Repointed to the correct relative depth (3-4 `../` more than the original). Verified with a real `./gradlew :app:assembleDebug` that got past both the plugin-resolution and `reactNativeDir` failure points. |
+
+**Also found and fixed 2026-09-05, not a path issue:** `package.json`'s `"react-native-reanimated": "^4.2.1"` was resolving to `4.4.1` here — newer than what the source repo's `package-lock.json` actually pins (`4.2.1`) — because no lockfile pin survived the migration to carry that resolution over. Reanimated's own `compatibility.json` restricts `4.4.x` to RN `0.83`–`0.86`; this app is on RN `0.81.1`, so the Gradle build failed a hard version-compatibility assertion (`assertMinimalReactNativeVersionTask`). Pinned to the exact `4.2.1` the source repo actually uses; confirmed compatible per Reanimated's own table (`4.2.x` supports `0.80`–`0.84`).
 
 `android/gradlew.bat` initially appeared to differ — it is byte-identical. The
 source repo's `.gitattributes` normalises CRLF on store, so the blob hashes
@@ -342,7 +350,7 @@ differ while the files do not.
 | --- | --- |
 | `src/api/admin.ts` | Imports paths from `@vivamama/contracts` instead of hard-coding four API routes. |
 | `vite.config.ts` | Aliases `@vivamama/contracts` to its TypeScript source — the package compiles to CommonJS for the Node services, which Rollup cannot statically read. |
-| `package.json` | `@vivamama/admin`, Apache-2.0 (the `licence` key was misspelled), `typecheck` script, contracts dep, yarn-specific scripts removed. |
+| `package.json` | `@vivamama/admin`, Apache-2.0 (the `licence` key was misspelled), `typecheck` script, contracts dep, yarn-specific scripts removed; `react`/`react-dom` pinned to exact `19.1.0` (2026-09-04 — fixed a hoisted-workspace version mismatch where `react-dom` alone floated to `19.2.8`). |
 | `chart.tsx`, `label/styles.tsx`, `theme/core/components.tsx` | `Number(theme.shape.borderRadius)` — MUI 7.3 widened the type to `number \| string`. The source pins 7.0.1 via npm/yarn locks, which pnpm cannot consume in a workspace. |
 
 ### `services/chatbot` — 3 files (after identical Ruff normalisation)
@@ -354,7 +362,17 @@ differ while the files do not.
 | `app/rag/loaders.py` | A dead `last_exception` store, removed by June's Ruff pass. |
 
 The other 34 changed Python files are **formatting only** — identical once the
-source is run through this repo's `ruff check --fix` + `ruff format`.
+source is run through this repo's `ruff check --fix` + `ruff format`. Re-verified
+2026-09-05 with `ruff.toml` at the correct project root (my first attempt at
+this re-check ran ruff one directory too deep, which changes its import-sort
+first-party detection and produced 12 false positives — corrected before
+reporting).
+
+`.env.example` also differs, harmlessly: the monorepo's copy documents the
+current Vertex-AI-default config; the source repo's own `.env.example` is
+stale (still documents the old Groq-only setup) **and has a real-looking Groq
+API key hardcoded in plaintext.** Not a monorepo issue, but worth rotating that
+key and scrubbing the source repo's file independently of this migration.
 
 ---
 
