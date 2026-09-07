@@ -1,0 +1,53 @@
+name: Backend — Deploy to Cloud Run (UAT)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        default: latest
+
+concurrency:
+  group: backend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GCP_REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
+  GAR_REPO: ${{ vars.GAR_REPO || 'vivamama-repo' }}
+  IMAGE_NAME: vivamama-backend
+  CLOUD_RUN_SERVICE: nodejs-api
+
+jobs:
+  deploy:
+    name: Deploy backend to Cloud Run
+    runs-on: ubuntu-latest
+    # Scopes secrets to this environment and lets you add a required reviewer in
+    # repo settings without touching this file.
+    environment: uat-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/gcp-auth
+        with:
+          credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+          project_id: ${{ secrets.UAT_GCP_PROJECT_ID }}
+
+      # --set-secrets is passed on every deploy rather than being set once by
+      # hand: FIREBASE_SA_KEY_JSON is new since the monorepo move (it replaces
+      # the service-account key file the old image baked in), and a console-only
+      # setting would silently vanish the next time the service is recreated.
+      - name: Deploy to Cloud Run
+        run: |
+          IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_PROJECT_ID }}/${GAR_REPO}/${IMAGE_NAME}:${{ inputs.image_tag }}"
+          echo "Deploying image: ${IMAGE_URI}"
+
+          gcloud run deploy "${CLOUD_RUN_SERVICE}" \
+            --image="${IMAGE_URI}" \
+            --region="${GCP_REGION}" \
+            --platform=managed \
+            --project="${{ secrets.UAT_GCP_PROJECT_ID }}" \
+            --set-secrets="FIREBASE_SA_KEY_JSON=FIREBASE_SA_KEY_JSON:latest"

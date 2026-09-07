@@ -3,6 +3,21 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock')
 );
 
+// react-native-iap pulls in react-native-nitro-modules, which requires a real
+// native TurboModule binding that doesn't exist in the Jest environment ("Failed
+// to get NitroModules"). playBilling.ts only touches these 8 named exports, so
+// mock the package directly rather than trying to make its native layer runnable.
+jest.mock('react-native-iap', () => ({
+  initConnection: jest.fn().mockResolvedValue(true),
+  endConnection: jest.fn().mockResolvedValue(true),
+  fetchProducts: jest.fn().mockResolvedValue([]),
+  getAvailablePurchases: jest.fn().mockResolvedValue([]),
+  finishTransaction: jest.fn().mockResolvedValue(undefined),
+  requestPurchase: jest.fn().mockResolvedValue(undefined),
+  purchaseErrorListener: jest.fn(() => ({ remove: jest.fn() })),
+  purchaseUpdatedListener: jest.fn(() => ({ remove: jest.fn() })),
+}));
+
 // Firebase App mock (prevents native crashes)
 jest.mock('@react-native-firebase/app', () => {
   const firebaseApp = {

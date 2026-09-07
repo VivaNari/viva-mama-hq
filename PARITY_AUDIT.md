@@ -36,7 +36,7 @@ source repo exists here (§1.1).
 
 ## 1. Gaps that need action
 
-### 1.1 All six CI/CD workflows are absent — **highest impact**
+### 1.1 All six CI/CD workflows are absent — ✅ PORTED 2026-09-06
 
 Not one deployment workflow from any source repo exists here. The June migration
 consolidated CI at the repo root and dropped the per-service `.github/`
@@ -72,6 +72,47 @@ They also cannot be copied across unchanged. They assume the repository root
 Related: `vivamama-devops` (Terraform/Ansible for prod and UAT) is still a
 separate repo. These workflows are the other half of that same deployment story,
 so the two are best planned together.
+
+**Resolution (2026-09-06).** All six were ported, rewritten for the workspace,
+plus one net-new workflow for admin (which never had CI of its own):
+
+| New file | Ported from | Key adaptation |
+| --- | --- | --- |
+| `.github/actions/gcp-auth/action.yml` | — (new) | Composite action replacing the auth + setup-gcloud + configure-docker preamble repeated in all four GCP workflows |
+| `.github/workflows/backend-build.yml` | backend `build-docker-image.yaml` | `docker build -f services/backend/Dockerfile .` from the **repo root** so `@vivamama/contracts` resolves; dropped `--build-arg NODE_ENV=production` (this Dockerfile declares no such ARG — it was a silent no-op) |
+| `.github/workflows/backend-deploy.yml` | backend `deploy.yaml` | Adds `--set-secrets=FIREBASE_SA_KEY_JSON=…` on every deploy, so the §1.3b credential cannot be lost when the service is recreated |
+| `.github/workflows/chatbot-build.yml` | chatbot `build-docker-image.yaml` | `defaults.run.working-directory: services/chatbot` so every ported step body resolves unchanged; added `paths:` filter so non-chatbot pushes cannot trigger a multi-hour embedding run |
+| `.github/workflows/chatbot-deploy.yml` | chatbot `deploy-cloud-run.yaml` | Structural port; only the secret rename below |
+| `.github/workflows/mobile-release.yml` | mobile `android-release.yml` | `pnpm install --frozen-lockfile` at the repo root instead of `npm ci`; every `android/…` path prefixed `apps/mobile/android/…`; added `paths:` filter and a fail-fast test step |
+| `.github/workflows/admin-deploy.yml` | — (new) | Firebase Hosting deploy + per-PR preview channels |
+
+Also folded the backend `ci.yaml`'s audit/license steps into `security.yml` as a
+non-blocking `dependency-audit` job (its test step was already covered by
+`ci.yml`'s Turbo run). `better-npm-audit` was swapped for native `pnpm audit`,
+since the former parses `npm audit --json` against a `package-lock.json` this
+repo does not have.
+
+Two secret names differed between the backend and chatbot repos for the same
+value and are now canonical: `SHARED_ARTIFACT_REGISTRY_PROJECT_ID` →
+`SHARED_ARTIFACT_PROJECT_ID`, and `UAT_PROJECT_ID` → `UAT_GCP_PROJECT_ID`. The
+non-secret constants `GCP_REGION` (`asia-south1`) and `GAR_REPO`
+(`vivamama-repo`) read from repo Variables with the literal as fallback, so they
+work with no setup and can still be overridden centrally.
+
+⚠️ Two things must happen before these can actually run:
+
+1. **Create the secrets** (nothing exists in this repo yet): `UAT_GCP_SA_KEY`,
+   `SHARED_BUILD_SA_KEY`, `SHARED_ARTIFACT_PROJECT_ID`, `UAT_GCP_PROJECT_ID`,
+   `BACKEND_DATABASE_VM_IP`, `KEYSTORE_BASE64`, `GOOGLE_SERVICES_JSON`,
+   `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`, `SLACK_WEBHOOK_URL`, and
+   the new `FIREBASE_SERVICE_ACCOUNT_ADMIN`. The Cloud Run runtime secrets
+   (`FIREBASE_SA_KEY_JSON`, `MONGODB_PASSWORD`, `REDIS_PASSWORD`,
+   `GROQ_API_KEY`, `RAG_API_KEY`) stay in **GCP Secret Manager**, not GitHub.
+2. **Re-register the self-hosted runner.** `vivamama-devops`'
+   `deploy-runner.yaml` / `destroy-runner.yaml` still default `github_repo` to
+   `rag_chatbot`. Until that points at this monorepo, `chatbot-build.yml` will
+   queue forever with no matching `[self-hosted, rag-builder]` runner. That repo
+   was deliberately left untouched in this pass.
 
 ### 1.2 `services/chatbot/lactmed.json` — ✅ RESOLVED 2026-09-03
 
@@ -390,17 +431,51 @@ documentation.
 
 1. ~~**Add `lactmed.json`**~~ — ✅ done, plus the Dockerfile `COPY` it always
    needed. Apply the same Dockerfile fix to the source repo.
-2. **Port the six workflows**, rewritten for the workspace: path-filtered
-   per-service deploys, root build context for the backend image, and secrets
-   re-pointed. Plan alongside `vivamama-devops`.
+2. ~~**Port the six workflows**~~ — ✅ done 2026-09-06 (§1.1), plus a net-new
+   admin deploy. Still needs the repo secrets created and the self-hosted runner
+   re-registered from `vivamama-devops`.
 3. ~~**Backend `.env.example`**~~ — ✅ created; the documented Firebase setup
    path now works.
 4. **Rotate the GCP service-account key.** It is baked into published images
    from the source repo (§1.3), so it is exposed regardless of this repo.
 5. **Restore `copilot-instructions.md`** if your team uses it.
-6. **Decide on the 14 pre-existing mobile test failures.** They fail identically
-   in the source repo, but this repo's CI actually runs them, so they will fail
-   the pipeline here.
+6. ~~**Decide on the 14 pre-existing mobile test failures.**~~ — ✅ fixed
+   2026-09-06. All 9 suites / 45 tests now pass. Every fix was confined to test
+   files, Jest config and one snapshot; no application source was touched. See
+   §6.
+
+   Note: a `typecheck` script still cannot be added to `apps/mobile`.
+   `tsc --noEmit` reports ~40 pre-existing errors under `apps/mobile/src`
+   (stale fixtures in `src/data`, `IContent` vs `IUserContent` drift, two
+   missing type names in `vivaAi.types.ts`), so wiring one up would fail CI
+   without changing app source.
 7. **Run a real Android build.** Never validated under `node-linker=hoisted`,
    and the resync adds three native modules.
 8. **Clean the 70 tracked `.pyc` files** the root `.gitignore` already excludes.
+
+## 6. Mobile test suite — ✅ FIXED 2026-09-06
+
+`apps/mobile` had 14 failing tests across 7 suites. They were **not** migration
+damage: every one reproduced identically in the standalone `viva_nari_app`
+source repo, whose Jest config and test files are byte-identical to this repo's.
+They were pre-existing bugs that had simply never been fixed upstream, and they
+mattered here only because this repo's CI actually runs the suite.
+
+All 9 suites / 45 tests now pass. **No application source changed** — every fix
+is in a test file, Jest config/setup, or a snapshot (`git diff --stat` over
+`apps/mobile/src` is empty).
+
+| File changed | Cause | Fix |
+| --- | --- | --- |
+| `jest.setup.js` | Neither setup file ever initialised i18next, so `useTranslation()` echoed raw keys and no copy assertion could match | Import `./src/i18n` (module-scope `init()`) |
+| `jest.setup.beforeEnv.js` | `react-native-iap` pulls in `react-native-nitro-modules`, which needs a native TurboModule binding Jest has not got | Mock the 8 named exports `playBilling.ts` actually uses |
+| `__tests__/onboardingFlowConfig.test.ts` | Expected `chat.completeMessageOnboarding`, a key that exists nowhere | Expect `chat.onboardingComplete`, what `flowTypeResolver.ts` returns |
+| `__tests__/Landing.login.test.tsx` | Expected `"Welcome, Mama"` (comma) and `/postpartum care/i`; the screen now gates both login paths behind a disclaimer modal, and Google behind two consent checkboxes | Corrected both literals to match `en.json`; tests now walk the disclaimer + consent flow |
+| `__tests__/LoginwithPhone.test.tsx` | Rendered bare although the screen calls `useNavigation()`; Send OTP is disabled until two consent boxes are ticked; `verifyPhoneOTP` now takes a 4th `consents` argument | Wrap in `NavigationContainer`, tick both boxes, assert the 4-argument call |
+| `__tests__/articlecard_onboarding_contexts.test.tsx` | `ArticleCard` reads `useSubscriptionContext()`; fixture still used the old `{id,title,content}` shape rather than `IUserContent` | Stub the context; fixture switched to `_id`/`featuredTitle`/`featuredImage`. Dropped the body-text assertion — the card renders the title only |
+| `__tests__/Products.test.tsx` | Replaced the **whole** `@react-navigation/native` module with a `useNavigation`-only stub, so `bottom-tabs` (via `useScreenEdges`) got `undefined` for `createScreenFactory` and the suite could not even load; also missing Language and Subscription contexts | Spread `jest.requireActual` into the mock; stub both contexts |
+| `__tests__/__snapshots__/more_component_snapshots_and_decode_extra.test.tsx.snap` | `GradientButtonWithSlightRadius` was refactored off `react-native-linear-gradient` after the snapshot was taken | Regenerated with `jest -u` |
+
+The recurring theme is drift: the app grew consent gating, a paywall context and
+a language context, and the tests were never updated to match. Each fix asserts
+the component's *current* contract rather than working around it.

@@ -1,6 +1,11 @@
 import '@testing-library/jest-native/extend-expect';
 import { Linking } from 'react-native';
 
+// Initializes the real i18next instance with the app's actual en/hi resource
+// bundles, so useTranslation() in tests resolves real copy instead of echoing
+// raw keys (it has module-scope side effects — importing it is the init call).
+import './src/i18n';
+
 // -----------------------------
 // LinearGradient mock
 // -----------------------------

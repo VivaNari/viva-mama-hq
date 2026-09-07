@@ -52,3 +52,35 @@ jobs:
       - uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
+
+  # ── Dependency audit & license report (informational) ──────────────
+  # Ported from the backend repo's ci.yaml, which ran these on every PR. They are
+  # advisory only — every step is continue-on-error and this job is deliberately
+  # NOT part of ci.yml's ci-ok gate, matching the source repo's behaviour.
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # pnpm's native audit replaces the source repo's better-npm-audit, which
+      # reads `npm audit --json` and needs a package-lock.json this repo has not
+      # got.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
+      - name: Check licenses
+        run: npx --yes license-checker --production
+        continue-on-error: true
+      - name: Generate license report
+        run: |
+          npx --yes license-report --output=table \
+            --fields="name" \
+            --fields="licenseType" \
+            --fields="installedVersion" \
+            --fields="link"
+        continue-on-error: true

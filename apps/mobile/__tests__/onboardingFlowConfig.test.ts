@@ -65,6 +65,6 @@ describe("onboarding flow config (FLOW_SLUGS + flowTypeResolver)", () => {
   it("uses onboarding completion copy from getCompletionMessage", () => {
     const { title, message } = getCompletionMessage(FlowType.ONBOARDING);
     expect(title).toBe("chat.completeTitle");
-    expect(message).toBe("chat.completeMessageOnboarding");
+    expect(message).toBe("chat.onboardingComplete");
   });
 });
