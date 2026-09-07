@@ -15,8 +15,10 @@ import {
     isCheckinEligibleWeek,
 } from "../utils/functions/postpartumWeek";
 import { resolveLanguage } from "../utils/i18n/localizeFlowDefinition";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
 import { sendPushNotification } from "../utils/sendPushNotification";
+
+const log = createModuleLogger(logger, "checkinNotification");
 
 export interface ICheckinNotificationResult {
     openCheckins: number;
@@ -38,7 +40,7 @@ export interface ICheckinNotificationResult {
 export const checkinNotification = async (
     now: Date = new Date(),
 ): Promise<ICheckinNotificationResult> => {
-    logger.info("Starting weekly check-in notification job");
+    log.info("Starting weekly check-in notification job");
 
     let sent = 0;
     let skipped = 0;
@@ -52,7 +54,7 @@ export const checkinNotification = async (
             })
             .lean();
 
-        logger.info({ count: openCheckins.length }, "Found open check-ins");
+        log.info({ count: openCheckins.length }, "Found open check-ins");
 
         for (const checkin of openCheckins) {
             try {
@@ -124,27 +126,27 @@ export const checkinNotification = async (
                 });
 
                 sent++;
-                logger.info(
+                log.info(
                     { userId: user._id, week: checkin.postpartumWeek, dayInWeek },
                     isOpeningDay ? "Sent check-in opened notification" : "Sent check-in reminder",
                 );
             } catch (error: any) {
                 errors++;
-                logger.error(
+                log.error(
                     { error: error?.message, flowInstanceId: checkin._id },
                     "Failed to send check-in notification",
                 );
             }
         }
 
-        logger.info(
+        log.info(
             { openCheckins: openCheckins.length, sent, skipped, errors },
             "Weekly check-in notification job completed",
         );
 
         return { openCheckins: openCheckins.length, sent, skipped, errors };
     } catch (error) {
-        logger.error({ error }, "Weekly check-in notification job failed");
+        log.error({ error }, "Weekly check-in notification job failed");
         throw error;
     }
 };

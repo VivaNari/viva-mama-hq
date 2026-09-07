@@ -48,6 +48,12 @@ services:
       MONGO_URI: mongodb://mongo:27017/viva_mama
       REDIS_HOST: redis
       REDIS_PORT: '6379'
+      # Ship logs (and spans) to the local collector. In GCP the collector is its own
+      # Cloud Run service and OTEL_AUTH_MODE is "oidc"; locally there is no auth.
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      OTEL_AUTH_MODE: none
+      OTEL_TRACES_ENABLED: 'true'
+      DEPLOYMENT_ENV: local
       # To enable Firebase push, mount a service-account key (see volumes below)
       # and uncomment:
       # GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-service-account.json
@@ -58,8 +64,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      otel-collector:
+        condition: service_started
     # volumes:
     #   - ./secrets/firebase-service-account.json:/run/secrets/firebase-service-account.json:ro
+
+  otel-collector:
+    # Local stand-in for the collector that runs as its own Cloud Run service in GCP.
+    # Receives OTLP over HTTP on 4318 and prints what it gets, which is enough to confirm
+    # the backend is emitting records with the attributes you expect. Swap the `debug`
+    # exporter in the config for a real backend when you want to keep the data.
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    restart: unless-stopped
+    command: ['--config=/etc/otel-collector-config.yaml']
+    volumes:
+      - ./ops/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      # 4318 = OTLP/HTTP. The backend exporters are the HTTP flavour, not gRPC.
+      - '${OTEL_COLLECTOR_PORT:-4318}:4318'
 
   chatbot:
     # NOTE: the image bakes the ~2.3 GB BAAI/bge-m3 embedding model into a

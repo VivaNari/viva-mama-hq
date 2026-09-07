@@ -7,8 +7,14 @@ import { dailyVivaInteraction } from "./dailyVivaInteraction";
 import { weeklyContentNotification } from "./weeklyContentNotification";
 import { subscriptionLifecycle } from "./subscriptionLifecycle";
 import { consultationReminders } from "./consultationReminders";
+import { randomUUID } from "crypto";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
 import env from "../config/env";
-import logger from "../utils/logger";
+import logger, { createModuleLogger, createWorkerLogger } from "../utils/logger";
+import { runWithContext } from "../utils/asyncLocalStorage";
+
+const log = createModuleLogger(logger, "cron-scheduler");
+const tracer = trace.getTracer("cron-jobs");
 
 /**
  * Schedules are expressed in IST, matching Cloud Scheduler's timezone in prod. The jobs
@@ -24,17 +30,41 @@ export const initScheduledJobs = () => {
     // multiple instances would each run their own copy). Only enable the
     // in-process scheduler for local development.
     if (!env.ENABLE_IN_PROCESS_CRON) {
-        logger.info("In-process cron disabled; jobs are driven by Cloud Scheduler");
+        log.info("In-process cron disabled; jobs are driven by Cloud Scheduler");
         return;
     }
 
-    logger.info("In-process cron enabled (development mode)");
+    log.info("In-process cron enabled (development mode)");
 
+    // Each tick runs inside its own correlation context and span. A cron tick has no
+    // ambient request to inherit from, so without this every line a job logs — and there
+    // are many — arrives at the collector with no id tying it to the run that produced it,
+    // and two overlapping jobs interleave indistinguishably.
     const schedule = (expression: string, job: () => Promise<unknown>, name: string) =>
         cron.schedule(
             expression,
             () => {
-                job().catch((error) => logger.error({ error, name }, "Scheduled job failed"));
+                const jobId = randomUUID();
+                const jobLog = createWorkerLogger(logger, name, jobId);
+
+                void runWithContext({ correlationId: jobId, jobName: name }, () =>
+                    tracer.startActiveSpan(`cron ${name}`, async (span) => {
+                        const startedAt = Date.now();
+                        try {
+                            await job();
+                            jobLog.info({ durationMs: Date.now() - startedAt }, "Scheduled job completed");
+                        } catch (error) {
+                            span.recordException(error as Error);
+                            span.setStatus({ code: SpanStatusCode.ERROR });
+                            jobLog.error(
+                                { error, name, durationMs: Date.now() - startedAt },
+                                "Scheduled job failed",
+                            );
+                        } finally {
+                            span.end();
+                        }
+                    }),
+                );
             },
             { timezone: IST_TIMEZONE },
         );

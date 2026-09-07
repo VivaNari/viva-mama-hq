@@ -2,8 +2,10 @@ import { Request, Response, NextFunction } from "express";
 import { OAuth2Client } from "google-auth-library";
 import { StatusCodes } from "http-status-codes";
 import env from "../config/env";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
 import sendResponse from "../utils/commonFunctions/sendResponse";
+
+const log = createModuleLogger(logger, "cloudScheduler.middleware");
 
 /**
  * Authenticates requests coming from Google Cloud Scheduler to the internal
@@ -36,7 +38,7 @@ const cloudSchedulerMiddleware = async (
     }
 
     if (!env.SCHEDULER_SA_EMAIL || !env.CLOUD_RUN_URL) {
-        logger.error("Cron auth misconfigured: SCHEDULER_SA_EMAIL or CLOUD_RUN_URL is not set");
+        log.error("Cron auth misconfigured: SCHEDULER_SA_EMAIL or CLOUD_RUN_URL is not set");
         return sendResponse({
             data: null,
             message: "Cron endpoint is not configured for authentication",
@@ -67,7 +69,7 @@ const cloudSchedulerMiddleware = async (
         const payload = ticket.getPayload();
 
         if (!payload || !payload.email_verified || payload.email !== env.SCHEDULER_SA_EMAIL) {
-            logger.warn({ email: payload?.email }, "Cron auth rejected: identity mismatch");
+            log.warn({ email: payload?.email }, "Cron auth rejected: identity mismatch");
             return sendResponse({
                 data: null,
                 message: "Forbidden: token identity not allowed",
@@ -79,7 +81,7 @@ const cloudSchedulerMiddleware = async (
 
         return next();
     } catch (error) {
-        logger.warn({ error }, "Cron auth rejected: invalid OIDC token");
+        log.warn({ error }, "Cron auth rejected: invalid OIDC token");
         return sendResponse({
             data: null,
             message: "Unauthorized: invalid token",

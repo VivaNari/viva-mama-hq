@@ -1,0 +1,42 @@
+# Local OpenTelemetry Collector config, used by the `otel-collector` service in
+# docker-compose.yml.
+#
+# This is a development stand-in, NOT the production config. In GCP the collector runs as
+# its own Cloud Run service and is owned separately; the backend only needs to know its
+# URL (OTEL_EXPORTER_OTLP_ENDPOINT) and to authenticate with an OIDC token
+# (OTEL_AUTH_MODE=oidc).
+#
+# What it does here: accept OTLP over HTTP and print everything to stdout, so
+# `docker compose logs -f otel-collector` shows exactly what the backend emitted —
+# resource attributes, log bodies, and the trace_id linking a log line to its span.
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        # 0.0.0.0 rather than localhost: the collector must be reachable from the backend
+        # container, not just from inside its own.
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Bounds memory if something upstream starts logging in a loop.
+  batch:
+    timeout: 1s
+    send_batch_size: 512
+
+exporters:
+  debug:
+    # `detailed` prints attributes and resource, which is the whole point of running this
+    # locally. `basic` would only print counts.
+    verbosity: detailed
+
+service:
+  pipelines:
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

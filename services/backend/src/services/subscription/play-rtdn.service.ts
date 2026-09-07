@@ -6,7 +6,7 @@ import {
     ESubscriptionStatus,
     ISubscription,
 } from "../../types/subscription.types";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
 import {
     EPlaySubscriptionState,
     getBillingProvider,
@@ -15,6 +15,8 @@ import {
     PLAY_ENTITLED_STATES,
 } from "./billing";
 import { subscriptionService } from "./subscription.service";
+
+const log = createModuleLogger(logger, "play-rtdn.service");
 
 /**
  * Real-Time Developer Notifications from Google Play.
@@ -103,7 +105,7 @@ export class PlayRtdnService {
             const json = Buffer.from(data, "base64").toString("utf8");
             return { notification: JSON.parse(json), messageId };
         } catch (error) {
-            logger.warn({ err: error }, "Play RTDN: undecodable message payload");
+            log.warn({ err: error }, "Play RTDN: undecodable message payload");
             return null;
         }
     }
@@ -127,7 +129,7 @@ export class PlayRtdnService {
         // Play Console's "send test notification" button. Acknowledged so the Console
         // reports success, but nothing is looked up — there is no purchase behind it.
         if (notification.testNotification) {
-            logger.info("Play RTDN: test notification received");
+            log.info("Play RTDN: test notification received");
             return { outcome: "TEST" };
         }
 
@@ -222,7 +224,7 @@ export class PlayRtdnService {
                 // the truth. If Google still reports an entitled state, this message
                 // describes a period that has already been superseded.
                 if (this.isEntitled(purchase)) {
-                    logger.info(
+                    log.info(
                         {
                             subscriptionId: String(row._id),
                             subscriptionState: purchase.subscriptionState,
@@ -250,7 +252,7 @@ export class PlayRtdnService {
             default:
                 // Price changes, deferrals and pause-schedule changes carry no
                 // entitlement consequence for this app. Recorded, acknowledged, ignored.
-                logger.info(
+                log.info(
                     { notificationType: sub.notificationType },
                     "Play RTDN: no handler for notification type",
                 );
@@ -278,7 +280,7 @@ export class PlayRtdnService {
             notificationType !== EPlayNotificationType.PURCHASED &&
             notificationType !== EPlayNotificationType.RENEWED
         ) {
-            logger.warn(
+            log.warn(
                 { notificationType },
                 "Play RTDN: notification for a purchase token with no subscription row",
             );
@@ -292,7 +294,7 @@ export class PlayRtdnService {
         // loudly: it means a purchase was made without the app attaching an account id,
         // which should be impossible on the current client.
         if (!accountId) {
-            logger.error(
+            log.error(
                 { productId: purchase.lineItems?.[0]?.productId },
                 "Play RTDN: unattributable purchase — no obfuscatedExternalAccountId",
             );
@@ -313,7 +315,7 @@ export class PlayRtdnService {
         if (linked) {
             const predecessor = await this.findByToken(linked);
             if (predecessor) {
-                logger.info(
+                log.info(
                     {
                         userId: String(predecessor.user_id),
                         previousSubscriptionId: String(predecessor._id),
@@ -332,7 +334,7 @@ export class PlayRtdnService {
             }
         }
 
-        logger.warn(
+        log.warn(
             { accountId },
             "Play RTDN: live purchase with no local row; client verification likely never completed",
         );
@@ -352,7 +354,7 @@ export class PlayRtdnService {
         // Guard against redelivery and out-of-order arrival: an older notification must
         // never shorten a term that a newer one already extended.
         if (row.currentPeriodEnd && currentPeriodEnd <= row.currentPeriodEnd) {
-            logger.info(
+            log.info(
                 { subscriptionId: String(row._id) },
                 "Play RTDN: renewal is not newer than the stored period; ignoring",
             );
@@ -437,7 +439,7 @@ export class PlayRtdnService {
         if (!row) return "UNKNOWN_SUBSCRIPTION";
 
         await subscriptionService.expire(row);
-        logger.warn(
+        log.warn(
             { subscriptionId: String(row._id) },
             "Play RTDN: purchase voided; access revoked immediately",
         );

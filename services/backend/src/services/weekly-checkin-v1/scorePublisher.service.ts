@@ -1,6 +1,8 @@
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
+
+const log = createModuleLogger(logger, "scorePublisher.service");
 
 /**
  * Dead letter entry for failed jobs
@@ -103,7 +105,7 @@ class ScorePublisherService {
                     flowInstanceId,
                 );
 
-                logger.info(
+                log.info(
                     { userId, flowInstanceId, attempt: attempt + 1 },
                     "Score job published successfully",
                 );
@@ -112,7 +114,7 @@ class ScorePublisherService {
             } catch (error: any) {
                 lastError = error;
 
-                logger.warn(
+                log.warn(
                     {
                         error: error.message,
                         userId,
@@ -166,7 +168,7 @@ class ScorePublisherService {
 
         this.deadLetterQueue.push(entry);
 
-        logger.error(
+        log.error(
             { userId, flowInstanceId, error: error.message },
             "Score job added to dead letter queue",
         );
@@ -210,7 +212,7 @@ class ScorePublisherService {
         if (result.success) {
             // Remove from dead letter queue
             this.deadLetterQueue.splice(index, 1);
-            logger.info({ entry }, "Dead letter entry processed successfully");
+            log.info({ entry }, "Dead letter entry processed successfully");
         }
 
         return result;
@@ -222,7 +224,7 @@ class ScorePublisherService {
     clearDeadLetterQueue(): void {
         const count = this.deadLetterQueue.length;
         this.deadLetterQueue = [];
-        logger.info({ count }, "Dead letter queue cleared");
+        log.info({ count }, "Dead letter queue cleared");
     }
 
     // ============================================
@@ -248,7 +250,7 @@ class ScorePublisherService {
             }
         }
 
-        logger.info({ successful, failed, total: jobs.length }, "Batch processing complete");
+        log.info({ successful, failed, total: jobs.length }, "Batch processing complete");
 
         return { successful, failed };
     }

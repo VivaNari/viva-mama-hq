@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import logger from "../../../../utils/logger";
+import logger, { createModuleLogger } from "../../../../utils/logger";
 import { logsReminders } from "../../../../cron-jobs/logsReminders";
 import { dailyVivaInteraction } from "../../../../cron-jobs/dailyVivaInteraction";
 import { weeklyContentNotification } from "../../../../cron-jobs/weeklyContentNotification";
@@ -8,6 +8,8 @@ import { weekProgression } from "../../../../cron-jobs/weekProgression";
 import { checkinNotification } from "../../../../cron-jobs/checkinNotification";
 import { subscriptionLifecycle } from "../../../../cron-jobs/subscriptionLifecycle";
 import { consultationReminders } from "../../../../cron-jobs/consultationReminders";
+
+const log = createModuleLogger(logger, "cron-jobs.controller");
 
 /**
  * HTTP entrypoints for the scheduled jobs, invoked by Cloud Scheduler.
@@ -28,7 +30,7 @@ const runJob = async (
 ): Promise<void> => {
     const startedAt = Date.now();
     try {
-        logger.info({ jobName }, "Cron endpoint invoked");
+        log.info({ jobName }, "Cron endpoint invoked");
         const result = await job();
         res.status(200).json({
             success: true,
@@ -37,7 +39,7 @@ const runJob = async (
             result: result ?? null,
         });
     } catch (error: any) {
-        logger.error({ error, jobName }, "Cron endpoint failed");
+        log.error({ error, jobName }, "Cron endpoint failed");
         res.status(500).json({
             success: false,
             job: jobName,

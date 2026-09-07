@@ -2,7 +2,9 @@ import { Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 
 import { playRtdnService } from "../../../../services/subscription/play-rtdn.service";
-import logger from "../../../../utils/logger";
+import logger, { createModuleLogger } from "../../../../utils/logger";
+
+const log = createModuleLogger(logger, "play-rtdn.controller");
 
 /**
  * POST /api/v1/webhooks/play/rtdn
@@ -23,14 +25,14 @@ export const handlePlayRtdn = async (request: Request, response: Response): Prom
         const { outcome } = await playRtdnService.handle(request.body);
 
         if (outcome !== "PROCESSED" && outcome !== "DUPLICATE") {
-            logger.info({ outcome }, "Play RTDN acknowledged without a state change");
+            log.info({ outcome }, "Play RTDN acknowledged without a state change");
         }
 
         response.status(StatusCodes.OK).json({ success: true, outcome });
     } catch (error) {
         // The event row is left unprocessed with its error recorded, and idempotency is
         // keyed on the Pub/Sub message id, so the redelivery this 500 triggers is safe.
-        logger.error({ err: error }, "Play RTDN processing failed");
+        log.error({ err: error }, "Play RTDN processing failed");
         response.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false });
     }
 };

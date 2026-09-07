@@ -42,9 +42,11 @@ import ScorePublisherService from "./scorePublisher.service";
 import NotificationService from "./notification.service";
 
 import { getUuid } from "../../utils/commonFunctions/uuid";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
 import ChatFlowService from "../chat-system/chat-flow.service";
 import { getOrCreateFlowConversation } from "../chat-system/flow-conversation.service";
+
+const log = createModuleLogger(logger, "weekly-checkin.service");
 
 /**
  * Question response format
@@ -146,7 +148,7 @@ class WeeklyCheckinService {
 
             const lang = resolveLanguage(params.lang, user.preferred_language);
 
-            logger.info({ userId, week, flowSlug, lang }, "Starting weekly check-in");
+            log.info({ userId, week, flowSlug, lang }, "Starting weekly check-in");
 
             // 2. Validate and get/create flow instance
             const validation = await validationService.validateSSERequest(user, week, flowSlug);
@@ -204,7 +206,7 @@ class WeeklyCheckinService {
             // 5. Save AI message for the question
             await this.saveQuestionMessage(user, flowInstance, questionResult.question);
 
-            logger.info(
+            log.info(
                 {
                     userId,
                     week,
@@ -227,7 +229,7 @@ class WeeklyCheckinService {
             };
         } catch (error: any) {
             console.error("errr", error);
-            logger.error({ error, userId, week }, "Error starting check-in");
+            log.error({ error, userId, week }, "Error starting check-in");
             return {
                 success: false,
                 message: "Failed to start check-in",
@@ -301,7 +303,7 @@ class WeeklyCheckinService {
 
             // 5. Handle duplicate (idempotent response)
             if (validation.isDuplicate) {
-                logger.info(
+                log.info(
                     { userId, nodeId, idempotencyKey },
                     "Duplicate request - returning current state",
                 );
@@ -488,7 +490,7 @@ class WeeklyCheckinService {
             // 11. Save AI message for the next question
             await this.saveQuestionMessage(updatedUser, updatedInstance, questionResult.question);
 
-            logger.info(
+            log.info(
                 {
                     userId,
                     flowInstanceId,
@@ -510,7 +512,7 @@ class WeeklyCheckinService {
                 },
             };
         } catch (error: any) {
-            logger.error({ error, userId, flowInstanceId, nodeId }, "Error processing answer");
+            log.error({ error, userId, flowInstanceId, nodeId }, "Error processing answer");
             return { success: false, message: "Failed to process answer" };
         }
     }
@@ -578,7 +580,7 @@ class WeeklyCheckinService {
 
         const currentNode = this.flowService.getNode(flowDefinition, validNodeId);
         if (!currentNode) {
-            logger.error({ nodeId: validNodeId }, "Node not found in definition");
+            log.error({ nodeId: validNodeId }, "Node not found in definition");
             return { question: null };
         }
 
@@ -676,7 +678,7 @@ class WeeklyCheckinService {
                 user.FCM_token,
             );
 
-            logger.info({ userId, week, flowInstanceId: flowInstance._id }, "Check-in completed");
+            log.info({ userId, week, flowInstanceId: flowInstance._id }, "Check-in completed");
         } else {
             await UserModel.findByIdAndUpdate(userId, {
                 $set: {
@@ -748,7 +750,7 @@ class WeeklyCheckinService {
             },
         });
 
-        logger.info(
+        log.info(
             { userId, week, flowInstanceId: flowInstance._id },
             "Onboarding terminated on stillbirth",
         );
@@ -942,14 +944,14 @@ class WeeklyCheckinService {
             // Check if already exists
             const exists = await this.hasCheckinForWeek(user._id.toString(), week);
             if (exists) {
-                logger.info({ userId: user._id, week }, "Check-in already exists for week");
+                log.info({ userId: user._id, week }, "Check-in already exists for week");
                 return null;
             }
 
             // Get flow definition
             const flowDefinition = await this.flowService.getFlowDefinition();
             if (!flowDefinition) {
-                logger.error("Weekly check-in flow definition not found");
+                log.error("Weekly check-in flow definition not found");
                 return null;
             }
 
@@ -977,14 +979,14 @@ class WeeklyCheckinService {
                 flowInstance._id.toString(),
             );
 
-            logger.info(
+            log.info(
                 { userId: user._id, week, flowInstanceId: flowInstance._id },
                 "Created pending check-in",
             );
 
             return flowInstance;
         } catch (error) {
-            logger.error({ error, userId: user._id, week }, "Failed to create pending check-in");
+            log.error({ error, userId: user._id, week }, "Failed to create pending check-in");
             return null;
         }
     }

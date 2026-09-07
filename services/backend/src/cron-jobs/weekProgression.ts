@@ -15,7 +15,9 @@ import {
     toCurrentWeekdaysUpdate,
     IPostpartumState,
 } from "../utils/functions/postpartumWeek";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
+
+const log = createModuleLogger(logger, "weekProgression");
 
 export interface IWeekProgressionResult {
     processed: number;
@@ -62,7 +64,7 @@ const ensureCheckinForWeek = async (
             outcome: null,
         });
 
-        logger.info({ userId: user._id, week }, "Opened weekly check-in");
+        log.info({ userId: user._id, week }, "Opened weekly check-in");
         return true;
     } catch (error: any) {
         // A parallel run won the insert. Not an error.
@@ -130,7 +132,7 @@ const persistWeekdays = async (user: IUser, state: IPostpartumState): Promise<vo
  * all for three days all converge on the same result.
  */
 export const weekProgression = async (now: Date = new Date()): Promise<IWeekProgressionResult> => {
-    logger.info("Starting week progression job");
+    log.info("Starting week progression job");
 
     let processed = 0;
     let skipped = 0;
@@ -145,14 +147,14 @@ export const weekProgression = async (now: Date = new Date()): Promise<IWeekProg
         });
 
         if (!flowDefinition) {
-            logger.error("Weekly check-in flow definition not found; weeks will still advance");
+            log.error("Weekly check-in flow definition not found; weeks will still advance");
         }
 
         const users = await UserModel.find({
             "onboarding_data.delivery_date": { $exists: true, $ne: null },
         });
 
-        logger.info({ userCount: users.length }, "Processing users for week progression");
+        log.info({ userCount: users.length }, "Processing users for week progression");
 
         for (const user of users) {
             try {
@@ -190,7 +192,7 @@ export const weekProgression = async (now: Date = new Date()): Promise<IWeekProg
                 }
             } catch (error: any) {
                 errors++;
-                logger.error(
+                log.error(
                     { error: error?.message, userId: user._id },
                     "Failed to progress week for user",
                 );
@@ -199,14 +201,14 @@ export const weekProgression = async (now: Date = new Date()): Promise<IWeekProg
 
         skipped = users.length - processed - errors;
 
-        logger.info(
+        log.info(
             { processed, skipped, errors, instancesCreated, instancesExpired },
             "Week progression job completed",
         );
 
         return { processed, skipped, errors, instancesCreated, instancesExpired };
     } catch (error) {
-        logger.error({ error }, "Week progression job failed");
+        log.error({ error }, "Week progression job failed");
         throw error;
     }
 };

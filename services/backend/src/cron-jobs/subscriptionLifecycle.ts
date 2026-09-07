@@ -7,8 +7,10 @@ import {
     ESubscriptionStatus,
     ISubscription,
 } from "../types/subscription.types";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
 import { sendPushNotification } from "../utils/sendPushNotification";
+
+const log = createModuleLogger(logger, "subscriptionLifecycle");
 
 export interface SubscriptionLifecycleResult {
     expired: number;
@@ -55,7 +57,7 @@ export const subscriptionLifecycle = async (
         } catch (error) {
             result.failures += 1;
             // Keep going: one bad row must not block every other user's expiry.
-            logger.error(
+            log.error(
                 { error, subscriptionId: subscription._id },
                 "Failed to expire subscription",
             );
@@ -82,14 +84,14 @@ export const subscriptionLifecycle = async (
             if (sent) result.remindersSent += 1;
         } catch (error) {
             result.failures += 1;
-            logger.error(
+            log.error(
                 { error, subscriptionId: subscription._id },
                 "Failed to send subscription reminder",
             );
         }
     }
 
-    logger.info(result, "Subscription lifecycle sweep complete");
+    log.info(result, "Subscription lifecycle sweep complete");
     return result;
 };
 

@@ -9,8 +9,10 @@ import {
 import { notificationMessages } from "../constants/messages";
 import { CallbackRequestStatusEnum, ConsultationTypeEnum } from "../types/consultation.types";
 import { formatIstDateTime } from "../utils/commonFunctions/formatIst";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
 import { sendPushNotification } from "../utils/sendPushNotification";
+
+const log = createModuleLogger(logger, "consultationReminders");
 
 export interface IConsultationReminderResult {
     due: number;
@@ -46,7 +48,7 @@ const MINUTE_MS = 60_000;
 export const consultationReminders = async (
     now: Date = new Date(),
 ): Promise<IConsultationReminderResult> => {
-    logger.info("Starting consultation reminder job");
+    log.info("Starting consultation reminder job");
 
     let sent = 0;
     let skipped = 0;
@@ -71,7 +73,7 @@ export const consultationReminders = async (
             })
             .lean();
 
-        logger.info({ count: consultations.length }, "Found consultations in the reminder window");
+        log.info({ count: consultations.length }, "Found consultations in the reminder window");
 
         for (const consultation of consultations) {
             for (const offset of CONSULTATION_REMINDER_OFFSETS_MINUTES) {
@@ -143,13 +145,13 @@ export const consultationReminders = async (
                     });
 
                     sent++;
-                    logger.info(
+                    log.info(
                         { consultationId: consultation._id, offset },
                         "Sent consultation reminder",
                     );
                 } catch (error: any) {
                     errors++;
-                    logger.error(
+                    log.error(
                         { error: error?.message, consultationId: consultation._id, offset },
                         "Failed to send consultation reminder",
                     );
@@ -157,14 +159,14 @@ export const consultationReminders = async (
             }
         }
 
-        logger.info(
+        log.info(
             { due: consultations.length, sent, skipped, errors },
             "Consultation reminder job completed",
         );
 
         return { due: consultations.length, sent, skipped, errors };
     } catch (error) {
-        logger.error({ error }, "Consultation reminder job failed");
+        log.error({ error }, "Consultation reminder job failed");
         throw error;
     }
 };

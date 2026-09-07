@@ -3,7 +3,7 @@ import {
     WeeklyCheckinStartParams,
     WeeklyCheckinAnswerParams,
 } from "../../../../types/weekly-checkin-v1.types";
-import logger from "../../../../utils/logger";
+import logger, { createModuleLogger } from "../../../../utils/logger";
 import { WEEKLY_CHECKIN_SLUG } from "../../../../constants/chat";
 import WeeklyCheckinService from "../../../../services/weekly-checkin-v1/weekly-checkin.service";
 import flowInstanceModel from "../../../../models/flowInstance.model";
@@ -11,6 +11,8 @@ import { FlowInstanceStateEnum } from "../../../../types/chat.types";
 import { ECapability } from "../../../../services/entitlements/entitlement.config";
 import { entitlementService } from "../../../../services/entitlements/entitlement.service";
 import { isEntitlementDenied, sendDenial } from "../../../../middlewares/entitlement.middleware";
+
+const log = createModuleLogger(logger, "weekly-checkin.controller");
 
 class WeeklyCheckinController {
     private weeklyCheckinService: WeeklyCheckinService;
@@ -54,7 +56,7 @@ class WeeklyCheckinController {
                 return;
             }
 
-            logger.info({ userId, week, flowSlug }, "Weekly check-in start request");
+            log.info({ userId, week, flowSlug }, "Weekly check-in start request");
 
             // Gate the weekly check-in ONLY.
             //
@@ -122,7 +124,7 @@ class WeeklyCheckinController {
                 res.status(statusCode).json(result);
             }
         } catch (error) {
-            logger.error({ error }, "Error starting weekly check-in");
+            log.error({ error }, "Error starting weekly check-in");
             res.status(500).json({ error: "Internal server error" });
         }
     };
@@ -199,7 +201,7 @@ class WeeklyCheckinController {
                 return;
             }
 
-            logger.info(
+            log.info(
                 { userId, flowInstanceId, nodeId, week: weekNum, idempotencyKey },
                 "Processing check-in answer",
             );
@@ -224,7 +226,7 @@ class WeeklyCheckinController {
                 res.status(400).json(result);
             }
         } catch (error) {
-            logger.error({ error }, "Error processing check-in answer");
+            log.error({ error }, "Error processing check-in answer");
             res.status(500).json({ error: "Internal server error" });
         }
     };
@@ -257,7 +259,7 @@ class WeeklyCheckinController {
 
             res.status(200).json(result);
         } catch (error) {
-            logger.error({ error }, "Error getting check-in state");
+            log.error({ error }, "Error getting check-in state");
             res.status(500).json({ error: "Internal server error" });
         }
     };
@@ -287,7 +289,7 @@ class WeeklyCheckinController {
 
             res.status(200).json(status);
         } catch (error) {
-            logger.error({ error }, "Error getting check-in status");
+            log.error({ error }, "Error getting check-in status");
             res.status(500).json({ error: "Internal server error" });
         }
     };

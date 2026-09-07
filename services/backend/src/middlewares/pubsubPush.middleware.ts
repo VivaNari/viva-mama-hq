@@ -3,7 +3,9 @@ import { OAuth2Client } from "google-auth-library";
 import { StatusCodes } from "http-status-codes";
 
 import env from "../config/env";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
+
+const log = createModuleLogger(logger, "pubsubPush.middleware");
 
 /**
  * Authenticates Google Cloud Pub/Sub push deliveries.
@@ -36,7 +38,7 @@ const pubsubPushMiddleware = async (
     }
 
     if (!env.PUBSUB_PUSH_SA_EMAIL || !env.CLOUD_RUN_URL) {
-        logger.error(
+        log.error(
             "Pub/Sub push auth misconfigured: PUBSUB_PUSH_SA_EMAIL or CLOUD_RUN_URL is not set",
         );
         // 500, not 401: this is our misconfiguration, and Pub/Sub retrying is the
@@ -61,14 +63,14 @@ const pubsubPushMiddleware = async (
         const payload = ticket.getPayload();
 
         if (!payload?.email_verified || payload.email !== env.PUBSUB_PUSH_SA_EMAIL) {
-            logger.warn({ email: payload?.email }, "Pub/Sub push rejected: identity mismatch");
+            log.warn({ email: payload?.email }, "Pub/Sub push rejected: identity mismatch");
             res.status(StatusCodes.FORBIDDEN).json({ success: false });
             return;
         }
 
         next();
     } catch (error) {
-        logger.warn({ err: error }, "Pub/Sub push rejected: invalid OIDC token");
+        log.warn({ err: error }, "Pub/Sub push rejected: invalid OIDC token");
         res.status(StatusCodes.UNAUTHORIZED).json({ success: false });
     }
 };

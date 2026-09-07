@@ -1,7 +1,9 @@
 import UserModel from "../models/user.model";
 import { EUserCategory } from "../types/user.types";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
 import { getEndOfISTDay } from "../services/date/date.service";
+
+const log = createModuleLogger(logger, "pregnancyTransition");
 
 export interface IPregnancyTransitionResult {
     transitioned: number;
@@ -21,7 +23,7 @@ export interface IPregnancyTransitionResult {
 export const pregnancyTransition = async (
     now: Date = new Date(),
 ): Promise<IPregnancyTransitionResult> => {
-    logger.info("Starting pregnancy -> postpartum transition job");
+    log.info("Starting pregnancy -> postpartum transition job");
 
     try {
         // Exclusive upper bound on the real instant the IST day ends, NOT the
@@ -41,11 +43,11 @@ export const pregnancyTransition = async (
 
         const transitioned = result.modifiedCount ?? 0;
 
-        logger.info({ transitioned }, "Pregnancy -> postpartum transition job completed");
+        log.info({ transitioned }, "Pregnancy -> postpartum transition job completed");
 
         return { transitioned };
     } catch (error) {
-        logger.error({ error }, "Pregnancy -> postpartum transition job failed");
+        log.error({ error }, "Pregnancy -> postpartum transition job failed");
         throw error;
     }
 };

@@ -5,7 +5,9 @@ import {
     WebhookSignatureError,
     webhookService,
 } from "../../../../services/subscription/webhook.service";
-import logger from "../../../../utils/logger";
+import logger, { createModuleLogger } from "../../../../utils/logger";
+
+const log = createModuleLogger(logger, "razorpay-webhook.controller");
 
 /**
  * POST /api/v1/webhooks/razorpay
@@ -26,7 +28,7 @@ export const handleRazorpayWebhook = async (
         );
     } catch (error) {
         if (error instanceof WebhookSignatureError) {
-            logger.warn({ error: error.message }, "Rejected webhook with bad signature");
+            log.warn({ error: error.message }, "Rejected webhook with bad signature");
             // 401, deliberately: Razorpay retries on 5xx, and retrying a forged or
             // misconfigured request forever helps nobody.
             response.status(StatusCodes.UNAUTHORIZED).json({ success: false });
@@ -41,7 +43,7 @@ export const handleRazorpayWebhook = async (
         // would make Razorpay retry an event that is already applied.
         response.status(StatusCodes.OK).json({ success: true, ...result });
     } catch (error: any) {
-        logger.error({ error }, "Webhook processing failed");
+        log.error({ error }, "Webhook processing failed");
         // 500 so Razorpay retries — the event is recorded with its error and the
         // idempotency guard makes the retry safe.
         response.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ success: false });

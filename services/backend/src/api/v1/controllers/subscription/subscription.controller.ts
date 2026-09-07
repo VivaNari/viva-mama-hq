@@ -14,7 +14,9 @@ import {
 import { localizeSubscriptionPlans } from "../../../../utils/i18n/localizeSubscriptionPlan";
 import { resolveLanguage } from "../../../../utils/i18n/localizeFlowDefinition";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
-import logger from "../../../../utils/logger";
+import logger, { createModuleLogger } from "../../../../utils/logger";
+
+const log = createModuleLogger(logger, "subscription.controller");
 
 export class SubscriptionController {
     /**
@@ -111,7 +113,7 @@ export class SubscriptionController {
         // business logic ("trial already used"), every one of these is an upstream fault
         // worth a log line.
         if (err instanceof PlayApiError) {
-            logger.error(
+            log.error(
                 { err, code: err.code, playStatus: err.status },
                 "Play Developer API call failed",
             );

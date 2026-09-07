@@ -34,7 +34,9 @@ import {
 import { subscriptionPlanService } from "./subscription-plan.service";
 import { analyticsService } from "../analytics/analytics.service";
 import { EAnalyticsEvent } from "../../types/analytics.types";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
+
+const log = createModuleLogger(logger, "subscription.service");
 
 export class SubscriptionError extends Error {
     constructor(
@@ -166,7 +168,7 @@ export class SubscriptionService {
         try {
             await provider.acknowledge(purchaseToken, productId);
         } catch (error) {
-            logger.error(
+            log.error(
                 { err: error, productId },
                 "Play acknowledge failed; purchase auto-refunds in 3 days if every retry keeps failing",
             );
@@ -930,7 +932,7 @@ export class SubscriptionService {
             // A renewal for a plan that has since been removed from the catalog. The
             // subscription itself is still valid, so the term is already extended; only
             // the credit grant is skipped, and loudly.
-            logger.error(
+            log.error(
                 { planCode: subscription.planCode, subscriptionId: String(subscription._id) },
                 "Renewal credits skipped: plan not found in catalog",
             );

@@ -17,7 +17,9 @@ import { creditService } from "../entitlements/credit.service";
 import { subscriptionPlanService } from "./subscription-plan.service";
 import { subscriptionService } from "./subscription.service";
 import paymentOrderModel from "../../models/payment-order.model";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
+
+const log = createModuleLogger(logger, "webhook.service");
 
 /** Razorpay webhook events we act on. Anything else is recorded and ignored. */
 export enum ERazorpayWebhookEvent {
@@ -144,7 +146,7 @@ export class WebhookService {
         const providerSubscriptionId = entity?.id;
 
         if (!providerSubscriptionId) {
-            logger.warn({ event }, "Webhook carried no subscription entity; ignoring");
+            log.warn({ event }, "Webhook carried no subscription entity; ignoring");
             return;
         }
 
@@ -155,7 +157,7 @@ export class WebhookService {
         if (!subscription) {
             // Can legitimately happen if the mandate was created but our row was not,
             // or for a subscription belonging to another environment sharing the account.
-            logger.warn(
+            log.warn(
                 { event, providerSubscriptionId },
                 "Webhook for an unknown subscription; ignoring",
             );
@@ -174,7 +176,7 @@ export class WebhookService {
                 await this.setStatus(subscription, ESubscriptionStatus.CANCELLED);
                 break;
             default:
-                logger.info({ event }, "Unhandled webhook event recorded but not acted on");
+                log.info({ event }, "Unhandled webhook event recorded but not acted on");
         }
     }
 
@@ -189,7 +191,7 @@ export class WebhookService {
     private async onOrderPaid(payload: Record<string, any>): Promise<void> {
         const orderId = payload?.payload?.order?.entity?.id;
         if (!orderId) {
-            logger.warn("order.paid webhook carried no order entity; ignoring");
+            log.warn("order.paid webhook carried no order entity; ignoring");
             return;
         }
 
@@ -197,11 +199,11 @@ export class WebhookService {
         if (!order) {
             // Consultation orders live in a different collection, and orders from another
             // environment sharing the Razorpay account will not be here either.
-            logger.warn({ orderId }, "order.paid for an unknown order; ignoring");
+            log.warn({ orderId }, "order.paid for an unknown order; ignoring");
             return;
         }
         if (order.purpose !== EPaymentOrderPurpose.SUBSCRIPTION) {
-            logger.info({ orderId }, "order.paid for a non-subscription order; ignoring");
+            log.info({ orderId }, "order.paid for a non-subscription order; ignoring");
             return;
         }
 
@@ -223,7 +225,7 @@ export class WebhookService {
             : null;
 
         if (!plan) {
-            logger.error(
+            log.error(
                 { subscriptionId: subscription._id },
                 "Charged subscription has no resolvable plan; cannot grant credits",
             );

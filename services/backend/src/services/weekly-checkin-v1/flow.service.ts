@@ -19,7 +19,9 @@ import {
     NP_WOMEN_INDICATORS,
     NN_WOMEN_INDICATORS,
 } from "../../constants/chat";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
+
+const log = createModuleLogger(logger, "flow.service");
 
 /**
  * Node eligibility result
@@ -168,7 +170,7 @@ class FlowService {
         const allScoresAreTwo = scores.every((score) => score === 2);
 
         if (allScoresAreTwo) {
-            logger.info(
+            log.info(
                 { nodeId: node.id, indicator: node.indicator, userId },
                 "Node eliminated - scored 2 for 2 consecutive weeks",
             );
@@ -291,7 +293,7 @@ class FlowService {
             const node = this.getNode(flowDefinition, currentNodeId);
 
             if (!node) {
-                logger.warn({ nodeId: currentNodeId }, "Node not found in flow definition");
+                log.warn({ nodeId: currentNodeId }, "Node not found in flow definition");
                 return null;
             }
 
@@ -299,11 +301,11 @@ class FlowService {
             const eligibility = await this.checkNodeEligibility(node, user, flowInstance, week);
 
             if (eligibility.isEligible) {
-                logger.debug({ nodeId: node.id, week }, "Found valid node");
+                log.debug({ nodeId: node.id, week }, "Found valid node");
                 return currentNodeId;
             }
 
-            logger.debug(
+            log.debug(
                 { nodeId: node.id, reason: eligibility.reason },
                 "Skipping ineligible node",
             );
@@ -312,7 +314,7 @@ class FlowService {
             currentNodeId = node.next;
         }
 
-        logger.debug({ userId: user._id, week }, "No more valid nodes - flow complete");
+        log.debug({ userId: user._id, week }, "No more valid nodes - flow complete");
         return null;
     }
 
@@ -347,7 +349,7 @@ class FlowService {
             flowInstance.cursorNodeId = nextNodeId;
             await (flowInstance as any).save();
 
-            logger.debug(
+            log.debug(
                 { userId: user._id, from: currentNodeId, to: nextNodeId },
                 "Moved cursor to next node",
             );

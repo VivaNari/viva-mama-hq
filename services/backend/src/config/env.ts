@@ -24,8 +24,81 @@ function parseBillingMode(raw: string | undefined): EBillingMode {
     );
 }
 
+/**
+ * How the OTLP exporters authenticate to the collector.
+ *
+ *   oidc - mint a Google ID token for OTEL_COLLECTOR_AUDIENCE and send it as a bearer
+ *          token. Correct for a collector deployed as its own private Cloud Run service.
+ *   none - send no Authorization header. Correct for a collector running as a SIDECAR in
+ *          the same Cloud Run service (traffic goes over localhost and never leaves the
+ *          instance) and for the local docker-compose collector.
+ *
+ * Parsed rather than cast for the same reason as BILLING_MODE, with a sharper edge: a
+ * typo here does not fail, it silently exports unauthenticated. Better to refuse to boot.
+ */
+export type TOtelAuthMode = "oidc" | "none";
+
+/**
+ * Loopback means the collector is in this same instance — a Cloud Run sidecar, or
+ * docker-compose locally. There is no identity to authenticate to and no network hop to
+ * protect, so default to "none" there.
+ *
+ * Without this, forgetting to set OTEL_AUTH_MODE=none alongside a sidecar endpoint makes
+ * every export first ask the metadata server for an ID token whose audience is
+ * "http://localhost:4318". That is a pointless round trip on the export path, and it fails
+ * in a way that is easy to misread as a telemetry outage.
+ */
+function isLoopbackEndpoint(endpoint: string): boolean {
+    if (!endpoint) return false;
+    try {
+        const { hostname } = new URL(endpoint);
+        return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+    } catch {
+        return false;
+    }
+}
+
+function parseOtelAuthMode(raw: string | undefined, endpoint: string): TOtelAuthMode {
+    if (!raw) return isLoopbackEndpoint(endpoint) ? "none" : "oidc";
+
+    const normalized = raw.trim().toLowerCase();
+    if (normalized === "oidc" || normalized === "none") {
+        return normalized;
+    }
+
+    throw new Error(`Invalid OTEL_AUTH_MODE "${raw}". Expected "oidc" or "none".`);
+}
+
+/**
+ * The OIDC audience Cloud Run expects is the receiving service's base URL, which is
+ * exactly the origin of the OTLP endpoint. Deriving it saves operators from setting two
+ * env vars that must agree — a mismatch is a 401 with nothing in the logs to explain it.
+ * An explicit OTEL_COLLECTOR_AUDIENCE still wins, for the case where the collector sits
+ * behind a load balancer whose audience differs from its URL.
+ */
+function resolveCollectorAudience(explicit: string | undefined, endpoint: string): string {
+    const trimmed = explicit?.trim();
+    if (trimmed) return trimmed;
+    if (!endpoint) return "";
+
+    try {
+        return new URL(endpoint).origin;
+    } catch {
+        throw new Error(
+            `Invalid OTEL_EXPORTER_OTLP_ENDPOINT "${endpoint}". Expected an absolute URL, e.g. https://otel-collector-abc123-el.a.run.app`,
+        );
+    }
+}
+
+const NODE_ENV = process.env.NODE_ENV || "development";
+
+// Trimmed because it is interpolated into the exporter URL (`${endpoint}/v1/logs`) and
+// used as the OIDC audience — the same trailing-newline trap documented on
+// PLAY_PACKAGE_NAME below, where a value piped in from a shell breaks every request.
+const OTEL_EXPORTER_OTLP_ENDPOINT = (process.env.OTEL_EXPORTER_OTLP_ENDPOINT || "").trim();
+
 const env = {
-    NODE_ENV: process.env.NODE_ENV || "development",
+    NODE_ENV,
     SERVICE_NAME: process.env.SERVICE_NAME || "my-service",
     SERVICE_VERSION: process.env.SERVICE_VERSION || "1.0.0",
     ENABLE_PII_REDACTION: process.env.ENABLE_PII_REDACTION === "true",
@@ -119,6 +192,38 @@ const env = {
     // When true, run the legacy in-process node-cron scheduler (local dev only). In prod/uat the
     // jobs are driven by Cloud Scheduler hitting the HTTP endpoints, so this stays unset/false.
     ENABLE_IN_PROCESS_CRON: process.env.ENABLE_IN_PROCESS_CRON === "true",
+    // ── OpenTelemetry ────────────────────────────────────────────────────────────────
+    // Log records (and optionally spans) are exported over OTLP/HTTP to a collector that
+    // runs as its own Cloud Run service. stdout logging is unaffected: the pino
+    // instrumentation adds the OTel stream alongside the existing one, so Cloud Logging
+    // stays the fallback if the collector is unreachable.
+    //
+    // Master switch. Never on under test: jest would otherwise open an exporter handle per
+    // suite and hang on `detectOpenHandles`.
+    OTEL_ENABLED: process.env.OTEL_ENABLED !== "false" && NODE_ENV !== "test",
+    // Collector base URL, WITHOUT the signal path — the exporters append /v1/logs and
+    // /v1/traces themselves. Empty disables telemetry entirely, which is the correct
+    // default for local dev and CI: there is no collector there, and a configured-but-
+    // absent endpoint means an export error logged on every flush.
+    OTEL_EXPORTER_OTLP_ENDPOINT,
+    OTEL_COLLECTOR_AUDIENCE: resolveCollectorAudience(
+        process.env.OTEL_COLLECTOR_AUDIENCE,
+        OTEL_EXPORTER_OTLP_ENDPOINT,
+    ),
+    OTEL_AUTH_MODE: parseOtelAuthMode(
+        process.env.OTEL_AUTH_MODE,
+        OTEL_EXPORTER_OTLP_ENDPOINT,
+    ),
+    // Spans are opt-in. Without them every log record still exports, just with an empty
+    // trace_id — so this can stay false until the collector has a traces pipeline.
+    OTEL_TRACES_ENABLED: process.env.OTEL_TRACES_ENABLED === "true",
+    // Set to "debug" to surface exporter failures (401/403 from the collector, DNS, etc.)
+    // through OTel's own diagnostic logger. Off by default because it is very chatty.
+    OTEL_DIAG_LOG_LEVEL: (process.env.OTEL_DIAG_LOG_LEVEL || "").trim().toLowerCase(),
+    // Becomes the `deployment.environment.name` resource attribute, which is how the
+    // collector separates uat from prod. Defaults to NODE_ENV, which is "production" on
+    // both — set it explicitly per environment to tell them apart.
+    DEPLOYMENT_ENV: (process.env.DEPLOYMENT_ENV || NODE_ENV).trim(),
     isDevelopment(): boolean {
         return env.NODE_ENV === "development";
     },

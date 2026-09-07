@@ -1,9 +1,11 @@
 import UserModel from "../models/user.model";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
 import { sendPushNotification } from "../utils/sendPushNotification";
 
+const log = createModuleLogger(logger, "logsReminders");
+
 export const logsReminders = async (): Promise<void> => {
-    logger.info("Starting daily logs reminder job");
+    log.info("Starting daily logs reminder job");
 
     try {
         const users = await UserModel.find({
@@ -11,7 +13,7 @@ export const logsReminders = async (): Promise<void> => {
             user_category: { $ne: null }, // Must have a category
         });
 
-        logger.info({ count: users.length }, "Found users for log reminders");
+        log.info({ count: users.length }, "Found users for log reminders");
 
         for (const user of users) {
             try {
@@ -37,14 +39,14 @@ export const logsReminders = async (): Promise<void> => {
                 //     },
                 // });
 
-                logger.info({ userId: user._id }, "Sent daily log reminders");
+                log.info({ userId: user._id }, "Sent daily log reminders");
             } catch (error) {
-                logger.error({ error, userId: user._id }, "Failed to send log reminders for user");
+                log.error({ error, userId: user._id }, "Failed to send log reminders for user");
             }
         }
 
-        logger.info("Daily logs reminder job completed");
+        log.info("Daily logs reminder job completed");
     } catch (error) {
-        logger.error({ error }, "Daily logs reminder job failed");
+        log.error({ error }, "Daily logs reminder job failed");
     }
 };

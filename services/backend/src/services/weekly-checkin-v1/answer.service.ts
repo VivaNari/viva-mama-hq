@@ -12,8 +12,10 @@ import {
 } from "../../types/chat.types";
 import { IUser } from "../../types";
 import { STOPPED_BREASTFEEDING_SCORE } from "../../constants/chat";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
 import { resolveSelectedOptions } from "../../utils/functions/resolveSelectedOptions";
+
+const log = createModuleLogger(logger, "answer.service");
 
 /**
  * Answer input from user
@@ -130,7 +132,7 @@ class AnswerService {
             idempotencyKey, // Store for idempotency checks
         });
 
-        logger.debug(
+        log.debug(
             { flowInstanceId: flowInstance._id, nodeId, idempotencyKey },
             "Flow response saved",
         );
@@ -162,7 +164,7 @@ class AnswerService {
             },
         });
 
-        logger.debug({ userId: user._id, nodeId, answerText }, "User message saved");
+        log.debug({ userId: user._id, nodeId, answerText }, "User message saved");
     }
 
     // ============================================
@@ -192,7 +194,7 @@ class AnswerService {
             is_breastfeeding_currently: false,
         });
 
-        logger.info({ userId: user._id }, "User stopped breastfeeding - updated record");
+        log.info({ userId: user._id }, "User stopped breastfeeding - updated record");
 
         return true;
     }
@@ -226,7 +228,7 @@ class AnswerService {
             // 5. Handle special cases
             await this.handleBreastfeedingStatusChange(user, node, answerData);
 
-            logger.info(
+            log.info(
                 {
                     userId: user._id,
                     flowInstanceId: flowInstance._id,
@@ -240,7 +242,7 @@ class AnswerService {
                 answerData,
             };
         } catch (error: any) {
-            logger.error(
+            log.error(
                 {
                     error,
                     userId: user._id,

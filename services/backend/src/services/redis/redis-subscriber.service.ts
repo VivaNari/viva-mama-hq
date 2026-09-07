@@ -1,3 +1,5 @@
+import { randomUUID } from "crypto";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
 import { REDIS_CHANNELS } from "./redis-publisher.service";
 import { redisSubscriber } from "../../config/redis.config";
 import ScoreRecommendationHandler from "../../handlers/score-recommendation.handler";
@@ -5,13 +7,21 @@ import { sendPushNotification } from "../../utils/sendPushNotification";
 import UserModel from "../../models/user.model";
 import { getScoreReadyNotification } from "../../constants/chat";
 import { resolveLanguage } from "../../utils/i18n/localizeFlowDefinition";
+import logger, { createWorkerLogger } from "../../utils/logger";
+import { runWithContext } from "../../utils/asyncLocalStorage";
+
+// This file previously logged entirely through console.log, which meant none of it was
+// structured, none of it carried request context, and none of it reached the OpenTelemetry
+// collector — the score pipeline was effectively invisible in production.
+const log = createWorkerLogger(logger, "score-processor");
+const tracer = trace.getTracer("redis-subscriber");
 
 class RedisSubscriberService {
     private isInitialized = false;
 
     public async initialize() {
         if (this.isInitialized) {
-            console.log("Redis subscriber already initialized");
+            log.warn("Redis subscriber already initialized");
             return;
         }
 
@@ -19,24 +29,43 @@ class RedisSubscriberService {
             // Subscribe to processing channel
             await redisSubscriber.subscribe(REDIS_CHANNELS.SCORE_PROCESS);
 
-            console.log("Subscribed to Redis channels:");
-            console.log(`- ${REDIS_CHANNELS.SCORE_PROCESS}`);
+            log.info({ channels: [REDIS_CHANNELS.SCORE_PROCESS] }, "Subscribed to Redis channels");
 
             // Set up message handler
             redisSubscriber.on("message", this.handleMessage.bind(this));
 
             this.isInitialized = true;
         } catch (error) {
-            console.error("Failed to initialize Redis subscriber:", error);
+            log.error({ err: error }, "Failed to initialize Redis subscriber");
             throw error;
         }
     }
 
-    // Handle incoming messages
+    /**
+     * Entry point for a pub/sub delivery.
+     *
+     * A Redis message arrives with no ambient context — there is no HTTP request to
+     * inherit a correlation id or trace from — so one is established here. Everything
+     * handleScoreProcess logs downstream then shares an id, and the work shows up as a
+     * root span rather than vanishing between the publisher's trace and nothing.
+     */
     private async handleMessage(channel: string, message: string) {
-        if (channel === REDIS_CHANNELS.SCORE_PROCESS) {
-            await this.handleScoreProcess(message);
-        }
+        if (channel !== REDIS_CHANNELS.SCORE_PROCESS) return;
+
+        const jobId = randomUUID();
+        await runWithContext({ correlationId: jobId, jobId, channel }, () =>
+            tracer.startActiveSpan(`redis ${channel}`, async (span) => {
+                try {
+                    await this.handleScoreProcess(message);
+                } catch (error) {
+                    span.recordException(error as Error);
+                    span.setStatus({ code: SpanStatusCode.ERROR });
+                    throw error;
+                } finally {
+                    span.end();
+                }
+            }),
+        );
     }
 
     // Process score calculation
@@ -50,8 +79,7 @@ class RedisSubscriberService {
             const FCM_token = data.FCM_token;
             const flowInstanceId = data.flowInstanceId;
 
-            console.log(`[WORKER] Processing score for user ${userId}...`);
-            console.log(`[WORKER] Indicators:`, JSON.stringify(indicators, null, 2));
+            log.info({ userId, flowInstanceId, indicators }, "Processing score");
 
             // Process the score and recommendation
             const result = await ScoreRecommendationHandler.process(
@@ -60,25 +88,25 @@ class RedisSubscriberService {
                 flowInstanceId,
             );
 
-            console.log(`\nSCORE DETAILS:`);
-            console.log(`   Final Score: ${result.score.finalScore}%`);
-            console.log(`   Zone: ${result.score.zone}`);
-            console.log(`   Week: ${result.score.week}`);
-            console.log(`   Breastfeeding: ${result.score.breastfeeding}`);
-            console.log(`   Weakest Category: ${result.score.weakestCategory}`);
-            console.log(`\nCATEGORY BREAKDOWN:`);
-            console.log(`   Physical:`);
-            console.log(`      Raw: ${result.score.categories.physical.raw}`);
-            console.log(`      Weighted: ${result.score.categories.physical.weighted}`);
-            console.log(`   Lactation:`);
-            console.log(`      Raw: ${result.score.categories.lactation.raw}`);
-            console.log(`      Weighted: ${result.score.categories.lactation.weighted}`);
-            console.log(`   Emotional:`);
-            console.log(`      Raw: ${result.score.categories.emotional.raw}`);
-            console.log(`      Weighted: ${result.score.categories.emotional.weighted}`);
-            console.log(`\nRECOMMENDATION:`);
-            console.log(`   ID: ${result.recommendation.id}`);
-            console.log(`   Message:\n${result.recommendation.message}`);
+            // Was ~20 console.log lines of hand-formatted prose. Collapsed into one
+            // structured record: the same values, but queryable in the collector and
+            // atomic, so a concurrent delivery cannot interleave halfway through.
+            log.info(
+                {
+                    userId,
+                    flowInstanceId,
+                    score: {
+                        finalScore: result.score.finalScore,
+                        zone: result.score.zone,
+                        week: result.score.week,
+                        breastfeeding: result.score.breastfeeding,
+                        weakestCategory: result.score.weakestCategory,
+                        categories: result.score.categories,
+                    },
+                    recommendationId: result.recommendation.id,
+                },
+                "Score computed",
+            );
 
             // Send the push notification (in the user's language) notifying that
             // the score is generated.
@@ -93,7 +121,7 @@ class RedisSubscriberService {
                 },
             });
         } catch (error) {
-            console.error(`[WORKER] Score processing failed for user ${userId!}:`, error);
+            log.error({ err: error, userId: userId! }, "Score processing failed");
         }
     }
 }

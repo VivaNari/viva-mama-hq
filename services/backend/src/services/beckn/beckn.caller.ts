@@ -1,7 +1,9 @@
 import axios from "axios";
 import env from "../../config/env";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
 import { BecknRequest } from "../../types/beckn.types";
+
+const log = createModuleLogger(logger, "beckn.caller");
 
 // Dispatch a Beckn callback (on_select / on_init / on_confirm / ...) to the BPP caller,
 // which signs it and routes it to the BAP. The caller base URL is configurable
@@ -17,12 +19,12 @@ export const dispatchToBppCaller = async (action: string, payload: BecknRequest)
             headers: { "Content-Type": "application/json" },
             timeout: 15000,
         });
-        logger.info(
+        log.info(
             { action, url, status: response.status, transactionId },
             "Beckn callback dispatched to BPP caller",
         );
     } catch (err: any) {
-        logger.error(
+        log.error(
             {
                 action,
                 url,

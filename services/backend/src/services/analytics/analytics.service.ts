@@ -1,7 +1,9 @@
 import analyticsEventModel from "../../models/analytics-event.model";
 import { EAnalyticsEvent, IAnalyticsEvent, IFunnelSummary } from "../../types/analytics.types";
 import { EPlanCode, ESubscriptionTier, TObjectIdLike } from "../../types/subscription.types";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
+
+const log = createModuleLogger(logger, "analytics.service");
 
 export interface ITrackParams {
     userId: TObjectIdLike;
@@ -37,7 +39,7 @@ export class AnalyticsService {
                 metadata: params.metadata ?? {},
             })
             .catch((error) => {
-                logger.warn({ error, event: params.event }, "Analytics write failed");
+                log.warn({ error, event: params.event }, "Analytics write failed");
             });
     }
 

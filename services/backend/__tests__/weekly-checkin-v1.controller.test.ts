@@ -17,13 +17,29 @@ jest.mock("../src/services/weekly-checkin-v1/weekly-checkin.service", () => ({
     default: jest.fn().mockImplementation(() => weeklyCheckinServiceMocks),
 }));
 
-jest.mock("../src/utils/logger", () => ({
-    __esModule: true,
-    default: {
+// Modules build their own child logger at import time via createModuleLogger, so the mock
+// has to supply that factory too — returning a logger-shaped stub, since the result is
+// what the module under test actually calls.
+jest.mock("../src/utils/logger", () => {
+    const stub = {
         info: jest.fn(),
         error: jest.fn(),
-    },
-}));
+        warn: jest.fn(),
+        debug: jest.fn(),
+        trace: jest.fn(),
+        fatal: jest.fn(),
+        child: jest.fn(() => stub),
+    };
+    return {
+        __esModule: true,
+        default: stub,
+        createChildLogger: jest.fn(() => stub),
+        createModuleLogger: jest.fn(() => stub),
+        createRequestLogger: jest.fn(() => stub),
+        createUserLogger: jest.fn(() => stub),
+        createWorkerLogger: jest.fn(() => stub),
+    };
+});
 
 /**
  * The controller checks the user's check-in entitlement before starting one, which needs

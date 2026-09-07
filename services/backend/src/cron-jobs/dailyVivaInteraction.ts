@@ -1,9 +1,11 @@
 import UserModel from "../models/user.model";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
 import { sendPushNotification } from "../utils/sendPushNotification";
 
+const log = createModuleLogger(logger, "dailyVivaInteraction");
+
 export const dailyVivaInteraction = async (): Promise<void> => {
-    logger.info("Starting daily Viva interaction reminder job");
+    log.info("Starting daily Viva interaction reminder job");
 
     try {
         const users = await UserModel.find({
@@ -11,7 +13,7 @@ export const dailyVivaInteraction = async (): Promise<void> => {
             user_category: { $ne: null }, // Must have a category
         });
 
-        logger.info({ count: users.length }, "Found users for Viva interaction reminders");
+        log.info({ count: users.length }, "Found users for Viva interaction reminders");
 
         for (const user of users) {
             try {
@@ -27,15 +29,15 @@ export const dailyVivaInteraction = async (): Promise<void> => {
                     },
                 });
             } catch (error) {
-                logger.error(
+                log.error(
                     { error, userId: user._id },
                     "Failed to send Viva interaction reminder for user",
                 );
             }
         }
 
-        logger.info("Daily Viva interaction reminder job completed");
+        log.info("Daily Viva interaction reminder job completed");
     } catch (error) {
-        logger.error({ error }, "Daily Viva interaction reminder job failed");
+        log.error({ error }, "Daily Viva interaction reminder job failed");
     }
 };

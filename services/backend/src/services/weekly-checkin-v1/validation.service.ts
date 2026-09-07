@@ -16,9 +16,11 @@ import {
     WEEKLY_CHECKIN_MESSAGES,
     CHECKIN_EXPIRY_DAYS,
 } from "../../constants/chat";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
 import { getOrCreateFlowConversation } from "../chat-system/flow-conversation.service";
 import { calculatePostpartumState } from "../../utils/functions/postpartumWeek";
+
+const log = createModuleLogger(logger, "validation.service");
 
 interface IdempotencyCheckResult {
     isDuplicate: boolean;
@@ -138,7 +140,7 @@ class ValidationService {
             state: WeeklyCheckinState.EXPIRED,
         });
 
-        logger.info(
+        log.info(
             { flowInstanceId: flowInstance._id, week: flowInstance.postpartumWeek },
             "Flow instance marked as expired",
         );
@@ -181,7 +183,7 @@ class ValidationService {
             });
 
             if (existingResponse) {
-                logger.info(
+                log.info(
                     { flowInstanceId, nodeId, idempotencyKey },
                     "Duplicate request detected via idempotency key",
                 );
@@ -197,7 +199,7 @@ class ValidationService {
         });
 
         if (existingAnswer) {
-            logger.info({ flowInstanceId, nodeId }, "Answer already exists for this node");
+            log.info({ flowInstanceId, nodeId }, "Answer already exists for this node");
             return { isDuplicate: true, existingResponse: existingAnswer };
         }
 
@@ -421,7 +423,7 @@ class ValidationService {
             outcome: null,
         });
 
-        logger.info(
+        log.info(
             { userId: user._id, week, flowInstanceId: newInstance._id },
             "Created flow instance on-demand",
         );
@@ -482,7 +484,7 @@ class ValidationService {
         );
 
         if (idempotencyCheck.isDuplicate) {
-            logger.info(
+            log.info(
                 { flowInstanceId, nodeId, idempotencyKey, userId },
                 "Duplicate answer detected - returning success for retry safety",
             );

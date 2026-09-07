@@ -16,7 +16,9 @@ import {
     EReportTargetType,
     IModerationState,
 } from "../../types/moderation.types";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
+
+const log = createModuleLogger(logger, "moderation.service");
 
 /**
  * The shape both reportable content types share. Posts and comments have different
@@ -191,7 +193,7 @@ export class ModerationService {
             throw error;
         }
 
-        logger.info(
+        log.info(
             { messageId: input.messageId, reason: input.reason },
             "AI message reported",
         );
@@ -280,7 +282,7 @@ export class ModerationService {
         );
 
         if (shouldHide) {
-            logger.warn(
+            log.warn(
                 { targetType: input.targetType, targetId: input.targetId, reportCount },
                 "Content auto-hidden pending review",
             );

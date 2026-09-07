@@ -19,9 +19,11 @@ import usageCounterModel from "../../models/usage-counter.model";
 import UserModel from "../../models/user.model";
 import VivaClubCommentModel from "../../models/vivaClubComment.model";
 import VivaClubPostModel from "../../models/vivaClubPost.model";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
 import { getBillingProvider } from "../subscription/billing";
 import { ISubscription } from "../../types/subscription.types";
+
+const log = createModuleLogger(logger, "account-deletion.service");
 
 /**
  * How many documents were removed, per collection. Returned to the caller and logged,
@@ -124,7 +126,7 @@ export class AccountDeletionService {
                 // Deliberately not fatal. A provider outage must not block a deletion
                 // request the user is entitled to — but it does need to be visible,
                 // because it means a mandate may still be live with no local record.
-                logger.error(
+                log.error(
                     {
                         err: error,
                         subscriptionId: String(subscription._id),
@@ -223,7 +225,7 @@ export class AccountDeletionService {
         // deletion is complete in this database but not necessarily at the provider, so
         // the claim "we delete your data" is only as true as their retention policy.
         // Closing this needs a purge endpoint on the RAG service and a call here.
-        logger.warn(
+        log.warn(
             { userId: _id.toString() },
             "Account deleted locally; LLM-side conversation history was NOT purged — no purge endpoint exists",
         );
@@ -233,7 +235,7 @@ export class AccountDeletionService {
         // on this document and go with it.
         await record("users", () => UserModel.deleteOne({ _id }));
 
-        logger.info({ userId: _id.toString(), report }, "Account deleted");
+        log.info({ userId: _id.toString(), report }, "Account deleted");
 
         return report;
     }

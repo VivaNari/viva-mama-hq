@@ -1,7 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
+import { SpanStatusCode, trace } from "@opentelemetry/api";
 import sendErrorResponse from "../utils/commonFunctions/sendErrorResponse";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
+
+const log = createModuleLogger(logger, "error-handler");
 
 export const errorHandler = (
     error: Error,
@@ -19,7 +22,7 @@ export const errorHandler = (
     // (PlayApiError, SubscriptionError) carry the useful discriminator there rather than
     // in the message, and a log line you have to parse prose out of is a log line nobody
     // greps. Goes through pino, so PII redaction applies.
-    logger.error(
+    log.error(
         {
             err: error,
             code: (error as { code?: unknown }).code,
@@ -29,6 +32,16 @@ export const errorHandler = (
         },
         "Unhandled error",
     );
+
+    // Mark the span as failed for the same reason the line above exists: this is the only
+    // place an unmapped fault is seen. Without it the trace shows a 500 with no exception
+    // attached, and the error-rate views in any OTel backend stay empty while the service
+    // is visibly failing. No-ops when tracing is disabled or no span is active.
+    const span = trace.getActiveSpan();
+    if (span) {
+        span.recordException(error);
+        span.setStatus({ code: SpanStatusCode.ERROR, message: error.message });
+    }
 
     sendErrorResponse({
         error: error,
