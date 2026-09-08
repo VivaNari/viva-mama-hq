@@ -98,6 +98,45 @@ const safely = (label: string, fn: () => unknown): void => {
   }
 };
 
+/**
+ * The screen the user is currently on, stamped onto every event as `screen`.
+ *
+ * `logScreenView` already sends `screen_name`/`screen_class`, but GA4 rewrites
+ * those into `firebase_screen`/`firebase_screen_class`, and the `firebase_`
+ * prefix is reserved — it cannot be registered as a custom dimension. That makes
+ * the built-in screen unreachable anywhere a *registered* dimension is required,
+ * including User Explorer's event panel, which lists nothing else.
+ *
+ * `screen` is not reserved, so it survives verbatim and can be registered. Two
+ * things follow from stamping it in `track` rather than only on screen_view:
+ *
+ *  1. The screen is readable per event in User Explorer.
+ *  2. Every other event carries the screen it happened on, which is what makes a
+ *     session legible as a sequence rather than a bag of event names.
+ *
+ * This is additive. The built-in Screen name / Screen class dimensions keep
+ * working in reports and explorations exactly as before.
+ *
+ * Register `screen` in GA4 (Admin > Custom definitions, event-scoped, parameter
+ * `screen`) — registration is not retroactive, so values arriving before it
+ * exists are collected but never queryable.
+ */
+let currentScreen: string | null = null;
+
+/** Spreadable so no `screen` key is emitted at all before the first screen view. */
+const screenParam = (): { screen?: string } =>
+  currentScreen ? { screen: currentScreen } : {};
+
+/**
+ * Merge the current screen into an event's params.
+ *
+ * A declared param of the same name would win, but none exists — no event in
+ * `EventParams` declares `screen`.
+ */
+const withScreen = (
+  params?: Record<string, unknown>,
+): Record<string, unknown> => ({ ...params, ...screenParam() });
+
 /** Params are only required for events that declare them in `EventParams`. */
 type ParamsFor<E extends AnalyticsEventName> = E extends keyof EventParams
   ? [params: EventParams[E]]
@@ -114,9 +153,12 @@ export const track = <E extends AnalyticsEventName>(
   event: E,
   ...args: ParamsFor<E>
 ): void => {
-  const params = args[0];
   safely(`track(${event})`, () =>
-    logEventUnchecked(analytics, event, params as Record<string, unknown>),
+    logEventUnchecked(
+      analytics,
+      event,
+      withScreen(args[0] as Record<string, unknown> | undefined),
+    ),
   );
   breadcrumb(`event: ${event}`);
 };
@@ -127,10 +169,15 @@ export const track = <E extends AnalyticsEventName>(
  * Called from the navigation container, not from screens — see RootNavigator.
  */
 export const trackScreen = (screenName: string, screenClass?: string): void => {
+  // Set before the event is logged so the screen_view itself carries `screen`,
+  // and so any event racing behind it is attributed to the screen now showing.
+  currentScreen = screenName;
+
   safely(`trackScreen(${screenName})`, () =>
     fireLogScreenView(analytics, {
       screen_name: screenName,
       screen_class: screenClass ?? screenName,
+      ...screenParam(),
     }),
   );
   // So a crash report names the screen the user was on, not just a stack trace.

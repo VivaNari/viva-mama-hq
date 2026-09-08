@@ -51,8 +51,15 @@ react {
     // extraPackagerArgs = []
 
     /* Hermes Commands */
-    //   The hermes compiler command to run. By default it is 'hermesc'
-    // hermesCommand = "$rootDir/my-custom-hermesc/bin/hermesc"
+    //   The hermes compiler command to run. By default it is 'hermesc'.
+    //   Set for the same pnpm-hoisting reason as reactNativeDir above, but it needs its
+    //   own line: the plugin resolves hermesc against `root` (see PathUtils.kt,
+    //   detectOSAwareHermesCommand(config.root, ...)), not against reactNativeDir. `root`
+    //   is correctly apps/mobile — that's where index.js lives — so the default lookup
+    //   lands on apps/mobile/node_modules/react-native, which node-linker=hoisted never
+    //   creates. %OS-BIN% is substituted by the plugin (linux64-bin / osx-bin / win64-bin).
+    //   Only release builds compile with Hermes, so a wrong path here fails nowhere else.
+    hermesCommand = "$rootDir/../../../node_modules/react-native/sdks/hermesc/%OS-BIN%/hermesc"
     //
     //   The list of flags to pass to the Hermes compiler. By default is "-O", "-output-source-map"
     // hermesFlags = ["-O", "-output-source-map"]
