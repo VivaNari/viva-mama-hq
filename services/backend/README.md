@@ -100,8 +100,26 @@ error recording). Set `OTEL_DIAG_LOG_LEVEL=debug` to surface exporter failures �
 against the real collector means the runtime service account is missing
 `roles/run.invoker` on it.
 
-Spans are opt-in via `OTEL_TRACES_ENABLED`; log records export either way, just without a
-`trace_id`. See `services/backend/.env.example` for every key.
+Spans are opt-in via `OTEL_TRACES_ENABLED` and metrics via `OTEL_METRICS_ENABLED`; log
+records export either way, just without a `trace_id`. See `services/backend/.env.example`
+for every key.
+
+> **Never set `OTEL_TRACES_EXPORTER`, `OTEL_METRICS_EXPORTER` or `OTEL_LOGS_EXPORTER`.**
+> The SDK treats an *unset* exporter variable as `otlp`, so `telemetry.ts` sets it to
+> `none` to make the `OTEL_*_ENABLED` flags real — and it only does that when the variable
+> is unset. Setting it yourself silently disables the kill switch: verified locally, with
+> `OTEL_METRICS_ENABLED=false` and `OTEL_METRICS_EXPORTER=otlp`, metrics still exported.
+> `OTEL_LOGS_EXPORTER` and `OTEL_EXPORTER_OTLP_PROTOCOL` are simply inert — the exporters
+> are constructed explicitly in code.
+
+Resource attributes come from detectors passed **in code**, including the GCP detector for
+`cloud.*` / `faas.*`. Do not set `OTEL_NODE_RESOURCE_DETECTORS`: it cannot express `gcp`,
+and an unrecognised name makes the SDK return an *empty* detector list, losing the ones that
+would have worked.
+
+`service.instance.id` is a per-process UUID from `serviceInstanceIdDetector`. It is
+deliberately **not** `K_REVISION` — that names the Cloud Run *revision*, so every instance
+reported the same id and Grafana rejected the metric series as duplicate samples.
 
 Tracing coverage comes from `@opentelemetry/auto-instrumentations-node`, so `express`,
 `mongoose`, `ioredis` and `http` are instrumented with no code change — and adding a new

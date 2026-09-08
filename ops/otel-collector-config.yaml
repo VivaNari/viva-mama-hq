@@ -40,3 +40,10 @@ service:
       receivers: [otlp]
       processors: [batch]
       exporters: [debug]
+    # Mirrors the production collector, which has all three pipelines. Without this the
+    # backend's POSTs to /v1/metrics are rejected — a signal only has a path if a pipeline
+    # for it exists, so a missing pipeline looks exactly like a broken exporter.
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

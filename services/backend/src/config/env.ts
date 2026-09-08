@@ -217,6 +217,11 @@ const env = {
     // Spans are opt-in. Without them every log record still exports, just with an empty
     // trace_id — so this can stay false until the collector has a traces pipeline.
     OTEL_TRACES_ENABLED: process.env.OTEL_TRACES_ENABLED === "true",
+    // Metrics are opt-in too, and OFF is the safe default for a reason worth knowing: the
+    // OTel SDK treats an unset OTEL_METRICS_EXPORTER as "otlp", so without this flag (and
+    // the guard it drives in telemetry.ts) metrics would start exporting the moment an
+    // endpoint is configured, whether or not anyone asked for them.
+    OTEL_METRICS_ENABLED: process.env.OTEL_METRICS_ENABLED === "true",
     // Set to "debug" to surface exporter failures (401/403 from the collector, DNS, etc.)
     // through OTel's own diagnostic logger. Off by default because it is very chatty.
     OTEL_DIAG_LOG_LEVEL: (process.env.OTEL_DIAG_LOG_LEVEL || "").trim().toLowerCase(),

@@ -22,6 +22,13 @@
  *   - Spans (opt-in, OTEL_TRACES_ENABLED): via @opentelemetry/auto-instrumentations-node,
  *     which covers express, mongoose, ioredis and http — and therefore also axios,
  *     firebase-admin, twilio and razorpay, all of which are HTTP underneath.
+ *   - Metrics (opt-in, OTEL_METRICS_ENABLED): request/DB/cache metrics from the same
+ *     instrumentations, plus Node runtime metrics when `runtime-node` is in the
+ *     instrumentation allowlist.
+ *
+ * Resource attributes come from a detector list passed in code — NOT from
+ * OTEL_NODE_RESOURCE_DETECTORS, which cannot express `gcp` and silently disables every
+ * detector when given a name it does not know. See the note by `resourceDetectors` below.
  *
  * Coverage is tunable from the environment, with no code change or redeploy of this file:
  *   OTEL_NODE_DISABLED_INSTRUMENTATIONS=dns,net     (the default set here)
@@ -32,14 +39,23 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-import os from "os";
 import { diag, DiagConsoleLogger, DiagLogLevel } from "@opentelemetry/api";
 import { NodeSDK } from "@opentelemetry/sdk-node";
-import { resourceFromAttributes } from "@opentelemetry/resources";
+import {
+    resourceFromAttributes,
+    envDetector,
+    processDetector,
+    hostDetector,
+    osDetector,
+    serviceInstanceIdDetector,
+} from "@opentelemetry/resources";
+import { gcpDetector } from "@opentelemetry/resource-detector-gcp";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
 import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
+import { PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { OTLPMetricExporter } from "@opentelemetry/exporter-metrics-otlp-http";
 import { PinoInstrumentation } from "@opentelemetry/instrumentation-pino";
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import type { Instrumentation } from "@opentelemetry/instrumentation";
@@ -136,14 +152,40 @@ function start(): void {
     const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT.replace(/\/+$/, "");
     const headers = createHeadersFactory();
 
+    // `service.instance.id` is deliberately NOT set here. It used to be K_REVISION, which
+    // names the Cloud Run *revision* — so every instance of a revision reported the same
+    // id, and Grafana rejects the resulting metric series as duplicate samples.
+    // `serviceInstanceIdDetector` below supplies a per-process UUID instead.
     const resource = resourceFromAttributes({
         [ATTR_SERVICE_NAME]: env.SERVICE_NAME,
         [ATTR_SERVICE_VERSION]: env.SERVICE_VERSION,
         "deployment.environment.name": env.DEPLOYMENT_ENV,
-        // K_REVISION is set by Cloud Run and identifies the specific revision, which is
-        // what you actually want when a bad deploy is only failing on some instances.
-        "service.instance.id": process.env.K_REVISION || os.hostname(),
     });
+
+    /**
+     * Resource detectors, passed in code rather than via OTEL_NODE_RESOURCE_DETECTORS.
+     *
+     * The env var cannot express `gcp` — NodeSDK's map only knows host, os,
+     * serviceinstance, process and env — and it does not degrade gracefully: an
+     * unrecognised name logs "Invalid resource detector" and yields an EMPTY list, losing
+     * every detector including the ones that would have worked. So it must be code, and
+     * setting that variable at all is a trap.
+     *
+     * Note NodeSDK merges as `configuredResource.merge(detected)`, and merge lets the
+     * ARGUMENT win — detected attributes override the ones built above. That is what makes
+     * dropping `service.instance.id` sufficient rather than merely tidy.
+     */
+    const resourceDetectors = [
+        envDetector,
+        processDetector,
+        hostDetector,
+        osDetector,
+        // Per-process randomUUID. Unique per instance, which is the whole requirement.
+        serviceInstanceIdDetector,
+        // cloud.provider/region/account.id, faas.name/instance/version, host.id — read
+        // from the Cloud Run metadata server. Absent (without error) off GCP.
+        gcpDetector,
+    ];
 
     // Make OTEL_TRACES_ENABLED=false mean what it says.
     //
@@ -159,6 +201,18 @@ function start(): void {
     // passed explicitly below are untouched, so log export continues normally.
     if (!env.OTEL_TRACES_ENABLED && process.env.OTEL_TRACES_EXPORTER === undefined) {
         process.env.OTEL_TRACES_EXPORTER = "none";
+    }
+
+    // Same guard for metrics, and it is needed for a sharper reason. NodeSDK treats an
+    // UNSET OTEL_METRICS_EXPORTER as "otlp" and builds a metric reader from the
+    // environment on its own, so without this line OTEL_METRICS_ENABLED=false would
+    // export metrics anyway — the flag would look like it did nothing.
+    //
+    // Both guards only fire when the variable is unset, so an explicitly configured
+    // OTEL_*_EXPORTER always wins. That means setting OTEL_METRICS_EXPORTER=otlp in the
+    // deployment disables this kill switch; don't.
+    if (!env.OTEL_METRICS_ENABLED && process.env.OTEL_METRICS_EXPORTER === undefined) {
+        process.env.OTEL_METRICS_EXPORTER = "none";
     }
 
     const pinoConfig = {
@@ -218,6 +272,7 @@ function start(): void {
 
     const sdk = new NodeSDK({
         resource,
+        resourceDetectors,
         instrumentations,
         // Batched, never simple: one HTTP round trip per log line would add latency to
         // every request and swamp the collector.
@@ -235,6 +290,27 @@ function start(): void {
                       url: `${endpoint}/v1/traces`,
                       ...(headers ? { headers } : {}),
                   }),
+              }
+            : {}),
+        // Built explicitly rather than left to the SDK's env path, so metrics go through
+        // the same createHeadersFactory() as logs and traces. The env-built exporter
+        // carries no Authorization header — harmless for a loopback sidecar, silently
+        // broken the day the collector moves anywhere else.
+        //
+        // Passing metricReaders bypasses the env path entirely, which also means
+        // OTEL_METRIC_EXPORT_INTERVAL has to be read here or it would be ignored.
+        ...(env.OTEL_METRICS_ENABLED
+            ? {
+                  metricReaders: [
+                      new PeriodicExportingMetricReader({
+                          exporter: new OTLPMetricExporter({
+                              url: `${endpoint}/v1/metrics`,
+                              ...(headers ? { headers } : {}),
+                          }),
+                          exportIntervalMillis:
+                              Number(process.env.OTEL_METRIC_EXPORT_INTERVAL) || 60_000,
+                      }),
+                  ],
               }
             : {}),
     });
