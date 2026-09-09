@@ -21,9 +21,16 @@ export default function TopBar({ navOpen, onToggleNav }: Props) {
       </button>
 
       <Link to="/" className="brand">
-        <span className="brand-mark" aria-hidden="true">
-          VM
-        </span>
+        {/* Served from public/, so BASE_URL keeps the path correct whether the
+            site is hosted at a domain root or under a subpath. Decorative: the
+            adjacent text already names the project. */}
+        <img
+          className="brand-mark"
+          src={`${import.meta.env.BASE_URL}logo.png`}
+          alt=""
+          width={30}
+          height={30}
+        />
         <span className="brand-text">
           VivaMama<span className="brand-sub">Contributor Docs</span>
         </span>

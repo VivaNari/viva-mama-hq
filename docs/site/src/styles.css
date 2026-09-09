@@ -97,13 +97,16 @@ a:hover { text-decoration: underline; }
 
 .brand { display: flex; align-items: center; gap: 10px; color: var(--text); }
 .brand:hover { text-decoration: none; }
+/* The app's launcher icon. It carries its own purple ground and rounded corners,
+   so it gets no background of ours — a tinted plate behind it would double up.
+   Explicit width/height match the img attributes, reserving the box before the
+   file loads so the header never shifts. */
 .brand-mark {
-  display: grid; place-items: center;
-  width: 30px; height: 30px;
+  display: block;
+  width: 30px;
+  height: 30px;
   border-radius: 7px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 12px; font-weight: 700; letter-spacing: .02em;
+  flex-shrink: 0;
 }
 .brand-text { display: flex; flex-direction: column; font-weight: 650; font-size: 15px; line-height: 1.15; }
 .brand-sub { font-size: 11.5px; font-weight: 450; color: var(--text-faint); }
