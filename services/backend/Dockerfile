@@ -5,7 +5,7 @@
 #   docker build -f services/backend/Dockerfile -t vivamama-backend .
 #
 # ── Stage 1: Build the workspace (backend + its deps) ──────────────
-FROM node:20-alpine AS build
+FROM node:26-alpine AS build
 RUN corepack enable && corepack prepare pnpm@8.9.0 --activate
 WORKDIR /repo
 
@@ -19,7 +19,7 @@ RUN pnpm install --frozen-lockfile --filter "@vivamama/backend..." \
  && pnpm prune --prod || true
 
 # ── Stage 2: Runtime ───────────────────────────────────────────────
-FROM node:20-alpine AS runtime
+FROM node:26-alpine AS runtime
 RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 WORKDIR /repo
 COPY --from=build --chown=nodejs:nodejs /repo /repo
