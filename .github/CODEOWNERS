@@ -1,0 +1,134 @@
+# ──────────────────────────────────────────────────────────────────────────
+# VivaMama — CODEOWNERS
+#
+# Every path below requires an approving review from a listed owner before a
+# PR can merge into the default branch. Enforced by the "Main Branch Protection"
+# ruleset (Settings → Rules → Rulesets) with "Require review from Code Owners"
+# enabled — without that checkbox this file is advisory only.
+#
+# Syntax notes, because they bite:
+#   * LAST matching pattern wins — not the most specific one. Order here goes
+#     broad → narrow, so the security-critical sections at the bottom always
+#     take precedence over the catch-all at the top. Adding a broad rule at the
+#     end would silently disable everything above it.
+#   * Owners must have write access to the repo, or the rule is ignored.
+#   * A pattern that matches nothing fails silently. Verify with
+#     `git ls-files <path>` before adding one.
+#   * A code owner cannot approve their own PR. Keep at least two owners on
+#     every security-critical path so neither maintainer is ever blocked.
+#
+# Owners:
+#   @souvik-dev-sudo  — Souvik Pal
+#   @rahul-qbit       — Rahul Dutta
+# ──────────────────────────────────────────────────────────────────────────
+
+
+# ── Default ───────────────────────────────────────────────────────────
+# Catch-all. Every path not matched by a later rule lands here.
+*                                   @souvik-dev-sudo @rahul-qbit
+
+
+# ── Governance & security policy ──────────────────────────────────────
+# Changing the disclosure process, the license, or the conduct policy is a
+# project-level decision, not a code change.
+/SECURITY.md                        @souvik-dev-sudo @rahul-qbit
+/LICENSE                            @souvik-dev-sudo @rahul-qbit
+/NOTICE                             @souvik-dev-sudo @rahul-qbit
+/CODE_OF_CONDUCT.md                 @souvik-dev-sudo @rahul-qbit
+/CONTRIBUTING.md                    @souvik-dev-sudo @rahul-qbit
+
+
+# ── CI/CD — highest blast radius ──────────────────────────────────────
+# These jobs hold the GCP, Firebase, Play and Razorpay credentials. A PR that
+# edits a workflow can exfiltrate every secret the job can read, so workflow
+# changes always need a second pair of eyes.
+/.github/workflows/                 @souvik-dev-sudo @rahul-qbit
+/.github/actions/                   @souvik-dev-sudo @rahul-qbit
+
+# Secret-scanning config. An allowlist entry here can blind gitleaks to a real
+# leak — review every addition against the rules written in the file itself.
+/.gitleaks.toml                     @souvik-dev-sudo @rahul-qbit
+
+# Automated dependency PRs and the ignore rules that keep secrets out of git.
+/.github/dependabot.yml             @souvik-dev-sudo @rahul-qbit
+/.gitignore                         @souvik-dev-sudo @rahul-qbit
+/.dockerignore                      @souvik-dev-sudo @rahul-qbit
+
+
+# ── Supply chain — lockfiles & manifests ──────────────────────────────
+# A lockfile diff is where a typosquatted or backdoored transitive dependency
+# actually enters the build. Review the resolved versions, not just the intent.
+/pnpm-lock.yaml                     @souvik-dev-sudo @rahul-qbit
+/package.json                       @souvik-dev-sudo @rahul-qbit
+/pnpm-workspace.yaml                @souvik-dev-sudo @rahul-qbit
+**/package.json                     @souvik-dev-sudo @rahul-qbit
+**/package-lock.json                @souvik-dev-sudo @rahul-qbit
+/services/chatbot/uv.lock           @souvik-dev-sudo @rahul-qbit
+/services/chatbot/requirements.txt  @souvik-dev-sudo @rahul-qbit
+/services/chatbot/requirements-dev.txt  @souvik-dev-sudo @rahul-qbit
+
+
+# ── Containers & infrastructure ───────────────────────────────────────
+# Base image pins, build stages, and what ends up in the published layers.
+**/Dockerfile                       @souvik-dev-sudo @rahul-qbit
+**/.dockerignore                    @souvik-dev-sudo @rahul-qbit
+/docker-compose.yml                 @souvik-dev-sudo @rahul-qbit
+/ops/                               @souvik-dev-sudo @rahul-qbit
+
+
+# ── Environment templates ─────────────────────────────────────────────
+# These are the contract for what is a secret and what is safe to ship in a
+# client bundle. apps/mobile/.env.example in particular documents why the
+# Razorpay secret must never appear there.
+**/.env.example                     @souvik-dev-sudo @rahul-qbit
+
+
+# ── Backend: authentication & authorization ───────────────────────────
+/services/backend/src/middlewares/                  @souvik-dev-sudo @rahul-qbit
+/services/backend/src/api/v1/validators/users/      @souvik-dev-sudo @rahul-qbit
+
+# ── Backend: payments, entitlements & webhooks ────────────────────────
+# Razorpay signature verification and Play RTDN handling — a flaw here is a
+# direct path to unpaid entitlements or forged payment callbacks.
+/services/backend/src/api/v1/controllers/webhooks/  @souvik-dev-sudo @rahul-qbit
+/services/backend/src/api/v1/routes/webhooks/       @souvik-dev-sudo @rahul-qbit
+/services/backend/src/services/entitlements/        @souvik-dev-sudo @rahul-qbit
+/services/backend/src/services/book-consultation/   @souvik-dev-sudo @rahul-qbit
+
+# ── Backend: configuration & credentials ──────────────────────────────
+# Env parsing, DB connection, Firebase Admin bootstrap.
+/services/backend/src/config/                       @souvik-dev-sudo @rahul-qbit
+
+# ── Backend: one-off data scripts ─────────────────────────────────────
+# These run against production data with elevated credentials.
+/services/backend/scripts/                          @souvik-dev-sudo @rahul-qbit
+
+
+# ── Chatbot: settings & data access ───────────────────────────────────
+# settings.py resolves every credential the service reads; mcp/ holds the
+# Mongo connection and the tool surface exposed to the LLM.
+/services/chatbot/app/settings.py   @souvik-dev-sudo @rahul-qbit
+/services/chatbot/app/mcp/          @souvik-dev-sudo @rahul-qbit
+
+
+# ── Firebase hosting & project config ─────────────────────────────────
+# Deploy targets and project IDs — a change here can redirect a deploy.
+/apps/admin/firebase.json           @souvik-dev-sudo @rahul-qbit
+/apps/admin/.firebaserc             @souvik-dev-sudo @rahul-qbit
+/apps/mobile/firebase.json          @souvik-dev-sudo @rahul-qbit
+
+
+# ── Mobile: build, signing & obfuscation ──────────────────────────────
+/apps/mobile/android/app/build.gradle       @souvik-dev-sudo @rahul-qbit
+/apps/mobile/android/app/proguard-rules.pro @souvik-dev-sudo @rahul-qbit
+
+
+# ── Shared API contracts ──────────────────────────────────────────────
+# Consumed by backend, mobile and admin — a breaking change here fans out to
+# every client at once.
+/packages/contracts/                @souvik-dev-sudo @rahul-qbit
+
+
+# ── This file ─────────────────────────────────────────────────────────
+# Self-protection: without this, a PR could remove every rule above it.
+/.github/CODEOWNERS                 @souvik-dev-sudo @rahul-qbit
