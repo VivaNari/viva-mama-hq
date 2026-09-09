@@ -59,6 +59,7 @@
 # A lockfile diff is where a typosquatted or backdoored transitive dependency
 # actually enters the build. Review the resolved versions, not just the intent.
 /pnpm-lock.yaml                     @souvik-dev-sudo @rahul-qbit
+**/pnpm-lock.yaml                   @souvik-dev-sudo @rahul-qbit
 /package.json                       @souvik-dev-sudo @rahul-qbit
 /pnpm-workspace.yaml                @souvik-dev-sudo @rahul-qbit
 **/package.json                     @souvik-dev-sudo @rahul-qbit
@@ -127,6 +128,13 @@
 # Consumed by backend, mobile and admin — a breaking change here fans out to
 # every client at once.
 /packages/contracts/                @souvik-dev-sudo @rahul-qbit
+
+
+# ── Documentation site ────────────────────────────────────────────────
+# Prose in content/ is low-risk and welcomes drive-by fixes; the build config
+# and its Pages deploy are ordinary CI surface and stay owned above.
+/docs/site/vite.config.ts           @souvik-dev-sudo @rahul-qbit
+/docs/site/package.json             @souvik-dev-sudo @rahul-qbit
 
 
 # ── This file ─────────────────────────────────────────────────────────

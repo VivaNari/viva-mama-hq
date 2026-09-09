@@ -1,0 +1,407 @@
+/* ── Tokens ────────────────────────────────────────────────────────────
+   Light is the base palette; the dark block below only redefines tokens,
+   so no colour is ever defined solely inside a media query. */
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f7f8fa;
+  --bg-inset: #f0f2f5;
+  --border: #e3e6ea;
+  --border-strong: #d0d5dc;
+  --text: #1a1d21;
+  --text-muted: #5b636d;
+  --text-faint: #858d97;
+  --accent: #b23a6f;
+  --accent-soft: #fdf2f7;
+  --code-bg: #1c2128;
+
+  /* Ambient aura. Deliberately faint in light mode: on a white ground these
+     read as tinted paper, and anything stronger fights the text for contrast. */
+  --aura-1: rgba(178, 58, 111, .13);
+  --aura-3: rgba(0, 170, 180, .07);
+
+  --radius: 8px;
+  --sidebar-w: 268px;
+  --toc-w: 200px;
+  --topbar-h: 56px;
+  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --bg-subtle: #131920;
+    --bg-inset: #1a212b;
+    --border: #262d38;
+    --border-strong: #333c48;
+    --text: #e6edf3;
+    --text-muted: #9aa6b2;
+    --text-faint: #6e7781;
+    --accent: #f08ab0;
+    --accent-soft: #24161d;
+    --code-bg: #161b22;
+
+    /* Against a near-black ground the same hues can run far hotter without
+       hurting legibility, which is what gives the neon read. */
+    --aura-1: rgba(255, 77, 148, .26);
+    --aura-3: rgba(0, 212, 200, .13);
+
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: calc(var(--topbar-h) + 16px); }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Top bar ──────────────────────────────────────────────────────── */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: var(--topbar-h);
+  padding: 0 20px;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-toggle {
+  display: none;
+  width: 34px; height: 34px;
+  align-items: center; justify-content: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.brand { display: flex; align-items: center; gap: 10px; color: var(--text); }
+.brand:hover { text-decoration: none; }
+.brand-mark {
+  display: grid; place-items: center;
+  width: 30px; height: 30px;
+  border-radius: 7px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px; font-weight: 700; letter-spacing: .02em;
+}
+.brand-text { display: flex; flex-direction: column; font-weight: 650; font-size: 15px; line-height: 1.15; }
+.brand-sub { font-size: 11.5px; font-weight: 450; color: var(--text-faint); }
+
+.topbar-spacer { flex: 1; }
+.topbar-link { font-size: 14px; color: var(--text-muted); }
+.topbar-link:hover { color: var(--text); text-decoration: none; }
+
+/* ── Ambient aura ─────────────────────────────────────────────────────
+   Three soft colour fields behind the content column.
+
+   Built from radial-gradients with no `filter: blur()`. A blur filter over a
+   viewport-sized fixed element forces the compositor to re-rasterise a large
+   surface and shows up as scroll jank on mid-range hardware; a gradient with a
+   long transparent falloff is already diffuse and costs nothing to paint.
+
+   Stacking: `body` paints an opaque background, so this layer sits at z-index 0
+   above it, and `.shell` is lifted to z-index 1 above this. The topbar's
+   backdrop-filter lets the glow bleed through it, which is most of the effect. */
+.aura {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  /* Never intercept clicks or text selection — it is pure decoration. */
+  pointer-events: none;
+}
+
+.aura span {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  /* vmin keeps the orbs proportional to the viewport, so the composition holds
+     from a phone to an ultrawide without per-breakpoint sizes. */
+  will-change: transform;
+}
+
+/* Teal orb — centred over the content column, just under the topbar. */
+.aura-1 {
+  top: -20vmin;
+  left: 50%;
+  width: 70vmin;
+  height: 70vmin;
+  margin-left: -35vmin;
+  background: radial-gradient(circle, var(--aura-3) 0%, transparent 68%);
+  animation: aura-drift-a 26s ease-in-out infinite alternate;
+}
+
+/* Rose accent low and left, so the palette does not read as a single wash. */
+.aura-3 {
+  top: 46vmin;
+  left: -10vmin;
+  width: 48vmin;
+  height: 48vmin;
+  background: radial-gradient(circle, var(--aura-1) 0%, transparent 70%);
+  animation: aura-drift-c 38s ease-in-out infinite alternate;
+}
+
+/* Transform-only keyframes: these run on the compositor and never trigger
+   layout or paint. Long durations keep the motion subliminal rather than
+   distracting while someone is reading. */
+@keyframes aura-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(-4vmin, 3vmin, 0) scale(1.08); }
+}
+@keyframes aura-drift-c {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(4vmin, -4vmin, 0) scale(1.06); }
+}
+
+/* ── Shell ────────────────────────────────────────────────────────── */
+.shell { display: flex; align-items: flex-start; position: relative; z-index: 1; }
+
+.sidebar {
+  position: sticky;
+  top: var(--topbar-h);
+  flex: 0 0 var(--sidebar-w);
+  width: var(--sidebar-w);
+  height: calc(100vh - var(--topbar-h));
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  /* Transparent on desktop so the aura reads as one continuous field behind the
+     whole page rather than stopping at the sidebar edge. Re-solidified in the
+     mobile media query, where this becomes an overlay drawer over content. */
+  background: transparent;
+}
+.sidebar-inner { padding: 24px 12px 48px 20px; }
+
+.nav-group + .nav-group { margin-top: 22px; }
+.nav-group-title {
+  margin: 0 0 8px;
+  padding-left: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.nav-list { list-style: none; margin: 0; padding: 0; }
+.nav-link {
+  display: block;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--text-muted);
+  border-left: 2px solid transparent;
+}
+.nav-link:hover { background: var(--bg-subtle); color: var(--text); text-decoration: none; }
+.nav-link-active {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.scrim {
+  display: none;
+  position: fixed;
+  inset: var(--topbar-h) 0 0 0;
+  z-index: 25;
+  border: 0;
+  background: rgba(0, 0, 0, .42);
+}
+
+.content { flex: 1; min-width: 0; padding: 40px 44px 96px; }
+/* Centred rather than left-aligned: the prose column is deliberately capped at
+   a readable line length, so on a wide screen the leftover space belongs on both
+   sides of the block, not pooled on the right. */
+.page {
+  display: flex;
+  gap: 44px;
+  align-items: flex-start;
+  max-width: 1120px;
+  margin-inline: auto;
+}
+
+/* ── Prose ────────────────────────────────────────────────────────── */
+.prose { flex: 1; min-width: 0; max-width: 780px; }
+
+.page-header { margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 12px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--accent);
+}
+.prose h1 { margin: 0; font-size: 34px; line-height: 1.2; letter-spacing: -.02em; font-weight: 700; }
+.lede { margin: 10px 0 0; font-size: 17px; color: var(--text-muted); }
+
+.prose h2 {
+  margin: 42px 0 14px;
+  padding-top: 10px;
+  font-size: 23px; font-weight: 660; letter-spacing: -.01em;
+  border-top: 1px solid var(--border);
+}
+.prose h3 { margin: 30px 0 10px; font-size: 17.5px; font-weight: 650; }
+.prose h4 { margin: 24px 0 8px; font-size: 15.5px; font-weight: 650; color: var(--text-muted); }
+.prose p { margin: 0 0 15px; }
+.prose ul, .prose ol { margin: 0 0 15px; padding-left: 24px; }
+.prose li { margin: 5px 0; }
+.prose li > ul, .prose li > ol { margin: 5px 0; }
+.prose hr { margin: 36px 0; border: 0; border-top: 1px solid var(--border); }
+.prose strong { font-weight: 650; }
+
+.prose blockquote {
+  margin: 20px 0;
+  padding: 12px 18px;
+  border-left: 3px solid var(--accent);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--accent-soft);
+  color: var(--text);
+}
+.prose blockquote p:last-child { margin-bottom: 0; }
+
+/* Inline code. The descendant guard keeps this off tokens inside <pre>. */
+.prose :not(pre) > code {
+  padding: .15em .4em;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg-inset);
+  font-family: var(--mono);
+  font-size: .875em;
+  word-break: break-word;
+}
+
+/* ── Code blocks ──────────────────────────────────────────────────── */
+.codeblock { position: relative; margin: 0 0 20px; }
+.codeblock pre {
+  margin: 0;
+  padding: 16px 18px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--code-bg);
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+/* highlight.js themes paint their own background; we want the token colours
+   but our own surface, so the theme's background is neutralised here. */
+.codeblock pre code.hljs { padding: 0; background: transparent; }
+.codeblock pre code { font-family: var(--mono); }
+
+.copy-btn {
+  position: absolute;
+  top: 8px; right: 8px;
+  z-index: 2;
+  padding: 4px 9px;
+  border: 1px solid #30363d;
+  border-radius: 5px;
+  background: #21262d;
+  color: #b9c1ca;
+  font-size: 11.5px;
+  font-family: var(--font);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity .12s ease;
+}
+.codeblock:hover .copy-btn,
+.copy-btn:focus-visible { opacity: 1; }
+.copy-btn:hover { background: #30363d; color: #fff; }
+/* Touch devices have no hover, so the button must stay visible. */
+@media (hover: none) { .copy-btn { opacity: 1; } }
+
+/* ── Tables ───────────────────────────────────────────────────────── */
+.table-wrap { margin: 0 0 20px; overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.table-wrap table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table-wrap th, .table-wrap td { padding: 9px 14px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+.table-wrap th { background: var(--bg-subtle); font-weight: 650; white-space: nowrap; }
+.table-wrap tr:last-child td { border-bottom: 0; }
+
+/* ── Page footer ──────────────────────────────────────────────────── */
+.page-footer { margin-top: 52px; padding-top: 20px; border-top: 1px solid var(--border); }
+.edit-link { font-size: 13.5px; color: var(--text-faint); }
+
+.pager { display: flex; justify-content: space-between; gap: 16px; margin-top: 24px; }
+.pager-link {
+  display: flex; flex-direction: column; gap: 3px;
+  flex: 1; max-width: 300px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.pager-link:hover { border-color: var(--accent); text-decoration: none; }
+.pager-next { align-items: flex-end; text-align: right; margin-left: auto; }
+.pager-dir { font-size: 12px; color: var(--text-faint); }
+.pager-title { font-size: 14.5px; font-weight: 600; }
+
+/* ── On-page contents ─────────────────────────────────────────────── */
+.toc {
+  position: sticky;
+  top: calc(var(--topbar-h) + 40px);
+  flex: 0 0 var(--toc-w);
+  width: var(--toc-w);
+  max-height: calc(100vh - var(--topbar-h) - 80px);
+  overflow-y: auto;
+  font-size: 13px;
+}
+.toc-title {
+  margin: 0 0 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text-faint);
+}
+.toc ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--border); }
+.toc li { margin: 0; }
+.toc a { display: block; padding: 4px 0 4px 12px; margin-left: -1px; border-left: 2px solid transparent; color: var(--text-muted); }
+.toc a:hover { color: var(--text); text-decoration: none; }
+.toc-sub a { padding-left: 24px; font-size: 12.5px; }
+.toc-active { color: var(--accent) !important; border-left-color: var(--accent) !important; font-weight: 600; }
+
+/* ── Responsive ───────────────────────────────────────────────────── */
+@media (max-width: 1180px) {
+  .toc { display: none; }
+}
+
+@media (max-width: 900px) {
+  .nav-toggle { display: flex; }
+  .scrim { display: block; }
+  .sidebar {
+    position: fixed;
+    top: var(--topbar-h); left: 0;
+    z-index: 30;
+    transform: translateX(-100%);
+    transition: transform .18s ease;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, .18);
+  }
+  .sidebar-open { transform: translateX(0); }
+  /* As a drawer it floats over the page, so it needs an opaque ground. */
+  .sidebar { background: var(--bg); }
+  .content { padding: 28px 20px 72px; }
+  .prose h1 { font-size: 28px; }
+  .pager { flex-direction: column; }
+  .pager-link, .pager-next { max-width: none; align-items: flex-start; text-align: left; margin-left: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .sidebar { transition: none; }
+  /* Keep the colour field, drop the drift. */
+  .aura span { animation: none; }
+}
