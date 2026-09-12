@@ -71,3 +71,6 @@ Thumbs.db
 *.tgz
 apps/mobile/**/*.jsbundle
 apps/mobile/**/index.android.bundle
+
+
+/docs/analytics-report/
