@@ -1,10 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
+import { getGrowthLogs } from '../../api/infantGrowth.api';
+import GrowthChartCard from '../growth/GrowthChartCard';
+import { buildSeries, latestResults } from '../../utils/growthSeries';
+import { IGrowthLog } from '../../types/growthLog.types';
 import { infantData } from '../../data/infantData';
 import { FLOW_SLUGS } from '../../constants/chat';
 import { FlowType } from '../../types/chat.types';
@@ -47,6 +51,39 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
     const selectedChild: IChild | undefined =
         children.find((child) => child._id === selectedChildId) ?? children[0];
 
+    const [growthLogs, setGrowthLogs] = useState<IGrowthLog[]>([]);
+
+    /**
+     * A failed fetch leaves the chart showing its reference curves with no child points,
+     * which is the same thing a child with no logs yet sees. That degrades honestly, so it
+     * is not worth a toast on a dashboard the mother did not explicitly ask to refresh.
+     */
+    useEffect(() => {
+        let cancelled = false;
+        const childId = selectedChild?._id;
+
+        if (!childId) {
+            setGrowthLogs([]);
+            return;
+        }
+
+        getGrowthLogs(childId)
+            .then((logs) => {
+                if (!cancelled) setGrowthLogs(logs);
+            })
+            .catch((error) => {
+                console.log('[DashboardInfantTab] Failed to load growth logs', error);
+                if (!cancelled) setGrowthLogs([]);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedChild?._id]);
+
+    const series = useMemo(() => buildSeries(growthLogs), [growthLogs]);
+    const results = useMemo(() => latestResults(growthLogs), [growthLogs]);
+
     /**
      * Both the empty state's CTA and the strip's "+" land here. No childId is passed: the
      * server resolves an in-flight run or creates a fresh draft child, which is what makes
@@ -86,22 +123,36 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
     const measurements = selectedChild?.birth_measurements;
     const missing = t('infant.statMissing');
 
+    /**
+     * The most recent numbers on file.
+     *
+     * Prefers the latest growth log and falls back to the birth measurements, so a child
+     * onboarded but never logged still shows something real. Weight is stored in kilograms
+     * and displayed in grams, which is the unit an Indian clinic reports.
+     */
+    const latest = growthLogs.length > 0 ? growthLogs[growthLogs.length - 1] : undefined;
+
+    const latestWeightGrams =
+        typeof latest?.measurements.weight_kg === 'number'
+            ? Math.round(latest.measurements.weight_kg * 1000)
+            : measurements?.weight_grams;
+    const latestLengthCm = latest?.measurements.length_cm ?? measurements?.length_cm;
+    const latestHeadCm =
+        latest?.measurements.head_circumference_cm ??
+        measurements?.head_circumference_cm;
+
     const stats = [
         {
             label: t('infant.statWeight'),
-            value: measurements?.weight_grams
-                ? `${measurements.weight_grams} g`
-                : missing,
+            value: latestWeightGrams ? `${latestWeightGrams} g` : missing,
         },
         {
             label: t('infant.statHeight'),
-            value: measurements?.length_cm ? `${measurements.length_cm} cm` : missing,
+            value: latestLengthCm ? `${latestLengthCm} cm` : missing,
         },
         {
             label: t('infant.statHead'),
-            value: measurements?.head_circumference_cm
-                ? `${measurements.head_circumference_cm} cm`
-                : missing,
+            value: latestHeadCm ? `${latestHeadCm} cm` : missing,
         },
     ];
 
@@ -118,8 +169,7 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
             ? new Date(selectedChild.date_of_birth).toISOString()
             : undefined,
         vaccinationSector: selectedChild?.vaccination_sector,
-        // Until a growth series exists, the birth numbers are the last ones on file.
-        lastMeasurements: measurements,
+        childSex: selectedChild?.sex,
     };
 
     // Rendered as rows rather than a FlatList: the last tile spans both columns, which a
@@ -141,52 +191,36 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                 onAddChild={startBabyOnboarding}
             />
 
-            <DashboardCard style={styles.growthCard}>
-                <View style={styles.growthHeader}>
-                    <Text style={[styles.growthTitle, globalStyles.fontBold]}>
-                        {t('infant.ageHeading', {
-                            age: getChildAgeLabel(selectedChild?.date_of_birth, t),
-                        })}
-                    </Text>
+            {/* <Text style={[styles.ageHeading, globalStyles.fontBold]}>
+                {t('infant.ageHeading', {
+                    age: getChildAgeLabel(selectedChild?.date_of_birth, t),
+                })}
+            </Text> */}
 
-                    {/*
-                      Placeholder until the WHO LMS reference data and z-score maths land.
-                      A real percentile cannot be computed from birth measurements alone,
-                      and showing an invented band on a growth chart would be worse than
-                      showing none.
-                    */}
-                    <Text style={[styles.percentile, globalStyles.fontSemiBold]}>
-                        {t('infant.percentilePending')}
-                    </Text>
-                </View>
+            {/*
+              Replaces the static growth-chart JPEG and the "Not yet scored" badge that
+              stood in until the WHO tables landed. Percentiles now come from real stored
+              measurements via @vivamama/growth-standards.
+            */}
+            <GrowthChartCard
+                sex={selectedChild?.sex}
+                childName={selectedChild?.name ?? t('infant.childFallback')}
+                seriesByIndicator={series}
+                latestByIndicator={results}
+            />
 
-                <Text style={[styles.growthSubtitle, globalStyles.fontRegular]}>
-                    {t('infant.growthSubtitle')}
-                </Text>
-
-                <Image
-                    source={infantData.scoreImage}
-                    style={styles.chart}
-                    resizeMode="contain"
-                />
-
-                <Text style={[styles.growthDescription, globalStyles.fontRegular]}>
-                    {t('infant.growthDescription')}
-                </Text>
-
-                <View style={styles.statRow}>
-                    {stats.map((stat) => (
-                        <View key={stat.label} style={styles.stat}>
-                            <Text style={[styles.statLabel, globalStyles.fontRegular]}>
-                                {stat.label}
-                            </Text>
-                            <Text style={[styles.statValue, globalStyles.fontBold]}>
-                                {stat.value}
-                            </Text>
-                        </View>
-                    ))}
-                </View>
-            </DashboardCard>
+            <View style={styles.statRow}>
+                {stats.map((stat) => (
+                    <View key={stat.label} style={styles.stat}>
+                        <Text style={[styles.statLabel, globalStyles.fontRegular]}>
+                            {stat.label}
+                        </Text>
+                        <Text style={[styles.statValue, globalStyles.fontBold]}>
+                            {stat.value}
+                        </Text>
+                    </View>
+                ))}
+            </View>
 
             <Text style={[styles.sectionTitle, globalStyles.fontBold]}>
                 {t('infant.checkinTitle')}
@@ -212,10 +246,10 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                 {wideTiles.map((tile) => (
                     <View key={tile.screen} style={styles.gridRow}>
                         <FLInfantCheckInOptions
-                        item={tile}
-                        navigation={navigation}
-                        params={logParams}
-                    />
+                            item={tile}
+                            navigation={navigation}
+                            params={logParams}
+                        />
                     </View>
                 ))}
             </View>
@@ -252,46 +286,10 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 
-    growthCard: {
-        backgroundColor: colors.white,
-        padding: 15,
-    },
-
-    growthHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 8,
-    },
-
-    growthTitle: {
-        flexShrink: 1,
+    ageHeading: {
+        marginTop: 6,
         fontSize: 17,
         color: colors.black,
-    },
-
-    percentile: {
-        fontSize: 12,
-        color: colors.darkPurple,
-    },
-
-    growthSubtitle: {
-        marginTop: 2,
-        fontSize: 12,
-        color: colors.gray,
-    },
-
-    chart: {
-        width: '100%',
-        height: 300,
-        marginVertical: 12,
-        borderRadius: 8,
-    },
-
-    growthDescription: {
-        fontSize: 13,
-        lineHeight: 20,
-        color: colors.darkGray,
     },
 
     statRow: {

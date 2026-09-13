@@ -76,6 +76,7 @@ const PURGE: readonly string[] = [
     "messages",
     "ai_message_bookmarks",
     "mood_logs",
+    "growth_logs",
     "flow_instances",
     "flow_responses",
     "recommendation_histories",

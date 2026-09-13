@@ -56,6 +56,21 @@
       "minutesAgo": "{{count}}m ago",
       "hoursAgo": "{{count}}h ago",
       "daysAgo": "{{count}}d ago"
+    },
+    "saving": "Saving...",
+    "monthsShort": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
     }
   },
   "productDetails": {
@@ -828,7 +843,7 @@
     "statHead": "HEAD",
     "statMissing": "—",
     "checkinTitle": "Infant check-in",
-    "checkinCaption": "Log today — entries stay editable for 24 hours.",
+    "checkinCaption": "Log today — today's entries can be changed until midnight.",
     "percentilePending": "Not yet scored",
     "ageDay": "{{count}} day",
     "ageDays": "{{count}} days",
@@ -856,7 +871,63 @@
       "whoTitle": "Against WHO standards",
       "chartAlt": "WHO growth chart for {{name}}",
       "percentilePending": "Awaiting WHO data",
-      "disclaimer": "Percentiles are for information only and are not a medical assessment. Always consult a qualified healthcare professional."
+      "disclaimer": "Percentiles are for information only and are not a medical assessment. Always consult a qualified healthcare professional.",
+      "unitKg": "kg",
+      "percentileValue": "{{value}}{{suffix}} percentile",
+      "percentileShort": "{{percentile}}th",
+      "percentileOffScale": "Off scale",
+      "notScored": "Not measured yet",
+      "chartPointLabel": "{{value}} {{unit}}",
+      "tooltipAge": "At {{months}} months",
+      "tooltipLength": "At {{length}} cm",
+      "axisAge": "Age in months",
+      "axisLength": "Length in cm",
+      "legendChild": "Your baby",
+      "attribution": "Reference curves: WHO Child Growth Standards (2006).",
+      "saved": "Growth log saved",
+      "saveFailed": "Could not save the growth log. Please try again.",
+      "loadFailed": "Could not load earlier measurements.",
+      "noChild": "Add your baby before logging a measurement.",
+      "comparisonExtreme": "{{name}}'s measurement sits outside the range these curves cover. Worth mentioning at your next visit.",
+      "tab": {
+        "weight_for_age": "Weight",
+        "length_for_age": "Length",
+        "head_circumference_for_age": "Head",
+        "weight_for_length": "Weight/Length"
+      },
+      "title": {
+        "weight_for_age": "Weight-for-age",
+        "length_for_age": "Length-for-age",
+        "head_circumference_for_age": "Head circumference-for-age",
+        "weight_for_length": "Weight-for-length"
+      },
+      "explainer": {
+        "weight_for_age": "How your baby's weight compares with other babies the same age.",
+        "length_for_age": "How your baby's length compares with other babies the same age. It shows steady growth over months rather than day to day.",
+        "head_circumference_for_age": "Head size tracks brain growth in the first two years, which is why it is measured at every visit.",
+        "weight_for_length": "Whether your baby's weight suits their length — useful because a long baby and a short baby of the same age are meant to weigh different amounts."
+      },
+      "comparison": {
+        "weight_for_age": "{{name}} weighs more than {{percentile}} of every 100 babies the same age and sex. Healthy babies sit anywhere across this range.",
+        "length_for_age": "{{name}} is longer than {{percentile}} of every 100 babies the same age and sex. Healthy babies sit anywhere across this range.",
+        "head_circumference_for_age": "{{name}}'s head is larger than {{percentile}} of every 100 babies the same age and sex. Healthy babies sit anywhere across this range.",
+        "weight_for_length": "For their length, {{name}} weighs more than {{percentile}} of every 100 babies. Healthy babies sit anywhere across this range."
+      },
+      "status": {
+        "MISSING_INPUT": "Record a measurement to see where {{name}} sits.",
+        "OUT_OF_RANGE": "This measurement falls outside the range the WHO standard covers, so it cannot be placed on the chart.",
+        "NOT_APPLICABLE": "The WHO growth standards are published for boys and girls, so this chart is not available for {{name}}.",
+        "weightForLengthTooShort": "The WHO weight-for-length standard starts at 45 cm. {{name}} is {{key}} cm, so this chart begins once they are a little longer."
+      },
+      "band": {
+        "far_below": "Below the 1st",
+        "below": "Below the 3rd",
+        "within": "Within range",
+        "above": "Above the 97th",
+        "far_above": "Above the 99th"
+      },
+      "dateChip": "{{day}} {{month}}",
+      "readOnlyDay": "Only today's entry can be changed."
     },
     "feeding": {
       "typeTitle": "Feeding type",

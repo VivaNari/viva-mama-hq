@@ -40,6 +40,7 @@ import {
 } from "../chat-system/child-onboarding.projection";
 import { interpolateFlowText } from "../../utils/functions/interpolateFlowText";
 import { resolveSubjectChild } from "../childs/child-subject.service";
+import GrowthLogService from "../growth-log/growth-log.service";
 
 // Import SRP services
 import { validationService } from "./validation.service";
@@ -756,10 +757,23 @@ class WeeklyCheckinService {
             // every non-check-in slug, so finishing a baby flow would have flipped
             // is_questionnaire_completed and pushed her past her own onboarding.
             if (flowInstance.subjectChildId) {
-                await markChildOnboardingComplete(
-                    userId,
-                    flowInstance.subjectChildId.toString(),
-                );
+                const childId = flowInstance.subjectChildId.toString();
+                await markChildOnboardingComplete(userId, childId);
+
+                // The birth measurements just captured become the child's day-0 growth
+                // point, so the growth chart has something to plot the moment onboarding
+                // ends rather than staying empty until the first manual log.
+                //
+                // Deliberately non-fatal: a missing point on a chart must never be the
+                // reason a mother cannot finish onboarding.
+                try {
+                    await new GrowthLogService().recordBirthMeasurements(userId, childId);
+                } catch (error) {
+                    log.error(
+                        { userId, childId, error },
+                        "Failed to record day-0 growth log from birth measurements",
+                    );
+                }
             } else {
                 log.error(
                     { userId, flowInstanceId: flowInstance._id },

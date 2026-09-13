@@ -1,3 +1,5 @@
+import { TFunction } from "i18next";
+
 import { IFeedEntry } from "../types/infantLog.types";
 
 /**
@@ -124,3 +126,63 @@ export const isSameDay = (a: Date, b: Date): boolean =>
   a.getFullYear() === b.getFullYear() &&
   a.getMonth() === b.getMonth() &&
   a.getDate() === b.getDate();
+
+/**
+ * India Standard Time, in minutes. The backend keys every calendar day on IST
+ * (`getISTCalendarDate` in services/backend/src/services/date/date.service.ts), so the app
+ * has to agree or the two disagree about which day "today" is. Device-local days looked
+ * identical in India and drifted for anyone else — a user an hour ahead of IST could have
+ * their own today rejected by the server as a future date.
+ */
+const IST_OFFSET_MINUTES = 330;
+
+/** The Y/M/D an instant falls on in IST, read off a shifted UTC clock. */
+export const istParts = (
+  instant: Date,
+): { year: number; month: number; day: number } => {
+  const shifted = new Date(instant.getTime() + IST_OFFSET_MINUTES * 60000);
+
+  return {
+    year: shifted.getUTCFullYear(),
+    month: shifted.getUTCMonth(),
+    day: shifted.getUTCDate(),
+  };
+};
+
+/** "YYYY-MM-DD" for the IST calendar day — the shape the growth-log API takes. */
+export const istDateKey = (instant: Date): string => {
+  const { year, month, day } = istParts(instant);
+  return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+};
+
+/** Whether two instants fall on the same IST calendar day. */
+export const isSameIstDay = (a: Date, b: Date): boolean =>
+  istDateKey(a) === istDateKey(b);
+
+const MONTH_KEYS = [
+  "jan", "feb", "mar", "apr", "may", "jun",
+  "jul", "aug", "sep", "oct", "nov", "dec",
+] as const;
+
+/**
+ * Short date for a chip label — "13 Sep".
+ *
+ * Built from translated month abbreviations rather than
+ * `toLocaleDateString(locale, { month: 'short', day: 'numeric' })`. Two reasons, both of
+ * which this app has already hit: Hermes does not reliably honour Intl options and falls
+ * back to a long default form, which blows a chip out to the width of "13 September 2026";
+ * and the device locale is not the app locale, so a Hindi user reading an English app
+ * would get Devanagari dates. MoodDateStrip avoids Intl in its own strip for the same
+ * reason (see its WEEKDAY_LABELS comment).
+ *
+ * The day/month order lives in the translation string, so a locale that puts the month
+ * first can say so.
+ */
+export const formatChipDate = (date: Date, t: TFunction): string => {
+  const { month, day } = istParts(date);
+
+  return t("infant.growth.dateChip", {
+    day,
+    month: t(`common.monthsShort.${MONTH_KEYS[month] ?? "jan"}`),
+  });
+};

@@ -1,5 +1,4 @@
 export interface IInfantData {
-  scoreImage: number;
   checkinOptions: IInfantCheckinOptions[];
 }
 

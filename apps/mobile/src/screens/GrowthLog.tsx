@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRoute } from '@react-navigation/native';
 import {
-    Image,
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -12,17 +12,33 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Toast from 'react-native-toast-message';
 
+import {
+    Indicator,
+    gramsToKg,
+    isPercentileQuotable,
+    kgToGrams,
+} from '@vivamama/growth-standards';
+
+import { getGrowthLogs, upsertGrowthLog } from '../api/infantGrowth.api';
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius';
+import { ordinalSuffix } from '../components/growth/growthCopy';
 import LogChipTabs from '../components/infant/LogChipTabs';
 import LogSectionCard from '../components/infant/LogSectionCard';
 import { GROWTH_BOUNDS, GROWTH_FIELDS } from '../data/infantGrowthData';
-import { infantData } from '../data/infantData';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { infantLogStyles } from '../public/styles/infantLogStyles';
+import { IGrowthLog } from '../types/growthLog.types';
 import { IGrowthMeasurementField, InfantLogRouteParams } from '../types/infantLog.types';
-import { isSameDay, recentDates } from '../utils/infantLogHelpers';
+import { latestResults, previewResults } from '../utils/growthSeries';
+import {
+    formatChipDate,
+    isSameIstDay,
+    istDateKey,
+    recentDates,
+} from '../utils/infantLogHelpers';
 
 /** Today plus the two days before it, matching the design's three date chips. */
 const VISIBLE_DAYS = 3;
@@ -35,12 +51,33 @@ const EMPTY_VALUES: MeasurementValues = {
     weight_grams: '',
 };
 
+/** Which indicator each input field's live percentile comes from. */
+const FIELD_INDICATOR: Record<IGrowthMeasurementField['key'], Indicator> = {
+    head_circumference_cm: 'head_circumference_for_age',
+    length_cm: 'length_for_age',
+    weight_grams: 'weight_for_age',
+};
+
 /**
- * Growth Log — head circumference, length and weight, plotted against WHO standards
- * (PRD 4.1). Tracked to two years.
+ * Short labels for the percentile tiles — the same three the dashboard uses.
  *
- * UI only: nothing is persisted, and the WHO chart is the same static image the dashboard
- * card uses. The percentile tiles are deliberately unscored — see the comment on them.
+ * Not the field labels: "Head circumference" and "Height / length" wrap inside a tile a
+ * third of the card wide, and the second breaks at the slash, leaving three tiles of
+ * different heights. The full names are already above, on the inputs these summarise.
+ */
+const FIELD_TILE_LABEL: Record<IGrowthMeasurementField['key'], string> = {
+    head_circumference_cm: 'infant.statHead',
+    length_cm: 'infant.statHeight',
+    weight_grams: 'infant.statWeight',
+};
+
+/**
+ * Growth Log — head circumference, length and weight, scored against the WHO Child Growth
+ * Standards (PRD 4.1). Tracked to two years.
+ *
+ * Percentiles update as the mother types, computed on the device by
+ * @vivamama/growth-standards — the same module the server uses to score the row it
+ * persists, so the preview and the saved value cannot disagree.
  */
 const GrowthLog: React.FC = () => {
     const { t } = useTranslation();
@@ -50,21 +87,72 @@ const GrowthLog: React.FC = () => {
     const dates = useMemo(() => recentDates(VISIBLE_DAYS), []);
     const [selectedDate, setSelectedDate] = useState<Date>(dates[0]);
     const [values, setValues] = useState<MeasurementValues>(EMPTY_VALUES);
+    const [logs, setLogs] = useState<IGrowthLog[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [saving, setSaving] = useState(false);
 
-    const childName = params.childName?.trim() || t('infant.childFallback');
+    const loadLogs = useCallback(async () => {
+        if (!params.childId) return;
 
-    const dateTabs = dates.map((date, index) => ({
-        key: date.toISOString(),
-        label: index === 0
-            ? t('infant.growth.today')
-            : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
-        // Only today is editable. Past days stay visible so a parent can see the series
-        // forming, but the 24-hour edit window the check-in caption promises is real.
-        disabled: index !== 0,
-    }));
+        setLoading(true);
+        try {
+            setLogs(await getGrowthLogs(params.childId));
+        } catch (error) {
+            console.log('[GrowthLog] Failed to load growth logs', error);
+            Toast.show({ type: 'error', text1: t('infant.growth.loadFailed') });
+        } finally {
+            setLoading(false);
+        }
+    }, [params.childId, t]);
+
+    useEffect(() => {
+        loadLogs();
+    }, [loadLogs]);
 
     const setValue = (key: IGrowthMeasurementField['key'], next: string) =>
-        setValues((prev) => ({ ...prev, [key]: next }));
+        setValues(prev => ({ ...prev, [key]: next }));
+
+    /** The stored entry for the day on screen, if there is one. */
+    const entryForSelectedDate = useMemo(
+        () => logs.find(entry => entry.measuredOn === istDateKey(selectedDate)),
+        [logs, selectedDate],
+    );
+
+    /**
+     * Show what is already recorded for the selected day.
+     *
+     * Without this the screen only ever showed an empty form: saving cleared the inputs and
+     * nothing read them back, so the measurements a mother had just entered disappeared,
+     * and reopening the screen looked like nothing had been logged at all.
+     *
+     * Runs on mount, when the day changes, and after a save refreshes `logs`.
+     */
+    useEffect(() => {
+        if (!entryForSelectedDate) {
+            setValues(EMPTY_VALUES);
+            return;
+        }
+
+        const stored = entryForSelectedDate.measurements;
+
+        setValues({
+            head_circumference_cm: stored.head_circumference_cm?.toString() ?? '',
+            length_cm: stored.length_cm?.toString() ?? '',
+            // Stored in kilograms, entered in the grams a clinic reports.
+            weight_grams:
+                typeof stored.weight_kg === 'number'
+                    ? String(Math.round(kgToGrams(stored.weight_kg)))
+                    : '',
+        });
+    }, [entryForSelectedDate]);
+
+    const numeric = (key: IGrowthMeasurementField['key']): number | null => {
+        const raw = values[key].trim();
+        if (!raw) return null;
+
+        const parsed = Number(raw);
+        return Number.isFinite(parsed) ? parsed : null;
+    };
 
     /**
      * Out-of-range is surfaced per field rather than blocking Save, because the range is a
@@ -75,32 +163,116 @@ const GrowthLog: React.FC = () => {
         const raw = values[key].trim();
         if (!raw) return false;
 
-        const parsed = Number(raw);
-        if (Number.isNaN(parsed)) return true;
+        const parsed = numeric(key);
+        if (parsed === null) return true;
 
         const bounds = GROWTH_BOUNDS[key];
         return parsed < bounds.min || parsed > bounds.max;
     };
 
-    const lastRecorded = (key: IGrowthMeasurementField['key']): string | null => {
-        const last = params.lastMeasurements?.[key];
-        if (last === undefined || last === null) return null;
+    /** The measurements currently typed, in the units the standards package expects. */
+    const typedMeasurement = useMemo(() => {
+        const grams = numeric('weight_grams');
 
-        const unit = t(
-            key === 'weight_grams' ? 'infant.growth.unitGrams' : 'infant.growth.unitCm',
-        );
-        return t('infant.growth.lastValue', { value: last, unit });
+        return {
+            // The field is in grams because that is what a clinic reports; WHO works in
+            // kilograms. The conversion happens once, here, through the package.
+            weight_kg: grams === null ? null : gramsToKg(grams),
+            length_cm: numeric('length_cm'),
+            head_circumference_cm: numeric('head_circumference_cm'),
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [values]);
+
+    const hasAnyValue = Object.values(values).some(value => value.trim().length > 0);
+    const isToday = isSameIstDay(selectedDate, new Date());
+
+    /**
+     * Scores for the day on screen: live while typing, otherwise whatever was stored for
+     * that day.
+     *
+     * It used to fall back to `latestResults(logs)` — the newest row in the whole history —
+     * so opening a day with nothing logged showed percentiles from some earlier day above
+     * three empty inputs. The tiles and the fields told different stories.
+     */
+    const results = useMemo(() => {
+        if (hasAnyValue) {
+            return previewResults({
+                sex: params.childSex,
+                dateOfBirth: params.childDob,
+                measuredOn: selectedDate,
+                measurement: typedMeasurement,
+            });
+        }
+
+        return latestResults(entryForSelectedDate ? [entryForSelectedDate] : []);
+    }, [
+        hasAnyValue,
+        params.childSex,
+        params.childDob,
+        selectedDate,
+        typedMeasurement,
+        entryForSelectedDate,
+    ]);
+
+    const percentileLabel = (key: IGrowthMeasurementField['key']): string => {
+        const result = results[FIELD_INDICATOR[key]];
+        if (result.status !== 'OK') return t('infant.statMissing');
+
+        if (!isPercentileQuotable(result.percentile)) {
+            return t('infant.growth.percentileOffScale');
+        }
+
+        const rounded = Math.round(result.percentile);
+        return t('infant.growth.percentileValue', {
+            value: rounded,
+            suffix: ordinalSuffix(rounded),
+        });
     };
 
-    const hasAnyValue = Object.values(values).some((value) => value.trim().length > 0);
-    const isToday = isSameDay(selectedDate, new Date());
+    const save = async () => {
+        if (!params.childId) {
+            Toast.show({ type: 'error', text1: t('infant.growth.noChild') });
+            return;
+        }
+
+        setSaving(true);
+        try {
+            await upsertGrowthLog({
+                childId: params.childId,
+                measuredOn: istDateKey(selectedDate),
+                weight_kg: typedMeasurement.weight_kg,
+                length_cm: typedMeasurement.length_cm,
+                head_circumference_cm: typedMeasurement.head_circumference_cm,
+            });
+
+            // Deliberately not clearing the form: reloading re-hydrates it from the row
+            // that was just written, so the mother sees her entry persisted rather than a
+            // blank screen that looks like the save was lost.
+            await loadLogs();
+            Toast.show({ type: 'success', text1: t('infant.growth.saved') });
+        } catch (error) {
+            console.log('[GrowthLog] Failed to save growth log', error);
+            Toast.show({ type: 'error', text1: t('infant.growth.saveFailed') });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    // Every day is selectable. Past ones were `disabled`, which made them inert decoration
+    // — a parent could see that the 12th existed but never what was recorded on it. They
+    // open read-only instead, which is what "editable for 24 hours" actually means.
+    const dateTabs = dates.map((date, index) => ({
+        key: date.toISOString(),
+        label: index === 0 ? t('infant.growth.today') : formatChipDate(date, t),
+    }));
 
     return (
         <SafeAreaView style={infantLogStyles.screen} edges={['bottom', 'left', 'right']}>
             <LogChipTabs
                 tabs={dateTabs}
                 activeKey={selectedDate.toISOString()}
-                onChange={(key) => setSelectedDate(new Date(key))}
+                onChange={key => setSelectedDate(new Date(key))}
             />
 
             <KeyboardAvoidingView
@@ -112,135 +284,121 @@ const GrowthLog: React.FC = () => {
                     keyboardShouldPersistTaps="handled"
                     showsVerticalScrollIndicator={false}
                 >
-                    <LogSectionCard title={t('infant.growth.measurements')}>
-                        {GROWTH_FIELDS.map((field) => {
-                            const last = lastRecorded(field.key);
-                            const invalid = outOfRange(field.key);
+                    {loading ? (
+                        <ActivityIndicator
+                            color={colors.darkPurple}
+                            style={styles.loader}
+                        />
+                    ) : (
+                        <LogSectionCard
+                            title={t('infant.growth.measurements')}
+                            caption={
+                                isToday ? undefined : t('infant.growth.readOnlyDay')
+                            }
+                        >
+                            {GROWTH_FIELDS.map(field => {
+                                const invalid = outOfRange(field.key);
 
-                            return (
-                                <View key={field.key} style={styles.field}>
-                                    <View style={styles.fieldHeader}>
-                                        <Text
-                                            style={[
-                                                styles.fieldLabel,
-                                                globalStyles.fontSemiBold,
-                                            ]}
-                                        >
-                                            {t(field.labelKey)}
-                                        </Text>
-
-                                        {!!last && (
+                                return (
+                                    <View key={field.key} style={styles.field}>
+                                        <View style={styles.fieldHeader}>
                                             <Text
                                                 style={[
-                                                    styles.fieldLast,
+                                                    styles.fieldLabel,
+                                                    globalStyles.fontSemiBold,
+                                                ]}
+                                            >
+                                                {t(field.labelKey)}
+                                            </Text>
+                                        </View>
+
+                                        <View style={infantLogStyles.row}>
+                                            <TextInput
+                                                value={values[field.key]}
+                                                onChangeText={text =>
+                                                    setValue(field.key, text)
+                                                }
+                                                // An em dash reads as "not recorded"; the
+                                                // sample number would read as a value.
+                                                placeholder={
+                                                    isToday ? field.placeholder : '—'
+                                                }
+                                                placeholderTextColor={colors.gray}
+                                                keyboardType="decimal-pad"
+                                                editable={isToday}
+                                                style={[
+                                                    infantLogStyles.input,
+                                                    !isToday && styles.inputReadOnly,
+                                                    invalid && styles.inputInvalid,
+                                                    globalStyles.fontRegular,
+                                                ]}
+                                                accessibilityLabel={t(field.labelKey)}
+                                            />
+
+                                            <Text
+                                                style={[
+                                                    styles.unit,
                                                     globalStyles.fontRegular,
                                                 ]}
                                             >
-                                                {last}
+                                                {t(field.unitKey)}
+                                            </Text>
+                                        </View>
+
+                                        {invalid && (
+                                            <Text
+                                                style={[
+                                                    styles.rangeHint,
+                                                    globalStyles.fontRegular,
+                                                ]}
+                                            >
+                                                {t('infant.growth.rangeHint', {
+                                                    min: GROWTH_BOUNDS[field.key].min,
+                                                    max: GROWTH_BOUNDS[field.key].max,
+                                                })}
                                             </Text>
                                         )}
                                     </View>
+                                );
+                            })}
 
-                                    <View style={infantLogStyles.row}>
-                                        <TextInput
-                                            value={values[field.key]}
-                                            onChangeText={(text) =>
-                                                setValue(field.key, text)
-                                            }
-                                            placeholder={field.placeholder}
-                                            placeholderTextColor={colors.gray}
-                                            keyboardType="decimal-pad"
-                                            style={[
-                                                infantLogStyles.input,
-                                                invalid && styles.inputInvalid,
-                                                globalStyles.fontRegular,
-                                            ]}
-                                            accessibilityLabel={t(field.labelKey)}
-                                        />
-
+                            {/* Live percentiles — these update as she types. */}
+                            <View style={styles.percentileRow}>
+                                {GROWTH_FIELDS.map(field => (
+                                    <View key={field.key} style={styles.percentile}>
                                         <Text
                                             style={[
-                                                styles.unit,
+                                                styles.percentileLabel,
                                                 globalStyles.fontRegular,
                                             ]}
                                         >
-                                            {t(field.unitKey)}
+                                            {t(FIELD_TILE_LABEL[field.key])}
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.percentileValue,
+                                                globalStyles.fontSemiBold,
+                                            ]}
+                                            numberOfLines={1}
+                                            adjustsFontSizeToFit
+                                        >
+                                            {percentileLabel(field.key)}
                                         </Text>
                                     </View>
+                                ))}
+                            </View>
+                        </LogSectionCard>
+                    )}
 
-                                    {invalid && (
-                                        <Text
-                                            style={[
-                                                styles.rangeHint,
-                                                globalStyles.fontRegular,
-                                            ]}
-                                        >
-                                            {t('infant.growth.rangeHint', {
-                                                min: GROWTH_BOUNDS[field.key].min,
-                                                max: GROWTH_BOUNDS[field.key].max,
-                                            })}
-                                        </Text>
-                                    )}
-                                </View>
-                            );
-                        })}
-                    </LogSectionCard>
-
-                    <LogSectionCard
-                        title={t('infant.growth.whoTitle')}
-                        footnote={t('infant.growth.disclaimer')}
-                    >
-                        <Image
-                            source={infantData.scoreImage}
-                            style={styles.chart}
-                            resizeMode="contain"
-                            accessibilityLabel={t('infant.growth.chartAlt', {
-                                name: childName,
-                            })}
+                    {isToday && !loading && (
+                        <GradientButtonWithSlightRadius
+                            title={saving ? t('common.saving') : t('infant.saveLog')}
+                            onPress={save}
+                            disabled={!hasAnyValue || saving}
+                            fullRounded
+                            fullWidth
                         />
-
-                        {/*
-                          The design shows scored bands here ("Weight 25th–50th"). They stay
-                          unscored until the WHO LMS reference tables and the z-score maths
-                          land: a percentile is a number a mother will act on, and an
-                          invented one is worse than an honest blank. The tiles keep their
-                          place in the layout so the wiring is a value swap.
-                        */}
-                        <View style={styles.percentileRow}>
-                            {GROWTH_FIELDS.map((field) => (
-                                <View key={field.key} style={styles.percentile}>
-                                    <Text
-                                        style={[
-                                            styles.percentileLabel,
-                                            globalStyles.fontRegular,
-                                        ]}
-                                    >
-                                        {t(field.labelKey)}
-                                    </Text>
-                                    <Text
-                                        style={[
-                                            styles.percentileValue,
-                                            globalStyles.fontSemiBold,
-                                        ]}
-                                    >
-                                        {t('infant.growth.percentilePending')}
-                                    </Text>
-                                </View>
-                            ))}
-                        </View>
-                    </LogSectionCard>
-
-                    <GradientButtonWithSlightRadius
-                        title={t('infant.saveLog')}
-                        onPress={() => undefined}
-                        disabled={!hasAnyValue || !isToday}
-                        fullRounded
-                        fullWidth
-                    />
-
-                    <Text style={[infantLogStyles.footnote, styles.savedHint, globalStyles.fontRegular]}>
-                        {t('infant.notPersistedYet')}
-                    </Text>
+                    )}
                 </ScrollView>
             </KeyboardAvoidingView>
         </SafeAreaView>
@@ -269,14 +427,23 @@ const styles = StyleSheet.create({
         color: colors.black,
     },
 
-    fieldLast: {
-        fontSize: 12,
-        color: colors.gray,
-    },
-
     inputInvalid: {
         borderWidth: 1,
         borderColor: colors.error,
+    },
+
+    /**
+     * A past day is shown, not edited.
+     *
+     * Keeps a visible ground and a hairline border. This was `backgroundColor: white`,
+     * which on a white card made an empty disabled field indistinguishable from blank
+     * space — the fields looked missing rather than read-only.
+     */
+    inputReadOnly: {
+        backgroundColor: colors.lightGray,
+        borderWidth: 1,
+        borderColor: colors.border,
+        color: colors.darkGray,
     },
 
     unit: {
@@ -291,16 +458,12 @@ const styles = StyleSheet.create({
         color: colors.error,
     },
 
-    chart: {
-        width: '100%',
-        height: 300,
-        borderRadius: 8,
-    },
-
     percentileRow: {
         flexDirection: 'row',
+        // stretch, not center: the three tiles share a height even if one value wraps.
+        alignItems: 'stretch',
         gap: 8,
-        marginTop: 14,
+        marginTop: 4,
     },
 
     percentile: {
@@ -313,7 +476,9 @@ const styles = StyleSheet.create({
     },
 
     percentileLabel: {
-        fontSize: 11,
+        fontSize: 10,
+        letterSpacing: 0.5,
+        textAlign: 'center',
         color: colors.gray,
     },
 
@@ -321,11 +486,11 @@ const styles = StyleSheet.create({
         marginTop: 3,
         fontSize: 12,
         textAlign: 'center',
-        color: colors.darkGray,
+        color: colors.darkPurple,
     },
 
-    savedHint: {
-        textAlign: 'center',
+    loader: {
+        marginVertical: 40,
     },
 });
 

@@ -5,11 +5,15 @@
  * parent reads as fact rather than as something they typed, so they are tested directly
  * rather than through a render.
  */
+import i18n from '../src/i18n';
 import {
+  formatChipDate,
   formatClockTime,
   getAgeInDays,
   isSameDay,
+  isSameIstDay,
   isSixMonthsOrOlder,
+  istDateKey,
   parseClockTime,
   recentDates,
   splitDuration,
@@ -138,5 +142,73 @@ describe('recentDates', () => {
 
     expect(dates[1].getMonth()).toBe(7);
     expect(dates[1].getDate()).toBe(31);
+  });
+});
+
+describe('formatChipDate', () => {
+  /**
+   * Built from translated month abbreviations rather than `toLocaleDateString` with
+   * options. Hermes does not reliably honour those options and falls back to a long form,
+   * which stretches a chip to the width of "13 September 2026" — and the device locale is
+   * not the app locale, so a Hindi phone would render an English app's dates in Devanagari.
+   */
+  it('renders a short "13 Sep" label, not a long localised date', () => {
+    const label = formatChipDate(new Date(2026, 8, 13), i18n.t.bind(i18n) as never);
+
+    expect(label).toBe('13 Sep');
+    expect(label.length).toBeLessThanOrEqual(6);
+  });
+
+  it('is short for every month of the year', () => {
+    for (let month = 0; month < 12; month++) {
+      const label = formatChipDate(new Date(2026, month, 28), i18n.t.bind(i18n) as never);
+
+      // Longest English abbreviation is 3 characters, plus "28 ".
+      expect(label.length).toBeLessThanOrEqual(6);
+      expect(label).toMatch(/^28 \w+$/);
+    }
+  });
+
+  it('translates the month rather than hardcoding English', async () => {
+    await i18n.changeLanguage('hi');
+    const hindi = formatChipDate(new Date(2026, 8, 13), i18n.t.bind(i18n) as never);
+    await i18n.changeLanguage('en');
+
+    expect(hindi).not.toBe('13 Sep');
+    expect(hindi).toContain('13');
+  });
+});
+
+describe('IST calendar days', () => {
+  /**
+   * The backend keys every calendar day on IST. The app used device-local days, which
+   * looked identical in India and drifted everywhere else — a user an hour ahead of IST
+   * could have their own "today" rejected by the server as a future date.
+   */
+  it('reads the IST day, not the device day', () => {
+    // 19:00 UTC on the 12th is already 00:30 on the 13th in IST.
+    expect(istDateKey(new Date('2026-09-12T19:00:00Z'))).toBe('2026-09-13');
+    // 18:00 UTC is still 23:30 on the 12th.
+    expect(istDateKey(new Date('2026-09-12T18:00:00Z'))).toBe('2026-09-12');
+  });
+
+  it('pads month and day to the YYYY-MM-DD the API expects', () => {
+    expect(istDateKey(new Date('2026-01-05T06:00:00Z'))).toBe('2026-01-05');
+  });
+
+  it('groups two instants on the same IST day', () => {
+    const morning = new Date('2026-09-13T04:00:00Z'); // 09:30 IST
+    const evening = new Date('2026-09-13T17:00:00Z'); // 22:30 IST
+    const nextDay = new Date('2026-09-13T19:00:00Z'); // 00:30 IST, 14th
+
+    expect(isSameIstDay(morning, evening)).toBe(true);
+    expect(isSameIstDay(evening, nextDay)).toBe(false);
+  });
+
+  /** The chip label has to name the IST day too, or a chip reads a day off. */
+  it('labels a chip by its IST day', () => {
+    expect(
+      formatChipDate(new Date('2026-09-12T19:00:00Z'), i18n.t.bind(i18n) as never),
+    ).toBe('13 Sep');
   });
 });

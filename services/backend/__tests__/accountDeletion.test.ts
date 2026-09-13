@@ -17,6 +17,7 @@ import flowInstanceModel from "../src/models/flowInstance.model";
 import flowResponseModel from "../src/models/flowResponse.model";
 import messageModel from "../src/models/message.model";
 import moodLogModel from "../src/models/mood-log.model";
+import growthLogModel from "../src/models/growth-log.model";
 import recommendationHistoryModel from "../src/models/recommendation-history.model";
 import reportModel from "../src/models/report.model";
 import subscriptionModel from "../src/models/subscription.model";
@@ -110,6 +111,16 @@ async function seed() {
     await messageModel.create({ userId: uid, text: "hello" });
     await aiMessageBookmarkModel.create({ userId: uid, messageId: new Types.ObjectId() });
     await moodLogModel.create({ userId: uid, mood: 3, logDate: new Date() });
+    // A child's growth log. Children themselves are embedded in the user document and go
+    // with it, but their measurements are their own collection — health data about a named
+    // minor, which must not outlive the account.
+    await growthLogModel.collection.insertOne({
+        userId: uid,
+        childId: new Types.ObjectId(),
+        measuredOn: new Date(),
+        ageInDays: 183,
+        sex: "Male",
+    } as never);
     // Inserted through the driver rather than the model: a valid recommendation
     // history needs a deep tree of per-category scores and copy, none of which the
     // deletion looks at. All that matters here is a row in the right collection
@@ -157,6 +168,7 @@ describe("AccountDeletionService", () => {
         expect(await messageModel.countDocuments({ userId: uid })).toBe(0);
         expect(await aiMessageBookmarkModel.countDocuments({ userId: uid })).toBe(0);
         expect(await moodLogModel.countDocuments({ userId: uid })).toBe(0);
+        expect(await growthLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await recommendationHistoryModel.countDocuments({ userId: uid })).toBe(0);
         expect(await supportModel.countDocuments({ userId: uid })).toBe(0);
         expect(await analyticsEventModel.countDocuments({ user_id: uid })).toBe(0);
@@ -312,7 +324,7 @@ describe("deletion coverage", () => {
             "users", "flow_instances", "flow_responses", "consultations",
             "consultation_reviews", "consultation_credits", "usage_counters",
             "subscriptions", "conversations", "messages", "ai_message_bookmarks",
-            "mood_logs", "recommendation_histories", "supports", "analytics_events",
+            "mood_logs", "growth_logs", "recommendation_histories", "supports", "analytics_events",
             "viva_club_posts", "viva_club_comments", "reports",
             "referral_redemptions",
         ]);

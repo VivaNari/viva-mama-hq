@@ -21,6 +21,7 @@ import {
     IChildBirthMeasurements,
 } from "../../types/user.types";
 import logger, { createModuleLogger } from "../../utils/logger";
+import GrowthLogService from "../growth-log/growth-log.service";
 
 const log = createModuleLogger(logger, "child.service");
 
@@ -145,6 +146,25 @@ export default class ChildService {
         }
 
         log.info({ userId, childId, fields: Object.keys(updates) }, "Child updated");
+
+        // Every stored percentile was computed against this child's date of birth and sex.
+        // Correcting either one silently invalidates all of them — and because a stale
+        // percentile still looks like a perfectly plausible number, nothing would ever
+        // surface the error. Recompute rather than leave history describing a different
+        // child.
+        //
+        // Non-fatal: the edit the mother asked for has already succeeded, so a failure here
+        // must not turn into a failed request.
+        if (date_of_birth !== undefined || sex !== undefined) {
+            try {
+                await new GrowthLogService().recomputeForChild(userId, childId);
+            } catch (error) {
+                log.error(
+                    { userId, childId, error },
+                    "Failed to recompute growth percentiles after a child correction",
+                );
+            }
+        }
 
         const child = await readChild(userId, childId);
         if (!child) throw new ChildNotFoundError();

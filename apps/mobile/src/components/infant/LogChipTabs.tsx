@@ -29,6 +29,10 @@ const LogChipTabs: React.FC<LogChipTabsProps> = ({ tabs, activeKey, onChange }) 
     <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        // flexGrow: 0 keeps the strip the height of its chips. A horizontal ScrollView
+        // given room to grow in a flex column takes all of it, which turns a 60px tab
+        // strip into half the screen.
+        style={infantLogStyles.chipStrip}
         contentContainerStyle={infantLogStyles.chipRow}
     >
         {tabs.map((tab) => {

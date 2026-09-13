@@ -123,6 +123,10 @@ export const API_CREATE_SUPPORT = `${API_VERSION_URL}/support`;
 // Mood log endpoints
 export const API_MOOD_LOGS = `${API_VERSION_URL}/mood-logs`;
 
+// Infant growth log endpoints. There is deliberately no endpoint for the WHO reference
+// curves — the app carries @vivamama/growth-standards, so the chart draws offline.
+export const API_GROWTH_LOGS = `${API_VERSION_URL}/growth-logs`;
+
 // Viva Club Endpoints
 const VIVA_CLUB_BASE = `${API_VERSION_URL}/viva-club`;
 export const API_VIVA_CLUB_POSTS = `${VIVA_CLUB_BASE}/posts`;

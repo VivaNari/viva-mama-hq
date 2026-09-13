@@ -19,17 +19,12 @@ export interface InfantLogRouteParams {
   childName?: string;
   /** ISO string — route params must stay serialisable for deep links and state restore. */
   childDob?: string;
-  vaccinationSector?: "public" | "private";
   /**
-   * The most recent numbers on file, shown as the "last: 34.8 cm" hints on the growth log.
-   * Sourced from the birth measurements captured at onboarding until a growth series
-   * exists to read a latest entry from.
+   * Needed to score against WHO's tables, which are published per sex. "Other" and absent
+   * are both valid here; the standards package reports NOT_APPLICABLE rather than guessing.
    */
-  lastMeasurements?: {
-    head_circumference_cm?: number;
-    length_cm?: number;
-    weight_grams?: number;
-  };
+  childSex?: "Male" | "Female" | "Other";
+  vaccinationSector?: "public" | "private";
 }
 
 /* ---------------------------------- Growth ---------------------------------- */

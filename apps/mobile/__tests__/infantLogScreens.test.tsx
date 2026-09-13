@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import DiaperLog from '../src/screens/DiaperLog';
 import FeedingLog from '../src/screens/FeedingLog';
@@ -22,6 +22,7 @@ import GrowthLog from '../src/screens/GrowthLog';
 import MilestoneLog from '../src/screens/MilestoneLog';
 import VaccinationLog from '../src/screens/VaccinationLog';
 import { InfantLogRouteParams } from '../src/types/infantLog.types';
+import { istDateKey, istParts } from '../src/utils/infantLogHelpers';
 
 // `mock`-prefixed so Jest allows the hoisted factory below to close over it.
 let mockRouteParams: InfantLogRouteParams = {};
@@ -40,10 +41,32 @@ jest.mock('react-native-safe-area-context', () => {
     };
 });
 
+const { getGrowthLogs, upsertGrowthLog } = require('../src/api/infantGrowth.api');
+
+jest.mock('../src/api/infantGrowth.api', () => ({
+    getGrowthLogs: jest.fn().mockResolvedValue([]),
+    upsertGrowthLog: jest.fn().mockResolvedValue({}),
+    deleteGrowthLog: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../src/analytics', () => ({
     AnalyticsEvent: { VACCINATION_LOG_UPDATED: 'vaccination_log_updated' },
     track: jest.fn(),
 }));
+
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// The app keys days on IST to match the server, so these helpers must too — otherwise the
+// suite passes in India and fails on a CI box in any other timezone.
+const dateKey = (date: Date): string => istDateKey(date);
+
+const todayKey = (): string => dateKey(new Date());
+
+/** The chip label the strip renders for a given day. */
+const formatChipLabel = (date: Date): string => {
+    const { month, day } = istParts(date);
+    return `${day} ${MONTHS[month]}`;
+};
 
 /** Days back from today, as an ISO string — the shape route params carry. */
 const dobDaysAgo = (days: number): string =>
@@ -64,14 +87,6 @@ describe('GrowthLog', () => {
         expect(getByText('grams')).toBeTruthy();
     });
 
-    /** Birth measurements are the last numbers on file until a growth series exists. */
-    it('shows the last recorded value beside a field when one was passed', () => {
-        mockRouteParams = { lastMeasurements: { weight_grams: 3250 } };
-
-        const { getByText } = render(<GrowthLog />);
-
-        expect(getByText('last: 3250 grams')).toBeTruthy();
-    });
 
     it('warns when a measurement lands outside the plausible range', () => {
         const { getByLabelText, getByText, queryByText } = render(<GrowthLog />);
@@ -85,14 +100,235 @@ describe('GrowthLog', () => {
     });
 
     /**
-     * The percentile tiles keep their place in the layout but stay unscored until the WHO
-     * LMS tables land. An invented percentile is the one thing on this screen a mother
-     * would act on without having typed it.
+     * The percentile tiles used to read "Awaiting WHO data" because there were no tables to
+     * score against. They are live now — but the rule they were placeholders for still
+     * holds: a number appears only when it was actually computed, never as a stand-in.
      */
-    it('does not invent a percentile', () => {
+    it('shows no percentile until there is something to score', () => {
         const { getAllByText } = render(<GrowthLog />);
 
-        expect(getAllByText('Awaiting WHO data')).toHaveLength(3);
+        expect(getAllByText('—')).toHaveLength(3);
+    });
+
+    /**
+     * The summary tiles are a third of the card wide. The full field names — "Head
+     * circumference", "Height / length" — wrap in that space, and the second breaks at the
+     * slash, leaving three tiles of different heights. They use the short labels the
+     * dashboard already uses; the full names are right above, on the inputs they summarise.
+     */
+    it('labels the percentile tiles short enough to fit one line', () => {
+        const { getByText } = render(<GrowthLog />);
+
+        expect(getByText('HEAD')).toBeTruthy();
+        expect(getByText('HEIGHT')).toBeTruthy();
+        expect(getByText('WEIGHT')).toBeTruthy();
+    });
+
+    /**
+     * The screen used to clear the form on save and never read anything back, so the
+     * measurements a mother had just entered vanished and reopening the screen looked like
+     * nothing had ever been logged.
+     */
+    it('shows what is already stored for today', async () => {
+        mockRouteParams = { childId: 'c1', childName: 'Aarav', childSex: 'Male' };
+        getGrowthLogs.mockResolvedValueOnce([
+            {
+                _id: 'g1',
+                childId: 'c1',
+                measuredOn: todayKey(),
+                ageInDays: 183,
+                sex: 'Male',
+                measurements: { weight_kg: 7.8, length_cm: 67.6, head_circumference_cm: 43.3 },
+                percentiles: {},
+                standard: { source: 'WHO-2006', version: 'who-2006.1' },
+                createdAt: '',
+                updatedAt: '',
+            },
+        ]);
+
+        const { getByLabelText } = render(<GrowthLog />);
+
+        // Kilograms on the wire, grams in the field a clinic's number goes into.
+        await waitFor(() => expect(getByLabelText('Weight').props.value).toBe('7800'));
+        expect(getByLabelText('Height / length').props.value).toBe('67.6');
+        expect(getByLabelText('Head circumference').props.value).toBe('43.3');
+    });
+
+    /**
+     * Past chips were `disabled`, so a parent could see that the 12th existed but never
+     * what was recorded on it. They open read-only instead.
+     */
+    it('opens a past day read-only instead of refusing the tap', async () => {
+        mockRouteParams = { childId: 'c1', childName: 'Aarav', childSex: 'Male' };
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        getGrowthLogs.mockResolvedValueOnce([
+            {
+                _id: 'g0',
+                childId: 'c1',
+                measuredOn: dateKey(yesterday),
+                ageInDays: 182,
+                sex: 'Male',
+                measurements: { weight_kg: 7.7, length_cm: null, head_circumference_cm: null },
+                percentiles: {},
+                standard: { source: 'WHO-2006', version: 'who-2006.1' },
+                createdAt: '',
+                updatedAt: '',
+            },
+        ]);
+
+        const { getByText, getByLabelText, queryByText } = render(<GrowthLog />);
+        await waitFor(() => expect(getGrowthLogs).toHaveBeenCalled());
+
+        fireEvent.press(getByText(formatChipLabel(yesterday)));
+
+        await waitFor(() =>
+            expect(getByLabelText('Weight').props.value).toBe('7700'),
+        );
+        expect(getByLabelText('Weight').props.editable).toBe(false);
+        expect(getByText("Only today's entry can be changed.")).toBeTruthy();
+        // Save belongs to today only; a permanently dead button would just puzzle people.
+        expect(queryByText('Save log')).toBeNull();
+    });
+
+    /**
+     * A past day with nothing recorded still shows its three fields, disabled. They were
+     * styled white-on-white, so an empty read-only field was invisible and the card looked
+     * like it had lost its inputs.
+     */
+    it('still shows the fields on a past day with nothing recorded', async () => {
+        mockRouteParams = { childId: 'c1', childName: 'Aarav', childSex: 'Male' };
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        const { getByText, getByLabelText } = render(<GrowthLog />);
+        await waitFor(() => expect(getGrowthLogs).toHaveBeenCalled());
+
+        fireEvent.press(getByText(formatChipLabel(yesterday)));
+
+        await waitFor(() =>
+            expect(getByText("Only today's entry can be changed.")).toBeTruthy(),
+        );
+
+        for (const label of ['Head circumference', 'Height / length', 'Weight']) {
+            const input = getByLabelText(label);
+            expect(input).toBeTruthy();
+            expect(input.props.editable).toBe(false);
+            expect(input.props.value).toBe('');
+            // An em dash reads as "not recorded"; the sample number would read as a value.
+            expect(input.props.placeholder).toBe('—');
+        }
+    });
+
+    /** The exact path reported: type, save, and the numbers must still be on screen. */
+    it('keeps the entry on screen after saving it', async () => {
+        mockRouteParams = { childId: 'c1', childName: 'Aarav', childSex: 'Male' };
+
+        const saved = {
+            _id: 'g1',
+            childId: 'c1',
+            measuredOn: todayKey(),
+            ageInDays: 183,
+            sex: 'Male' as const,
+            measurements: { weight_kg: 7.8, length_cm: null, head_circumference_cm: null },
+            percentiles: {},
+            standard: { source: 'WHO-2006', version: 'who-2006.1' },
+            createdAt: '',
+            updatedAt: '',
+        };
+
+        getGrowthLogs.mockResolvedValueOnce([]).mockResolvedValue([saved]);
+        upsertGrowthLog.mockResolvedValue(saved);
+
+        const { getByLabelText, getByText } = render(<GrowthLog />);
+        await waitFor(() => expect(getGrowthLogs).toHaveBeenCalled());
+
+        fireEvent.changeText(getByLabelText('Weight'), '7800');
+        fireEvent.press(getByText('Save log'));
+
+        await waitFor(() => expect(upsertGrowthLog).toHaveBeenCalled());
+        // Used to be cleared here, which read as "the save was lost".
+        await waitFor(() => expect(getByLabelText('Weight').props.value).toBe('7800'));
+    });
+
+    /**
+     * The reported bug: three empty inputs above three tiles reading 81st / 77th / Off
+     * scale, which came from a birth entry six days earlier. The tiles now describe the day
+     * on screen and nothing else.
+     */
+    it('does not show another day\'s percentiles above an empty form', async () => {
+        mockRouteParams = { childId: 'c1', childName: 'Aarav', childSex: 'Female' };
+
+        const lastWeek = new Date();
+        lastWeek.setDate(lastWeek.getDate() - 6);
+
+        getGrowthLogs.mockResolvedValueOnce([
+            {
+                _id: 'birth',
+                childId: 'c1',
+                measuredOn: dateKey(lastWeek),
+                ageInDays: 0,
+                sex: 'Female',
+                measurements: { weight_kg: 3.5, length_cm: 50.5, head_circumference_cm: 34.9 },
+                percentiles: {
+                    weight_for_age: { status: 'OK', value: 3.5, key: 0, z: 1, zRaw: 1, percentile: 81 },
+                    length_for_age: { status: 'OK', value: 50.5, key: 0, z: 0.7, zRaw: 0.7, percentile: 77 },
+                    head_circumference_for_age: { status: 'OK', value: 34.9, key: 0, z: 0.8, zRaw: 0.8, percentile: 79 },
+                    weight_for_length: { status: 'OK', value: 3.5, key: 50.5, z: 0, zRaw: 0, percentile: 50 },
+                },
+                standard: { source: 'WHO-2006', version: 'who-2006.1' },
+                createdAt: '',
+                updatedAt: '',
+            },
+        ]);
+
+        const { getAllByText, queryByText } = render(<GrowthLog />);
+        await waitFor(() => expect(getGrowthLogs).toHaveBeenCalled());
+
+        // Today has no entry, so the tiles have nothing to report.
+        await waitFor(() => expect(getAllByText('—')).toHaveLength(3));
+        expect(queryByText('81st percentile')).toBeNull();
+        expect(queryByText('77th percentile')).toBeNull();
+    });
+
+    /** A chip reading "13 September 2026" stretches the strip off the screen. */
+    it('keeps the date chips short', () => {
+        const { getByText } = render(<GrowthLog />);
+
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        const day = String(yesterday.getDate());
+
+        expect(getByText('Today')).toBeTruthy();
+        expect(getByText(new RegExp(`^${day} \\w{3}$`))).toBeTruthy();
+    });
+
+    /**
+     * The live preview runs @vivamama/growth-standards on the device — the same module the
+     * server scores the saved row with. 7.80 kg at 183 days is the worked example from the
+     * client's reference site, which reports the 44th percentile.
+     */
+    it('scores a measurement as it is typed, matching the reference implementation', async () => {
+        mockRouteParams = {
+            childId: 'c1',
+            childName: 'Aarav',
+            childSex: 'Male',
+            childDob: new Date(
+                Date.now() - 183 * 24 * 60 * 60 * 1000,
+            ).toISOString(),
+        };
+
+        const { getByLabelText, getAllByText } = render(<GrowthLog />);
+
+        // The screen fetches history on mount; let that settle before asserting.
+        await waitFor(() => expect(getGrowthLogs).toHaveBeenCalled());
+
+        fireEvent.changeText(getByLabelText('Weight'), '7800');
+
+        expect(getAllByText('44th percentile')).toHaveLength(1);
     });
 });
 

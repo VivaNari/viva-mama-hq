@@ -31,6 +31,7 @@ export const infantLogStyles = StyleSheet.create({
     borderRadius: 14,
     padding: 16,
     marginBottom: 14,
+    marginTop: 5,
     boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.12)",
   },
 
@@ -64,9 +65,17 @@ export const infantLogStyles = StyleSheet.create({
     color: colors.gray,
   },
 
+  /** The strip itself. See the comment at its use site in LogChipTabs. */
+  chipStrip: {
+    flexGrow: 0,
+    flexShrink: 0,
+  },
+
   chipRow: {
     paddingHorizontal: 16,
     paddingVertical: 12,
+    // Chips share a height even when one label wraps.
+    alignItems: "center",
     gap: 10,
   },
 

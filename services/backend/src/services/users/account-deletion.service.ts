@@ -10,6 +10,7 @@ import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
 import moodLogModel from "../../models/mood-log.model";
+import growthLogModel from "../../models/growth-log.model";
 import recommendationHistoryModel from "../../models/recommendation-history.model";
 import reportModel from "../../models/report.model";
 import subscriptionModel from "../../models/subscription.model";
@@ -158,6 +159,10 @@ export class AccountDeletionService {
 
         // ── Health logs and derived content ──────────────────────────────────────
         await record("mood_logs", () => moodLogModel.deleteMany({ userId: _id }));
+        // Children themselves are embedded in the user document and go with it. Their
+        // growth logs are not — they are their own collection keyed on userId, and are
+        // health data about a named child, so they must be swept explicitly.
+        await record("growth_logs", () => growthLogModel.deleteMany({ userId: _id }));
         await record("recommendation_history", () =>
             recommendationHistoryModel.deleteMany({ userId: _id }),
         );

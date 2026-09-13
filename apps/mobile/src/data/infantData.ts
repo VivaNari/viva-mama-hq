@@ -3,6 +3,10 @@ import { IInfantData } from '../types/infantData.types';
 /**
  * Static scaffolding for the Infant tab.
  *
+ * `scoreImage` used to live here, pointing at a static WHO growth-chart JPEG. Both the
+ * dashboard and the Growth Log now render a real chart from @vivamama/growth-standards, so
+ * the placeholder and its asset are gone.
+ *
  * `age` used to live here as the string '15 days'. It is now derived per child from the
  * real date of birth by getChildAgeLabel — a hardcoded age was fine for a mock and wrong
  * the moment children became real records.
@@ -11,7 +15,6 @@ import { IInfantData } from '../types/infantData.types';
  * Milestone spanning the last row.
  */
 export const infantData: IInfantData = {
-  scoreImage: require('../public/assets/images/infant_growth_chart.jpg'),
   checkinOptions: [
     {
       titleKey: 'nav.growthLog',
