@@ -21,7 +21,9 @@ import {
     IChildBirthMeasurements,
 } from "../../types/user.types";
 import logger, { createModuleLogger } from "../../utils/logger";
+import DiaperLogService from "../diaper-log/diaper-log.service";
 import GrowthLogService from "../growth-log/growth-log.service";
+import { ChildNotFoundError } from "./child-ownership";
 
 const log = createModuleLogger(logger, "child.service");
 
@@ -41,12 +43,13 @@ export interface UpdateChildParams {
     birth_measurements?: IChildBirthMeasurements;
 }
 
-export class ChildNotFoundError extends Error {
-    constructor(message = "Child not found for this user") {
-        super(message);
-        this.name = "ChildNotFoundError";
-    }
-}
+/**
+ * Re-exported so every existing `import { ChildNotFoundError } from ".../child.service"`
+ * keeps working. The class itself now lives in `child-ownership` — it used to be declared
+ * here *and* again in the growth-log service, which meant two distinct classes with the
+ * same name and an `instanceof` check that silently failed across the boundary.
+ */
+export { ChildNotFoundError };
 
 /** Read one child straight back out of the parent document. */
 const readChild = async (userId: string, childId: string): Promise<IChild | null> => {
@@ -190,6 +193,25 @@ export default class ChildService {
 
         if (result.matchedCount === 0) {
             throw new ChildNotFoundError();
+        }
+
+        // The child's per-child log collections do not go with it, because they are keyed
+        // on childId rather than embedded in the user. Left behind they are orphaned health
+        // data about a child the parent believes they deleted — invisible in the app and
+        // impossible to reach again, since every read goes through an ownership check that
+        // now fails.
+        //
+        // Non-fatal: the child is already gone from the user's document, and failing the
+        // request here would report a deletion that did happen as an error.
+        try {
+            const [growthLogs, diaperLogs] = await Promise.all([
+                new GrowthLogService().deleteForChild(userId, childId),
+                new DiaperLogService().deleteForChild(userId, childId),
+            ]);
+
+            log.info({ userId, childId, growthLogs, diaperLogs }, "Child logs deleted");
+        } catch (error) {
+            log.error({ err: error, userId, childId }, "Failed to delete child logs");
         }
 
         log.info({ userId, childId }, "Child deleted");

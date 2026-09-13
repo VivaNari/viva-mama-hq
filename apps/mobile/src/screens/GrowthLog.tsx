@@ -22,11 +22,14 @@ import {
 } from '@vivamama/growth-standards';
 
 import { getGrowthLogs, upsertGrowthLog } from '../api/infantGrowth.api';
+import CustomDatePicker from '../components/CustomDatePicker';
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius';
 import { ordinalSuffix } from '../components/growth/growthCopy';
 import LogChipTabs from '../components/infant/LogChipTabs';
+import LogDatePickerChip from '../components/infant/LogDatePickerChip';
 import LogSectionCard from '../components/infant/LogSectionCard';
 import { GROWTH_BOUNDS, GROWTH_FIELDS } from '../data/infantGrowthData';
+import { useLogDateStrip } from '../hooks/useLogDateStrip';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { infantLogStyles } from '../public/styles/infantLogStyles';
@@ -35,13 +38,9 @@ import { IGrowthMeasurementField, InfantLogRouteParams } from '../types/infantLo
 import { latestResults, previewResults } from '../utils/growthSeries';
 import {
     formatChipDate,
-    isSameIstDay,
     istDateKey,
-    recentDates,
+    mergeByDay,
 } from '../utils/infantLogHelpers';
-
-/** Today plus the two days before it, matching the design's three date chips. */
-const VISIBLE_DAYS = 3;
 
 type MeasurementValues = Record<IGrowthMeasurementField['key'], string>;
 
@@ -84,26 +83,65 @@ const GrowthLog: React.FC = () => {
     const route = useRoute();
     const params = (route.params ?? {}) as InfantLogRouteParams;
 
-    const dates = useMemo(() => recentDates(VISIBLE_DAYS), []);
-    const [selectedDate, setSelectedDate] = useState<Date>(dates[0]);
+    const strip = useLogDateStrip(params.childDob);
+    const { selectedDate, isToday } = strip;
+
     const [values, setValues] = useState<MeasurementValues>(EMPTY_VALUES);
     const [logs, setLogs] = useState<IGrowthLog[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+
+    const beforeBirth = strip.isBeforeBirth(selectedDate);
 
     const loadLogs = useCallback(async () => {
         if (!params.childId) return;
 
         setLoading(true);
         try {
-            setLogs(await getGrowthLogs(params.childId));
+            // Bounded to the days the strip can actually reach. Unbounded, this pulled a
+            // child's entire history on every open and then rendered a week of it — the
+            // dashboard chart is what needs the full series, and it fetches its own.
+            const week = await getGrowthLogs(
+                params.childId,
+                strip.windowFrom,
+                strip.windowTo,
+            );
+            setLogs(prev => mergeByDay(prev, week, row => row.measuredOn));
         } catch (error) {
             console.log('[GrowthLog] Failed to load growth logs', error);
             Toast.show({ type: 'error', text1: t('infant.growth.loadFailed') });
         } finally {
             setLoading(false);
         }
-    }, [params.childId, t]);
+    }, [params.childId, strip.windowFrom, strip.windowTo, t]);
+
+    /**
+     * A day picked from the calendar, fetched on its own.
+     *
+     * A separate single-day request rather than widening the range above: reaching back to
+     * a measurement taken three months ago should cost one day's data, not three months.
+     */
+    useEffect(() => {
+        const dayKey = strip.extraDayKey;
+        if (!dayKey || !params.childId) return;
+
+        let cancelled = false;
+
+        getGrowthLogs(params.childId, dayKey, dayKey)
+            .then(rows => {
+                if (!cancelled) {
+                    setLogs(prev => mergeByDay(prev, rows, row => row.measuredOn));
+                }
+            })
+            .catch(error => {
+                console.log('[GrowthLog] Failed to load the picked day', error);
+                Toast.show({ type: 'error', text1: t('infant.growth.loadFailed') });
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [strip.extraDayKey, params.childId, t]);
 
     useEffect(() => {
         loadLogs();
@@ -185,7 +223,6 @@ const GrowthLog: React.FC = () => {
     }, [values]);
 
     const hasAnyValue = Object.values(values).some(value => value.trim().length > 0);
-    const isToday = isSameIstDay(selectedDate, new Date());
 
     /**
      * Scores for the day on screen: live while typing, otherwise whatever was stored for
@@ -262,17 +299,36 @@ const GrowthLog: React.FC = () => {
     // Every day is selectable. Past ones were `disabled`, which made them inert decoration
     // — a parent could see that the 12th existed but never what was recorded on it. They
     // open read-only instead, which is what "editable for 24 hours" actually means.
-    const dateTabs = dates.map((date, index) => ({
-        key: date.toISOString(),
-        label: index === 0 ? t('infant.growth.today') : formatChipDate(date, t),
+    //
+    // Days before the child was born are the one exception: there is nothing behind them
+    // and never can be, and the server rejects a measurement dated before birth anyway.
+    const dateTabs = strip.dates.map((date, index) => ({
+        // Keyed on the IST day, not the instant. A chip is a day, and keying on
+        // toISOString() meant a date chosen from the calendar — which arrives at
+        // midnight — matched no chip, leaving the strip with nothing highlighted.
+        key: istDateKey(date),
+        label: index === 0 ? t('infant.today') : formatChipDate(date, t),
+        disabled: strip.isBeforeBirth(date),
     }));
 
     return (
         <SafeAreaView style={infantLogStyles.screen} edges={['bottom', 'left', 'right']}>
             <LogChipTabs
                 tabs={dateTabs}
-                activeKey={selectedDate.toISOString()}
-                onChange={key => setSelectedDate(new Date(key))}
+                activeKey={istDateKey(selectedDate)}
+                onChange={strip.selectByKey}
+                trailing={<LogDatePickerChip onPress={strip.openPicker} />}
+            />
+
+            <CustomDatePicker
+                show={strip.pickerVisible}
+                setShow={visible => (visible ? strip.openPicker() : strip.closePicker())}
+                selectedDate={selectedDate}
+                onSelect={strip.pickDate}
+                // The calendar refuses anything before the child existed or after today,
+                // so an impossible day cannot be chosen in the first place.
+                minimumDate={strip.minimumDate}
+                maximumDate={strip.maximumDate}
             />
 
             <KeyboardAvoidingView
@@ -289,6 +345,18 @@ const GrowthLog: React.FC = () => {
                             color={colors.darkPurple}
                             style={styles.loader}
                         />
+                    ) : beforeBirth ? (
+                        // Both the chips and the calendar refuse these days, so this is
+                        // only reachable with a date of birth in the future. Saying so
+                        // beats rendering an empty form that invites a measurement the
+                        // server will reject.
+                        <LogSectionCard title={t('infant.growth.measurements')}>
+                            <Text style={[styles.caption, globalStyles.fontRegular]}>
+                                {t('infant.beforeBirth', {
+                                    name: params.childName ?? t('infant.childFallback'),
+                                })}
+                            </Text>
+                        </LogSectionCard>
                     ) : (
                         <LogSectionCard
                             title={t('infant.growth.measurements')}
@@ -390,7 +458,7 @@ const GrowthLog: React.FC = () => {
                         </LogSectionCard>
                     )}
 
-                    {isToday && !loading && (
+                    {isToday && !loading && !beforeBirth && (
                         <GradientButtonWithSlightRadius
                             title={saving ? t('common.saving') : t('infant.saveLog')}
                             onPress={save}
@@ -491,6 +559,11 @@ const styles = StyleSheet.create({
 
     loader: {
         marginVertical: 40,
+    },
+
+    caption: {
+        fontSize: 13,
+        color: colors.gray,
     },
 });
 

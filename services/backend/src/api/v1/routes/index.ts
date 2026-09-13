@@ -17,6 +17,7 @@ import aiMessageReportRouter from "./ai-message-reports/ai-message-report.route"
 import supportRouter from "./support/support.route";
 import moodLogRouter from "./mood-logs/mood-log.route";
 import growthLogRouter from "./growth-logs/growth-log.route";
+import diaperLogRouter from "./diaper-logs/diaper-log.route";
 import becknRouter from "./beckn/beckn.route";
 import subscriptionRouter from "./subscription/subscription.route";
 import referralRouter from "./referral/referral.route";
@@ -43,6 +44,7 @@ router.use(aiMessageReportRouter);
 router.use(supportRouter);
 router.use(moodLogRouter);
 router.use(growthLogRouter);
+router.use(diaperLogRouter);
 router.use(becknRouter);
 router.use(subscriptionRouter);
 router.use(referralRouter);

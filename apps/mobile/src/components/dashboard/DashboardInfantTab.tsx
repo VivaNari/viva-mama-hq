@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
+import { getDiaperLogs } from '../../api/infantDiaper.api';
 import { getGrowthLogs } from '../../api/infantGrowth.api';
 import GrowthChartCard from '../growth/GrowthChartCard';
 import { buildSeries, latestResults } from '../../utils/growthSeries';
@@ -16,6 +17,7 @@ import { IChild } from '../../types/user.types';
 import { IUserAllData } from '../../types/dashboard.types';
 import { InfantLogRouteParams } from '../../types/infantLog.types';
 import { getChildAgeLabel, getVisibleChildren } from '../../utils/childAge';
+import { istDateKey } from '../../utils/infantLogHelpers';
 import DashboardCard from './DashboardCard';
 import ChildAvatarStrip from './ChildAvatarStrip';
 import FLInfantCheckInOptions from './FLInfantCheckInOptions';
@@ -83,6 +85,48 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
 
     const series = useMemo(() => buildSeries(growthLogs), [growthLogs]);
     const results = useMemo(() => latestResults(growthLogs), [growthLogs]);
+
+    const [diaperToday, setDiaperToday] = useState<number>(0);
+
+    /**
+     * Today's diaper count for the tile subtitle.
+     *
+     * Asks for one day rather than the history — the tile needs a single number, and the
+     * dashboard should not pull a month of entries to render it. Fails silently for the
+     * same reason the growth fetch does: the tile falls back to its static line, which is
+     * also what a day with nothing logged shows.
+     *
+     * On focus rather than on mount. Logging a diaper and coming straight back here is the
+     * single most likely way this tile is looked at, and keyed on the child alone it would
+     * still be showing the count from before the visit — the one number on the dashboard
+     * guaranteed to be stale exactly when a parent goes to check it.
+     */
+    useFocusEffect(
+        useCallback(() => {
+            let cancelled = false;
+            const childId = selectedChild?._id;
+
+            if (!childId) {
+                setDiaperToday(0);
+                return;
+            }
+
+            const today = istDateKey(new Date());
+
+            getDiaperLogs(childId, today, today)
+                .then((logs) => {
+                    if (!cancelled) setDiaperToday(logs[0]?.totals?.total ?? 0);
+                })
+                .catch((error) => {
+                    console.log('[DashboardInfantTab] Failed to load diaper logs', error);
+                    if (!cancelled) setDiaperToday(0);
+                });
+
+            return () => {
+                cancelled = true;
+            };
+        }, [selectedChild?._id]),
+    );
 
     /**
      * Both the empty state's CTA and the strip's "+" land here. No childId is passed: the
@@ -172,6 +216,18 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
         childSex: selectedChild?.sex,
     };
 
+    /**
+     * A live line for a tile whose data the dashboard has loaded, or undefined to keep the
+     * tile's static one.
+     *
+     * Zero falls through to "Not logged" rather than rendering "0 today" — they mean the
+     * same thing and the static line reads better.
+     */
+    const tileSubtitle = (screen: string): string | undefined =>
+        screen === 'DiaperLog' && diaperToday > 0
+            ? t('infant.diaper.countToday', { count: diaperToday })
+            : undefined;
+
     // Rendered as rows rather than a FlatList: the last tile spans both columns, which a
     // numColumns grid cannot express.
     const tiles = infantData.checkinOptions;
@@ -238,6 +294,7 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                                 item={tile}
                                 navigation={navigation}
                                 params={logParams}
+                                subtitle={tileSubtitle(tile.screen)}
                             />
                         ))}
                     </View>

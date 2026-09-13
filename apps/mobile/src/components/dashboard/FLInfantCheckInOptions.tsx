@@ -12,6 +12,7 @@ const FLInfantCheckInOptions = ({
     item,
     navigation,
     params,
+    subtitle,
 }: {
     item: IInfantCheckinOptions;
     navigation: { navigate: any };
@@ -21,6 +22,12 @@ const FLInfantCheckInOptions = ({
      * so the selection has to travel with the tap rather than be re-derived.
      */
     params?: InfantLogRouteParams;
+    /**
+     * Already-translated line replacing the tile's static one — "3 today" instead of "Not
+     * logged". Only tiles whose data the dashboard has actually loaded pass it; the rest
+     * keep `item.subtitleKey`, which is what a tile with nothing to report should say.
+     */
+    subtitle?: string;
 }) => {
     const { t } = useTranslation();
 
@@ -42,7 +49,7 @@ const FLInfantCheckInOptions = ({
             <Text style={[styles.title, globalStyles.fontBold]}>{t(item.titleKey)}</Text>
 
             <Text style={[styles.subtitle, globalStyles.fontRegular]}>
-                {t(item.subtitleKey)}
+                {subtitle ?? t(item.subtitleKey)}
             </Text>
         </TouchableOpacity>
     );

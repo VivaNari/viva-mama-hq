@@ -96,6 +96,16 @@ export const messages = {
     GROWTH_LOG_CHILD_NOT_FOUND: "Child not found for this user",
     GROWTH_LOG_DAY_CLOSED:
         "Only today's measurement can be added or changed. Earlier days are read-only.",
+    DIAPER_LOG_SAVED_SUCCESS: "Diaper logged successfully",
+    DIAPER_LOG_FETCH_SUCCESS: "Diaper logs fetched successfully",
+    DIAPER_LOG_DELETED_SUCCESS: "Diaper log entry removed successfully",
+    DIAPER_LOG_NOT_FOUND: "Diaper log entry not found",
+    DIAPER_LOG_INVALID_DATE: "loggedAt must be a valid date",
+    DIAPER_LOG_FUTURE_NOT_ALLOWED: "Cannot log a diaper change in the future",
+    DIAPER_LOG_BEFORE_BIRTH: "Cannot log a diaper change for a time before the child was born",
+    DIAPER_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+    DIAPER_LOG_DAY_CLOSED:
+        "Only today's diapers can be added or removed. Earlier days are read-only.",
     SUBSCRIPTION_FETCH_SUCCESS: "Subscription fetched successfully",
     SUBSCRIPTION_PLANS_FETCH_SUCCESS: "Subscription plans fetched successfully",
     TRIAL_STARTED_SUCCESS: "Free trial started successfully",

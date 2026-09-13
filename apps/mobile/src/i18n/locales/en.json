@@ -835,6 +835,10 @@
     "emptyCta": "Add your baby",
     "emptyCaption": "Takes about a minute · editable later",
     "add": "Add",
+    "today": "Today",
+    "dateChip": "{{day}} {{month}}",
+    "pickDate": "Pick a date",
+    "beforeBirth": "Nothing to show — before {{name}} was born.",
     "ageHeading": "Infant age — {{age}}",
     "growthSubtitle": "Weight-for-age, WHO child growth standards",
     "growthDescription": "An infant growth score tracks weight, height and head circumference against healthy standards, so nutrition and milestones stay visible and delays are caught early.",
@@ -859,7 +863,6 @@
     "timePlaceholder": "Time",
     "notPersistedYet": "Design preview — entries are not saved yet.",
     "growth": {
-      "today": "Today",
       "measurements": "Measurements",
       "headLabel": "Head circumference",
       "lengthLabel": "Height / length",
@@ -926,7 +929,6 @@
         "above": "Above the 97th",
         "far_above": "Above the 99th"
       },
-      "dateChip": "{{day}} {{month}}",
       "readOnlyDay": "Only today's entry can be changed."
     },
     "feeding": {
@@ -982,7 +984,13 @@
       "total": "{{count}} total",
       "empty": "Nothing logged yet today.",
       "remove": "Remove entry",
-      "guidance": "6+ wet diapers a day usually means feeding is going well in the newborn weeks."
+      "guidance": "6+ wet diapers a day usually means feeding is going well in the newborn weeks.",
+      "readOnlyDay": "Only today's diapers can be changed.",
+      "emptyPast": "Nothing was logged on this day.",
+      "loadFailed": "Could not load the diaper log.",
+      "saveFailed": "Could not save that change. Please try again.",
+      "removeFailed": "Could not remove that entry. Please try again.",
+      "noChild": "Select a child before logging a diaper change."
     },
     "vaccination": {
       "sectorPublic": "Government sector schedule",

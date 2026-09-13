@@ -18,6 +18,11 @@ const mockNavigate = jest.fn();
 
 jest.mock('@react-navigation/native', () => ({
     useNavigation: () => ({ navigate: mockNavigate }),
+    // Stands in for React Navigation's useFocusEffect, which fires the effect while the
+    // screen is focused. Screens are always focused under test, so running it as a plain
+    // effect — cleanup and all — matches the real behaviour closely enough.
+    useFocusEffect: (effect: () => void | (() => void)) =>
+        require('react').useEffect(effect, [effect]),
 }));
 
 const { getGrowthLogs } = require('../src/api/infantGrowth.api');

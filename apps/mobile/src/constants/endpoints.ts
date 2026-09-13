@@ -127,6 +127,10 @@ export const API_MOOD_LOGS = `${API_VERSION_URL}/mood-logs`;
 // curves — the app carries @vivamama/growth-standards, so the chart draws offline.
 export const API_GROWTH_LOGS = `${API_VERSION_URL}/growth-logs`;
 
+// Infant diaper log endpoints. POST appends one change rather than replacing a day — this
+// screen is tapped fast, and a whole-day write would drop entries when two taps overlap.
+export const API_DIAPER_LOGS = `${API_VERSION_URL}/diaper-logs`;
+
 // Viva Club Endpoints
 const VIVA_CLUB_BASE = `${API_VERSION_URL}/viva-club`;
 export const API_VIVA_CLUB_POSTS = `${VIVA_CLUB_BASE}/posts`;

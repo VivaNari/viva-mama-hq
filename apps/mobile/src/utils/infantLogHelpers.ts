@@ -110,10 +110,10 @@ export const splitDuration = (
 });
 
 /**
- * The date chips on the growth log: today first, then the days before it.
+ * The date chips on the growth and diaper logs: today first, then the days before it.
  *
- * Only today is editable — the design greys the rest — but they stay visible so a parent
- * can see what was already recorded.
+ * Only today is editable, but the rest are selectable rather than greyed out — a chip a
+ * parent can see and not open tells them a day exists without ever showing what is on it.
  */
 export const recentDates = (count: number, now: Date = new Date()): Date[] =>
   Array.from({ length: count }, (_, index) => {
@@ -121,6 +121,25 @@ export const recentDates = (count: number, now: Date = new Date()): Date[] =>
     date.setDate(now.getDate() - index);
     return date;
   });
+
+/**
+ * Fold newly-fetched day rows into the ones already held, newest data winning.
+ *
+ * The date strips fetch the recent week on open and any picked day on its own, so two
+ * responses describe overlapping-but-different sets of days. Merging on the day key keeps
+ * a picked day from being dropped by the next week refresh, and keeps a refreshed day from
+ * appearing twice.
+ */
+export const mergeByDay = <T>(
+  existing: T[],
+  incoming: T[],
+  keyOf: (row: T) => string,
+): T[] => {
+  const byKey = new Map(existing.map((row) => [keyOf(row), row]));
+  for (const row of incoming) byKey.set(keyOf(row), row);
+
+  return [...byKey.values()].sort((a, b) => keyOf(a).localeCompare(keyOf(b)));
+};
 
 export const isSameDay = (a: Date, b: Date): boolean =>
   a.getFullYear() === b.getFullYear() &&
@@ -181,7 +200,7 @@ const MONTH_KEYS = [
 export const formatChipDate = (date: Date, t: TFunction): string => {
   const { month, day } = istParts(date);
 
-  return t("infant.growth.dateChip", {
+  return t("infant.dateChip", {
     day,
     month: t(`common.monthsShort.${MONTH_KEYS[month] ?? "jan"}`),
   });

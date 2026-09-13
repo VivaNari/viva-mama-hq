@@ -16,6 +16,11 @@ interface LogChipTabsProps {
     tabs: LogChipTab[];
     activeKey: string;
     onChange: (key: string) => void;
+    /**
+     * Rendered after the last chip, inside the same scroll. The date strips put their
+     * "pick a date" button here; the schedule and age-band strips pass nothing.
+     */
+    trailing?: React.ReactNode;
 }
 
 /**
@@ -25,7 +30,12 @@ interface LogChipTabsProps {
  * Horizontally scrollable by design: the vaccination schedule runs to a dozen visits and
  * the milestone bands to five, neither of which fits a phone width.
  */
-const LogChipTabs: React.FC<LogChipTabsProps> = ({ tabs, activeKey, onChange }) => (
+const LogChipTabs: React.FC<LogChipTabsProps> = ({
+    tabs,
+    activeKey,
+    onChange,
+    trailing,
+}) => (
     <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -65,6 +75,8 @@ const LogChipTabs: React.FC<LogChipTabsProps> = ({ tabs, activeKey, onChange }) 
                 </TouchableOpacity>
             );
         })}
+
+        {trailing}
     </ScrollView>
 );
 

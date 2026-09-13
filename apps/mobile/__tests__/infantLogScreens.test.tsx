@@ -14,7 +14,7 @@
  */
 
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import DiaperLog from '../src/screens/DiaperLog';
 import FeedingLog from '../src/screens/FeedingLog';
@@ -30,6 +30,11 @@ let mockRouteParams: InfantLogRouteParams = {};
 jest.mock('@react-navigation/native', () => ({
     useRoute: () => ({ params: mockRouteParams }),
     useNavigation: () => ({ navigate: jest.fn() }),
+    // Stands in for React Navigation's useFocusEffect, which fires the effect while the
+    // screen is focused. Screens are always focused under test, so running it as a plain
+    // effect — cleanup and all — matches the real behaviour closely enough.
+    useFocusEffect: (effect: () => void | (() => void)) =>
+        require('react').useEffect(effect, [effect]),
 }));
 
 jest.mock('react-native-safe-area-context', () => {
@@ -47,6 +52,18 @@ jest.mock('../src/api/infantGrowth.api', () => ({
     getGrowthLogs: jest.fn().mockResolvedValue([]),
     upsertGrowthLog: jest.fn().mockResolvedValue({}),
     deleteGrowthLog: jest.fn().mockResolvedValue(undefined),
+}));
+
+const {
+    getDiaperLogs,
+    addDiaperEntry,
+    removeDiaperEntry,
+} = require('../src/api/infantDiaper.api');
+
+jest.mock('../src/api/infantDiaper.api', () => ({
+    getDiaperLogs: jest.fn().mockResolvedValue([]),
+    addDiaperEntry: jest.fn(),
+    removeDiaperEntry: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock('../src/analytics', () => ({
@@ -72,11 +89,132 @@ const formatChipLabel = (date: Date): string => {
 const dobDaysAgo = (days: number): string =>
     new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 
+/** The IST day key `days` days before today — the far edge of a date strip. */
+const keyDaysAgo = (days: number): string =>
+    dateKey(new Date(Date.now() - days * 24 * 60 * 60 * 1000));
+
+/**
+ * Both date strips show today plus the six days before it.
+ *
+ * Asserted rather than hardcoded per test so that widening or narrowing a strip fails in
+ * one obvious place instead of scattering magic numbers through the suite.
+ */
+const STRIP_DAYS = 7;
+
+/**
+ * The calendar, as `jest.setup.js` mocks it — a host element carrying the real component's
+ * props. Querying it is how the bounds handed to the picker get asserted, since a mocked
+ * calendar has no dates to try tapping.
+ */
+const picker = (root: ReturnType<typeof render>) =>
+    root.UNSAFE_getAllByProps({ mode: 'date' })[0];
+
+/** Drive the mocked calendar the way the real one reports a chosen date. */
+const choose = (root: ReturnType<typeof render>, date: Date) =>
+    act(() => {
+        picker(root).props.onChange({ type: 'set' }, date);
+    });
+
+/**
+ * The chip carrying a given label, found by walking up from its text to the pressable.
+ *
+ * Needed because a date label is not unique on screen — the diaper card titles a past day
+ * with the same "15 Jun" its chip shows — and because the accessibility state lives on the
+ * touchable, several levels above the Text that matches.
+ */
+const chipFor = (root: ReturnType<typeof render>, label: string) => {
+    let node: any = root.getAllByText(label)[0];
+    while (node && node.props?.accessibilityRole !== 'tab') node = node.parent;
+    return node;
+};
+
 beforeEach(() => {
     mockRouteParams = {};
 });
 
 describe('GrowthLog', () => {
+    /**
+     * The strip used to show three days while the fetch asked for the child's entire
+     * history — the screen downloaded months of entries to render three of them. The window
+     * and the request have to agree, so both are asserted together.
+     */
+    it('asks for exactly the week of days the strip can reach', async () => {
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(200) };
+        getGrowthLogs.mockClear();
+
+        const { getByText } = render(<GrowthLog />);
+
+        await waitFor(() => expect(getGrowthLogs).toHaveBeenCalled());
+        expect(getGrowthLogs).toHaveBeenCalledWith(
+            'child-1',
+            keyDaysAgo(STRIP_DAYS - 1),
+            todayKey(),
+        );
+
+        // The far chip is reachable, so the data behind it is worth having fetched.
+        expect(
+            getByText(formatChipLabel(new Date(Date.now() - (STRIP_DAYS - 1) * 86400000))),
+        ).toBeTruthy();
+    });
+
+    it('opens a picked day beyond the week and fetches only that day', async () => {
+        const longAgo = new Date(Date.now() - 60 * 86400000);
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(200) };
+        getGrowthLogs.mockResolvedValue([]);
+
+        const root = render(<GrowthLog />);
+        await waitFor(() => expect(getGrowthLogs).toHaveBeenCalled());
+
+        getGrowthLogs.mockResolvedValue([
+            {
+                _id: 'g1',
+                childId: 'child-1',
+                measuredOn: dateKey(longAgo),
+                ageInDays: 140,
+                sex: 'Male',
+                measurements: { weight_kg: 6.4, length_cm: 64, head_circumference_cm: 42 },
+                percentiles: {},
+                standard: { source: 'WHO-2006', version: 'who-2006.1' },
+                createdAt: '',
+                updatedAt: '',
+            },
+        ]);
+
+        fireEvent.press(root.getByLabelText('Pick a date'));
+        choose(root, longAgo);
+
+        await waitFor(() =>
+            expect(getGrowthLogs).toHaveBeenCalledWith(
+                'child-1',
+                dateKey(longAgo),
+                dateKey(longAgo),
+            ),
+        );
+
+        // That day's stored measurements hydrate the form, read-only.
+        await waitFor(() =>
+            expect(root.getByLabelText('Weight').props.value).toBe('6400'),
+        );
+        expect(root.getByLabelText('Weight').props.editable).toBe(false);
+    });
+
+    it('disables the days before the child was born', async () => {
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(2) };
+        getGrowthLogs.mockResolvedValue([]);
+
+        const root = render(<GrowthLog />);
+        await waitFor(() => expect(getGrowthLogs).toHaveBeenCalled());
+
+        expect(
+            chipFor(root, formatChipLabel(new Date(Date.now() - 86400000))).props
+                .accessibilityState.disabled,
+        ).toBe(false);
+        expect(
+            chipFor(root, formatChipLabel(new Date(Date.now() - 5 * 86400000))).props
+                .accessibilityState.disabled,
+        ).toBe(true);
+    });
+
     it('renders the three measurements with their units', () => {
         const { getByText, getAllByText } = render(<GrowthLog />);
 
@@ -414,34 +552,326 @@ describe('FeedingLog', () => {
 });
 
 describe('DiaperLog', () => {
-    it('logs a diaper on one tap and lets it be removed again', () => {
+    /** One stored entry for the given day, in the shape the API returns. */
+    const day = (loggedOn: string, entries: { _id: string; kind: string; at: Date }[]) => ({
+        _id: `day-${loggedOn}`,
+        childId: 'child-1',
+        loggedOn,
+        entries: entries.map((entry) => ({
+            _id: entry._id,
+            kind: entry.kind,
+            loggedAt: entry.at.toISOString(),
+        })),
+        totals: { wet: 0, dirty: 0, both: 0, total: entries.length },
+        createdAt: '',
+        updatedAt: '',
+    });
+
+    beforeEach(() => {
+        mockRouteParams = { childId: 'child-1' };
+
+        // The suite does not set `clearMocks`, so call history survives between tests —
+        // without this, "the tiles are inert" sees the taps the previous test made.
+        getDiaperLogs.mockClear();
+        addDiaperEntry.mockClear();
+        removeDiaperEntry.mockClear();
+
+        getDiaperLogs.mockResolvedValue([]);
+        removeDiaperEntry.mockResolvedValue(undefined);
+
+        // Echo back whatever was sent, with a server-shaped id — the swap from the
+        // optimistic row to the stored one is what gives the ✕ an id it can delete by.
+        let created = 0;
+        addDiaperEntry.mockImplementation(
+            async ({ kind, loggedAt }: { kind: string; loggedAt: string }) => ({
+                childId: 'child-1',
+                loggedOn: todayKey(),
+                entry: { _id: `server-${(created += 1)}`, kind, loggedAt },
+                totals: { wet: 0, dirty: 0, both: 0, total: created },
+            }),
+        );
+    });
+
+    it('asks for exactly the week of days the strip can reach', async () => {
+        render(<DiaperLog />);
+
+        await waitFor(() => expect(getDiaperLogs).toHaveBeenCalled());
+        expect(getDiaperLogs).toHaveBeenCalledWith(
+            'child-1',
+            keyDaysAgo(STRIP_DAYS - 1),
+            todayKey(),
+        );
+    });
+
+    describe('picking a date beyond the week', () => {
+        it('opens that day and fetches only it', async () => {
+            const longAgo = new Date(Date.now() - 90 * 86400000);
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(200) };
+
+            const root = render(<DiaperLog />);
+            const { getByLabelText, getByText } = root;
+
+            await waitFor(() => expect(getDiaperLogs).toHaveBeenCalled());
+
+            getDiaperLogs.mockResolvedValue([
+                day(dateKey(longAgo), [{ _id: 'old-1', kind: 'both', at: longAgo }]),
+            ]);
+
+            fireEvent.press(getByLabelText('Pick a date'));
+            choose(root, longAgo);
+
+            // One day's worth, not ninety — the picked day is fetched on its own rather
+            // than by widening the week's range back to it.
+            await waitFor(() =>
+                expect(getDiaperLogs).toHaveBeenCalledWith(
+                    'child-1',
+                    dateKey(longAgo),
+                    dateKey(longAgo),
+                ),
+            );
+
+            await waitFor(() => expect(getByText('1 total')).toBeTruthy());
+            // It also joins the strip, so it can be returned to without picking again.
+            expect(chipFor(root, formatChipLabel(longAgo))).toBeTruthy();
+        });
+
+        /**
+         * Regression: chips were keyed on `toISOString()`, which carries the time of day
+         * the Date was built at, while the calendar hands back midnight. Picking a day
+         * already on the strip produced an activeKey matching no chip — the right data
+         * loaded with the whole strip showing nothing selected.
+         */
+        it('keeps a chip highlighted when the picked day is already on the strip', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(200) };
+
+            const root = render(<DiaperLog />);
+            await waitFor(() => expect(getDiaperLogs).toHaveBeenCalled());
+
+            const selected = () =>
+                root
+                    .getAllByRole('tab')
+                    .filter((node: any) => node.props.accessibilityState?.selected);
+
+            expect(selected()).toHaveLength(1);
+
+            // Midnight, the way a calendar reports a date.
+            const threeBack = new Date(Date.now() - 3 * 86400000);
+            threeBack.setHours(0, 0, 0, 0);
+
+            fireEvent.press(root.getByLabelText('Pick a date'));
+            choose(root, threeBack);
+
+            expect(selected()).toHaveLength(1);
+            expect(chipFor(root, formatChipLabel(threeBack)).props.accessibilityState.selected).toBe(
+                true,
+            );
+            // Already in the week, so it is not appended as an eighth day.
+            expect(root.getAllByRole('tab')).toHaveLength(STRIP_DAYS);
+        });
+
+        /**
+         * The gap is not filled in. Picking a day twenty back adds that one chip, not the
+         * thirteen days between it and the week — the strip stays a fixed week plus at most
+         * one reached-for day, however far back that day is.
+         */
+        it('adds exactly one chip, however far back the date is', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(200) };
+
+            const root = render(<DiaperLog />);
+            await waitFor(() => expect(getDiaperLogs).toHaveBeenCalled());
+            expect(root.getAllByRole('tab')).toHaveLength(STRIP_DAYS);
+
+            const twentyBack = new Date(Date.now() - 20 * 86400000);
+            fireEvent.press(root.getByLabelText('Pick a date'));
+            choose(root, twentyBack);
+
+            await waitFor(() =>
+                expect(root.getAllByRole('tab')).toHaveLength(STRIP_DAYS + 1),
+            );
+
+            // And a second pick replaces the first rather than accumulating, so the strip
+            // cannot grow without bound as a parent browses.
+            const fortyBack = new Date(Date.now() - 40 * 86400000);
+            fireEvent.press(root.getByLabelText('Pick a date'));
+            choose(root, fortyBack);
+
+            await waitFor(() =>
+                expect(chipFor(root, formatChipLabel(fortyBack))).toBeTruthy(),
+            );
+            expect(root.getAllByRole('tab')).toHaveLength(STRIP_DAYS + 1);
+            expect(root.queryAllByText(formatChipLabel(twentyBack))).toHaveLength(0);
+        });
+
+        it('will not offer a date before the child was born, or after today', async () => {
+            const dob = new Date(Date.now() - 40 * 86400000);
+            mockRouteParams = { childId: 'child-1', childDob: dob.toISOString() };
+
+            const root = render(<DiaperLog />);
+
+            await waitFor(() => expect(getDiaperLogs).toHaveBeenCalled());
+            fireEvent.press(root.getByLabelText('Pick a date'));
+
+            expect(dateKey(picker(root).props.minimumDate)).toBe(dateKey(dob));
+            expect(dateKey(picker(root).props.maximumDate)).toBe(todayKey());
+        });
+    });
+
+    /**
+     * A baby three days old has four chips in its week that predate it. They are the one
+     * case where a chip should not open — there is nothing behind them and never can be.
+     */
+    it('disables the days before the child was born', async () => {
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(2) };
+
+        const root = render(<DiaperLog />);
+
+        await waitFor(() => expect(getDiaperLogs).toHaveBeenCalled());
+
+        const afterBirth = new Date(Date.now() - 1 * 86400000);
+        const beforeBirth = new Date(Date.now() - 5 * 86400000);
+
+        expect(
+            chipFor(root, formatChipLabel(afterBirth)).props.accessibilityState.disabled,
+        ).toBe(false);
+        expect(
+            chipFor(root, formatChipLabel(beforeBirth)).props.accessibilityState.disabled,
+        ).toBe(true);
+    });
+
+    it('reaches a week back, not three days', async () => {
+        const sixDaysAgo = new Date(Date.now() - 6 * 86400000);
+        getDiaperLogs.mockResolvedValue([
+            day(dateKey(sixDaysAgo), [{ _id: 'old-1', kind: 'wet', at: sixDaysAgo }]),
+        ]);
+
+        const { getByText } = render(<DiaperLog />);
+
+        await waitFor(() => expect(getByText(formatChipLabel(sixDaysAgo))).toBeTruthy());
+        fireEvent.press(getByText(formatChipLabel(sixDaysAgo)));
+
+        await waitFor(() => expect(getByText('1 total')).toBeTruthy());
+    });
+
+    it('logs a diaper on one tap and lets it be removed again', async () => {
         const { getByText, getAllByText, getByLabelText, queryByText } = render(
             <DiaperLog />,
         );
 
-        expect(getByText('Nothing logged yet today.')).toBeTruthy();
+        await waitFor(() => expect(getByText('Nothing logged yet today.')).toBeTruthy());
 
         fireEvent.press(getByLabelText('Wet'));
 
-        expect(getByText('1 total')).toBeTruthy();
+        // Appears before the request resolves — the whole point of the screen is that a
+        // tap is instant.
+        await waitFor(() => expect(getByText('1 total')).toBeTruthy());
         // Once in the quick-log tile's counter, once on the entry row.
         expect(getAllByText('Wet').length).toBeGreaterThan(1);
 
         fireEvent.press(getByLabelText('Remove entry'));
 
-        expect(queryByText('1 total')).toBeNull();
+        await waitFor(() => expect(queryByText('1 total')).toBeNull());
         expect(getByText('Nothing logged yet today.')).toBeTruthy();
+        expect(removeDiaperEntry).toHaveBeenCalledWith(
+            expect.objectContaining({ childId: 'child-1', entryId: 'server-1' }),
+        );
     });
 
-    it('counts each kind separately', () => {
+    it('counts each kind separately', async () => {
         const { getByLabelText, getByText } = render(<DiaperLog />);
+
+        await waitFor(() => expect(getByText('Nothing logged yet today.')).toBeTruthy());
 
         fireEvent.press(getByLabelText('Wet'));
         fireEvent.press(getByLabelText('Wet'));
         fireEvent.press(getByLabelText('Both'));
 
+        await waitFor(() => expect(getByText('3 total')).toBeTruthy());
         expect(getByText('2 today')).toBeTruthy();
-        expect(getByText('3 total')).toBeTruthy();
+    });
+
+    /**
+     * The cost of writing optimistically: a failed request must take its row back, or the
+     * parent is looking at a change the server never recorded.
+     */
+    it('takes the entry back when the save fails', async () => {
+        // Held open rather than rejected up front, so the assertions can sit either side of
+        // the failure: the row must appear immediately, then disappear. Rejecting inside
+        // `act` is also what makes this deterministic — a floating rejection updates state
+        // outside React's control and the flush lands whenever it lands.
+        let fail: (error: Error) => void = () => undefined;
+        addDiaperEntry.mockReturnValue(
+            new Promise((_resolve, reject) => {
+                fail = reject;
+            }),
+        );
+
+        const { getByLabelText, getByText, queryByText } = render(<DiaperLog />);
+
+        await waitFor(() => expect(getByText('Nothing logged yet today.')).toBeTruthy());
+
+        fireEvent.press(getByLabelText('Wet'));
+        expect(getByText('1 total')).toBeTruthy();
+
+        await act(async () => {
+            fail(new Error('offline'));
+        });
+
+        expect(queryByText('1 total')).toBeNull();
+        expect(getByText('Nothing logged yet today.')).toBeTruthy();
+    });
+
+    it('shows what was logged on a past day', async () => {
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        getDiaperLogs.mockResolvedValue([
+            day(dateKey(yesterday), [
+                { _id: 'old-1', kind: 'wet', at: yesterday },
+                { _id: 'old-2', kind: 'dirty', at: yesterday },
+            ]),
+        ]);
+
+        const { getByText, queryByLabelText } = render(<DiaperLog />);
+
+        await waitFor(() => expect(getByText(formatChipLabel(yesterday))).toBeTruthy());
+        fireEvent.press(getByText(formatChipLabel(yesterday)));
+
+        await waitFor(() => expect(getByText('2 total')).toBeTruthy());
+
+        // Read-only: the day's entries are visible but there is no way to change them.
+        expect(queryByLabelText('Remove entry')).toBeNull();
+        expect(getByText("Only today's diapers can be changed.")).toBeTruthy();
+    });
+
+    /**
+     * The quick-log tiles stay on screen on a past day rather than disappearing. A card
+     * that loses its controls reads as broken, and the per-kind counts on those tiles are
+     * most of what a past day is for.
+     */
+    it('keeps the quick-log tiles visible but inert on a past day', async () => {
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        getDiaperLogs.mockResolvedValue([day(dateKey(yesterday), [])]);
+
+        const { getByText, getByLabelText } = render(<DiaperLog />);
+
+        await waitFor(() => expect(getByText(formatChipLabel(yesterday))).toBeTruthy());
+        fireEvent.press(getByText(formatChipLabel(yesterday)));
+
+        await waitFor(() =>
+            expect(getByText('Nothing was logged on this day.')).toBeTruthy(),
+        );
+
+        fireEvent.press(getByLabelText('Wet'));
+        expect(addDiaperEntry).not.toHaveBeenCalled();
+    });
+
+    it('hydrates today from what the server already has', async () => {
+        getDiaperLogs.mockResolvedValue([
+            day(todayKey(), [{ _id: 'stored-1', kind: 'both', at: new Date() }]),
+        ]);
+
+        const { getByText } = render(<DiaperLog />);
+
+        await waitFor(() => expect(getByText('1 total')).toBeTruthy());
+        expect(getByText('Pee and poop')).toBeTruthy();
     });
 });
 

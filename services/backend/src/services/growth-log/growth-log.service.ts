@@ -1,5 +1,3 @@
-import { Types } from "mongoose";
-
 import {
     GrowthMeasurement,
     Indicator,
@@ -13,7 +11,6 @@ import {
 } from "@vivamama/growth-standards";
 
 import growthLogModel from "../../models/growth-log.model";
-import UserModel from "../../models/user.model";
 import {
     IGrowthLog,
     IGrowthPercentiles,
@@ -22,16 +19,13 @@ import {
 import { IChild } from "../../types/user.types";
 import logger, { createModuleLogger } from "../../utils/logger";
 import BaseService from "../base.service";
+import { ChildNotFoundError, getOwnedChild } from "../childs/child-ownership";
 import { getISTCalendarDate } from "../date/date.service";
 
 const log = createModuleLogger(logger, "growth-log.service");
 
-export class ChildNotFoundError extends Error {
-    constructor(message = "Child not found for this user") {
-        super(message);
-        this.name = "ChildNotFoundError";
-    }
-}
+/** Re-exported for the controller and tests that already import it from here. */
+export { ChildNotFoundError };
 
 /** The package's discriminated union flattened for storage. Mongoose has no union type. */
 const toPersisted = (result: IndicatorResult): IPersistedIndicatorResult => ({
@@ -68,23 +62,12 @@ class GrowthLogService extends BaseService<IGrowthLog> {
     /**
      * The child, verified to belong to this user.
      *
-     * Children are embedded subdocuments, so ownership is a filter rather than a join —
-     * the same `{_id: userId, "childs._id": childId}` shape ChildService uses. Doing it any
-     * other way would let one user address another's child by id.
+     * Delegates to the shared ownership check — the diaper log asks the same question, and
+     * two copies of an authorization filter is one copy too many. Kept as a method so the
+     * existing call sites and tests read unchanged.
      */
-    getOwnedChild = async (userId: string, childId: string): Promise<IChild> => {
-        if (!Types.ObjectId.isValid(childId)) throw new ChildNotFoundError();
-
-        const user = await UserModel.findOne(
-            { _id: userId, "childs._id": new Types.ObjectId(childId) },
-            { "childs.$": 1 },
-        ).lean();
-
-        const child = user?.childs?.[0];
-        if (!child) throw new ChildNotFoundError();
-
-        return child as IChild;
-    };
+    getOwnedChild = (userId: string, childId: string): Promise<IChild> =>
+        getOwnedChild(userId, childId);
 
     /**
      * Score a set of measurements for a child on a given day.
@@ -176,6 +159,12 @@ class GrowthLogService extends BaseService<IGrowthLog> {
             })
             .sort({ measuredOn: 1 })
             .lean<IGrowthLog[]>();
+    };
+
+    /** Every growth log for one child. Used when a child is removed from a user. */
+    deleteForChild = async (userId: string, childId: string): Promise<number> => {
+        const result = await growthLogModel.deleteMany({ userId, childId });
+        return result.deletedCount ?? 0;
     };
 
     deleteForDate = async ({
