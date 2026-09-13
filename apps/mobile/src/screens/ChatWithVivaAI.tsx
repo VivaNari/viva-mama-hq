@@ -228,9 +228,15 @@ const ChatWithVivaAI: React.FC = () => {
             // Clear history for CHECKIN and BABY_ONBOARDING on completion. For the latter
             // it is what stops the next child's chat opening on the previous child's
             // transcript — history is keyed by (user, flow slug), not by child.
-            if (shouldClearHistoryOnComplete(completedFlowType)) {
+            //
+            // Scoped to THIS flow, deliberately. clearChatHistoryV2() is an unscoped
+            // `DELETE FROM chat_messages`: it wipes every flow for every user on the
+            // device, so finishing a check-in also erased the onboarding transcript.
+            // Harmless-looking until baby onboarding started calling it too, at which
+            // point adding a child would have destroyed the mother's own history.
+            if (shouldClearHistoryOnComplete(completedFlowType) && userId && flowSlug) {
                 chatLogger.debug('Clearing chat history for completed flow', completedFlowType);
-                await chatDB.clearChatHistoryV2();
+                await chatDB.clearChatHistory(userId, flowSlug);
             }
 
             const redirect = getCompletionRedirect(
@@ -249,7 +255,7 @@ const ChatWithVivaAI: React.FC = () => {
                 }, redirect.delay);
             }
         },
-        [completeQuestionnaire, navigation, userToken, t]
+        [completeQuestionnaire, navigation, userToken, userId, flowSlug, t]
     );
 
     const stripThinkTags = (text: string): string => {

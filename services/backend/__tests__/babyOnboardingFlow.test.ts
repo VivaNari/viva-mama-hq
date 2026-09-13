@@ -129,6 +129,36 @@ describe("seed-baby-onboarding-flow", () => {
         }
     });
 
+    it("keeps the {{child_name}} token in the Hindi copy too", async () => {
+        // Localization runs first and interpolation second, so the token has to survive
+        // translation. A Hindi bundle written without it would address the child by name
+        // in English and not at all in Hindi.
+        await seedBabyFlow();
+        const flow = await flowDefinitionModel.findOne({ slug: BABY_ONBOARDING_SLUG }).lean();
+        const hiNodes = (flow!.translations as any).hi.nodes;
+
+        expect(hiNodes.child_dob.text).toContain("{{child_name}}");
+        expect(interpolateFlowText(hiNodes.child_dob.text, { child_name: "आशा" })).not.toContain(
+            "{{",
+        );
+    });
+
+    it("translates the sex and sector options under their stored values", async () => {
+        // localizeFlowDefinition looks options up by String(opt.value), so the Hindi keys
+        // must be the raw tokens ("Female", "public") — not the English labels.
+        await seedBabyFlow();
+        const flow = await flowDefinitionModel.findOne({ slug: BABY_ONBOARDING_SLUG }).lean();
+        const hiNodes = (flow!.translations as any).hi.nodes;
+
+        for (const node of flow!.nodes as any[]) {
+            const hiOptions = hiNodes[node.id]?.options;
+            if (!hiOptions) continue;
+            for (const opt of node.options) {
+                expect(hiOptions[String(opt.value)]).toBeTruthy();
+            }
+        }
+    });
+
     it("is idempotent — a second run creates nothing and duplicates nothing", async () => {
         await seedBabyFlow();
         const second = await seedBabyFlow();
@@ -336,23 +366,43 @@ describe("child onboarding projection", () => {
 
     it("touches only the addressed child when the user has several", async () => {
         const { user, childId } = await setup();
+
+        // Finish the first child, so resolveSubjectChild has no draft left to resume and
+        // genuinely opens a second one. Calling it twice against an unfinished draft
+        // correctly returns the SAME child — that is the leak guard, covered below.
+        await markChildOnboardingComplete(user._id.toString(), childId);
+
         const reloaded = await UserModel.findById(user._id);
         const other = await resolveSubjectChild(reloaded!, undefined);
-
-        // resolveSubjectChild resumes when a run is in flight; there is none here, so it
-        // should have produced a genuinely separate child.
         expect(other.childId.toString()).not.toBe(childId.toString());
 
         await updateChildOnboardingData(
             user._id.toString(),
-            childId,
+            other.childId,
             await getNode("child_name"),
             undefined,
-            "Aarav",
+            "Meera",
         );
 
-        const untouched = await child(user._id, other.childId);
-        expect(untouched.name).toBeUndefined();
+        const first = await child(user._id, childId);
+        expect(first.name).toBeUndefined();
+    });
+
+    it("never stacks up draft children when a start is repeated", async () => {
+        // The child is pushed before the flow instance exists, so resumption has to key
+        // off the draft child itself. Keying off the instance leaked a child every time
+        // instance creation failed, or whenever two starts raced.
+        const { user, childId } = await setup();
+
+        for (let i = 0; i < 3; i++) {
+            const reloaded = await UserModel.findById(user._id);
+            const again = await resolveSubjectChild(reloaded!, undefined);
+            expect(again.created).toBe(false);
+            expect(again.childId.toString()).toBe(childId.toString());
+        }
+
+        const fresh = await UserModel.findById(user._id).lean();
+        expect(fresh!.childs).toHaveLength(1);
     });
 
     it("records child_name on the instance so later questions can interpolate it", async () => {

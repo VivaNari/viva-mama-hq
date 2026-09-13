@@ -9,9 +9,6 @@
 import { Types } from "mongoose";
 
 import UserModel from "../../models/user.model";
-import flowInstanceModel from "../../models/flowInstance.model";
-import { BABY_ONBOARDING_SLUG } from "../../constants/chat";
-import { FlowInstanceStateEnum } from "../../types/chat.types";
 import { EChildOnboardingStatus, IUser } from "../../types/user.types";
 import logger, { createModuleLogger } from "../../utils/logger";
 
@@ -56,32 +53,28 @@ export const resolveSubjectChild = async (
         return { childId: new Types.ObjectId(childId), created: false };
     }
 
-    // 2. Resume an in-flight run.
-    const openRun = await flowInstanceModel
-        .findOne({
-            userId: user._id,
-            flowSlug: BABY_ONBOARDING_SLUG,
-            state: { $in: [FlowInstanceStateEnum.ACTIVE, FlowInstanceStateEnum.PENDING] },
-            subjectChildId: { $ne: null },
-        })
-        .select("subjectChildId")
-        .sort({ createdAt: -1 })
-        .lean();
+    // 2. Resume an unfinished run by finding the DRAFT CHILD, not the flow instance.
+    //
+    // The child is the first thing written — step 3 pushes it, and only then does the
+    // caller create the instance. Keying resumption off the instance therefore left two
+    // ways to leak a child that nothing could ever reach again:
+    //
+    //   - instance creation fails after the push, so no instance exists to resume from;
+    //   - two starts race, both see no instance yet, and both push a child.
+    //
+    // Either way the next start found no open run and pushed yet another draft, forever.
+    // Matching on the draft child closes both: whatever else happened, the child from the
+    // previous attempt is still sitting on the user and gets picked back up.
+    const existingDraft = (user.childs ?? []).find(
+        (child) => child.onboarding_status === EChildOnboardingStatus.DRAFT && child._id,
+    );
 
-    if (openRun?.subjectChildId) {
-        const stillDraft = (user.childs ?? []).some(
-            (child) =>
-                child._id?.toString() === openRun.subjectChildId!.toString() &&
-                child.onboarding_status !== EChildOnboardingStatus.COMPLETED,
+    if (existingDraft?._id) {
+        log.info(
+            { userId, childId: existingDraft._id },
+            "Resuming unfinished baby onboarding",
         );
-
-        if (stillDraft) {
-            log.info(
-                { userId, childId: openRun.subjectChildId },
-                "Resuming in-flight baby onboarding",
-            );
-            return { childId: new Types.ObjectId(openRun.subjectChildId.toString()), created: false };
-        }
+        return { childId: new Types.ObjectId(existingDraft._id.toString()), created: false };
     }
 
     // 3. New draft child. The _id is generated here rather than read back from the
