@@ -11,17 +11,45 @@ declare global {
         }
     }
 }
+export interface IChildBirthMeasurements {
+    head_circumference_cm?: number;
+    length_cm?: number;
+    weight_grams?: number;
+}
+
 export interface IChild {
-    name: string;
-    date_of_birth: Date;
-    sex: "Male" | "Female" | "Other";
+    _id?: Schema.Types.ObjectId;
+    // Optional at the type/schema level so the baby-onboarding flow can push a DRAFT child
+    // before the first question is answered. Still required by child.validator.ts on the
+    // direct POST /api/v1/child path.
+    name?: string;
+    date_of_birth?: Date;
+    sex?: "Male" | "Female" | "Other";
+    vaccination_sector?: EVaccinationSector;
+    birth_measurements?: IChildBirthMeasurements;
+    onboarding_status?: EChildOnboardingStatus;
+    onboarded_at?: Date;
     child_id?: number;
 }
 
 export enum ESex {
     MALE = "Male",
     FEMALE = "Female",
+    // Retained for the existing POST /api/v1/child contract and any row already carrying
+    // it. The baby-onboarding flow deliberately offers only MALE and FEMALE.
     OTHER = "Other",
+}
+
+export enum EVaccinationSector {
+    PUBLIC = "public",
+    PRIVATE = "private",
+}
+
+export enum EChildOnboardingStatus {
+    // Pushed when the baby-onboarding flow starts, before any answer has landed. Filtered
+    // out of the dashboard's child strip so a half-finished add never shows up as a child.
+    DRAFT = "DRAFT",
+    COMPLETED = "COMPLETED",
 }
 
 export enum EUserRole {

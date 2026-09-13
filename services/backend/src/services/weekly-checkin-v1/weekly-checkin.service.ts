@@ -1,4 +1,4 @@
-import { Schema } from "mongoose";
+import { Schema, Types } from "mongoose";
 
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
@@ -29,10 +29,17 @@ import { IUser, DeliveryOutcomeEnum } from "../../types/user.types";
 import { ESubscriptionTier } from "../../types/subscription.types";
 import {
     WEEKLY_CHECKIN_SLUG,
+    BABY_ONBOARDING_SLUG,
     WEEKLY_CHECKIN_MESSAGES,
     getFlowCompletionMessage,
     getStillBirthAckMessage,
 } from "../../constants/chat";
+import {
+    updateChildOnboardingData,
+    markChildOnboardingComplete,
+} from "../chat-system/child-onboarding.projection";
+import { interpolateFlowText } from "../../utils/functions/interpolateFlowText";
+import { resolveSubjectChild } from "../childs/child-subject.service";
 
 // Import SRP services
 import { validationService } from "./validation.service";
@@ -150,8 +157,35 @@ class WeeklyCheckinService {
 
             log.info({ userId, week, flowSlug, lang }, "Starting weekly check-in");
 
+            // 1b. Per-child flows need their subject resolved before the instance lookup,
+            // since the child is part of the instance's identity. Creates a DRAFT child
+            // when this is a brand new add — the name question has not been asked yet, so
+            // there is nothing to name it with.
+            let subjectChildId: Types.ObjectId | null = null;
+            if (flowSlug === BABY_ONBOARDING_SLUG) {
+                try {
+                    const subject = await resolveSubjectChild(user, params.childId);
+                    subjectChildId = subject.childId;
+                } catch (error: any) {
+                    log.warn(
+                        { userId, childId: params.childId, error: error?.message },
+                        "Could not resolve baby onboarding subject",
+                    );
+                    return {
+                        success: false,
+                        message: error?.message || "Could not resolve the child for this flow",
+                        errorType: WeeklyCheckinErrorTypeEnum.INSTANCE_NOT_FOUND,
+                    };
+                }
+            }
+
             // 2. Validate and get/create flow instance
-            const validation = await validationService.validateSSERequest(user, week, flowSlug);
+            const validation = await validationService.validateSSERequest(
+                user,
+                week,
+                flowSlug,
+                subjectChildId,
+            );
 
             if (!validation.isValid || !validation.flowInstance) {
                 return {
@@ -193,6 +227,7 @@ class WeeklyCheckinService {
                     data: {
                         flowInstanceId: flowInstance._id.toString(),
                         week,
+                        ...(subjectChildId ? { childId: subjectChildId.toString() } : {}),
                         isCompleted: true,
                         nextQuestion: null,
                         progress: await this.getProgress(
@@ -222,6 +257,7 @@ class WeeklyCheckinService {
                 data: {
                     flowInstanceId: flowInstance._id.toString(),
                     week,
+                    ...(subjectChildId ? { childId: subjectChildId.toString() } : {}),
                     isCompleted: false,
                     nextQuestion: questionResult.question,
                     progress: await this.getProgress(flowInstance._id.toString(), flowDefinition),
@@ -407,14 +443,38 @@ class WeeklyCheckinService {
             //     freeText = detected_name;
             // }
 
-            await this.chatFlowService.updateOnboardingData(
-                userId,
-                flowDefinition,
-                currentNode.id,
-                selectedKeys,
-                freeText,
-                selectedValues,
-            );
+            // Project the answer onto the right subject. The mother flows write into
+            // user.onboarding_data; baby onboarding writes into the one child this
+            // instance is about. Routing on slug rather than letting both run matters:
+            // updateOnboardingData's switch is keyed on nodeId, and a future mother node
+            // sharing a name with a child node would otherwise write to both.
+            if (flowInstance.flowSlug === BABY_ONBOARDING_SLUG) {
+                if (!flowInstance.subjectChildId) {
+                    log.error(
+                        { userId, flowInstanceId },
+                        "Baby onboarding instance has no subjectChildId",
+                    );
+                    return { success: false, message: "Flow instance is missing its child" };
+                }
+
+                await updateChildOnboardingData(
+                    userId,
+                    flowInstance.subjectChildId.toString(),
+                    currentNode,
+                    selectedKeys,
+                    freeText,
+                    selectedValues,
+                );
+            } else {
+                await this.chatFlowService.updateOnboardingData(
+                    userId,
+                    flowDefinition,
+                    currentNode.id,
+                    selectedKeys,
+                    freeText,
+                    selectedValues,
+                );
+            }
 
             if (!saveResult.success) {
                 return { success: false, message: saveResult.error || "Failed to save answer" };
@@ -584,14 +644,20 @@ class WeeklyCheckinService {
             return { question: null };
         }
 
-        // Build question payload
+        // Build question payload.
+        //
+        // Copy is interpolated against the instance's variables bag so per-run facts can
+        // appear in stored question text — baby onboarding addresses the child by name
+        // ({{child_name}}), which the flow definition cannot know. Nodes without tokens
+        // pass through untouched, so the mother flows are unaffected.
+        const vars = flowInstance.variables as Record<string, unknown> | undefined;
         const question: QuestionPayload = {
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
             week,
-            text: currentNode.text || "",
-            educationalMessage: currentNode.educationalMessage || "",
-            whyThisMatters: currentNode.whyThisMatters || "",
+            text: interpolateFlowText(currentNode.text, vars),
+            educationalMessage: interpolateFlowText(currentNode.educationalMessage, vars),
+            whyThisMatters: interpolateFlowText(currentNode.whyThisMatters, vars),
             options: currentNode.options.map((opt) => ({
                 id: opt.value,
                 label: opt.label,
@@ -642,10 +708,15 @@ class WeeklyCheckinService {
     ): Promise<WeeklyCheckinResponse> {
         const userId = user._id.toString();
 
-        // Onboarding and weekly check-in share this completion path; pick the
-        // right localized "thank you" by flow slug.
+        // Three flows share this completion path; pick the right localized "thank you"
+        // by slug. This must stay an exhaustive mapping rather than a binary check —
+        // see the completion branch below for why.
         const completionKey =
-            flowInstance.flowSlug === "weekly-checkin-v1" ? "CHECK_IN" : "ONBOARDING";
+            flowInstance.flowSlug === WEEKLY_CHECKIN_SLUG
+                ? "CHECK_IN"
+                : flowInstance.flowSlug === BABY_ONBOARDING_SLUG
+                  ? "BABY_ONBOARDING"
+                  : "ONBOARDING";
         const thankYouText = getFlowCompletionMessage(completionKey, lang);
 
         // 1. Update flow instance state
@@ -679,6 +750,31 @@ class WeeklyCheckinService {
             );
 
             log.info({ userId, week, flowInstanceId: flowInstance._id }, "Check-in completed");
+        } else if (flowInstance.flowSlug === BABY_ONBOARDING_SLUG) {
+            // Completing a child's onboarding says nothing about the MOTHER's
+            // questionnaire. This branch exists because the else below used to catch
+            // every non-check-in slug, so finishing a baby flow would have flipped
+            // is_questionnaire_completed and pushed her past her own onboarding.
+            if (flowInstance.subjectChildId) {
+                await markChildOnboardingComplete(
+                    userId,
+                    flowInstance.subjectChildId.toString(),
+                );
+            } else {
+                log.error(
+                    { userId, flowInstanceId: flowInstance._id },
+                    "Baby onboarding completed without a subjectChildId",
+                );
+            }
+
+            log.info(
+                {
+                    userId,
+                    flowInstanceId: flowInstance._id,
+                    childId: flowInstance.subjectChildId,
+                },
+                "Baby onboarding completed",
+            );
         } else {
             await UserModel.findByIdAndUpdate(userId, {
                 $set: {

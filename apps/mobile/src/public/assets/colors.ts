@@ -25,6 +25,9 @@ export const colors = {
   SubscriptionOptionsBG: "rgba(232, 215, 255, 1)",
   profileOptionsBG: "rgba(224, 200, 255, 1)",
   notoficatioBorder: "rgba(139, 127, 252, 1)",
+  // Infant tab. The check-in tiles were carrying this value inline; named here so the
+  // Infant surface draws from the palette like everything else.
+  infantTile: "rgba(139, 128, 252, 1)",
   redBadgeText: "rgba(211, 47, 47, 0.9)",
   redBadgeBG: "rgba(211, 47, 47, 0.2)",
   yellowBadgeText: "rgba(245, 124, 0, 0.9)",

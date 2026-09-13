@@ -67,4 +67,18 @@ describe("onboarding flow config (FLOW_SLUGS + flowTypeResolver)", () => {
     expect(title).toBe("chat.completeTitle");
     expect(message).toBe("chat.onboardingComplete");
   });
+
+  /**
+   * index.js (the FCM background handler) writes a pre-fetched question into SQLite, and
+   * useChatMessages reads it back. History is keyed by (user_id, flow_slug), so the two
+   * must derive that key from the same place.
+   *
+   * They did not: index.js hardcoded "weekly-check-in-v1" — one hyphen too many — so
+   * every question pre-fetched by a background push was stored under a key the chat
+   * screen never opened, and was silently never shown. Both now read FLOW_SLUGS.
+   */
+  it("uses one spelling of the check-in slug, with no stray hyphen", () => {
+    expect(FLOW_SLUGS[FlowType.CHECKIN]).toBe("weekly-checkin-v1");
+    expect(FLOW_SLUGS[FlowType.CHECKIN]).not.toBe("weekly-check-in-v1");
+  });
 });

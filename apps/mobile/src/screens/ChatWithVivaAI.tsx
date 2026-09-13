@@ -40,13 +40,22 @@ import {
 import {
     getCompletionMessage,
     getCompletionRedirect,
+    isGuidedFlowType,
     resolveFlowConfig,
     shouldClearHistoryOnComplete,
     shouldSaveHistory,
 } from '../utils/flowTypeResolver';
 import { useCapability } from '../context/SubscriptionContext';
 import { Capability } from '../types/entitlements.types';
-import { determineInputMode, isAiMessage, isDobNode, getMaxDateOfBirth } from '../utils/messageHelpers';
+import {
+    determineInputMode,
+    getDateBoundsForNode,
+    isAiMessage,
+    isChildDobNode,
+    isDobNode,
+    getMaxDateOfBirth,
+    validateMeasurement,
+} from '../utils/messageHelpers';
 import { MIN_AGE_YEARS } from '../constants/chat';
 import { chatLogger } from '../utils/logger';
 import { globalStyles } from '../public/styles';
@@ -83,7 +92,7 @@ const ChatWithVivaAI: React.FC = () => {
     const { flowType, flowSlug } = flowConfig;
 
     // Determine if this is a guided flow (request-response) or chatbot (SSE)
-    const isGuidedFlow = flowType === FlowType.ONBOARDING || flowType === FlowType.CHECKIN;
+    const isGuidedFlow = isGuidedFlowType(flowType);
     const isChatbotFlow = flowType === FlowType.CHATBOT;
 
     // Limit and usage both come from the server; nothing here assumes "3".
@@ -171,16 +180,26 @@ const ChatWithVivaAI: React.FC = () => {
         return lastMessage.options;
     }, [lastMessage]);
 
-    // For the date-of-birth question, cap the picker so the user must be at
-    // least MIN_AGE_YEARS old; undefined for any other date question.
-    const datePickerMaximumDate = useMemo(() => {
+    // Bounds for whichever date question is on screen. The mother's date-of-birth caps at
+    // MIN_AGE_YEARS ago; the CHILD's runs the other way — born already, and under five,
+    // since growth tracking stops there. Sharing one cap made a newborn unenterable.
+    // Birth measurements are free-text nodes carrying numbers, so the range check has to
+    // happen here. The server discards anything outside the bounds without complaint, so
+    // catching it before submit is what turns a silently lost answer into a fixable one.
+    const measurementError = useMemo(
+        () => validateMeasurement(lastMessage, state.inputText),
+        [lastMessage, state.inputText],
+    );
+
+    const datePickerBounds = useMemo(() => {
         // The Last Menstrual Period date can never be in the future.
         if (isLmpDatePicker) {
-            return new Date();
+            return { minimumDate: undefined, maximumDate: new Date() };
         }
-        return lastMessage && isDobNode(lastMessage)
-            ? getMaxDateOfBirth()
-            : undefined;
+        if (lastMessage && (isDobNode(lastMessage) || isChildDobNode(lastMessage))) {
+            return getDateBoundsForNode(lastMessage);
+        }
+        return { minimumDate: undefined, maximumDate: undefined };
     }, [lastMessage, isLmpDatePicker]);
 
     const handleFlowComplete = useCallback(
@@ -198,13 +217,19 @@ const ChatWithVivaAI: React.FC = () => {
                 visibilityTime: 2500,
             });
 
+            // Deliberately ONBOARDING only, not "any onboarding-ish flow".
+            // BABY_ONBOARDING is about a child; completing it says nothing about whether
+            // the mother has finished her own questionnaire, and flipping this for her
+            // would skip her past it.
             if (completedFlowType === FlowType.ONBOARDING) {
                 await completeQuestionnaire();
             }
 
-            // Clear history for CHECKIN flow on completion
+            // Clear history for CHECKIN and BABY_ONBOARDING on completion. For the latter
+            // it is what stops the next child's chat opening on the previous child's
+            // transcript — history is keyed by (user, flow slug), not by child.
             if (shouldClearHistoryOnComplete(completedFlowType)) {
-                chatLogger.debug('Clearing history for completed check-in flow');
+                chatLogger.debug('Clearing chat history for completed flow', completedFlowType);
                 await chatDB.clearChatHistoryV2();
             }
 
@@ -284,6 +309,7 @@ const ChatWithVivaAI: React.FC = () => {
     const { initialize: initializeGuidedFlow, submitAnswer: submitGuidedAnswer } = useGuidedFlow({
         flowType: isGuidedFlow ? flowType : null,
         flowSlug: isGuidedFlow ? flowSlug : null,
+        childId: route.params?.childId,
         dispatch,
         onMessageReceived: handleMessageReceived,
         onFlowComplete: handleFlowComplete,
@@ -889,6 +915,7 @@ const ChatWithVivaAI: React.FC = () => {
                         onSend={handleSend}
                         onDatePickerOpen={handleDatePickerOpen}
                         onMultiSelectSubmit={handleMultiSubmit}
+                        validationError={measurementError}
                     />
                     <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, textAlign: 'center', paddingBottom: 10, paddingTop: 5, paddingHorizontal: 10 }]}>
                         {t('chat.disclaimer')}
@@ -900,7 +927,8 @@ const ChatWithVivaAI: React.FC = () => {
                     setShow={setShowDatePicker}
                     selectedDate={selectedDate}
                     onSelect={handleDateSelected}
-                    maximumDate={datePickerMaximumDate}
+                    minimumDate={datePickerBounds.minimumDate}
+                    maximumDate={datePickerBounds.maximumDate}
                 />
                 {/* <ModelSelector
                     visible={modelSelectorVisible}

@@ -19,6 +19,7 @@ import {
   isTextInputMessage,
   isDateInputMessage,
 } from "../utils/messageHelpers";
+import { isGuidedFlowType } from "../utils/flowTypeResolver";
 import { chatLogger } from "../utils/logger";
 import { t } from "i18next";
 import { AnalyticsEvent, lengthBucket, track } from "../analytics";
@@ -53,8 +54,7 @@ export const useChatActions = ({
   /**
    * Check if this is a guided flow (uses request-response)
    */
-  const isGuidedFlow =
-    flowType === FlowType.ONBOARDING || flowType === FlowType.CHECKIN;
+  const isGuidedFlow = isGuidedFlowType(flowType);
 
   /**
    * Send answer for CHATBOT flow (SSE-based)

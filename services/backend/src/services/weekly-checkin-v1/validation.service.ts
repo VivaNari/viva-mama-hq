@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 import flowDefinitionModel from "../../models/flowDefinition.model";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
@@ -272,6 +274,7 @@ class ValidationService {
         user: IUser,
         week: number,
         flowSlug: string = WEEKLY_CHECKIN_SLUG,
+        subjectChildId: Types.ObjectId | null = null,
     ): Promise<WeeklyCheckinValidation> {
         // 1. Validate week parameter
         const weekParamValidation = this.validateWeekParam(week);
@@ -319,11 +322,16 @@ class ValidationService {
             };
         }
 
-        // 4. Check for existing flow instance
+        // 4. Check for existing flow instance.
+        //
+        // subjectChildId is part of the lookup, not just the write: without it a mother
+        // adding a second child would match the first child's completed instance and be
+        // told her onboarding was already done.
         const existingInstance = await flowInstanceModel.findOne({
             userId: user._id,
             flowDefId: flowDefinition._id,
             postpartumWeek: week,
+            subjectChildId,
         });
 
         // 5. Handle different states
@@ -390,7 +398,12 @@ class ValidationService {
             }
         }
 
-        const newInstance = await this.createFlowInstance(user, week, flowDefinition);
+        const newInstance = await this.createFlowInstance(
+            user,
+            week,
+            flowDefinition,
+            subjectChildId,
+        );
 
         return {
             isValid: true,
@@ -402,6 +415,7 @@ class ValidationService {
         user: IUser,
         week: number,
         flowDefinition: IFlowDefinition,
+        subjectChildId: Types.ObjectId | null = null,
     ): Promise<IFlowInstance> {
         // Keyed on the flow being started, NOT hardcoded to the check-in. This method
         // serves onboarding too, and asking for the "check-in" conversation regardless
@@ -417,6 +431,7 @@ class ValidationService {
             flowSlug: flowDefinition.slug,
             version: flowDefinition.version,
             postpartumWeek: week,
+            subjectChildId,
             state: FlowInstanceStateEnum.ACTIVE, // ACTIVE, not PENDING
             cursorNodeId: flowDefinition.startNodeId,
             variables: {},

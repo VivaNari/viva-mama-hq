@@ -6,9 +6,22 @@ interface ICustomDatePickerProps {
     setShow: Dispatch<SetStateAction<boolean>>;
     selectedDate: Date | null;
     onSelect: (date: Date) => void;
-    minimumDate?: boolean;
+    /**
+     * Earliest selectable date.
+     *
+     * `true` means "not before today" and `false`/omitted means no floor — the original
+     * boolean contract, kept because the consultation booking sheet relies on it. A Date
+     * sets an explicit floor, which is what a bounded range like a child's date of birth
+     * (born already, but under five) needs.
+     */
+    minimumDate?: boolean | Date;
     maximumDate?: Date;
 }
+
+const resolveMinimumDate = (minimumDate: boolean | Date | undefined): Date | undefined => {
+    if (minimumDate instanceof Date) return minimumDate;
+    return minimumDate ? new Date() : undefined;
+};
 
 const CustomDatePicker = ({
     show,
@@ -35,7 +48,7 @@ const CustomDatePicker = ({
                     mode="date"
                     display="default"
                     onChange={handleChange}
-                    minimumDate={minimumDate ? new Date() : undefined}
+                    minimumDate={resolveMinimumDate(minimumDate)}
                     maximumDate={maximumDate}
                 />
             )}

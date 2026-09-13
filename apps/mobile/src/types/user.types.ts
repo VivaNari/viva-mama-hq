@@ -88,11 +88,31 @@ export interface IUser {
   };
   np_weeks: number;
 }
+export interface IChildBirthMeasurements {
+  head_circumference_cm?: number;
+  length_cm?: number;
+  weight_grams?: number;
+}
+
 export interface IChild {
-  name: string;
-  date_of_birth: Date;
-  sex: 'Male' | 'Female' | 'Other';
+  _id?: string;
+  // Optional because baby onboarding creates the child in DRAFT before the first question
+  // is answered. Anything rendering a child must be prepared for a half-filled record —
+  // filter on onboarding_status rather than assuming these are present.
+  name?: string;
+  date_of_birth?: Date;
+  sex?: 'Male' | 'Female' | 'Other';
+  vaccination_sector?: 'public' | 'private';
+  birth_measurements?: IChildBirthMeasurements;
+  onboarding_status?: EChildOnboardingStatus;
+  onboarded_at?: Date;
   child_id?: number;
+}
+
+export enum EChildOnboardingStatus {
+  /** Created at flow start; not yet a real child and hidden from the dashboard. */
+  DRAFT = 'DRAFT',
+  COMPLETED = 'COMPLETED',
 }
 
 export enum ESex {

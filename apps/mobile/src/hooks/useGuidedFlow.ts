@@ -14,6 +14,11 @@ import { AnalyticsEvent, track } from "../analytics";
 interface UseGuidedFlowProps {
   flowType: FlowType | null;
   flowSlug: string | null;
+  /**
+   * Per-child flows only. Omit when adding a new baby: the server then resumes an
+   * in-flight run or creates a draft child, and tells us which in the start response.
+   */
+  childId?: string | undefined;
   dispatch: React.Dispatch<ChatAction>;
   onMessageReceived: (message: IAiMessage) => Promise<void>;
   onFlowComplete: (flowType: FlowType) => Promise<void>;
@@ -32,6 +37,7 @@ interface UseGuidedFlowProps {
 export const useGuidedFlow = ({
   flowType,
   flowSlug,
+  childId,
   dispatch,
   onMessageReceived,
   onFlowComplete,
@@ -41,6 +47,12 @@ export const useGuidedFlow = ({
   const { userId } = useAuth();
   const { t } = useTranslation();
   const weekRef = useRef(1);
+  /**
+   * Which child this run is about, as resolved by the server on start. Held so a resume
+   * after an interrupted session re-attaches to the same draft child rather than
+   * starting a new one.
+   */
+  const childIdRef = useRef<string | null>(childId ?? null);
   /**
    * How many questions the user has answered in this instance.
    *
@@ -231,10 +243,17 @@ export const useGuidedFlow = ({
     // job. If that job is late or failed, the stored copy lags the real week and the
     // start endpoint rejects it as "not triggered yet". Onboarding has no active_checkin
     // and legitimately falls back to the stored week.
+    //
+    // Baby onboarding is not week-scoped at all — it is about a child, not a point in the
+    // mother's recovery. It still has to send a week because the endpoint validates
+    // 1..52, so it sends 1. Falling through to current_weekdays.weeks would send 0 or
+    // undefined for an NN user and be rejected outright.
     const week =
-      (flowType === FlowType.CHECKIN
-        ? dbUser?.data.user.active_checkin?.week
-        : undefined) ?? dbUser?.data.user.current_weekdays.weeks;
+      flowType === FlowType.BABY_ONBOARDING
+        ? 1
+        : ((flowType === FlowType.CHECKIN
+            ? dbUser?.data.user.active_checkin?.week
+            : undefined) ?? dbUser?.data.user.current_weekdays.weeks);
 
     dispatch({ type: "SET_LOADING", payload: true });
 
@@ -242,6 +261,7 @@ export const useGuidedFlow = ({
       const { data } = await apiClientInterceptor().post(GUIDED_FLOW_START, {
         flowSlug,
         week: week,
+        ...(childIdRef.current ? { childId: childIdRef.current } : {}),
       });
 
       if (!data.success) {
@@ -250,6 +270,11 @@ export const useGuidedFlow = ({
 
       flowInstanceIdRef.current = data.data.flowInstanceId;
       weekRef.current = data.data.week;
+      // The server owns this: on a fresh add it has just created the draft child, and on
+      // a resume it has found the one already in flight.
+      if (data.data.childId) {
+        childIdRef.current = data.data.childId;
+      }
 
       // Resuming counts as a fresh entry into the flow for funnel purposes, but
       // the step counter must restart or a resumed instance would report step

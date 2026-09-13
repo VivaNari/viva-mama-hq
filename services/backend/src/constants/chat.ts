@@ -7,6 +7,13 @@ export const NAME_QUERY = "Please provide a valid name so that we can proceed.";
 
 export const WEEKLY_CHECKIN_SLUG = "weekly-checkin-v1";
 
+/**
+ * Per-child onboarding. Runs on the same guided-flow engine as the mother flows, but is
+ * the only slug whose instances carry a subjectChildId and whose answers project into
+ * users.childs[] rather than users.onboarding_data.
+ */
+export const BABY_ONBOARDING_SLUG = "baby-onboarding-v1";
+
 export const WEEKLY_CHECKIN_FLOW_TYPE = "CHECK_IN";
 
 // ============================================
@@ -142,7 +149,7 @@ export const WEEKLY_CHECKIN_NOTIFICATIONS = WEEKLY_CHECKIN_NOTIFICATIONS_I18N.en
 // Flow completion ("thank you") messages
 // ============================================
 
-type FlowCompletionKey = "ONBOARDING" | "CHECK_IN";
+type FlowCompletionKey = "ONBOARDING" | "CHECK_IN" | "BABY_ONBOARDING";
 
 /**
  * Localized end-of-flow messages shown when onboarding or a weekly check-in
@@ -157,12 +164,16 @@ export const FLOW_COMPLETION_MESSAGES_I18N: Record<
             "Thank you! That gives me a clear picture of your health, support, and daily life. I will now build your personalised recovery journey and connect you with the right support.",
         CHECK_IN:
             "Thank you for completing your check-in! Your score is being generated. Please check the dashboard.",
+        BABY_ONBOARDING:
+            "All set! I've added your little one. You can now track growth, feeding, diapers, vaccinations and milestones from the Infant tab on your dashboard.",
     },
     hi: {
         ONBOARDING:
             "धन्यवाद, अब मुझे आपकी सेहत, सहारे और रोज़मर्रा की ज़िंदगी की स्पष्ट तस्वीर मिल गई है। मैं अब आपकी journey personalise करूँगी। हर रिकवरी अलग होती है, और मैं हर कोमल दिन आपके साथ चलूँगी।",
         CHECK_IN:
             "आपकी जाँच पूरी करने के लिए धन्यवाद! आपका स्कोर तैयार किया जा रहा है। कृपया डैशबोर्ड देखें।",
+        BABY_ONBOARDING:
+            "हो गया! मैंने आपके नन्हे को जोड़ दिया है। अब आप अपने डैशबोर्ड के Infant टैब से ग्रोथ, फीडिंग, डायपर, टीकाकरण और माइलस्टोन ट्रैक कर सकती हैं।",
     },
 };
 

@@ -21,6 +21,12 @@ interface ChatInputBarProps {
     onSend: () => void;
     onDatePickerOpen: () => void;
     onMultiSelectSubmit: () => void;
+    /**
+     * Validation message for the current numeric answer, or null when it is acceptable.
+     * Shown inline and used to block send — the server silently discards out-of-range
+     * measurements, so without this the answer would just vanish.
+     */
+    validationError?: string | null;
 }
 
 export const ChatInputBar: React.FC<ChatInputBarProps> = ({
@@ -32,6 +38,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     onSend,
     onDatePickerOpen,
     onMultiSelectSubmit,
+    validationError = null,
 }) => {
     const { t } = useTranslation();
     // Multi-select submit bar
@@ -66,44 +73,67 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     }
 
     const isDateMode = inputMode === 'date';
-    const isSendDisabled = inputText.trim().length === 0 || isLoading;
-    const placeholder = isDateMode ? t('chat.selectADate') : t('chat.typeAnswer');
+    const isNumberMode = inputMode === 'number';
+    const hasError = isNumberMode && inputText.trim().length > 0 && !!validationError;
+    const isSendDisabled =
+        inputText.trim().length === 0 || isLoading || (isNumberMode && !!validationError);
+    const placeholder = isDateMode
+        ? t('chat.selectADate')
+        : isNumberMode
+            ? t('chat.enterNumber')
+            : t('chat.typeAnswer');
 
     return (
-        <View style={styles.container}>
-            <TouchableOpacity
-                style={styles.inputWrapper}
-                activeOpacity={isDateMode ? 0.7 : 1}
-                onPress={isDateMode ? onDatePickerOpen : undefined}
-            >
-                <TextInput
-                    style={[styles.input, globalStyles.fontSemiBold]}
-                    value={inputText}
-                    onChangeText={onInputChange}
-                    placeholder={placeholder}
-                    placeholderTextColor={colors.gray}
-                    editable={!isDateMode}
-                    pointerEvents={isDateMode ? 'none' : 'auto'}
-                    onSubmitEditing={onSend}
-                    returnKeyType="send"
-                    accessibilityLabel={placeholder}
-                />
-            </TouchableOpacity>
+        <View>
+            {/* Only once she has typed something: an empty field is not yet a mistake. */}
+            {hasError && (
+                <Text style={[styles.errorText, globalStyles.fontRegular]}>
+                    {validationError}
+                </Text>
+            )}
 
-            <TouchableOpacity
-                style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled, { backgroundColor: colors.darkPurple }]}
-                onPress={onSend}
-                disabled={isSendDisabled}
-                accessibilityRole="button"
-                accessibilityLabel="Send message"
-            >
-                <MaterialDesignIcons
-                    name="send-outline"
-                    size={20}
-                    color={colors.white}
-                    style={styles.sendIcon}
-                />
-            </TouchableOpacity>
+            <View style={styles.container}>
+                <TouchableOpacity
+                    style={styles.inputWrapper}
+                    activeOpacity={isDateMode ? 0.7 : 1}
+                    onPress={isDateMode ? onDatePickerOpen : undefined}
+                >
+                    <TextInput
+                        style={[
+                            styles.input,
+                            globalStyles.fontSemiBold,
+                            hasError && styles.inputError,
+                        ]}
+                        value={inputText}
+                        onChangeText={onInputChange}
+                        placeholder={placeholder}
+                        placeholderTextColor={colors.gray}
+                        editable={!isDateMode}
+                        pointerEvents={isDateMode ? 'none' : 'auto'}
+                        onSubmitEditing={onSend}
+                        returnKeyType="send"
+                        // decimal-pad, not numeric: the measurements are decimals (34.8 cm)
+                        // and numeric offers punctuation that would fail parseFloat.
+                        keyboardType={isNumberMode ? 'decimal-pad' : 'default'}
+                        accessibilityLabel={placeholder}
+                    />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled, { backgroundColor: colors.darkPurple }]}
+                    onPress={onSend}
+                    disabled={isSendDisabled}
+                    accessibilityRole="button"
+                    accessibilityLabel="Send message"
+                >
+                    <MaterialDesignIcons
+                        name="send-outline"
+                        size={20}
+                        color={colors.white}
+                        style={styles.sendIcon}
+                    />
+                </TouchableOpacity>
+            </View>
         </View>
     );
 };
@@ -132,6 +162,19 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: colors.black,
         minHeight: 44,
+    },
+
+    inputError: {
+        borderWidth: 1,
+        borderColor: colors.redBadgeText,
+    },
+
+    errorText: {
+        color: colors.redBadgeText,
+        fontSize: 12,
+        paddingHorizontal: 16,
+        paddingTop: 6,
+        backgroundColor: colors.white,
     },
 
     selectionText: {

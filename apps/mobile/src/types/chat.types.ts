@@ -4,6 +4,12 @@ export enum FlowType {
   ONBOARDING = "ONBOARDING",
   CHECKIN = "CHECK_IN",
   CHATBOT = "CHATBOT",
+  /**
+   * Per-child onboarding. Runs on the same guided-flow machinery as ONBOARDING, but is
+   * about a child rather than the mother — so it must never touch her questionnaire
+   * status, and it can legitimately run more than once per user.
+   */
+  BABY_ONBOARDING = "BABY_ONBOARDING",
 }
 
 export enum NodeType {
@@ -97,7 +103,12 @@ export type InputMode =
   | "text"
   | "date"
   | "multiSelect"
-  | "deliveryDate";
+  | "deliveryDate"
+  /**
+   * Free text constrained to a number. The flow engine has no numeric node type, so the
+   * baby birth measurements arrive as QUESTION_FREE_TEXT and are recognised by node id.
+   */
+  | "number";
 
 export interface ChatState {
   messages: IChatMessage[];
@@ -138,6 +149,11 @@ export type ChatAction =
 export type ChatRouteParams = {
   ChatWithVivaAI: {
     flowSlug?: string;
+    /**
+     * Per-child flows only. Omit when adding a new baby — the server resolves an
+     * in-flight run or creates a draft child. Pass it to target an existing child.
+     */
+    childId?: string;
   };
 };
 

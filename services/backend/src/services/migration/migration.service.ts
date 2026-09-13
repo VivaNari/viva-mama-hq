@@ -30,6 +30,9 @@ import { migrate as backfillReferralRedemptions } from "./steps/backfill-referra
 import { migrate as addPlayProductIds } from "./steps/add-play-product-ids.step";
 import { migrate as addOnboardingFeedingNode } from "./steps/add-onboarding-feeding-node.step";
 import { migrate as rebrandPerinatalFlowCopy } from "./steps/rebrand-perinatal-flow-copy.step";
+import { migrate as resolveFlowInstanceDuplicates } from "./steps/resolve-flow-instance-duplicates.step";
+import { migrate as reindexFlowInstancesSubject } from "./steps/reindex-flow-instances-subject.step";
+import { migrate as seedBabyOnboardingFlow } from "./steps/seed-baby-onboarding-flow.step";
 
 export interface MigrationStepResult {
     step: string;
@@ -97,6 +100,19 @@ const STEPS: Array<{ name: string; fn: () => Promise<unknown> }> = [
     // Also after add-hindi-translations, for the same reason: that step rewrites
     // `translations.hi` wholesale, so anything asserting Hindi has to follow it.
     { name: "rebrand-perinatal-flow-copy", fn: rebrandPerinatalFlowCopy },
+    // Baby onboarding. The reindex goes first and the ordering is load-bearing: until the
+    // old three-field unique index on flow_instances is dropped, a mother adding a second
+    // child fails on a duplicate key, so seeding the flow before widening the index would
+    // publish a questionnaire that only works once per user.
+    //
+    // Neither step cares where it sits relative to add-hindi-translations: that one
+    // rewrites translations.hi wholesale, but only on onboarding-flow-v2.
+    // Report-only on purpose. This step deletes user data and run-all is reachable over
+    // HTTP from Cloud Scheduler, so here it only ever lists what is blocking the index.
+    // Deleting takes a deliberate `npm run migrate:resolve-flow-instance-duplicates -- --apply`.
+    { name: "resolve-flow-instance-duplicates(report)", fn: () => resolveFlowInstanceDuplicates() },
+    { name: "reindex-flow-instances-subject", fn: reindexFlowInstancesSubject },
+    { name: "seed-baby-onboarding-flow", fn: seedBabyOnboardingFlow },
 ];
 
 export async function runAllMigrations(): Promise<MigrationRunResult> {

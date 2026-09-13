@@ -113,6 +113,9 @@ class WeeklyCheckinController {
                 userId,
                 week,
                 flowSlug,
+                // Per-child flows only. Left undefined for the mother flows, which have no
+                // subject beyond the user herself.
+                childId: (req.body?.childId as string) || undefined,
                 lang: (req.body?.lang as string) || (req.query?.lang as string),
             };
 

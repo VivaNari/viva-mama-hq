@@ -252,6 +252,8 @@ export interface IFlowInstance {
     version: number;
     postpartumWeek: number;
     postpartumDays: number;
+    /** Subject of a per-child flow (baby-onboarding-v1); null for every mother flow. */
+    subjectChildId: Schema.Types.ObjectId | null;
     state: FlowInstanceState;
     cursorNodeId: string | null;
     variables: Record<string, any>;

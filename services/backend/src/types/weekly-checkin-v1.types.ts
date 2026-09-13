@@ -4,6 +4,11 @@ export type WeeklyCheckinStartParams = {
     userId: string;
     week: number;
     flowSlug?: string;
+    /**
+     * Per-child flows only (baby-onboarding-v1). Omit to resume an in-flight run or start
+     * one for a new child; pass it to target a specific existing child.
+     */
+    childId?: string | undefined;
     /** Raw language hint from the request; resolved against user.preferred_language. */
     lang?: string;
 };
@@ -51,6 +56,8 @@ export type WeeklyCheckinResponse = {
     data?: {
         flowInstanceId: string;
         week: number;
+        /** Subject of a per-child flow, so the client can address the same child again. */
+        childId?: string;
         isCompleted: boolean;
         nextQuestion: WeeklyCheckinQuestionPayload | null;
         progress: WeeklyCheckinProgress | null;

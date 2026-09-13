@@ -4,6 +4,7 @@ export const FLOW_SLUGS: Record<FlowType, string> = {
   [FlowType.ONBOARDING]: "onboarding-flow-v2",
   [FlowType.CHECKIN]: "weekly-checkin-v1",
   [FlowType.CHATBOT]: "chatbot-flow",
+  [FlowType.BABY_ONBOARDING]: "baby-onboarding-v1",
 };
 
 export const TYPING_SPEED_MS = 30;
@@ -17,6 +18,34 @@ export const NAVIGATION_DELAY_MS = 3000;
 
 export const DELIVERY_DATE_NODE_ID = "delivery_date";
 export const DOB_NODE_ID = "dob";
+
+// ============================================
+// Baby Onboarding Node IDs
+// ============================================
+
+/**
+ * The child's date of birth. Needs its own identity because the shared date handling caps
+ * the picker at MIN_AGE_YEARS ago — correct for the mother, absurd for a newborn.
+ */
+export const CHILD_DOB_NODE_ID = "child_dob";
+
+/** Growth is tracked to age 5, which bounds how old a child being added can be. */
+export const MAX_CHILD_AGE_YEARS = 5;
+
+/**
+ * Birth measurements. The flow engine has no numeric node type, so these are
+ * QUESTION_FREE_TEXT nodes recognised by id and given a numeric keypad plus range checks.
+ * Bounds are mirrored server-side in child-onboarding.projection.ts, which discards
+ * anything outside them — keep the two in step.
+ */
+export const MEASUREMENT_NODE_BOUNDS: Record<
+  string,
+  { min: number; max: number; unit: string }
+> = {
+  child_birth_head_circumference: { min: 20, max: 60, unit: "cm" },
+  child_birth_length: { min: 30, max: 100, unit: "cm" },
+  child_birth_weight: { min: 500, max: 8000, unit: "g" },
+};
 
 // Synthetic node id for the grief-sensitive acknowledgement message shown when a
 // user reports a stillbirth. Distinct from the real "delivery_outcome" node so

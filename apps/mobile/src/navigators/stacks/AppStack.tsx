@@ -24,7 +24,8 @@ import Products from '../../screens/Products';
 import RecommendationDetails from '../../screens/RecommendationDetails';
 import Recommendations from '../../screens/Recommendations';
 import SubCategoryArticles from '../../screens/SubCategoryArticles';
-import VaccinationLog from '../../screens/VaccinationLog';
+import VaccinationLog from '../../screens/VaccinationLog'
+import InfantLogPlaceholder from '../../screens/InfantLogPlaceholder';
 import VivaClubPost from '../../screens/VivaClubPost';
 import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
 import { DashboardTabs } from '../tabs/DashboardTabs';
@@ -299,6 +300,35 @@ const AppStack = () => {
                 }}
                 name="VaccinationLog"
                 component={VaccinationLog}
+            />
+            {/*
+              Growth, Diaper and Milestone have tiles on the Infant dashboard but no
+              implementation yet. They share one placeholder screen so the tiles navigate
+              somewhere real instead of throwing.
+            */}
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: t('nav.growthLog'),
+                }}
+                name="GrowthLog"
+                component={InfantLogPlaceholder}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: t('nav.diaperLog'),
+                }}
+                name="DiaperLog"
+                component={InfantLogPlaceholder}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: t('nav.milestoneLog'),
+                }}
+                name="MilestoneLog"
+                component={InfantLogPlaceholder}
             />
             <Stack.Screen
                 options={{

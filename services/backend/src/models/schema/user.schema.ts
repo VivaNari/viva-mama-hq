@@ -1,5 +1,14 @@
 import mongoose, { Schema } from "mongoose";
-import { ESex, EUserCategory, EUserRole, IChild, IUser, TUsercategory } from "../../types";
+import {
+    EChildOnboardingStatus,
+    ESex,
+    EUserCategory,
+    EUserRole,
+    EVaccinationSector,
+    IChild,
+    IUser,
+    TUsercategory,
+} from "../../types";
 import { FlowLanguageEnum } from "../../types/chat.types";
 import {
     EBillingMode,
@@ -14,17 +23,39 @@ const childSchema = new Schema<IChild>(
         child_id: {
             type: Number,
         },
+        // name and date_of_birth are deliberately NOT required.
+        //
+        // The baby-onboarding flow pushes a DRAFT child at flow start, before the first
+        // question has been answered, so it has something stable to project answers into
+        // and to resume against. `required: true` here made that push fail under
+        // runValidators. The direct POST /api/v1/child path still enforces both through
+        // child.validator.ts, so that contract is unchanged.
         name: {
             type: String,
-            required: true,
         },
         date_of_birth: {
             type: Date,
-            required: true,
         },
         sex: {
             type: String,
             enum: [ESex.MALE, ESex.FEMALE, ESex.OTHER],
+        },
+        vaccination_sector: {
+            type: String,
+            enum: Object.values(EVaccinationSector),
+        },
+        birth_measurements: {
+            head_circumference_cm: { type: Number },
+            length_cm: { type: Number },
+            weight_grams: { type: Number },
+        },
+        onboarding_status: {
+            type: String,
+            enum: Object.values(EChildOnboardingStatus),
+            default: EChildOnboardingStatus.DRAFT,
+        },
+        onboarded_at: {
+            type: Date,
         },
     },
     {

@@ -47,19 +47,43 @@ export const resolveFlowConfig = (
 };
 
 /**
+ * Guided flows use the request-response engine; CHATBOT uses SSE.
+ *
+ * Extracted because this test was written out longhand in both ChatWithVivaAI and
+ * useChatActions, and the two have to agree: if one counts a flow as guided and the other
+ * does not, answers are submitted down one path and rendered by the other.
+ */
+export const isGuidedFlowType = (flowType: FlowType | null): boolean => {
+  return (
+    flowType === FlowType.ONBOARDING ||
+    flowType === FlowType.CHECKIN ||
+    flowType === FlowType.BABY_ONBOARDING
+  );
+};
+
+/**
  * Check if the flow type requires saving chat history
  */
 export const shouldSaveHistory = (flowType: FlowType): boolean => {
-  // Only ONBOARDING and CHECKIN save history
-  // CHATBOT has no history interaction
-  return flowType === FlowType.CHECKIN || flowType === FlowType.ONBOARDING;
+  // Guided flows save history so a killed app resumes where it left off.
+  // CHATBOT has no history interaction.
+  return (
+    flowType === FlowType.CHECKIN ||
+    flowType === FlowType.ONBOARDING ||
+    flowType === FlowType.BABY_ONBOARDING
+  );
 };
 
 /**
  * Check if the flow should clear history after completion
+ *
+ * BABY_ONBOARDING clears for the same reason CHECKIN does, and it matters more here:
+ * SQLite history is keyed (user_id, flow_slug), and one user runs this flow once per
+ * child. Without the clear, "Add your baby" for a second child would open on top of the
+ * first child's transcript, with that child's answered bubbles still on screen.
  */
 export const shouldClearHistoryOnComplete = (flowType: FlowType): boolean => {
-  return flowType === FlowType.CHECKIN;
+  return flowType === FlowType.CHECKIN || flowType === FlowType.BABY_ONBOARDING;
 };
 
 /**
@@ -89,6 +113,10 @@ export const getCompletionRedirect = (
       return { screen: "ReferralCode", delay: 5000 };
     case FlowType.CHECKIN:
       return { screen: "DashboardTabNavigator", delay: 3000 };
+    // Straight to the dashboard, where the Infant tab now has a child to show. Never to
+    // ReferralCode: this flow does not change her subscription or her own onboarding.
+    case FlowType.BABY_ONBOARDING:
+      return { screen: "DashboardTabNavigator", delay: 3000 };
     case FlowType.CHATBOT:
       return null;
     default:
@@ -113,6 +141,11 @@ export const getCompletionMessage = (
       return {
         title: "chat.completeTitle",
         message: "chat.checkinComplete",
+      };
+    case FlowType.BABY_ONBOARDING:
+      return {
+        title: "chat.babyOnboardingCompleteTitle",
+        message: "chat.babyOnboardingComplete",
       };
     default:
       return {

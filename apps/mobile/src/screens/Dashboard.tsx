@@ -8,6 +8,7 @@ import { getUserContents } from '../api/getUserContents'
 import { getUserProducts } from '../api/getUserProducts'
 import { ArticleCard } from '../components/ArticleCard'
 import DashboardMotherTab from '../components/dashboard/DashboardMotherTab'
+import DashboardInfantTab from '../components/dashboard/DashboardInfantTab'
 import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius'
 import ItemProduct from '../components/products/ItemProduct'
 import { useAuth } from '../context/AuthContext'
@@ -34,6 +35,7 @@ const Dashboard = () => {
     const [productsData, setProductsData] = useState<IUserProduct[]>([]);
     const [userActiveConsultationsData, setUserActiveConsultationsData] = useState<IUserActiveConsultations[]>([]);
     const [refreshing, setRefreshing] = useState(false);
+    const [isMotherTab, setIsMotherTab] = useState<boolean>(true);
     const { userId, userToken } = useAuth();
 
     const [showBookingSheet, setShowBookingSheet] = useState(false);
@@ -147,10 +149,53 @@ const Dashboard = () => {
                 <View
                     style={[globalStyles.container, { flex: 1, backgroundColor: colors.white }]}
                 >
-                    <View
-                    >
+                    <View>
+                        {/*
+                          Mother / Infant segmented control. Selection is component state
+                          only — it is a view preference, not something the server or the
+                          next session needs to know.
+                        */}
+                        <View style={styles.segmented}>
+                            {([
+                                { key: 'mother', label: t('infant.tabMother') },
+                                { key: 'infant', label: t('infant.tabInfant') },
+                            ] as const).map(({ key, label }) => {
+                                const isActive =
+                                    (key === 'mother') === isMotherTab;
 
-                        <DashboardMotherTab userData={userData as IUserAllData} userActiveConsultationsData={userActiveConsultationsData} />
+                                return (
+                                    <TouchableOpacity
+                                        key={key}
+                                        activeOpacity={0.8}
+                                        onPress={() => setIsMotherTab(key === 'mother')}
+                                        style={[
+                                            styles.segment,
+                                            isActive && styles.segmentActive,
+                                        ]}
+                                        accessibilityRole="tab"
+                                        accessibilityState={{ selected: isActive }}
+                                    >
+                                        <Text
+                                            style={[
+                                                styles.segmentText,
+                                                isActive
+                                                    ? globalStyles.fontSemiBold
+                                                    : globalStyles.fontRegular,
+                                                isActive && styles.segmentTextActive,
+                                            ]}
+                                        >
+                                            {label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+
+                        {isMotherTab ? (
+                            <DashboardMotherTab userData={userData as IUserAllData} userActiveConsultationsData={userActiveConsultationsData} />
+                        ) : (
+                            <DashboardInfantTab userData={userData} />
+                        )}
 
                     </View>
 
@@ -428,6 +473,36 @@ const styles = StyleSheet.create({
     itemDesc: {
         fontSize: 11,
         color: colors.darkGray,
+    },
+
+    segmented: {
+        flexDirection: 'row',
+        backgroundColor: colors.lightPurple,
+        borderRadius: 30,
+        padding: 4,
+        marginTop: 12,
+        marginBottom: 4,
+    },
+
+    segment: {
+        flex: 1,
+        paddingVertical: 10,
+        borderRadius: 26,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+
+    segmentActive: {
+        backgroundColor: colors.darkPurple,
+    },
+
+    segmentText: {
+        fontSize: 16,
+        color: colors.darkPurple,
+    },
+
+    segmentTextActive: {
+        color: colors.white,
     },
 });
 

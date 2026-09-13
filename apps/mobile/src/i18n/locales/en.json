@@ -28,7 +28,10 @@
     "tabProducts": "Products",
     "tabContents": "Contents",
     "myConsultations": "My Consultations",
-    "mySubscription": "My Subscription"
+    "mySubscription": "My Subscription",
+    "growthLog": "Growth Log",
+    "diaperLog": "Diaper Log",
+    "milestoneLog": "Milestone Log"
   },
   "common": {
     "close": "Close",
@@ -350,7 +353,7 @@
     "checkinDaysLeft": "{{days}} days left to complete it",
     "logMood": "Log your Mood",
     "seeProgress": "See Progress",
-    "careManagerDisclaimer": "Your Perinatal Counsellor is a certified perinatal professional. She does not diagnose conditions or prescribe medication \u2014 for those, please consult a qualified healthcare professional.",
+    "careManagerDisclaimer": "Your Perinatal Counsellor is a certified perinatal professional. She does not diagnose conditions or prescribe medication — for those, please consult a qualified healthcare professional.",
     "connectHealthcare": "Connect with a healthcare professional",
     "consultationDisclaimer": "The consultation will be conducted by an independent healthcare professional. Any clinical advice, diagnosis, or treatment is provided by them, not by VivaMama. Please share relevant information clearly during the consultation.",
     "seeAllExperts": "See all experts",
@@ -424,7 +427,7 @@
     "submit": "Submit",
     "skip": "Skip for now",
     "successMessage": "Referral code applied",
-    "grantedMessage": "Your plan is active \u2014 no payment needed",
+    "grantedMessage": "Your plan is active — no payment needed",
     "errorMessage": "We couldn't apply that referral code"
   },
   "consultationRating": {
@@ -515,7 +518,10 @@
     "reportSubject": "Viva AI reply",
     "reportNotice": "This reply and the message you sent just before it will be shared with our team so we can review what went wrong.",
     "reportThanks": "Thank you for telling us",
-    "reportThanksBody": "Our team will review this reply."
+    "reportThanksBody": "Our team will review this reply.",
+    "enterNumber": "Enter a number",
+    "babyOnboardingCompleteTitle": "Baby added",
+    "babyOnboardingComplete": "You can now track growth, feeding, diapers, vaccinations and milestones from the Infant tab."
   },
   "subscription": {
     "choosePlan": "Choose a plan",
@@ -805,5 +811,34 @@
     "manageInPlay": "Manage in Google Play",
     "manageInPlayHint": "Your subscription is billed by Google Play. You can change or cancel it any time in your Google Play account, and you keep access until the end of the period you have paid for.",
     "playOpenFailed": "We couldn't open Google Play. You can manage your subscription from the Play Store app under Payments and subscriptions."
+  },
+  "infant": {
+    "tabMother": "Mother",
+    "tabInfant": "Infant",
+    "emptyTitle": "No baby added yet",
+    "emptyBody": "Add your baby to track growth against WHO standards, feeding, diapers, vaccines and milestones — all in one place.",
+    "emptyCta": "Add your baby",
+    "emptyCaption": "Takes about a minute · editable later",
+    "add": "Add",
+    "ageHeading": "Infant age — {{age}}",
+    "growthSubtitle": "Weight-for-age, WHO child growth standards",
+    "growthDescription": "An infant growth score tracks weight, height and head circumference against healthy standards, so nutrition and milestones stay visible and delays are caught early.",
+    "statWeight": "WEIGHT",
+    "statHeight": "HEIGHT",
+    "statHead": "HEAD",
+    "statMissing": "—",
+    "checkinTitle": "Infant check-in",
+    "checkinCaption": "Log today — entries stay editable for 24 hours.",
+    "percentilePending": "Not yet scored",
+    "comingSoonTitle": "Coming soon",
+    "comingSoonBody": "We're still building this log. It will appear here as soon as it's ready.",
+    "ageDay": "{{count}} day",
+    "ageDays": "{{count}} days",
+    "ageMonth": "{{count}} month",
+    "ageMonths": "{{count}} months",
+    "ageYear": "{{count}} year",
+    "ageYears": "{{count}} years",
+    "tileNotLogged": "Not logged yet",
+    "tileSchedulePending": "Schedule pending"
   }
 }
