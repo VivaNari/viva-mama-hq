@@ -10,6 +10,7 @@ import { FLOW_SLUGS } from '../../constants/chat';
 import { FlowType } from '../../types/chat.types';
 import { IChild } from '../../types/user.types';
 import { IUserAllData } from '../../types/dashboard.types';
+import { InfantLogRouteParams } from '../../types/infantLog.types';
 import { getChildAgeLabel, getVisibleChildren } from '../../utils/childAge';
 import DashboardCard from './DashboardCard';
 import ChildAvatarStrip from './ChildAvatarStrip';
@@ -104,6 +105,23 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
         },
     ];
 
+    /**
+     * What every log screen is handed when a tile is tapped.
+     *
+     * Route params must stay serialisable — React Navigation persists them across a state
+     * restore — so the date of birth travels as an ISO string rather than a Date.
+     */
+    const logParams: InfantLogRouteParams = {
+        childId: selectedChild?._id,
+        childName: selectedChild?.name,
+        childDob: selectedChild?.date_of_birth
+            ? new Date(selectedChild.date_of_birth).toISOString()
+            : undefined,
+        vaccinationSector: selectedChild?.vaccination_sector,
+        // Until a growth series exists, the birth numbers are the last ones on file.
+        lastMeasurements: measurements,
+    };
+
     // Rendered as rows rather than a FlatList: the last tile spans both columns, which a
     // numColumns grid cannot express.
     const tiles = infantData.checkinOptions;
@@ -185,6 +203,7 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                                 key={tile.screen}
                                 item={tile}
                                 navigation={navigation}
+                                params={logParams}
                             />
                         ))}
                     </View>
@@ -192,7 +211,11 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
 
                 {wideTiles.map((tile) => (
                     <View key={tile.screen} style={styles.gridRow}>
-                        <FLInfantCheckInOptions item={tile} navigation={navigation} />
+                        <FLInfantCheckInOptions
+                        item={tile}
+                        navigation={navigation}
+                        params={logParams}
+                    />
                     </View>
                 ))}
             </View>

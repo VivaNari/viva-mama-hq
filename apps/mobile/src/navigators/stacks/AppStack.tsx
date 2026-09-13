@@ -25,7 +25,9 @@ import RecommendationDetails from '../../screens/RecommendationDetails';
 import Recommendations from '../../screens/Recommendations';
 import SubCategoryArticles from '../../screens/SubCategoryArticles';
 import VaccinationLog from '../../screens/VaccinationLog'
-import InfantLogPlaceholder from '../../screens/InfantLogPlaceholder';
+import GrowthLog from '../../screens/GrowthLog';
+import DiaperLog from '../../screens/DiaperLog';
+import MilestoneLog from '../../screens/MilestoneLog';
 import VivaClubPost from '../../screens/VivaClubPost';
 import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
 import { DashboardTabs } from '../tabs/DashboardTabs';
@@ -301,18 +303,13 @@ const AppStack = () => {
                 name="VaccinationLog"
                 component={VaccinationLog}
             />
-            {/*
-              Growth, Diaper and Milestone have tiles on the Infant dashboard but no
-              implementation yet. They share one placeholder screen so the tiles navigate
-              somewhere real instead of throwing.
-            */}
             <Stack.Screen
                 options={{
                     headerShown: true,
                     title: t('nav.growthLog'),
                 }}
                 name="GrowthLog"
-                component={InfantLogPlaceholder}
+                component={GrowthLog}
             />
             <Stack.Screen
                 options={{
@@ -320,7 +317,7 @@ const AppStack = () => {
                     title: t('nav.diaperLog'),
                 }}
                 name="DiaperLog"
-                component={InfantLogPlaceholder}
+                component={DiaperLog}
             />
             <Stack.Screen
                 options={{
@@ -328,7 +325,7 @@ const AppStack = () => {
                     title: t('nav.milestoneLog'),
                 }}
                 name="MilestoneLog"
-                component={InfantLogPlaceholder}
+                component={MilestoneLog}
             />
             <Stack.Screen
                 options={{

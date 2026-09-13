@@ -6,20 +6,28 @@ import MaterialDesignIcons from '@react-native-vector-icons/material-design-icon
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
 import { IInfantCheckinOptions } from '../../types/infantData.types';
+import { InfantLogRouteParams } from '../../types/infantLog.types';
 
 const FLInfantCheckInOptions = ({
     item,
     navigation,
+    params,
 }: {
     item: IInfantCheckinOptions;
     navigation: { navigate: any };
+    /**
+     * The child the dashboard is showing, forwarded to the log screen. The logs address a
+     * named child ("Has Aarav been vaccinated with:") and pick their layout from the age,
+     * so the selection has to travel with the tap rather than be re-derived.
+     */
+    params?: InfantLogRouteParams;
 }) => {
     const { t } = useTranslation();
 
     return (
         <TouchableOpacity
             activeOpacity={0.7}
-            onPress={() => navigation.navigate(item.screen)}
+            onPress={() => navigation.navigate(item.screen, params)}
             style={styles.tile}
             accessibilityRole="button"
             accessibilityLabel={t(item.titleKey)}

@@ -1,104 +1,270 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useRoute } from '@react-navigation/native';
 import {
     ScrollView,
+    StyleSheet,
     Switch,
     Text,
     TouchableOpacity,
-    View
+    View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { VACCINATION_DATA } from '../data/infantVacineData';
-import { globalStyles } from '../public/styles';
-import { styles } from '../public/styles/infantStyles';
-import { Tab, ToggleSwitchProps, VaccinationData, VaccineCardProps, VaccineStatus } from '../types/infantVaccine.types';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+
 import { AnalyticsEvent, track } from '../analytics';
+import GradientButtonWithSlightRadius from '../components/GradientButtonWithSlightRadius';
+import LogChipTabs from '../components/infant/LogChipTabs';
+import LogSectionCard from '../components/infant/LogSectionCard';
+import { VACCINATION_SCHEDULE } from '../data/infantVacineData';
+import { colors } from '../public/assets/colors';
+import { globalStyles } from '../public/styles';
+import { infantLogStyles } from '../public/styles/infantLogStyles';
+import {
+    InfantLogRouteParams,
+    TVaccinationSector,
+    TVaccinationSelection,
+} from '../types/infantLog.types';
 
+/**
+ * Vaccination Log (PRD 4.4).
+ *
+ * Which schedule is shown comes from the sector the mother chose during baby onboarding
+ * and which is stored on the child. The pill at the top is a control, not a label: the
+ * design marks it "editable", and a family does move between a government centre and a
+ * private paediatrician — switching here swaps the whole visit list.
+ *
+ * UI only. Toggles are held per visit in component state and are lost on unmount; dates
+ * and certificates are a later change, as the footnote says.
+ */
+const VaccinationLog: React.FC = () => {
+    const { t } = useTranslation();
+    const route = useRoute();
+    const params = (route.params ?? {}) as InfantLogRouteParams;
 
-const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ vaccineName, status, onToggle }) => {
-    const isEnabled = status === 'Yes';
+    const childName = params.childName?.trim() || t('infant.childFallback');
 
-    const handleValueChange = (newValue: boolean) => {
-        onToggle(vaccineName, newValue ? 'Yes' : 'No');
-    };
-
-    return (
-        <Switch
-            trackColor={{ false: '#D1D5DB', true: '#A5B4FC' }}
-            thumbColor={isEnabled ? '#4338CA' : '#F9FAFB'}
-            ios_backgroundColor="#E5E7EB"
-            onValueChange={handleValueChange}
-            value={isEnabled}
-        />
+    const [sector, setSector] = useState<TVaccinationSector>(
+        params.vaccinationSector ?? 'public',
     );
-};
 
-const VaccineCard: React.FC<VaccineCardProps> = ({ vaccines, onToggle }) => (
-    <View style={styles.card}>
-        <Text style={[styles.cardQuestion, globalStyles.fontRegular]}>Does the baby is vaccinated with:</Text>
-        {vaccines.map((vaccine) => (
-            <View key={vaccine.name} style={styles.vaccineRow}>
-                <View style={styles.vaccineInfo}>
-                    <Text style={[globalStyles.fontRegular, styles.vaccineName]}>{vaccine.name}</Text>
-                    {vaccine.description && (
-                        <Text style={[globalStyles.fontRegular, styles.vaccineDescription]}>{vaccine.description}</Text>
-                    )}
-                </View>
-                <ToggleSwitch
-                    vaccineName={vaccine.name}
-                    status={vaccine.status}
-                    onToggle={onToggle}
-                />
-            </View>
-        ))}
-    </View>
-);
+    const visits = VACCINATION_SCHEDULE[sector];
+    const [activeVisitKey, setActiveVisitKey] = useState<string>(visits[0].key);
 
+    /**
+     * Given vaccines, keyed by sector so a switch does not carry one schedule's ticks onto
+     * the other — "DTwP/DTaP-1" and "Pentavalent-1" are different records.
+     */
+    const [given, setGiven] = useState<Record<string, TVaccinationSelection>>({});
 
-const VaccinationLogScreen: React.FC = () => {
-    const [activeTab, setActiveTab] = useState<Tab>('Birth');
-    const [vaccinationData, setVaccinationData] = useState<VaccinationData>(VACCINATION_DATA);
+    const activeVisit = useMemo(
+        () => visits.find((visit) => visit.key === activeVisitKey) ?? visits[0],
+        [visits, activeVisitKey],
+    );
 
-    const handleToggle = (vaccineName: string, newStatus: VaccineStatus) => {
-        // The vaccine name and status are a child's medical record, so only the
-        // fact that the schedule was touched is logged. Worth logging even though
-        // this screen has no persistence yet: it shows whether anyone uses it.
+    const selectionKey = `${sector}:${activeVisit.key}`;
+    const visitSelection = given[selectionKey] ?? {};
+
+    const toggleVaccine = (name: string, isGiven: boolean) => {
+        // The vaccine and its status are a child's medical record, so only the fact that
+        // the schedule was touched is reported — never which vaccine, never the child.
         track(AnalyticsEvent.VACCINATION_LOG_UPDATED);
-        setVaccinationData((prevData) => {
-            const updatedVaccines = prevData[activeTab].map((vaccine) =>
-                vaccine.name === vaccineName ? { ...vaccine, status: newStatus } : vaccine
-            );
-            return { ...prevData, [activeTab]: updatedVaccines };
-        });
+
+        setGiven((prev) => ({
+            ...prev,
+            [selectionKey]: { ...(prev[selectionKey] ?? {}), [name]: isGiven },
+        }));
     };
 
-    const tabs: Tab[] = ['Birth', '6 Weeks', '10 Weeks'];
+    const switchSector = () => {
+        const next: TVaccinationSector = sector === 'public' ? 'private' : 'public';
+        setSector(next);
+        // Visit keys differ between schedules ('12m' exists only in the private one), so
+        // land on the first visit rather than a key the new list may not contain.
+        setActiveVisitKey(VACCINATION_SCHEDULE[next][0].key);
+    };
 
     return (
-        <SafeAreaView style={globalStyles.container} edges={['bottom', 'left', 'right']}>
+        <SafeAreaView style={infantLogStyles.screen} edges={['bottom', 'left', 'right']}>
+            <View style={styles.sectorRow}>
+                <TouchableOpacity
+                    activeOpacity={0.8}
+                    onPress={switchSector}
+                    accessibilityRole="button"
+                    accessibilityLabel={t('infant.vaccination.switchSector')}
+                    style={styles.sectorPill}
+                >
+                    <Text style={[styles.sectorLabel, globalStyles.fontSemiBold]}>
+                        {sector === 'public'
+                            ? t('infant.vaccination.sectorPublic')
+                            : t('infant.vaccination.sectorPrivate')}
+                    </Text>
 
-            <View style={styles.tabContainer}>
-                {tabs.map((tab) => (
-                    <TouchableOpacity
-                        key={tab}
-                        style={[styles.tab, activeTab === tab && styles.activeTab]}
-                        onPress={() => setActiveTab(tab)}
-                    >
-                        <Text style={[globalStyles.fontRegular, styles.tabText, activeTab === tab && styles.activeTabText]}>
-                            {tab}
-                        </Text>
-                    </TouchableOpacity>
-                ))}
+                    <MaterialDesignIcons
+                        name="swap-horizontal"
+                        size={14}
+                        color={colors.darkPurple}
+                    />
+                </TouchableOpacity>
+
+                <Text style={[styles.sectorHint, globalStyles.fontRegular]}>
+                    {t('infant.vaccination.sectorHint')}
+                </Text>
             </View>
 
-            <ScrollView contentContainerStyle={styles.contentContainer}>
-                <VaccineCard
-                    vaccines={vaccinationData[activeTab]}
-                    onToggle={handleToggle}
+            <LogChipTabs
+                tabs={visits.map((visit) => ({
+                    key: visit.key,
+                    label: t(visit.labelKey),
+                }))}
+                activeKey={activeVisit.key}
+                onChange={setActiveVisitKey}
+            />
+
+            <ScrollView
+                contentContainerStyle={infantLogStyles.content}
+                showsVerticalScrollIndicator={false}
+            >
+                <LogSectionCard
+                    title={t(activeVisit.labelKey)}
+                    caption={t('infant.vaccination.question', { name: childName })}
+                    footnote={t('infant.vaccination.footnote')}
+                >
+                    {activeVisit.vaccines.map((vaccine, index) => (
+                        <View
+                            key={vaccine.name}
+                            style={[
+                                styles.vaccineRow,
+                                index === activeVisit.vaccines.length - 1 &&
+                                    styles.vaccineRowLast,
+                            ]}
+                        >
+                            <View style={styles.vaccineText}>
+                                <Text
+                                    style={[
+                                        styles.vaccineName,
+                                        globalStyles.fontSemiBold,
+                                    ]}
+                                >
+                                    {vaccine.name}
+                                </Text>
+
+                                {!!vaccine.descriptionKey && (
+                                    <Text
+                                        style={[
+                                            styles.vaccineHint,
+                                            globalStyles.fontRegular,
+                                        ]}
+                                    >
+                                        {t(vaccine.descriptionKey)}
+                                    </Text>
+                                )}
+                            </View>
+
+                            <Switch
+                                value={!!visitSelection[vaccine.name]}
+                                onValueChange={(next) =>
+                                    toggleVaccine(vaccine.name, next)
+                                }
+                                trackColor={{
+                                    false: colors.offWhite,
+                                    true: colors.lightPurple,
+                                }}
+                                thumbColor={
+                                    visitSelection[vaccine.name]
+                                        ? colors.darkPurple
+                                        : colors.white
+                                }
+                                ios_backgroundColor={colors.offWhite}
+                                accessibilityLabel={vaccine.name}
+                            />
+                        </View>
+                    ))}
+                </LogSectionCard>
+
+                <GradientButtonWithSlightRadius
+                    title={t('infant.saveLog')}
+                    onPress={() => undefined}
+                    fullRounded
+                    fullWidth
                 />
+
+                <Text
+                    style={[
+                        infantLogStyles.footnote,
+                        styles.centered,
+                        globalStyles.fontRegular,
+                    ]}
+                >
+                    {t('infant.notPersistedYet')}
+                </Text>
             </ScrollView>
         </SafeAreaView>
     );
 };
 
-export default VaccinationLogScreen;
+const styles = StyleSheet.create({
+    sectorRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 10,
+        paddingHorizontal: 16,
+        paddingTop: 14,
+    },
 
+    sectorPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        backgroundColor: colors.lightPurple,
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+    },
+
+    sectorLabel: {
+        fontSize: 13,
+        color: colors.darkPurple,
+    },
+
+    sectorHint: {
+        flexShrink: 1,
+        fontSize: 12,
+        color: colors.gray,
+    },
+
+    vaccineRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.lightGray,
+    },
+
+    vaccineRowLast: {
+        borderBottomWidth: 0,
+    },
+
+    vaccineText: {
+        flex: 1,
+    },
+
+    vaccineName: {
+        fontSize: 15,
+        color: colors.black,
+    },
+
+    vaccineHint: {
+        marginTop: 2,
+        fontSize: 12,
+        color: colors.gray,
+    },
+
+    centered: {
+        textAlign: 'center',
+    },
+});
+
+export default VaccinationLog;
