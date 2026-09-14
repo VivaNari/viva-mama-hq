@@ -103,17 +103,22 @@ export type TVaccinationSelection = Record<string, boolean>;
 
 /* -------------------------------- Milestone --------------------------------- */
 
-export interface IMilestone {
-  key: string;
-  nameKey: string;
-  /** Typical age range, e.g. "1–2 months". */
-  ageKey: string;
-  /** Stand-in caption for the illustration that has not been supplied yet. */
-  photoHintKey: string;
-}
-
+/**
+ * Milestones and their matching warning signs, as printed on the India MCP card (2018).
+ *
+ * Both lists hold keys, not text. The words live in the locale files under
+ * `infant.milestone.items.<key>` and `infant.milestone.warnings.<key>` so Hindi can be a
+ * translation rather than a second transcription of a government publication.
+ *
+ * The card gives one age range per band rather than per milestone, so a card shows its
+ * band's range — the old per-milestone `ageKey` had no source and is gone, along with
+ * `photoHintKey`, whose hatched placeholder the rig illustration replaces.
+ */
 export interface IMilestoneBand {
   key: string;
   labelKey: string;
-  milestones: IMilestone[];
+  /** Milestone keys, in card order. */
+  milestones: string[];
+  /** Warning-sign keys for the same band, in card order. */
+  warnings: string[];
 }

@@ -18,6 +18,7 @@ import flowResponseModel from "../src/models/flowResponse.model";
 import messageModel from "../src/models/message.model";
 import moodLogModel from "../src/models/mood-log.model";
 import diaperLogModel from "../src/models/diaper-log.model";
+import milestoneLogModel from "../src/models/milestone-log.model";
 import growthLogModel from "../src/models/growth-log.model";
 import recommendationHistoryModel from "../src/models/recommendation-history.model";
 import reportModel from "../src/models/report.model";
@@ -129,6 +130,13 @@ async function seed() {
         loggedOn: new Date(),
         entries: [{ kind: "wet", loggedAt: new Date() }],
     });
+    // And a milestone they reached.
+    await milestoneLogModel.create({
+        userId: uid,
+        childId: new Types.ObjectId(),
+        milestoneKey: "develops_a_social_smile",
+        achievedOn: new Date(),
+    });
     // Inserted through the driver rather than the model: a valid recommendation
     // history needs a deep tree of per-category scores and copy, none of which the
     // deletion looks at. All that matters here is a row in the right collection
@@ -178,6 +186,7 @@ describe("AccountDeletionService", () => {
         expect(await moodLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await growthLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await diaperLogModel.countDocuments({ userId: uid })).toBe(0);
+        expect(await milestoneLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await recommendationHistoryModel.countDocuments({ userId: uid })).toBe(0);
         expect(await supportModel.countDocuments({ userId: uid })).toBe(0);
         expect(await analyticsEventModel.countDocuments({ user_id: uid })).toBe(0);
@@ -333,7 +342,8 @@ describe("deletion coverage", () => {
             "users", "flow_instances", "flow_responses", "consultations",
             "consultation_reviews", "consultation_credits", "usage_counters",
             "subscriptions", "conversations", "messages", "ai_message_bookmarks",
-            "mood_logs", "growth_logs", "diaper_logs", "recommendation_histories", "supports",
+            "mood_logs", "growth_logs", "diaper_logs", "milestone_logs",
+            "recommendation_histories", "supports",
             "analytics_events",
             "viva_club_posts", "viva_club_comments", "reports",
             "referral_redemptions",

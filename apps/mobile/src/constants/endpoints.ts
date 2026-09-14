@@ -131,6 +131,10 @@ export const API_GROWTH_LOGS = `${API_VERSION_URL}/growth-logs`;
 // screen is tapped fast, and a whole-day write would drop entries when two taps overlap.
 export const API_DIAPER_LOGS = `${API_VERSION_URL}/diaper-logs`;
 
+// Infant milestone endpoints. Keyed on the milestone rather than the day — a milestone is
+// reached once, and re-logging it corrects the date it carries.
+export const API_MILESTONE_LOGS = `${API_VERSION_URL}/milestone-logs`;
+
 // Viva Club Endpoints
 const VIVA_CLUB_BASE = `${API_VERSION_URL}/viva-club`;
 export const API_VIVA_CLUB_POSTS = `${VIVA_CLUB_BASE}/posts`;

@@ -66,6 +66,18 @@ jest.mock('../src/api/infantDiaper.api', () => ({
     removeDiaperEntry: jest.fn().mockResolvedValue(undefined),
 }));
 
+const {
+    getMilestoneLogs,
+    achieveMilestone,
+    forgetMilestone,
+} = require('../src/api/infantMilestone.api');
+
+jest.mock('../src/api/infantMilestone.api', () => ({
+    getMilestoneLogs: jest.fn().mockResolvedValue([]),
+    achieveMilestone: jest.fn(),
+    forgetMilestone: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../src/analytics', () => ({
     AnalyticsEvent: { VACCINATION_LOG_UPDATED: 'vaccination_log_updated' },
     track: jest.fn(),
@@ -910,44 +922,184 @@ describe('VaccinationLog', () => {
 });
 
 describe('MilestoneLog', () => {
-    it('renders the first age band with its milestones', () => {
-        const { getByText } = render(<MilestoneLog />);
-
-        expect(getByText('Holds head up')).toBeTruthy();
-        expect(getByText('0 of 4 logged')).toBeTruthy();
+    beforeEach(() => {
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(120) };
+        getMilestoneLogs.mockClear();
+        achieveMilestone.mockClear();
+        forgetMilestone.mockClear();
+        getMilestoneLogs.mockResolvedValue([]);
+        achieveMilestone.mockImplementation(async ({ milestoneKey }: { milestoneKey: string }) => ({
+            _id: 'm1',
+            childId: 'child-1',
+            milestoneKey,
+            achievedOn: todayKey(),
+            createdAt: '',
+            updatedAt: '',
+        }));
+        forgetMilestone.mockResolvedValue(undefined);
     });
 
-    it('logs a milestone and lets it be un-logged again', () => {
+    /**
+     * The content is the India MCP card's, generated into infantMilestoneData.ts. These
+     * assertions are against the card's own wording, so a regeneration that mangled the
+     * text or dropped a row fails here.
+     */
+    it('renders the first age band from the MCP card', async () => {
+        const { getByText } = render(<MilestoneLog />);
+
+        await waitFor(() => expect(getMilestoneLogs).toHaveBeenCalledWith('child-1'));
+
+        expect(getByText('Develops a social smile')).toBeTruthy();
+        expect(getByText('Raises head at times, when on tummy')).toBeTruthy();
+        expect(getByText('0 of 6 logged')).toBeTruthy();
+    });
+
+    it('logs a milestone and lets it be un-logged again', async () => {
         const { getAllByText, getByText } = render(<MilestoneLog />);
+
+        await waitFor(() => expect(getByText('0 of 6 logged')).toBeTruthy());
 
         fireEvent.press(getAllByText('Log this')[0]);
 
-        expect(getByText('1 of 4 logged')).toBeTruthy();
-        expect(getByText('Logged')).toBeTruthy();
+        await waitFor(() => expect(getByText('1 of 6 logged')).toBeTruthy());
+        expect(achieveMilestone).toHaveBeenCalledWith(
+            expect.objectContaining({ childId: 'child-1' }),
+        );
 
         fireEvent.press(getByText('Logged'));
 
-        expect(getByText('0 of 4 logged')).toBeTruthy();
+        await waitFor(() => expect(getByText('0 of 6 logged')).toBeTruthy());
+        expect(forgetMilestone).toHaveBeenCalled();
     });
 
-    it('changes band when another age chip is chosen', () => {
-        const { getByText, queryByText } = render(<MilestoneLog />);
+    /**
+     * Optimistic, like the diaper log: a failed write has to take its tick back.
+     *
+     * The rejection is held open and fired inside `act` rather than rejected up front. That
+     * is what makes the test deterministic — a floating rejection updates state outside
+     * React's control and the flush lands whenever it lands — and it also lets the tick be
+     * asserted present before it is asserted gone, which is the actual behaviour.
+     */
+    it('takes the tick back when the save fails', async () => {
+        let fail: (error: Error) => void = () => undefined;
+        achieveMilestone.mockReturnValue(
+            new Promise((_resolve, reject) => {
+                fail = reject;
+            }),
+        );
 
-        fireEvent.press(getByText('7–12 months'));
+        const { getAllByText, getByText, queryByText } = render(<MilestoneLog />);
 
-        expect(getByText('Crawls')).toBeTruthy();
-        expect(queryByText('Holds head up')).toBeNull();
+        await waitFor(() => expect(getByText('0 of 6 logged')).toBeTruthy());
+
+        fireEvent.press(getAllByText('Log this')[0]);
+        expect(getByText('1 of 6 logged')).toBeTruthy();
+
+        await act(async () => {
+            fail(new Error('offline'));
+        });
+
+        expect(queryByText('1 of 6 logged')).toBeNull();
+        expect(getByText('0 of 6 logged')).toBeTruthy();
     });
 
-    /** The illustrations are still outstanding; the cards say so rather than look broken. */
-    it('names the missing illustration on every card', () => {
+    it('shows what the server already has logged', async () => {
+        getMilestoneLogs.mockResolvedValue([
+            {
+                _id: 'm1',
+                childId: 'child-1',
+                milestoneKey: 'develops_a_social_smile',
+                achievedOn: todayKey(),
+                createdAt: '',
+                updatedAt: '',
+            },
+        ]);
+
         const { getByText } = render(<MilestoneLog />);
 
-        expect(getByText('photo: baby lifting head')).toBeTruthy();
-        expect(
-            getByText(
-                'Illustrations pending from Dr Harsha — each card takes one image plus the milestone name.',
-            ),
-        ).toBeTruthy();
+        await waitFor(() => expect(getByText('1 of 6 logged')).toBeTruthy());
+        expect(getByText('Logged')).toBeTruthy();
+    });
+
+    it('changes band when another age chip is chosen', async () => {
+        const { getByText, queryByText } = render(<MilestoneLog />);
+
+        await waitFor(() => expect(getByText('Develops a social smile')).toBeTruthy());
+
+        fireEvent.press(getByText('10–12 months'));
+
+        expect(getByText('Raises arms to be picked up')).toBeTruthy();
+        expect(queryByText('Develops a social smile')).toBeNull();
+    });
+
+    /**
+     * Six bands, through two years. The card itself carries a seventh at three years; it is
+     * excluded in the catalogue generator, so its chip must not appear here either — a tab
+     * with no milestones behind it would be worse than no tab.
+     */
+    it('covers six bands, through two years, and not the third year', async () => {
+        const { getByText, queryByText } = render(<MilestoneLog />);
+
+        await waitFor(() => expect(getByText('2–3 months')).toBeTruthy());
+
+        for (const label of ['4–6 months', '7–9 months', '10–12 months', '18 months']) {
+            expect(getByText(label)).toBeTruthy();
+        }
+
+        expect(queryByText('3 years')).toBeNull();
+    });
+
+    /**
+     * Warning signs are the other half of every band on the card. Closed by default: this
+     * screen is opened to celebrate something, and six things that might be wrong is not
+     * what it should lead with.
+     */
+    describe('warning signs', () => {
+        it('stays closed until asked for', async () => {
+            const { getByText, queryByText } = render(<MilestoneLog />);
+
+            await waitFor(() =>
+                expect(getByText('When to check with a health worker')).toBeTruthy(),
+            );
+
+            expect(queryByText('No social smile')).toBeNull();
+        });
+
+        it("opens to the band's own signs", async () => {
+            const { getByText } = render(<MilestoneLog />);
+
+            await waitFor(() =>
+                expect(getByText('When to check with a health worker')).toBeTruthy(),
+            );
+
+            fireEvent.press(getByText('When to check with a health worker'));
+
+            expect(getByText('No social smile')).toBeTruthy();
+            expect(getByText('Persistent squinting after 2 months')).toBeTruthy();
+        });
+
+        it('never tells a parent something is wrong, only who to ask', async () => {
+            const { getByText } = render(<MilestoneLog />);
+
+            await waitFor(() =>
+                expect(getByText('When to check with a health worker')).toBeTruthy(),
+            );
+            fireEvent.press(getByText('When to check with a health worker'));
+
+            expect(
+                getByText(/Babies vary a great deal, and one of these on its own/),
+            ).toBeTruthy();
+        });
+    });
+
+    it('credits the card the content comes from', async () => {
+        const { getByText } = render(<MilestoneLog />);
+
+        await waitFor(() =>
+            expect(
+                getByText(/India Mother and Child Protection Card \(2018\)/),
+            ).toBeTruthy(),
+        );
     });
 });
+

@@ -1,168 +1,161 @@
-import { IMilestoneBand } from '../types/infantLog.types';
-
 /**
- * Developmental milestones by age band, to two years (PRD 4.2, "our focus is till 2 years").
+ * GENERATED — do not edit by hand.
  *
- * ─────────────────────────────────────────────────────────────────────────────────────
- * CONTENT PENDING. The authoritative list lives in the team's milestone sheet linked from
- * the PRD, with illustrations still to come from Dr Harsha. What follows is the widely
- * published WHO/CDC set, four per band, so the screen has real structure to lay out —
- * replace it wholesale when the sheet is final rather than editing around it.
- * ─────────────────────────────────────────────────────────────────────────────────────
+ * Source:     content/mcp-card/VivaMama_Vaccinations_and_Milestones.xlsx (sheet "Milestones")
+ * sha256:     49480011db00a6d5446a0f1f8c1fe217d9868f72563893293cfbeb16e92e7450
+ * Content:    India Mother and Child Protection (MCP) Card, 2018 Version.
+ *             Ministry of Health & Family Welfare · Ministry of Women & Child Development.
+ * Counts:     6 bands, 29 milestones, 33 warning signs
+ * Regenerate: node scripts/generate-milestone-catalogue.mjs
  *
- * `photoHintKey` stands in for the illustration each card is designed around. It renders
- * as the hatched placeholder in the design, which is honest about what is missing instead
- * of shipping a blank tile.
+ * Milestone keys only. The words a parent reads live in the locale files, keyed
+ * `infant.milestone.items.<key>` and `infant.milestone.warnings.<key>`, so that Hindi is a
+ * translation rather than a second transcription of the card.
  */
+import { IMilestoneBand } from "../types/infantLog.types";
+
 export const MILESTONE_BANDS: IMilestoneBand[] = [
-  {
-    key: '0-3',
-    labelKey: 'infant.milestone.band0to3',
-    milestones: [
-      {
-        key: 'holds_head_up',
-        nameKey: 'infant.milestone.holdsHeadUp',
-        ageKey: 'infant.milestone.age1to2Months',
-        photoHintKey: 'infant.milestone.photoHoldsHeadUp',
-      },
-      {
-        key: 'social_smile',
-        nameKey: 'infant.milestone.socialSmile',
-        ageKey: 'infant.milestone.age2Months',
-        photoHintKey: 'infant.milestone.photoSocialSmile',
-      },
-      {
-        key: 'follows_objects',
-        nameKey: 'infant.milestone.followsObjects',
-        ageKey: 'infant.milestone.age2to3Months',
-        photoHintKey: 'infant.milestone.photoFollowsObjects',
-      },
-      {
-        key: 'pushes_up',
-        nameKey: 'infant.milestone.pushesUp',
-        ageKey: 'infant.milestone.age3Months',
-        photoHintKey: 'infant.milestone.photoPushesUp',
-      },
-    ],
-  },
-  {
-    key: '4-6',
-    labelKey: 'infant.milestone.band4to6',
-    milestones: [
-      {
-        key: 'reaches_for_toys',
-        nameKey: 'infant.milestone.reachesForToys',
-        ageKey: 'infant.milestone.age4Months',
-        photoHintKey: 'infant.milestone.photoReachesForToys',
-      },
-      {
-        key: 'rolls_over',
-        nameKey: 'infant.milestone.rollsOver',
-        ageKey: 'infant.milestone.age4to6Months',
-        photoHintKey: 'infant.milestone.photoRollsOver',
-      },
-      {
-        key: 'babbles',
-        nameKey: 'infant.milestone.babbles',
-        ageKey: 'infant.milestone.age4to6Months',
-        photoHintKey: 'infant.milestone.photoBabbles',
-      },
-      {
-        key: 'sits_with_support',
-        nameKey: 'infant.milestone.sitsWithSupport',
-        ageKey: 'infant.milestone.age6Months',
-        photoHintKey: 'infant.milestone.photoSitsWithSupport',
-      },
-    ],
-  },
-  {
-    key: '7-12',
-    labelKey: 'infant.milestone.band7to12',
-    milestones: [
-      {
-        key: 'sits_unsupported',
-        nameKey: 'infant.milestone.sitsUnsupported',
-        ageKey: 'infant.milestone.age7to9Months',
-        photoHintKey: 'infant.milestone.photoSitsUnsupported',
-      },
-      {
-        key: 'crawls',
-        nameKey: 'infant.milestone.crawls',
-        ageKey: 'infant.milestone.age8to10Months',
-        photoHintKey: 'infant.milestone.photoCrawls',
-      },
-      {
-        key: 'pulls_to_stand',
-        nameKey: 'infant.milestone.pullsToStand',
-        ageKey: 'infant.milestone.age9to12Months',
-        photoHintKey: 'infant.milestone.photoPullsToStand',
-      },
-      {
-        key: 'first_words',
-        nameKey: 'infant.milestone.firstWords',
-        ageKey: 'infant.milestone.age10to12Months',
-        photoHintKey: 'infant.milestone.photoFirstWords',
-      },
-    ],
-  },
-  {
-    key: '13-18',
-    labelKey: 'infant.milestone.band13to18',
-    milestones: [
-      {
-        key: 'walks_alone',
-        nameKey: 'infant.milestone.walksAlone',
-        ageKey: 'infant.milestone.age12to15Months',
-        photoHintKey: 'infant.milestone.photoWalksAlone',
-      },
-      {
-        key: 'points_to_show',
-        nameKey: 'infant.milestone.pointsToShow',
-        ageKey: 'infant.milestone.age15to18Months',
-        photoHintKey: 'infant.milestone.photoPointsToShow',
-      },
-      {
-        key: 'drinks_from_cup',
-        nameKey: 'infant.milestone.drinksFromCup',
-        ageKey: 'infant.milestone.age15to18Months',
-        photoHintKey: 'infant.milestone.photoDrinksFromCup',
-      },
-      {
-        key: 'stacks_blocks',
-        nameKey: 'infant.milestone.stacksBlocks',
-        ageKey: 'infant.milestone.age15to18Months',
-        photoHintKey: 'infant.milestone.photoStacksBlocks',
-      },
-    ],
-  },
-  {
-    key: '19-24',
-    labelKey: 'infant.milestone.band19to24',
-    milestones: [
-      {
-        key: 'runs',
-        nameKey: 'infant.milestone.runs',
-        ageKey: 'infant.milestone.age18to24Months',
-        photoHintKey: 'infant.milestone.photoRuns',
-      },
-      {
-        key: 'kicks_ball',
-        nameKey: 'infant.milestone.kicksBall',
-        ageKey: 'infant.milestone.age20to24Months',
-        photoHintKey: 'infant.milestone.photoKicksBall',
-      },
-      {
-        key: 'two_word_phrases',
-        nameKey: 'infant.milestone.twoWordPhrases',
-        ageKey: 'infant.milestone.age20to24Months',
-        photoHintKey: 'infant.milestone.photoTwoWordPhrases',
-      },
-      {
-        key: 'uses_spoon',
-        nameKey: 'infant.milestone.usesSpoon',
-        ageKey: 'infant.milestone.age18to24Months',
-        photoHintKey: 'infant.milestone.photoUsesSpoon',
-      },
-    ],
-  },
+    {
+        key: "2-3m",
+        labelKey: "infant.milestone.bands.2-3m",
+        milestones: [
+            "begins_to_recognize_the_mothers_face",
+            "develops_a_social_smile",
+            "makes_eye_contact",
+            "raises_head_at_times_when_on_tummy",
+            "moves_both_arms_and_both_legs_when_excited",
+            "keeps_hands_open_and_relaxed",
+        ],
+        warnings: [
+            "no_social_smile",
+            "does_not_make_eye_contact_when_being_fed_cuddled_or_spoken",
+            "persistent_squinting_after_2_months",
+            "does_not_startle_wake_up_cry_in_response_to_a_sudden_loud",
+            "head_pushed_back_with_stiff_arms_and_legs",
+            "persistently_holds_thumb_inside_the_palm_with_hands_kept",
+        ],
+    },
+    {
+        key: "4-6m",
+        labelKey: "infant.milestone.bands.4-6m",
+        milestones: [
+            "keeps_head_steady_when_held_upright_and_can_sit_with_support",
+            "turns_head_towards_the_direction_of_sound",
+            "attempts_to_reach_and_grasp_an_object",
+            "laughs_aloud_or_makes_squealing_sounds",
+            "begins_to_babble_ah_ee_oo_other_than_when_crying",
+            "likes_to_look_at_self_in_a_mirror",
+        ],
+        warnings: [
+            "lacks_head_control",
+            "cannot_sit_up_even_with_help",
+            "does_not_grasp_things_within_reach",
+            "unable_to_raise_head_when_on_tummy",
+            "head_and_eyes_do_not_move_to_follow_track_a_moving_object",
+            "does_not_vocalize_by_making_different_sounds_such_as_ah_eh",
+        ],
+    },
+    {
+        key: "7-9m",
+        labelKey: "infant.milestone.bands.7-9m",
+        milestones: [
+            "rolls_over_in_both_directions",
+            "grasps_a_toy_using_all_fingers",
+            "turns_head_to_visually_follow_familiar_faces_or_toys",
+            "looks_for_toys_that_have_been_hidden_in_front_of_them",
+            "responds_to_name_being_called",
+        ],
+        warnings: [
+            "cannot_roll_over",
+            "needs_support_to_sit",
+            "does_not_turn_towards_a_sound_out_of_sight",
+            "tilts_head_always_to_one_side_each_time_when_looking",
+            "does_not_utter_pa_pa_pa_ma_ma_ba_ba_ba",
+        ],
+    },
+    {
+        key: "10-12m",
+        labelKey: "infant.milestone.bands.10-12m",
+        milestones: [
+            "sits_without_support_and_reaches_for_toys_without_falling",
+            "raises_arms_to_be_picked_up",
+            "crawls_to_get_desired_toys_without_bumping_into_objects",
+            "uses_one_or_two_common_words_in_mother_tongue",
+            "responds_to_simple_requests_like_no_come_here",
+        ],
+        warnings: [
+            "cannot_pick_up_small_objects_with_finger_and_thumb",
+            "does_not_stretch_hands_to_be_picked_up",
+            "does_not_respond_to_own_name",
+            "does_not_search_for_half_hidden_toys_that_the_child_sees",
+            "does_not_play_social_games_like_peek_a_boo_jhalak_anakh",
+        ],
+    },
+    {
+        key: "18m",
+        labelKey: "infant.milestone.bands.18m",
+        milestones: [
+            "stands_and_takes_several_independent_steps",
+            "uses_a_variety_of_familiar_gestures_like_waving_clapping",
+            "puts_pebbles_small_objects_in_a_container",
+            "names_and_identifies_common_objects_and_their_pictures",
+        ],
+        warnings: [
+            "cannot_stand_on_his_her_own_without_support",
+            "cannot_put_small_objects_in_a_container",
+            "does_not_use_both_hands_for_everyday_activities_shows",
+            "does_not_point_a_finger_at_an_object_when_named",
+            "does_not_say_single_words_like_mama_or_dada",
+            "does_not_respond_to_mothers_gestures_and_seems",
+        ],
+    },
+    {
+        key: "24m",
+        labelKey: "infant.milestone.bands.24m",
+        milestones: [
+            "walks_steadily_even_while_pulling_a_toy",
+            "imitates_household_chores",
+            "correctly_points_out_and_names_one_or_more_body_parts",
+        ],
+        warnings: [
+            "does_not_walk_steadily_while_pulling_a_toy",
+            "cannot_scribble",
+            "does_not_use_two_word_phrases_such_as_give_milk",
+            "does_not_point_to_body_parts",
+            "does_not_respond_appropriately_to_gestures_such_as_bye_bye",
+        ],
+    },
+];
+
+/** Every milestone key, in card order. The catalogue the API validates against. */
+export const MILESTONE_KEYS: string[] = [
+    "begins_to_recognize_the_mothers_face",
+    "develops_a_social_smile",
+    "makes_eye_contact",
+    "raises_head_at_times_when_on_tummy",
+    "moves_both_arms_and_both_legs_when_excited",
+    "keeps_hands_open_and_relaxed",
+    "keeps_head_steady_when_held_upright_and_can_sit_with_support",
+    "turns_head_towards_the_direction_of_sound",
+    "attempts_to_reach_and_grasp_an_object",
+    "laughs_aloud_or_makes_squealing_sounds",
+    "begins_to_babble_ah_ee_oo_other_than_when_crying",
+    "likes_to_look_at_self_in_a_mirror",
+    "rolls_over_in_both_directions",
+    "grasps_a_toy_using_all_fingers",
+    "turns_head_to_visually_follow_familiar_faces_or_toys",
+    "looks_for_toys_that_have_been_hidden_in_front_of_them",
+    "responds_to_name_being_called",
+    "sits_without_support_and_reaches_for_toys_without_falling",
+    "raises_arms_to_be_picked_up",
+    "crawls_to_get_desired_toys_without_bumping_into_objects",
+    "uses_one_or_two_common_words_in_mother_tongue",
+    "responds_to_simple_requests_like_no_come_here",
+    "stands_and_takes_several_independent_steps",
+    "uses_a_variety_of_familiar_gestures_like_waving_clapping",
+    "puts_pebbles_small_objects_in_a_container",
+    "names_and_identifies_common_objects_and_their_pictures",
+    "walks_steadily_even_while_pulling_a_toy",
+    "imitates_household_chores",
+    "correctly_points_out_and_names_one_or_more_body_parts",
 ];

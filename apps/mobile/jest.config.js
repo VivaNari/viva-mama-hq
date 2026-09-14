@@ -45,6 +45,8 @@ module.exports = {
       'react-native-linear-gradient|' +
       'react-native-svg|' +
       'react-native-gesture-handler|' +
+      'react-native-reanimated|' +
+      'react-native-worklets|' +
       '@react-native-google-signin/google-signin|' +
       'react-native-toast-message|' +
       '@react-native-firebase/app|' +

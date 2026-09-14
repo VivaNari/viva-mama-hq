@@ -1,53 +1,171 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRoute } from '@react-navigation/native';
+import {
+    ActivityIndicator,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
+    useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import Toast from 'react-native-toast-message';
 
+import { achieveMilestone, forgetMilestone, getMilestoneLogs } from '../api/infantMilestone.api';
 import LogChipTabs from '../components/infant/LogChipTabs';
-import LogInfoBanner from '../components/infant/LogInfoBanner';
+import MilestoneCard from '../components/milestone/MilestoneCard';
+import MilestoneDetail from '../components/milestone/MilestoneDetail';
+import WarningSigns from '../components/milestone/WarningSigns';
 import { MILESTONE_BANDS } from '../data/infantMilestoneData';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { infantLogStyles } from '../public/styles/infantLogStyles';
+import { InfantLogRouteParams } from '../types/infantLog.types';
+import { IMilestoneLog } from '../types/milestoneLog.types';
 
 /**
- * Milestone Log (PRD 4.2) — "child is able to crawl / walk".
+ * Milestone Log (PRD 4.2) — the India MCP card's age-wise development milestones.
  *
- * A milestone is logged, never un-due: the card flips to "Logged" and stays available to
- * untick, because a parent who taps the wrong card at 3am needs a way back and there is no
- * other undo on this screen.
+ * Content is the card's own, generated into `infantMilestoneData.ts` from the workbook in
+ * content/mcp-card. The illustrations are drawn from the rig in components/milestone; every
+ * milestone that ships has an authored scene.
  *
- * The illustrations the design is built around have not been supplied. Each card renders a
- * labelled placeholder naming the image it wants, which is what the banner at the foot
- * explains — a blank tile would just look broken.
+ * A milestone can always be un-logged. A parent who taps the wrong card at 3am needs a way
+ * back, and this screen offers no other undo.
  *
- * UI only — nothing is persisted.
+ * ## The grid does not animate
+ *
+ * The scenes here are drawn still, each frozen at the frame its author chose as the clearest.
+ * The performances play in `MilestoneDetail`, which is the only place they are big enough to
+ * read.
+ *
+ * That is a cost decision as much as a design one. Changing band swaps every card at once, and
+ * the illustrations are built from a few hundred plain Views each — several hundred native
+ * views created in one commit before the tab can paint. Six looping scenes on top of that
+ * bought motion nobody could follow in a 150px box. The clock, and with it the Reduce Motion
+ * check that used to live here, moved to the detail view.
  */
+
 const MilestoneLog: React.FC = () => {
     const { t } = useTranslation();
+    const route = useRoute();
+    const params = (route.params ?? {}) as InfantLogRouteParams;
+    const { width } = useWindowDimensions();
 
-    const [activeBandKey, setActiveBandKey] = useState<string>(MILESTONE_BANDS[0].key);
-    const [logged, setLogged] = useState<Record<string, boolean>>({});
+    const [activeBandKey, setActiveBandKey] = useState(MILESTONE_BANDS[0].key);
+    const [logs, setLogs] = useState<IMilestoneLog[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [openKey, setOpenKey] = useState<string | null>(null);
 
-    const activeBand =
-        MILESTONE_BANDS.find((band) => band.key === activeBandKey) ?? MILESTONE_BANDS[0];
+    const band =
+        MILESTONE_BANDS.find((candidate) => candidate.key === activeBandKey) ??
+        MILESTONE_BANDS[0];
 
-    const loggedCount = activeBand.milestones.filter(
-        (milestone) => logged[milestone.key],
-    ).length;
+    const loadLogs = useCallback(async () => {
+        if (!params.childId) return;
 
-    const toggle = (key: string) =>
-        setLogged((prev) => ({ ...prev, [key]: !prev[key] }));
+        setLoading(true);
+        try {
+            setLogs(await getMilestoneLogs(params.childId));
+        } catch (error) {
+            console.log('[MilestoneLog] Failed to load milestones', error);
+            Toast.show({ type: 'error', text1: t('infant.milestone.loadFailed') });
+        } finally {
+            setLoading(false);
+        }
+    }, [params.childId, t]);
+
+    useEffect(() => {
+        loadLogs();
+    }, [loadLogs]);
+
+    const loggedKeys = useMemo(
+        () => new Set(logs.map((entry) => entry.milestoneKey)),
+        [logs],
+    );
+
+    const loggedCount = band.milestones.filter((key) => loggedKeys.has(key)).length;
+
+    /**
+     * The current logs, readable from a handler that must not be rebuilt when they change.
+     *
+     * `toggle` is handed to six memoised cards, so it has to keep its identity across a log
+     * being added or removed — otherwise every card re-renders on every tap and the memo is
+     * decoration. A ref updated after commit gives the handler the same value the closure it
+     * replaces would have captured.
+     */
+    const logsRef = useRef(logs);
+    useEffect(() => {
+        logsRef.current = logs;
+    }, [logs]);
+
+    /**
+     * Optimistic, like the diaper log's quick entries.
+     *
+     * Tapping a milestone is a small celebration; a spinner between the tap and the tick
+     * takes the moment out of it. A failed write takes its tick back and says so.
+     */
+    const toggle = useCallback(async (milestoneKey: string) => {
+        if (!params.childId) {
+            Toast.show({ type: 'error', text1: t('infant.milestone.noChild') });
+            return;
+        }
+
+        const previous = logsRef.current;
+        const wasLogged = previous.some((entry) => entry.milestoneKey === milestoneKey);
+
+        setLogs((current) =>
+            wasLogged
+                ? current.filter((entry) => entry.milestoneKey !== milestoneKey)
+                : [
+                      ...current,
+                      {
+                          _id: `pending-${milestoneKey}`,
+                          childId: params.childId as string,
+                          milestoneKey,
+                          achievedOn: '',
+                          createdAt: '',
+                          updatedAt: '',
+                      },
+                  ],
+        );
+
+        try {
+            if (wasLogged) {
+                await forgetMilestone({ childId: params.childId, milestoneKey });
+            } else {
+                const saved = await achieveMilestone({ childId: params.childId, milestoneKey });
+                setLogs((current) =>
+                    current.map((entry) =>
+                        entry.milestoneKey === milestoneKey ? saved : entry,
+                    ),
+                );
+            }
+        } catch (error) {
+            console.log('[MilestoneLog] Failed to save milestone', error);
+            setLogs(previous);
+            Toast.show({ type: 'error', text1: t('infant.milestone.saveFailed') });
+        }
+    }, [params.childId, t]);
+
+    const open = useCallback((milestoneKey: string) => setOpenKey(milestoneKey), []);
+    const closeDetail = useCallback(() => setOpenKey(null), []);
+    const toggleOpen = useCallback(() => {
+        if (openKey) toggle(openKey);
+    }, [openKey, toggle]);
+
+    // Two per row, matching the design's grid: half the content width less the gutter.
+    const cardWidth = (width - 16 * 2 - 12) / 2;
 
     return (
         <SafeAreaView style={infantLogStyles.screen} edges={['bottom', 'left', 'right']}>
             <LogChipTabs
-                tabs={MILESTONE_BANDS.map((band) => ({
-                    key: band.key,
-                    label: t(band.labelKey),
+                tabs={MILESTONE_BANDS.map((candidate) => ({
+                    key: candidate.key,
+                    label: t(candidate.labelKey),
                 }))}
-                activeKey={activeBand.key}
+                activeKey={band.key}
                 onChange={setActiveBandKey}
             />
 
@@ -59,102 +177,32 @@ const MilestoneLog: React.FC = () => {
                     <Text style={[styles.heading, globalStyles.fontBold]}>
                         {t('infant.milestone.heading')}
                     </Text>
-
                     <Text style={[styles.progress, globalStyles.fontRegular]}>
                         {t('infant.milestone.progress', {
                             logged: loggedCount,
-                            total: activeBand.milestones.length,
+                            total: band.milestones.length,
                         })}
                     </Text>
                 </View>
 
-                <View style={styles.grid}>
-                    {activeBand.milestones.map((milestone) => {
-                        const isLogged = !!logged[milestone.key];
+                {loading ? (
+                    <ActivityIndicator color={colors.darkPurple} style={styles.loader} />
+                ) : (
+                    <View style={styles.grid}>
+                        {band.milestones.map((key) => (
+                            <MilestoneCard
+                                key={key}
+                                milestoneKey={key}
+                                width={cardWidth}
+                                logged={loggedKeys.has(key)}
+                                onOpen={open}
+                                onToggle={toggle}
+                            />
+                        ))}
+                    </View>
+                )}
 
-                        return (
-                            <View key={milestone.key} style={styles.card}>
-                                <View style={styles.photo}>
-                                    <Text
-                                        style={[
-                                            styles.photoHint,
-                                            globalStyles.fontRegular,
-                                        ]}
-                                        numberOfLines={2}
-                                    >
-                                        {t(milestone.photoHintKey)}
-                                    </Text>
-
-                                    {isLogged && (
-                                        <View style={styles.badge}>
-                                            <MaterialDesignIcons
-                                                name="check"
-                                                size={14}
-                                                color={colors.white}
-                                            />
-                                        </View>
-                                    )}
-                                </View>
-
-                                <View style={styles.cardBody}>
-                                    <Text
-                                        style={[
-                                            styles.cardTitle,
-                                            globalStyles.fontSemiBold,
-                                        ]}
-                                    >
-                                        {t(milestone.nameKey)}
-                                    </Text>
-
-                                    <Text
-                                        style={[
-                                            styles.cardAge,
-                                            globalStyles.fontRegular,
-                                        ]}
-                                    >
-                                        {t(milestone.ageKey)}
-                                    </Text>
-
-                                    <TouchableOpacity
-                                        activeOpacity={0.8}
-                                        onPress={() => toggle(milestone.key)}
-                                        accessibilityRole="button"
-                                        accessibilityState={{ selected: isLogged }}
-                                        style={[
-                                            styles.action,
-                                            isLogged && styles.actionLogged,
-                                        ]}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.actionLabel,
-                                                isLogged && styles.actionLabelLogged,
-                                                globalStyles.fontSemiBold,
-                                            ]}
-                                        >
-                                            {isLogged
-                                                ? t('infant.milestone.logged')
-                                                : t('infant.milestone.logThis')}
-                                        </Text>
-
-                                        {isLogged && (
-                                            <MaterialDesignIcons
-                                                name="check"
-                                                size={14}
-                                                color={colors.success}
-                                            />
-                                        )}
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                        );
-                    })}
-                </View>
-
-                <LogInfoBanner
-                    icon="image-outline"
-                    text={t('infant.milestone.illustrationsPending')}
-                />
+                <WarningSigns signs={band.warnings} />
 
                 <Text
                     style={[
@@ -163,9 +211,18 @@ const MilestoneLog: React.FC = () => {
                         globalStyles.fontRegular,
                     ]}
                 >
-                    {t('infant.notPersistedYet')}
+                    {t('infant.milestone.source')}
                 </Text>
             </ScrollView>
+
+            <MilestoneDetail
+                milestoneKey={openKey}
+                bandMilestones={band.milestones}
+                bandLabelKey={band.labelKey}
+                logged={openKey ? loggedKeys.has(openKey) : false}
+                onToggle={toggleOpen}
+                onClose={closeDetail}
+            />
         </SafeAreaView>
     );
 };
@@ -196,81 +253,8 @@ const styles = StyleSheet.create({
         marginBottom: 14,
     },
 
-    card: {
-        // Two per row: half the remaining width once the 12px gutter is removed.
-        width: '48%',
-        flexGrow: 1,
-        backgroundColor: colors.white,
-        borderRadius: 12,
-        overflow: 'hidden',
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.12)',
-    },
-
-    photo: {
-        height: 110,
-        backgroundColor: colors.lightPurple,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingHorizontal: 10,
-    },
-
-    photoHint: {
-        fontSize: 11,
-        textAlign: 'center',
-        color: colors.purple,
-    },
-
-    badge: {
-        position: 'absolute',
-        top: 8,
-        right: 8,
-        width: 22,
-        height: 22,
-        borderRadius: 11,
-        backgroundColor: colors.success,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-
-    cardBody: {
-        padding: 12,
-    },
-
-    cardTitle: {
-        fontSize: 14,
-        color: colors.black,
-    },
-
-    cardAge: {
-        marginTop: 2,
-        fontSize: 12,
-        color: colors.gray,
-    },
-
-    action: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 6,
-        marginTop: 12,
-        borderWidth: 1,
-        borderColor: colors.purple,
-        borderRadius: 20,
-        paddingVertical: 9,
-    },
-
-    actionLogged: {
-        borderColor: colors.success,
-        backgroundColor: colors.greenBadgeBG,
-    },
-
-    actionLabel: {
-        fontSize: 13,
-        color: colors.darkPurple,
-    },
-
-    actionLabelLogged: {
-        color: colors.success,
+    loader: {
+        marginVertical: 40,
     },
 
     centered: {

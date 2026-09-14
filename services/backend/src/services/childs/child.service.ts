@@ -22,6 +22,7 @@ import {
 } from "../../types/user.types";
 import logger, { createModuleLogger } from "../../utils/logger";
 import DiaperLogService from "../diaper-log/diaper-log.service";
+import MilestoneLogService from "../milestone-log/milestone-log.service";
 import GrowthLogService from "../growth-log/growth-log.service";
 import { ChildNotFoundError } from "./child-ownership";
 
@@ -204,12 +205,16 @@ export default class ChildService {
         // Non-fatal: the child is already gone from the user's document, and failing the
         // request here would report a deletion that did happen as an error.
         try {
-            const [growthLogs, diaperLogs] = await Promise.all([
+            const [growthLogs, diaperLogs, milestoneLogs] = await Promise.all([
                 new GrowthLogService().deleteForChild(userId, childId),
                 new DiaperLogService().deleteForChild(userId, childId),
+                new MilestoneLogService().deleteForChild(userId, childId),
             ]);
 
-            log.info({ userId, childId, growthLogs, diaperLogs }, "Child logs deleted");
+            log.info(
+                { userId, childId, growthLogs, diaperLogs, milestoneLogs },
+                "Child logs deleted",
+            );
         } catch (error) {
             log.error({ err: error, userId, childId }, "Failed to delete child logs");
         }
