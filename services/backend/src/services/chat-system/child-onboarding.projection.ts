@@ -41,6 +41,14 @@ export const CHILD_WEIGHT_NODE_ID = "child_birth_weight";
  * landing outside these bounds is a bad payload, and a nonsense birth weight would poison
  * the day-0 point on the growth chart.
  */
+/**
+ * Oldest child the product accepts, in years. Mirrors MAX_CHILD_AGE_YEARS in
+ * apps/mobile/src/constants/chat.ts, which bounds the picker the mother actually sees.
+ * Growth tracking stops at five, so a date before that describes a child none of this is
+ * built for.
+ */
+const MAX_CHILD_AGE_YEARS = 5;
+
 const MEASUREMENT_BOUNDS: Record<string, { field: string; min: number; max: number }> = {
     [CHILD_HEAD_CIRCUMFERENCE_NODE_ID]: {
         field: "birth_measurements.head_circumference_cm",
@@ -113,6 +121,32 @@ export const updateChildOnboardingData = async (
                 log.warn({ userId, childId, freeText }, "Unparseable child date of birth");
                 break;
             }
+
+            // Range-checked here and not only in the picker.
+            //
+            // The date of birth is the single most load-bearing field on a child: growth
+            // percentiles, vaccination due dates, the six-month solids gate and the floor on
+            // every date strip are all derived from it. It is also set once and never again —
+            // it is deliberately not editable, so a correction means deleting the child and
+            // every log attached to them.
+            //
+            // The client bounds its picker to the same window, but that is the guard a
+            // mother sees rather than the guard that holds: a future date here would leave
+            // all five log screens rendering their "before birth" empty state with no way
+            // back. Dropped rather than clamped — a silently corrected birthday is worse
+            // than a question asked twice, and the flow re-asks an unanswered node.
+            const now = new Date();
+            const earliest = new Date(now);
+            earliest.setFullYear(earliest.getFullYear() - MAX_CHILD_AGE_YEARS);
+
+            if (dob.getTime() > now.getTime() || dob.getTime() < earliest.getTime()) {
+                log.warn(
+                    { userId, childId, freeText },
+                    "Discarding out-of-range child date of birth",
+                );
+                break;
+            }
+
             await setChildFields(userId, childId, { date_of_birth: dob });
             break;
         }

@@ -36,7 +36,11 @@ import { formatDateToISO, getISTCalendarDate } from "../src/services/date/date.s
 import VaccinationLogService, {
     ChildNotFoundError,
 } from "../src/services/vaccination-log/vaccination-log.service";
-import { EChildOnboardingStatus, ESex } from "../src/types/user.types";
+import {
+    EChildOnboardingStatus,
+    ESex,
+    EVaccinationSector,
+} from "../src/types/user.types";
 
 jest.setTimeout(120000);
 
@@ -45,7 +49,9 @@ const service = new VaccinationLogService();
 const BCG = "bcg";
 const PENTA_1 = "pentavalent_1";
 
-async function createUserWithChild(overrides: { date_of_birth?: string } = {}) {
+async function createUserWithChild(
+    overrides: { date_of_birth?: string; vaccination_sector?: EVaccinationSector } = {},
+) {
     const childId = new Types.ObjectId();
 
     const user = await UserModel.create({
@@ -57,6 +63,9 @@ async function createUserWithChild(overrides: { date_of_birth?: string } = {}) {
                 date_of_birth: new Date(overrides.date_of_birth ?? "2026-03-14"),
                 sex: ESex.MALE,
                 onboarding_status: EChildOnboardingStatus.COMPLETED,
+                ...(overrides.vaccination_sector
+                    ? { vaccination_sector: overrides.vaccination_sector }
+                    : {}),
             },
         ],
     });
@@ -388,6 +397,107 @@ describe("the record validator", () => {
         expect(
             vaccinationLogRecordValidator.validate(body({ givenOn: "25-04-2026" })).error,
         ).toBeDefined();
+    });
+});
+
+/**
+ * The schedule a child is on is chosen at baby onboarding and never changes.
+ *
+ * VACCINE_KEYS answers "is this a real dose"; it cannot answer "is this a real dose for
+ * this child", and the two schedules share only nine of their keys. Without this check the
+ * sector would be a display setting rather than a rule — a stale or hand-rolled client
+ * could store a row that this child's screen can never render.
+ */
+describe("the sector lock", () => {
+    const respond = () => {
+        const res: Record<string, unknown> = {};
+        res.status = jest.fn().mockReturnValue(res);
+        res.json = jest.fn().mockReturnValue(res);
+        return res as unknown as Response & { status: jest.Mock; json: jest.Mock };
+    };
+
+    const post = async (userId: string, body: object) => {
+        const controller = new VaccinationLogController();
+        const res = respond();
+        await controller.recordDose(
+            { body, user: { _id: userId } } as never,
+            res,
+            jest.fn() as never,
+        );
+        return res;
+    };
+
+    const message = (res: { json: jest.Mock }) => res.json.mock.calls[0][0].message;
+
+    it("refuses a private-only dose for a public-sector child", async () => {
+        const { userId, childId } = await createUserWithChild({
+            vaccination_sector: EVaccinationSector.PUBLIC,
+        });
+
+        const res = await post(userId, { childId, vaccineKey: "mmr_1" });
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(message(res)).toBe(messages.VACCINATION_LOG_WRONG_SECTOR);
+    });
+
+    it("refuses a public-only dose for a private-sector child", async () => {
+        const { userId, childId } = await createUserWithChild({
+            vaccination_sector: EVaccinationSector.PRIVATE,
+        });
+
+        const res = await post(userId, { childId, vaccineKey: PENTA_1 });
+
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(message(res)).toBe(messages.VACCINATION_LOG_WRONG_SECTOR);
+    });
+
+    it("accepts each schedule's own doses", async () => {
+        const pub = await createUserWithChild({
+            vaccination_sector: EVaccinationSector.PUBLIC,
+        });
+        const pri = await createUserWithChild({
+            vaccination_sector: EVaccinationSector.PRIVATE,
+        });
+
+        expect(
+            (await post(pub.userId, { childId: pub.childId, vaccineKey: PENTA_1 })).status,
+        ).toHaveBeenCalledWith(200);
+        expect(
+            (await post(pri.userId, { childId: pri.childId, vaccineKey: "mmr_1" })).status,
+        ).toHaveBeenCalledWith(200);
+    });
+
+    /** The nine shared doses are exactly the ones that must pass under either schedule. */
+    it("accepts a shared dose under both schedules", async () => {
+        const pub = await createUserWithChild({
+            vaccination_sector: EVaccinationSector.PUBLIC,
+        });
+        const pri = await createUserWithChild({
+            vaccination_sector: EVaccinationSector.PRIVATE,
+        });
+
+        expect(
+            (await post(pub.userId, { childId: pub.childId, vaccineKey: BCG })).status,
+        ).toHaveBeenCalledWith(200);
+        expect(
+            (await post(pri.userId, { childId: pri.childId, vaccineKey: BCG })).status,
+        ).toHaveBeenCalledWith(200);
+    });
+
+    /**
+     * A child with no stored sector predates the question or came through the direct create
+     * endpoint. The government schedule is the card every Indian family is handed, and the
+     * client applies the same fallback — the two must not disagree about which doses exist.
+     */
+    it("treats a child with no sector as public", async () => {
+        const { userId, childId } = await createUserWithChild();
+
+        expect(
+            (await post(userId, { childId, vaccineKey: PENTA_1 })).status,
+        ).toHaveBeenCalledWith(200);
+        expect(
+            (await post(userId, { childId, vaccineKey: "mmr_1" })).status,
+        ).toHaveBeenCalledWith(400);
     });
 });
 

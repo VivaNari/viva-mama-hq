@@ -120,6 +120,8 @@ const FeedingLog: React.FC = () => {
     const [days, setDays] = useState<IFeedingDay[]>([]);
     const [settings, setSettings] = useState<IFeedingSettings | null>(null);
     const [loading, setLoading] = useState(false);
+    /** The settings read failed, so the screen does not know how this baby is fed. */
+    const [settingsFailed, setSettingsFailed] = useState(false);
 
     // Composer state. Not the log — what has not been committed yet.
     const [feedChoice, setFeedChoice] = useState<TFeedChoice | null>(null);
@@ -163,6 +165,7 @@ const FeedingLog: React.FC = () => {
         if (!params.childId) return;
 
         setLoading(true);
+        setSettingsFailed(false);
         try {
             // Bounded to the days the strip can reach, as on the diaper log.
             const res = await getFeedingLogs(
@@ -174,6 +177,15 @@ const FeedingLog: React.FC = () => {
             setDays(prev => mergeByDay(prev, res.days, row => row.loggedOn));
         } catch (error) {
             console.log('[FeedingLog] Failed to load feeding logs', error);
+            // Recorded, not just toasted.
+            //
+            // The settings decide which controls a feed row offers, and without them the
+            // screen falls back to exclusive breastfeeding — so a mother who feeds by bottle
+            // would be shown Left and Right and no way to say so. The entries she manages to
+            // log are still stored correctly, because the server resolves the method for
+            // itself, but the form in front of her would be the wrong one and nothing would
+            // say so. Better to ask her to retry than to guess on her behalf.
+            setSettingsFailed(true);
             Toast.show({ type: 'error', text1: t('infant.feeding.loadFailed') });
         } finally {
             setLoading(false);
@@ -292,7 +304,15 @@ const FeedingLog: React.FC = () => {
     /* ------------------------------- settings ------------------------------- */
 
     const changeMethod = async (next: FeedingMethodEnum) => {
-        if (!params.childId || next === method) return;
+        if (next === method) return;
+
+        // Said out loud rather than returned from. The three entry paths go through
+        // guardWritable and toast; a radio that moves under the thumb and then silently
+        // does nothing is the worse failure of the two.
+        if (!params.childId) {
+            Toast.show({ type: 'error', text1: t('infant.feeding.noChild') });
+            return;
+        }
 
         const previous = settings;
         // Optimistic, like every other write here: the radio must move under the thumb.
@@ -317,7 +337,10 @@ const FeedingLog: React.FC = () => {
     };
 
     const setSolidsStarted = async (started: boolean) => {
-        if (!params.childId) return;
+        if (!params.childId) {
+            Toast.show({ type: 'error', text1: t('infant.feeding.noChild') });
+            return;
+        }
 
         const previous = settings;
         const startedOn = started ? istDateKey(new Date()) : null;
@@ -1118,6 +1141,31 @@ const FeedingLog: React.FC = () => {
                             color={colors.darkPurple}
                             style={styles.loader}
                         />
+                    ) : settingsFailed ? (
+                        // The one thing this screen must not do is guess how a baby is fed
+                        // and lay out the form accordingly. Asking costs a tap; guessing
+                        // wrong costs her the controls she actually needs.
+                        <LogSectionCard title={t('infant.feeding.todayTitle')}>
+                            <Text style={[styles.empty, globalStyles.fontRegular]}>
+                                {t('infant.feeding.settingsUnavailable')}
+                            </Text>
+
+                            <TouchableOpacity
+                                activeOpacity={0.7}
+                                onPress={loadLogs}
+                                accessibilityRole="button"
+                                style={infantLogStyles.linkButton}
+                            >
+                                <Text
+                                    style={[
+                                        infantLogStyles.linkText,
+                                        globalStyles.fontSemiBold,
+                                    ]}
+                                >
+                                    {t('infant.feeding.retry')}
+                                </Text>
+                            </TouchableOpacity>
+                        </LogSectionCard>
                     ) : beforeBirth ? (
                         // Both the chips and the calendar refuse these days, so this is
                         // only reachable with a date of birth in the future. Saying so

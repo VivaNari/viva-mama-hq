@@ -31,7 +31,8 @@
     "mySubscription": "My Subscription",
     "growthLog": "Growth Log",
     "diaperLog": "Diaper Log",
-    "milestoneLog": "Milestone Log"
+    "milestoneLog": "Milestone Log",
+    "editChild": "Baby details"
   },
   "common": {
     "close": "Close",
@@ -536,7 +537,8 @@
     "reportThanksBody": "Our team will review this reply.",
     "enterNumber": "Enter a number",
     "babyOnboardingCompleteTitle": "Baby added",
-    "babyOnboardingComplete": "You can now track growth, feeding, diapers, vaccinations and milestones from the Infant tab."
+    "babyOnboardingComplete": "You can now track growth, feeding, diapers, vaccinations and milestones from the Infant tab.",
+    "measurementOutOfRange": "Please enter a value between {{min}} and {{max}} {{unit}}."
   },
   "subscription": {
     "choosePlan": "Choose a plan",
@@ -839,16 +841,12 @@
     "dateChip": "{{day}} {{month}}",
     "pickDate": "Pick a date",
     "beforeBirth": "Nothing to show — before {{name}} was born.",
-    "ageHeading": "Infant age — {{age}}",
-    "growthSubtitle": "Weight-for-age, WHO child growth standards",
-    "growthDescription": "An infant growth score tracks weight, height and head circumference against healthy standards, so nutrition and milestones stay visible and delays are caught early.",
     "statWeight": "WEIGHT",
     "statHeight": "HEIGHT",
     "statHead": "HEAD",
     "statMissing": "—",
     "checkinTitle": "Infant check-in",
     "checkinCaption": "Log today — today's entries can be changed until midnight.",
-    "percentilePending": "Not yet scored",
     "ageDay": "{{count}} day",
     "ageDays": "{{count}} days",
     "ageMonth": "{{count}} month",
@@ -860,7 +858,6 @@
     "childFallback": "your baby",
     "saveLog": "Save log",
     "addMore": "Add more",
-    "timePlaceholder": "Time",
     "growth": {
       "measurements": "Measurements",
       "headLabel": "Head circumference",
@@ -868,11 +865,7 @@
       "weightLabel": "Weight",
       "unitCm": "cm",
       "unitGrams": "grams",
-      "lastValue": "last: {{value}} {{unit}}",
       "rangeHint": "Enter a value between {{min}} and {{max}}.",
-      "whoTitle": "Against WHO standards",
-      "chartAlt": "WHO growth chart for {{name}}",
-      "percentilePending": "Awaiting WHO data",
       "disclaimer": "Percentiles are for information only and are not a medical assessment. Always consult a qualified healthcare professional.",
       "unitKg": "kg",
       "percentileValue": "{{value}}{{suffix}} percentile",
@@ -989,7 +982,9 @@
       "loadFailed": "Could not load the feeding log",
       "saveFailed": "Could not save that — please try again",
       "removeFailed": "Could not remove that — please try again",
-      "noChild": "Add your baby before logging feeds"
+      "noChild": "Add your baby before logging feeds",
+      "settingsUnavailable": "We couldn't load how you're feeding your baby, so this page isn't showing the right options yet.",
+      "retry": "Try again"
     },
     "diaper": {
       "quickLogTitle": "Quick log",
@@ -1016,8 +1011,7 @@
     "vaccination": {
       "sectorPublic": "Government sector schedule",
       "sectorPrivate": "Private sector schedule",
-      "sectorHint": "from onboarding · tap to change",
-      "switchSector": "Switch vaccination schedule",
+      "sectorHint": "set when you added your baby",
       "question": "Has {{name}} been vaccinated with:",
       "footnote": "Record what the clinic administered. A dose can always be un-recorded.",
       "source": "India Mother and Child Protection Card (2018), Ministry of Health & Family Welfare.",
@@ -1149,7 +1143,6 @@
       "loadFailed": "Could not load the milestone log.",
       "saveFailed": "Could not save that. Please try again.",
       "noChild": "Select a child before logging a milestone.",
-      "stillPose": "Illustration",
       "bands": {
         "2-3m": "2–3 months",
         "4-6m": "4–6 months",
@@ -1323,6 +1316,40 @@
         "headPart": "Head"
       }
     },
-    "dateFull": "{{day}} {{month}} {{year}}"
+    "dateFull": "{{day}} {{month}} {{year}}",
+    "editChild": {
+      "entry": "Edit {{name}}'s details",
+      "nameTitle": "Name",
+      "namePlaceholder": "Your baby's name",
+      "nameRequired": "Enter a name",
+      "birthTitle": "Birth measurements",
+      "birthCaption": "These are the first point on the growth chart. Leave one blank if it wasn't recorded.",
+      "birthWeight": "Weight at birth",
+      "birthLength": "Length at birth",
+      "birthHead": "Head circumference at birth",
+      "notANumber": "Enter a number",
+      "outOfRange": "Enter a value between {{min}} and {{max}}",
+      "fixedTitle": "Set when you added your baby",
+      "fixedCaption": "These can't be changed. Growth percentiles, the vaccination schedule and the daily logs are all worked out from them, so changing one would quietly make everything recorded so far describe a different baby.",
+      "dob": "Date of birth",
+      "sexLabel": "Sex",
+      "sector": "Vaccination schedule",
+      "sex": {
+        "Male": "Boy",
+        "Female": "Girl",
+        "Other": "Other"
+      },
+      "save": "Save changes",
+      "saved": "Details updated",
+      "saveFailed": "Could not save that — please try again",
+      "removeExplainer": "To correct a date of birth, sex or vaccination schedule, remove your baby and add them again.",
+      "remove": "Remove {{name}}",
+      "removeTitle": "Remove {{name}}?",
+      "removeBody": "This deletes everything logged for {{name}} — growth measurements, feeds, nappy changes, milestones and vaccinations. It cannot be undone.",
+      "removeConfirm": "Remove",
+      "removed": "Baby removed",
+      "removeFailed": "Could not remove that — please try again"
+    },
+    "statValue": "{{value}} {{unit}}"
   }
 }

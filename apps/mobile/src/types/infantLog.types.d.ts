@@ -158,6 +158,11 @@ export interface IVaccinationVisit {
 export interface IMilestoneBand {
   key: string;
   labelKey: string;
+  /**
+   * The band's range in whole months, so the screen can open on the band a child is
+   * actually in rather than always on the newborn one.
+   */
+  ageMonths: { from: number; to: number };
   /** Milestone keys, in card order. */
   milestones: string[];
   /** Warning-sign keys for the same band, in card order. */

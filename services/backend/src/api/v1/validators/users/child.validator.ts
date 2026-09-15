@@ -20,13 +20,39 @@ const childValidator = Joi.object({
  * Partial update. Every field is optional, but at least one must be present — an empty
  * PATCH is a caller bug, not a no-op worth accepting silently.
  *
+ * ─── What cannot be edited, and why ────────────────────────────────────────────────
+ *
+ * `date_of_birth`, `sex` and `vaccination_sector` are set once, at baby onboarding, and are
+ * frozen after. They are not merely fields: growth percentiles are computed against the
+ * date of birth and the sex, vaccination due dates and the immunisation schedule come from
+ * them, the six-month solids gate is derived from the date of birth, and every date strip
+ * is floored at it. Editing one does not change a value, it invalidates a history — and a
+ * stale percentile still looks like a perfectly plausible number, so nothing would surface
+ * the error.
+ *
+ * They are `forbidden()` rather than absent so a client that sends one is told, instead of
+ * having the field quietly dropped and reporting success for a change that did not happen.
+ * Correcting one means deleting the child and adding them again, which is deliberate: it
+ * makes the cost visible rather than spreading it silently across five log collections.
+ *
+ * Birth measurements ARE editable. They have a derived copy — the day-0 point on the growth
+ * chart is a real `growth_logs` row — but unlike the frozen three that copy can simply be
+ * rewritten, and `ChildService.updateChild` does exactly that after the write.
+ *
  * Measurement bounds mirror those in child-onboarding.projection.ts and the client's
  * MEASUREMENT_NODE_BOUNDS. All three must move together.
  */
 export const childUpdateValidator = Joi.object({
-    name: Joi.string(),
-    date_of_birth: Joi.date().less("now"),
-    sex: Joi.string().valid(ESex.MALE, ESex.FEMALE, ESex.OTHER),
+    name: Joi.string().trim().min(1).max(60),
+    date_of_birth: Joi.forbidden().messages({
+        "any.unknown": "date_of_birth cannot be changed after onboarding",
+    }),
+    sex: Joi.forbidden().messages({
+        "any.unknown": "sex cannot be changed after onboarding",
+    }),
+    vaccination_sector: Joi.forbidden().messages({
+        "any.unknown": "vaccination_sector cannot be changed after onboarding",
+    }),
     birth_measurements: Joi.object({
         head_circumference_cm: Joi.number().min(20).max(60),
         length_cm: Joi.number().min(30).max(100),

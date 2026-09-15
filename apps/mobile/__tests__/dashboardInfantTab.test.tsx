@@ -149,15 +149,15 @@ describe('DashboardInfantTab', () => {
         const { getByText, queryByText } = render(<DashboardInfantTab userData={userData()} />);
 
         // 7.8 kg stored, displayed in the grams a clinic reports.
-        await waitFor(() => expect(getByText('7800 g')).toBeTruthy());
+        await waitFor(() => expect(getByText('7800 grams')).toBeTruthy());
         expect(getByText('67.6 cm')).toBeTruthy();
-        expect(queryByText('3300 g')).toBeNull();
+        expect(queryByText('3300 grams')).toBeNull();
     });
 
     it('falls back to the birth measurements for a child with no logs yet', async () => {
         const { getByText } = render(<DashboardInfantTab userData={userData()} />);
 
-        await waitFor(() => expect(getByText('3300 g')).toBeTruthy());
+        await waitFor(() => expect(getByText('3300 grams')).toBeTruthy());
         expect(getByText('50 cm')).toBeTruthy();
     });
 

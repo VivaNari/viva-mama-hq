@@ -412,6 +412,29 @@ async function main() {
      * that the emitted list is reviewable against the card rather than being an alphabetised
      * pile.
      */
+    /**
+     * The dose keys each schedule actually contains.
+     *
+     * Emitted per sector, not only as one flat list, because a child's schedule is fixed at
+     * onboarding and can never be switched: a dose may only be recorded against the schedule
+     * that child is on. The API has to be able to check that, and it can only do so if it is
+     * told which keys belong to which sector.
+     *
+     * The nine keys the two schedules share — BCG at birth is BCG at birth — appear in both
+     * lists, which is what makes the check a plain membership test rather than a special case.
+     */
+    const keysBySector = { public: [], private: [] };
+    for (const [sector, visits] of [
+        ["public", publicVisits],
+        ["private", privateVisits],
+    ]) {
+        for (const visit of visits) {
+            for (const key of visit.doses) {
+                if (!keysBySector[sector].includes(key)) keysBySector[sector].push(key);
+            }
+        }
+    }
+
     const orderedKeys = [];
     for (const visit of [...publicVisits, ...privateVisits]) {
         for (const key of visit.doses) {
@@ -505,6 +528,35 @@ export type VaccineKey = (typeof VACCINE_KEYS)[number];
 
 export const isVaccineKey = (value: unknown): value is VaccineKey =>
     typeof value === "string" && (VACCINE_KEYS as readonly string[]).includes(value);
+
+/**
+ * Which doses belong to which schedule.
+ *
+ * A child's sector is chosen at baby onboarding and is fixed for life, so a dose may only be
+ * recorded against the schedule that child is actually on. VACCINE_KEYS above answers "is
+ * this a real dose"; this answers "is this a real dose *for this child*", which is the
+ * question the write path has to ask.
+ *
+ * The overlap is deliberate and not a mistake to be deduplicated: ${
+     keysBySector.public.filter((key) => keysBySector.private.includes(key)).length
+ } keys appear in both
+ * lists because both schedules genuinely give those doses.
+ */
+export const VACCINE_KEYS_BY_SECTOR = {
+    public: [
+${keysBySector.public.map((key) => `        "${key}",`).join("\n")}
+    ],
+    private: [
+${keysBySector.private.map((key) => `        "${key}",`).join("\n")}
+    ],
+} as const;
+
+export type VaccinationSector = keyof typeof VACCINE_KEYS_BY_SECTOR;
+
+/** Whether this dose exists on the schedule the child is on. */
+export const isVaccineKeyForSector = (value: unknown, sector: VaccinationSector): boolean =>
+    typeof value === "string" &&
+    (VACCINE_KEYS_BY_SECTOR[sector] as readonly string[]).includes(value);
 `;
 
     // ── scripts/out/vaccination-en.json ──────────────────────────────────────────────

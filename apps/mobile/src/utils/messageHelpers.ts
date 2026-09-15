@@ -1,3 +1,4 @@
+import { TFunction } from "i18next";
 import {
   IChatMessage,
   IAiMessage,
@@ -110,10 +111,16 @@ export const getDateBoundsForNode = (
  * Returns null when the value is acceptable, otherwise a message to show the user. The
  * server drops out-of-range values silently, so catching them here is what turns a lost
  * answer into a correctable one.
+ *
+ * Takes `t` rather than returning a key, matching `getChildAgeLabel` and `formatChipDate`:
+ * the caller renders this straight into the chat input, so handing it a key would only move
+ * the same lookup one line away. The strings used to be English literals, which meant a
+ * Hindi mother was asked the question in Hindi and corrected in English.
  */
 export const validateMeasurement = (
   message: IChatMessage | undefined,
   raw: string,
+  t: TFunction,
 ): string | null => {
   if (!message || !isAiMessage(message)) return null;
 
@@ -122,11 +129,15 @@ export const validateMeasurement = (
 
   const value = Number.parseFloat(raw.trim());
   if (!Number.isFinite(value)) {
-    return "Please enter a number.";
+    return t("infant.editChild.notANumber");
   }
 
   if (value < bounds.min || value > bounds.max) {
-    return `Please enter a value between ${bounds.min} and ${bounds.max} ${bounds.unit}.`;
+    return t("chat.measurementOutOfRange", {
+      min: bounds.min,
+      max: bounds.max,
+      unit: bounds.unit,
+    });
   }
 
   return null;

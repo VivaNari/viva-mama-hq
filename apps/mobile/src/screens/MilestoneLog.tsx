@@ -23,6 +23,7 @@ import { globalStyles } from '../public/styles';
 import { infantLogStyles } from '../public/styles/infantLogStyles';
 import { InfantLogRouteParams } from '../types/infantLog.types';
 import { IMilestoneLog } from '../types/milestoneLog.types';
+import { currentAgeIndex } from '../utils/infantLogHelpers';
 
 /**
  * Milestone Log (PRD 4.2) — the India MCP card's age-wise development milestones.
@@ -53,7 +54,21 @@ const MilestoneLog: React.FC = () => {
     const params = (route.params ?? {}) as InfantLogRouteParams;
     const { width } = useWindowDimensions();
 
-    const [activeBandKey, setActiveBandKey] = useState(MILESTONE_BANDS[0].key);
+    /**
+     * Opens on the band the child is actually in, not on the first one.
+     *
+     * Computed once at mount rather than tracked: a band lasts months, so re-deriving it
+     * would only ever fight a mother who has deliberately looked at another one.
+     */
+    const [activeBandKey, setActiveBandKey] = useState(
+        () =>
+            MILESTONE_BANDS[
+                currentAgeIndex(
+                    MILESTONE_BANDS.map((entry) => entry.ageMonths),
+                    params.childDob,
+                )
+            ]!.key,
+    );
     const [logs, setLogs] = useState<IMilestoneLog[]>([]);
     const [loading, setLoading] = useState(false);
     const [openKey, setOpenKey] = useState<string | null>(null);

@@ -6,6 +6,7 @@
  * The date-bounds and history-clearing cases are the ones worth locking down — both are
  * places where sharing the mother's behaviour produces something quietly wrong.
  */
+import i18n from "../src/i18n";
 import { FLOW_SLUGS, MEASUREMENT_NODE_BOUNDS } from "../src/constants/chat";
 import {
   EChildOnboardingStatus,
@@ -145,29 +146,55 @@ describe("birth measurement input", () => {
     expect(mode).toBe("text");
   });
 
+  /** The app's own translator, so these assert the copy a mother actually reads. */
+  const translate = i18n.t.bind(i18n) as any;
+
   it("accepts a plausible measurement", () => {
     const node = aiMessage("child_birth_weight", NodeType.QUESTION_FREE_TEXT);
-    expect(validateMeasurement(node, "3250")).toBeNull();
+    expect(validateMeasurement(node, "3250", translate)).toBeNull();
   });
 
   it("accepts a decimal, since lengths are given to one place", () => {
     const node = aiMessage("child_birth_length", NodeType.QUESTION_FREE_TEXT);
-    expect(validateMeasurement(node, "50.5")).toBeNull();
+    expect(validateMeasurement(node, "50.5", translate)).toBeNull();
   });
 
   it("rejects an out-of-range value rather than letting the server drop it", () => {
     const node = aiMessage("child_birth_weight", NodeType.QUESTION_FREE_TEXT);
-    expect(validateMeasurement(node, "99999")).toMatch(/between/i);
+    expect(validateMeasurement(node, "99999", translate)).toMatch(/between/i);
   });
 
   it("rejects text", () => {
     const node = aiMessage("child_birth_head_circumference", NodeType.QUESTION_FREE_TEXT);
-    expect(validateMeasurement(node, "big")).toMatch(/number/i);
+    expect(validateMeasurement(node, "big", translate)).toMatch(/number/i);
+  });
+
+  /**
+   * These two used to be English string literals in the helper, which meant a Hindi mother
+   * was asked the question in Hindi and corrected in English — the only hardcoded copy left
+   * anywhere in the infant flow.
+   */
+  it("speaks the language the rest of the screen is in", async () => {
+    const node = aiMessage("child_birth_weight", NodeType.QUESTION_FREE_TEXT);
+
+    await i18n.changeLanguage("hi");
+    try {
+      const outOfRange = validateMeasurement(node, "99999", translate);
+      const notANumber = validateMeasurement(node, "big", translate);
+
+      expect(outOfRange).toContain("500");
+      expect(outOfRange).not.toMatch(/please enter/i);
+      expect(notANumber).not.toMatch(/please enter/i);
+      // Devanagari, rather than merely "not English".
+      expect(notANumber).toMatch(/[\u0900-\u097F]/);
+    } finally {
+      await i18n.changeLanguage("en");
+    }
   });
 
   it("has no opinion about non-measurement nodes", () => {
     const node = aiMessage("child_name", NodeType.QUESTION_FREE_TEXT);
-    expect(validateMeasurement(node, "Aarav")).toBeNull();
+    expect(validateMeasurement(node, "Aarav", translate)).toBeNull();
   });
 
   it("keeps its bounds in step with the server's", () => {

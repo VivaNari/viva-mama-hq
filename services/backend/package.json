@@ -16,6 +16,7 @@
         "diagnose:otel": "ts-node scripts/verify-otel.ts",
         "diagnose:otel-http": "ts-node scripts/verify-otel-http.ts",
         "purge:user-data": "ts-node scripts/purge-user-data.ts",
+        "check:vaccination-sector": "ts-node scripts/check-vaccination-sector.ts",
         "seed:super-admin": "ts-node scripts/seed-super-admin.ts",
         "migrate:user-role": "ts-node scripts/backfill-user-role.ts",
         "migrate:hindi-translations": "ts-node scripts/add-hindi-translations.ts",

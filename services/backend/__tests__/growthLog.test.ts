@@ -294,12 +294,37 @@ describe("recordBirthMeasurements", () => {
     });
 });
 
+/**
+ * The repair for a date-of-birth or sex correction.
+ *
+ * These used to drive it through `ChildService.updateChild`, because that is where a
+ * correction came from. It no longer can: both fields are set at baby onboarding and frozen
+ * after, so there is no API path that changes one, and `recomputeForChild` has no caller in
+ * the application any more.
+ *
+ * It is kept, and tested directly, because the correction did not stop being possible —
+ * only the route did. An operator editing a birthday in the database is now the only way it
+ * happens, and without this the stored percentiles would quietly go on describing a
+ * different child. A stale percentile looks exactly as plausible as a correct one, which is
+ * what makes the repair worth having rather than the thing to delete alongside the path.
+ */
 describe("recomputeForChild", () => {
-    /**
-     * A percentile is only meaningful against the right birthday. A mother who fixes a
-     * typo'd date would otherwise keep numbers computed against the wrong age forever —
-     * and a stale percentile looks exactly as plausible as a correct one.
-     */
+    /** Directly changes the child, standing in for an operator's database edit. */
+    const correctChild = async (
+        userId: string,
+        childId: string,
+        fields: Record<string, unknown>,
+    ) => {
+        const prefixed: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(fields)) {
+            prefixed[`childs.$.${key}`] = value;
+        }
+        await UserModel.updateOne(
+            { _id: userId, "childs._id": new Types.ObjectId(childId) },
+            { $set: prefixed },
+        );
+    };
+
     it("rescores stored history after the date of birth is corrected", async () => {
         const { userId, childId } = await createUserWithChild();
         const measuredOn = new Date("2026-09-13T00:00:00.000Z");
@@ -314,11 +339,8 @@ describe("recomputeForChild", () => {
 
         // Born a month earlier than first recorded: the same weight now belongs to an
         // older baby, so the percentile must fall.
-        await new ChildService().updateChild({
-            userId,
-            childId,
-            date_of_birth: "2026-02-14",
-        });
+        await correctChild(userId, childId, { date_of_birth: new Date("2026-02-14") });
+        await service.recomputeForChild(userId, childId);
 
         const after = await growthLogModel.findById(before._id).lean();
 
@@ -339,7 +361,8 @@ describe("recomputeForChild", () => {
             measurement: { weight_kg: 7.8 },
         });
 
-        await new ChildService().updateChild({ userId, childId, sex: ESex.FEMALE });
+        await correctChild(userId, childId, { sex: ESex.FEMALE });
+        await service.recomputeForChild(userId, childId);
 
         const after = await growthLogModel.findById(before._id).lean();
 

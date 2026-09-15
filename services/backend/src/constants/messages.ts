@@ -123,6 +123,10 @@ export const messages = {
     VACCINATION_LOG_FUTURE_NOT_ALLOWED: "Cannot record a vaccination for a future date",
     VACCINATION_LOG_BEFORE_BIRTH: "Cannot record a vaccination for a date before the child was born",
     VACCINATION_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+    // The schedule is chosen at baby onboarding and is fixed for that child, so a dose
+    // that only exists on the other schedule is not a dose this child can be given.
+    VACCINATION_LOG_WRONG_SECTOR:
+        "That vaccine is not on this child's immunisation schedule",
 
     FEEDING_LOG_SAVED_SUCCESS: "Feeding logged successfully",
     FEEDING_LOG_FETCH_SUCCESS: "Feeding logs fetched successfully",

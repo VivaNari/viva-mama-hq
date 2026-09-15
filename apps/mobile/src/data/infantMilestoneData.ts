@@ -18,6 +18,7 @@ export const MILESTONE_BANDS: IMilestoneBand[] = [
     {
         key: "2-3m",
         labelKey: "infant.milestone.bands.2-3m",
+        ageMonths: { from: 2, to: 3 },
         milestones: [
             "begins_to_recognize_the_mothers_face",
             "develops_a_social_smile",
@@ -38,6 +39,7 @@ export const MILESTONE_BANDS: IMilestoneBand[] = [
     {
         key: "4-6m",
         labelKey: "infant.milestone.bands.4-6m",
+        ageMonths: { from: 4, to: 6 },
         milestones: [
             "keeps_head_steady_when_held_upright_and_can_sit_with_support",
             "turns_head_towards_the_direction_of_sound",
@@ -58,6 +60,7 @@ export const MILESTONE_BANDS: IMilestoneBand[] = [
     {
         key: "7-9m",
         labelKey: "infant.milestone.bands.7-9m",
+        ageMonths: { from: 7, to: 9 },
         milestones: [
             "rolls_over_in_both_directions",
             "grasps_a_toy_using_all_fingers",
@@ -76,6 +79,7 @@ export const MILESTONE_BANDS: IMilestoneBand[] = [
     {
         key: "10-12m",
         labelKey: "infant.milestone.bands.10-12m",
+        ageMonths: { from: 10, to: 12 },
         milestones: [
             "sits_without_support_and_reaches_for_toys_without_falling",
             "raises_arms_to_be_picked_up",
@@ -94,6 +98,7 @@ export const MILESTONE_BANDS: IMilestoneBand[] = [
     {
         key: "18m",
         labelKey: "infant.milestone.bands.18m",
+        ageMonths: { from: 18, to: 18 },
         milestones: [
             "stands_and_takes_several_independent_steps",
             "uses_a_variety_of_familiar_gestures_like_waving_clapping",
@@ -112,6 +117,7 @@ export const MILESTONE_BANDS: IMilestoneBand[] = [
     {
         key: "24m",
         labelKey: "infant.milestone.bands.24m",
+        ageMonths: { from: 24, to: 24 },
         milestones: [
             "walks_steadily_even_while_pulling_a_toy",
             "imitates_household_chores",

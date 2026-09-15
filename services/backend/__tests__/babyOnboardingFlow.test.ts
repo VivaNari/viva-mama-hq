@@ -364,6 +364,61 @@ describe("child onboarding projection", () => {
         expect(saved.birth_measurements?.weight_grams).toBeUndefined();
     });
 
+    /**
+     * The date of birth is the one field a child can never have corrected — it is set at
+     * onboarding and is immutable after, so a bad value means deleting the child and every
+     * log attached to them. The picker bounds it, but the picker is not the guard.
+     */
+    describe("the date of birth range", () => {
+        const answerDob = async (user: any, childId: any, value: string) =>
+            updateChildOnboardingData(
+                user._id.toString(),
+                childId,
+                await getNode("child_dob"),
+                undefined,
+                value,
+            );
+
+        const iso = (offsetDays: number) =>
+            new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000)
+                .toISOString()
+                .slice(0, 10);
+
+        it("discards a date in the future rather than storing it", async () => {
+            const { user, childId } = await setup();
+
+            await answerDob(user, childId, iso(30));
+
+            // Left unset, so the flow asks again. A future date would have put all five
+            // log screens into their "before birth" empty state with no way back.
+            expect((await child(user._id, childId)).date_of_birth).toBeUndefined();
+        });
+
+        it("discards a date older than the product supports", async () => {
+            const { user, childId } = await setup();
+
+            await answerDob(user, childId, iso(-365 * 6));
+
+            expect((await child(user._id, childId)).date_of_birth).toBeUndefined();
+        });
+
+        it("accepts a child born today", async () => {
+            const { user, childId } = await setup();
+
+            await answerDob(user, childId, iso(0));
+
+            expect((await child(user._id, childId)).date_of_birth).toBeDefined();
+        });
+
+        it("accepts a date just inside the upper bound", async () => {
+            const { user, childId } = await setup();
+
+            await answerDob(user, childId, iso(-365 * 5 + 2));
+
+            expect((await child(user._id, childId)).date_of_birth).toBeDefined();
+        });
+    });
+
     it("touches only the addressed child when the user has several", async () => {
         const { user, childId } = await setup();
 

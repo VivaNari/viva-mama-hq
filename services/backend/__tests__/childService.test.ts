@@ -1,8 +1,10 @@
 /**
  * Direct child CRUD — the non-chat path onto users.childs[].
  *
- * The partial-update behaviour is the part worth pinning: measurements are merged field
- * by field, so editing one does not erase the other two recorded at birth.
+ * Two things are worth pinning here. Measurements are merged field by field, so editing
+ * one does not erase the other two recorded at birth — and the fields a child's history is
+ * derived from cannot be edited at all, which is asserted below rather than left to the
+ * validator, since the service is what a future caller would reach past it to use.
  */
 
 jest.mock(require.resolve("../src/config/firebase"), () => ({ __esModule: true, default: null }));
@@ -142,6 +144,38 @@ describe("ChildService", () => {
         const children = await service.listChildren(userId);
         const untouched = children.find((c) => c._id!.toString() === second._id!.toString());
         expect(untouched!.name).toBe("Meera");
+    });
+
+    /**
+     * Date of birth, sex and vaccination sector are set at baby onboarding and frozen.
+     *
+     * They are the basis of every derived number on the child — percentiles, due dates, the
+     * solids gate, each date strip's floor — so an edit would not change a value, it would
+     * invalidate a history. `UpdateChildParams` no longer carries them, which makes this a
+     * compile error as well as a runtime one; the validator refuses them at the boundary too.
+     */
+    it("has no way to change the fields a child's history is derived from", async () => {
+        const user = await createUser();
+        const added = await service.addChild({
+            userId: user._id.toString(),
+            name: "Aarav",
+            date_of_birth: "2026-03-14",
+            sex: ESex.MALE,
+        });
+
+        const fresh = await service.updateChild({
+            userId: user._id.toString(),
+            childId: added._id!.toString(),
+            name: "Aarav Kumar",
+            // @ts-expect-error — not on UpdateChildParams, and that is the point.
+            date_of_birth: "2020-01-01",
+            // @ts-expect-error — likewise.
+            sex: ESex.FEMALE,
+        });
+
+        expect(fresh.name).toBe("Aarav Kumar");
+        expect(fresh.date_of_birth).toEqual(new Date("2026-03-14"));
+        expect(fresh.sex).toBe(ESex.MALE);
     });
 
     it("deletes a child", async () => {

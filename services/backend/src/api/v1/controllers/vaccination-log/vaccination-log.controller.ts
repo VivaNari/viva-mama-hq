@@ -3,6 +3,10 @@ import { StatusCodes } from "http-status-codes";
 
 import { messages } from "../../../../constants/messages";
 import {
+    VaccinationSector,
+    isVaccineKeyForSector,
+} from "../../../../constants/vaccine-keys";
+import {
     formatDateToISO,
     getISTCalendarDate,
     parseISODateToStartOfDay,
@@ -11,7 +15,20 @@ import VaccinationLogService, {
     ChildNotFoundError,
 } from "../../../../services/vaccination-log/vaccination-log.service";
 import { IVaccinationLog } from "../../../../types/vaccination-log.types";
+import { EVaccinationSector, IChild } from "../../../../types/user.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
+
+/**
+ * The schedule this child is on.
+ *
+ * Chosen at baby onboarding and fixed for life — there is no way to change it, by design, so
+ * this is a read rather than a negotiation. An absent value means a child that predates the
+ * question or came in through the direct create endpoint; those fall to the government
+ * schedule, which is the one printed on the MCP card every Indian family is given. The
+ * client applies the same fallback, and the two must not disagree about which doses exist.
+ */
+const sectorOf = (child: IChild): VaccinationSector =>
+    child.vaccination_sector === EVaccinationSector.PRIVATE ? "private" : "public";
 
 export default class VaccinationLogController {
     private vaccinationLogService: VaccinationLogService;
@@ -71,6 +88,18 @@ export default class VaccinationLogController {
                 req.user._id,
                 childId,
             );
+
+            // The dose has to exist on *this child's* schedule, not merely somewhere in the
+            // catalogue.
+            //
+            // The validator has already confirmed it is a real key; the two schedules share
+            // only nine of them, so "a real dose" and "a dose this child can be given" are
+            // very different questions. Without this the sector would be a display setting
+            // rather than a rule, and a stale or hand-rolled client could store a row that
+            // this child's screen can never render.
+            if (!isVaccineKeyForSector(vaccineKey, sectorOf(child))) {
+                return this.badRequest(res, messages.VACCINATION_LOG_WRONG_SECTOR);
+            }
 
             // The birth dose is given within 24 hours of delivery, so the birthday itself
             // is a valid date — the bound is inclusive.

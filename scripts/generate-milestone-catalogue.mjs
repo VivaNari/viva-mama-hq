@@ -35,17 +35,24 @@ const SOURCE = path.join(ROOT, "content/mcp-card/VivaMama_Vaccinations_and_Miles
  * The labels carry en-dashes and parentheses ("24 months (2 years)") that would slug into
  * something unreadable, and these keys appear in URLs and stored rows — they should be
  * chosen, not derived. The `age` here is the label shown on the chip.
+ *
+ * `from`/`to` are the band's range in whole months, written out rather than parsed back off
+ * the key. The screen opens on the band a child is actually in, and deriving "18m" → 18..18
+ * but "2-3m" → 2..3 from the key string would make the chip label load-bearing — rename a
+ * key and the screen quietly opens somewhere else.
  */
 const BANDS = [
-    { match: "2–3 months", key: "2-3m" },
-    { match: "4–6 months", key: "4-6m" },
-    { match: "7–9 months", key: "7-9m" },
-    { match: "10–12 months", key: "10-12m" },
-    { match: "18 months", key: "18m" },
-    { match: "24 months (2 years)", key: "24m" },
+    { match: "2–3 months", key: "2-3m", from: 2, to: 3 },
+    { match: "4–6 months", key: "4-6m", from: 4, to: 6 },
+    { match: "7–9 months", key: "7-9m", from: 7, to: 9 },
+    { match: "10–12 months", key: "10-12m", from: 10, to: 12 },
+    { match: "18 months", key: "18m", from: 18, to: 18 },
+    { match: "24 months (2 years)", key: "24m", from: 24, to: 24 },
     {
         match: "3 years",
         key: "3y",
+        from: 36,
+        to: 36,
         /**
          * Transcribed from the card and deliberately not shipped.
          *
@@ -170,6 +177,8 @@ async function main() {
 
         bands.push({
             key: band.key,
+            from: band.from,
+            to: band.to,
             age,
             milestones: bullets(row.getCell(2).value).map(build),
             warnings: bullets(row.getCell(3).value).map(build),
@@ -186,6 +195,7 @@ async function main() {
             (band) => `    {
         key: "${band.key}",
         labelKey: "infant.milestone.bands.${band.key}",
+        ageMonths: { from: ${band.from}, to: ${band.to} },
         milestones: [
 ${band.milestones.map((m) => `            "${m.key}",`).join("\n")}
         ],

@@ -16,6 +16,7 @@ import CategoryArticles from '../../screens/CategoryArticles';
 import CreatePost from '../../screens/CreatePost';
 import EditProfile from '../../screens/EditProfile';
 import ExpertDetails from '../../screens/ExpertDetails';
+import EditChild from '../../screens/EditChild';
 import FeedingLog from '../../screens/FeedingLog';
 import FullReport from '../../screens/FullReport';
 import MyProfile from '../../screens/MyProfile';
@@ -294,6 +295,14 @@ const AppStack = () => {
                 }}
                 name="FeedingLog"
                 component={FeedingLog}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: t('nav.editChild'),
+                }}
+                name="EditChild"
+                component={EditChild}
             />
             <Stack.Screen
                 options={{

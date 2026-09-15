@@ -38,7 +38,7 @@ export const infantLogStyles = StyleSheet.create({
   /** The blue rounded label that titles each section. */
   pill: {
     alignSelf: "flex-start",
-    backgroundColor: colors.logSectionPill,
+    backgroundColor: colors.darkPurple,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 7,
@@ -51,7 +51,7 @@ export const infantLogStyles = StyleSheet.create({
 
   /** Explanatory line under a section pill. */
   caption: {
-    marginTop: 10,
+    marginVertical: 5,
     fontSize: 13,
     lineHeight: 19,
     color: colors.darkGray,

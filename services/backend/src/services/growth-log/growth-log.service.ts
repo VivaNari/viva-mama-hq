@@ -185,9 +185,17 @@ class GrowthLogService extends BaseService<IGrowthLog> {
     /**
      * Recompute every stored percentile for a child.
      *
-     * Called when the child's date of birth or sex changes. Without it, a mother who fixes a
-     * typo'd birthday keeps percentiles computed against the wrong age forever — and because
-     * the number looks perfectly plausible, nothing would ever surface the error.
+     * Every stored percentile was scored against the child's date of birth and sex. Change
+     * either and all of them are quietly wrong — and because a stale percentile looks
+     * exactly as plausible as a correct one, nothing else would ever surface it.
+     *
+     * NO CALLER IN THE APPLICATION, deliberately. It used to run from
+     * `ChildService.updateChild`; both fields are now set at baby onboarding and frozen
+     * after, so no request can change one and there is nothing for it to repair. It is kept
+     * because the correction did not stop being possible — only the route did. An operator
+     * editing a birthday directly in the database is now the only way it happens, and this
+     * is the repair for it. `__tests__/growthLog.test.ts` exercises it against exactly that
+     * scenario rather than through an API path that no longer exists.
      */
     recomputeForChild = async (userId: string, childId: string): Promise<number> => {
         const child = await this.getOwnedChild(userId, childId);

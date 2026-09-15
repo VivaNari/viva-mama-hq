@@ -41,10 +41,19 @@ export interface UpdateChildParams {
     userId: string;
     childId: string;
     name?: string;
-    date_of_birth?: Date | string;
-    sex?: ESex;
     birth_measurements?: IChildBirthMeasurements;
 }
+
+/*
+ * `date_of_birth` and `sex` are deliberately absent, and so is `vaccination_sector`.
+ *
+ * All three are set at baby onboarding and frozen after — see the note on
+ * childUpdateValidator, which refuses them at the boundary. They are not fields so much as
+ * the basis of everything derived from them: percentiles, due dates, the solids gate, every
+ * date strip's floor. Correcting one means deleting the child and adding them again.
+ *
+ * Removing them from this type is what makes that a compile error rather than a comment.
+ */
 
 /**
  * Re-exported so every existing `import { ChildNotFoundError } from ".../child.service"`
@@ -110,8 +119,6 @@ export default class ChildService {
         userId,
         childId,
         name,
-        date_of_birth,
-        sex,
         birth_measurements,
     }: UpdateChildParams): Promise<IChild> => {
         if (!Types.ObjectId.isValid(childId)) {
@@ -120,10 +127,6 @@ export default class ChildService {
 
         const updates: Record<string, unknown> = {};
         if (name !== undefined) updates["childs.$.name"] = name;
-        if (date_of_birth !== undefined) {
-            updates["childs.$.date_of_birth"] = new Date(date_of_birth);
-        }
-        if (sex !== undefined) updates["childs.$.sex"] = sex;
 
         // Merged field by field rather than as a whole object: $set on the parent would
         // replace the subdocument, so sending only a new weight would erase the length
@@ -153,21 +156,24 @@ export default class ChildService {
 
         log.info({ userId, childId, fields: Object.keys(updates) }, "Child updated");
 
-        // Every stored percentile was computed against this child's date of birth and sex.
-        // Correcting either one silently invalidates all of them — and because a stale
-        // percentile still looks like a perfectly plausible number, nothing would ever
-        // surface the error. Recompute rather than leave history describing a different
-        // child.
+        // Birth measurements are also the day-0 point on the growth chart, and that point is
+        // a real growth_logs row rather than a read of this field. Rewriting the child
+        // without rewriting the row would leave two copies of the same number, the chart
+        // drawing the stale one, and nothing anywhere to say which was right.
+        //
+        // recordBirthMeasurements upserts against the birthday, so this corrects the
+        // existing row rather than adding a second one, and it recomputes that day's
+        // percentiles on the way through.
         //
         // Non-fatal: the edit the mother asked for has already succeeded, so a failure here
         // must not turn into a failed request.
-        if (date_of_birth !== undefined || sex !== undefined) {
+        if (birth_measurements !== undefined) {
             try {
-                await new GrowthLogService().recomputeForChild(userId, childId);
+                await new GrowthLogService().recordBirthMeasurements(userId, childId);
             } catch (error) {
                 log.error(
                     { userId, childId, error },
-                    "Failed to recompute growth percentiles after a child correction",
+                    "Failed to rewrite the day-0 growth point after a measurement correction",
                 );
             }
         }

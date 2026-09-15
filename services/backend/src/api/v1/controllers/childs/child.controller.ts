@@ -64,14 +64,14 @@ export default class ChildController {
         const childId = req.params.childId as string;
 
         try {
+            // Only the two fields that can change. The validator has already refused a
+            // date of birth, a sex or a vaccination sector, so reaching here with one is
+            // not possible — but forwarding them would make this the second place that
+            // decides what is editable, and the two would drift.
             const child = await childService.updateChild({
                 userId,
                 childId,
                 ...(req.body.name !== undefined ? { name: req.body.name } : {}),
-                ...(req.body.date_of_birth !== undefined
-                    ? { date_of_birth: req.body.date_of_birth }
-                    : {}),
-                ...(req.body.sex !== undefined ? { sex: req.body.sex } : {}),
                 ...(req.body.birth_measurements !== undefined
                     ? { birth_measurements: req.body.birth_measurements }
                     : {}),

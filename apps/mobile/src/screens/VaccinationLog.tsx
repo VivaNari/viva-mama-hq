@@ -7,7 +7,6 @@ import {
     StyleSheet,
     Switch,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,7 +32,11 @@ import {
     TVaccinationSector,
 } from '../types/infantLog.types';
 import { IVaccinationLog } from '../types/vaccinationLog.types';
-import { formatFullDate, vaccinationDueWindow } from '../utils/infantLogHelpers';
+import {
+    currentAgeIndex,
+    formatFullDate,
+    vaccinationDueWindow,
+} from '../utils/infantLogHelpers';
 
 /**
  * Vaccination Log (PRD 4.4) — the India MCP card's age-wise immunisation schedule.
@@ -47,21 +50,23 @@ import { formatFullDate, vaccinationDueWindow } from '../utils/infantLogHelpers'
  * months are excluded at the generator — recorded there as a decision rather than deleted,
  * so that a missing visit cannot be mistaken for an oversight.
  *
- * ## What the sector switch does, and what it does not
+ * ## The schedule is fixed, and the pill is a label
  *
- * The pill at the top is a control, not a label: the design marks it editable, and a family
- * does move between a government centre and a private paediatrician. Switching swaps the
- * visit list.
+ * Which schedule a child is on is chosen once, at baby onboarding, and never again. This
+ * screen reads it; it does not offer to change it. A dose is a clinical event that happened
+ * on a particular schedule, and letting the schedule be re-picked afterwards would mean a
+ * record whose meaning depends on a setting — three of Pentavalent are not three of
+ * DTwP + Hib + Hepatitis B, and a screen that can swap between them invites exactly that
+ * confusion. The API refuses a dose that is not on this child's schedule, so the rule holds
+ * whatever a client sends.
  *
- * It does *not* swap what has been recorded. A dose key names the dose and not the sector,
- * so BCG at birth is one row whichever schedule it was read from, and switching keeps every
- * tick the two schedules genuinely share. What it does not keep is the doses whose products
- * differ — three of Pentavalent are not three of DTwP + Hib + Hepatitis B — because those
- * have different keys, and quietly equating them would tell a parent a dose had been given
- * when it had not.
+ * A child with no stored sector falls to the government schedule. That is the card every
+ * Indian family is handed, and the server applies the same fallback — the two must not
+ * disagree about which doses exist.
  *
- * The switch is also still local: it does not write back to the child. Changing it here
- * lasts until the screen unmounts, and onboarding remains the thing that sets it.
+ * The nine doses both schedules give still share one key, so a key names the dose rather
+ * than the schedule. Nothing user-facing depends on that any more, but it is what lets the
+ * API check a key against a sector with a plain membership test.
  */
 
 /** Which dose of a vaccine this is, where the card numbers them. */
@@ -88,12 +93,31 @@ const VaccinationLog: React.FC = () => {
 
     const childName = params.childName?.trim() || t('infant.childFallback');
 
-    const [sector, setSector] = useState<TVaccinationSector>(
-        params.vaccinationSector ?? 'public',
-    );
+    // Read once from the child, never set. See the note above on why this is not a control.
+    const sector: TVaccinationSector = params.vaccinationSector ?? 'public';
 
     const visits = VACCINATION_SCHEDULE[sector];
-    const [activeVisitKey, setActiveVisitKey] = useState<string>(visits[0].key);
+    /**
+     * Opens on the visit the child has reached, not on the birth visit.
+     *
+     * The due windows are already in weeks or months; normalised to months here so one
+     * helper serves both this screen and the milestone bands. A visit given in weeks is
+     * under three months old, so integer division is precise enough to order them.
+     */
+    const [activeVisitKey, setActiveVisitKey] = useState<string>(
+        () =>
+            visits[
+                currentAgeIndex(
+                    visits.map((visit) => ({
+                        from:
+                            visit.due.unit === 'week'
+                                ? Math.floor((visit.due.from * 7) / 30)
+                                : visit.due.from,
+                    })),
+                    params.childDob,
+                )
+            ]!.key,
+    );
     const [logs, setLogs] = useState<IVaccinationLog[]>([]);
     const [loading, setLoading] = useState(false);
 
@@ -203,14 +227,6 @@ const VaccinationLog: React.FC = () => {
         [params.childId, t],
     );
 
-    const switchSector = () => {
-        const next: TVaccinationSector = sector === 'public' ? 'private' : 'public';
-        setSector(next);
-        // Visit keys differ between schedules ('12m' exists only in the private one), so
-        // land on the first visit rather than a key the new list may not contain.
-        setActiveVisitKey(VACCINATION_SCHEDULE[next][0].key);
-    };
-
     /**
      * When this visit falls due, from the child's date of birth.
      *
@@ -247,25 +263,13 @@ const VaccinationLog: React.FC = () => {
     return (
         <SafeAreaView style={infantLogStyles.screen} edges={['bottom', 'left', 'right']}>
             <View style={styles.sectorRow}>
-                <TouchableOpacity
-                    activeOpacity={0.8}
-                    onPress={switchSector}
-                    accessibilityRole="button"
-                    accessibilityLabel={t('infant.vaccination.switchSector')}
-                    style={styles.sectorPill}
-                >
+                <View style={styles.sectorPill}>
                     <Text style={[styles.sectorLabel, globalStyles.fontSemiBold]}>
                         {sector === 'public'
                             ? t('infant.vaccination.sectorPublic')
                             : t('infant.vaccination.sectorPrivate')}
                     </Text>
-
-                    <MaterialDesignIcons
-                        name="swap-horizontal"
-                        size={14}
-                        color={colors.darkPurple}
-                    />
-                </TouchableOpacity>
+                </View>
 
                 <Text style={[styles.sectorHint, globalStyles.fontRegular]}>
                     {t('infant.vaccination.sectorHint')}

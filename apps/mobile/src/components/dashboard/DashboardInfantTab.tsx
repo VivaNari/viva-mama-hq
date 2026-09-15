@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
@@ -16,7 +16,7 @@ import { FlowType } from '../../types/chat.types';
 import { IChild } from '../../types/user.types';
 import { IUserAllData } from '../../types/dashboard.types';
 import { InfantLogRouteParams } from '../../types/infantLog.types';
-import { getChildAgeLabel, getVisibleChildren } from '../../utils/childAge';
+import { getVisibleChildren } from '../../utils/childAge';
 import { istDateKey } from '../../utils/infantLogHelpers';
 import DashboardCard from './DashboardCard';
 import ChildAvatarStrip from './ChildAvatarStrip';
@@ -185,18 +185,26 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
         latest?.measurements.head_circumference_cm ??
         measurements?.head_circumference_cm;
 
+    // Units come from the locale files, as they do on the growth log — "g" and "cm" are
+    // English words, and hardcoding them left the dashboard reading in English while the
+    // screen behind it read in Hindi.
+    const measured = (value: number | undefined, unitKey: string): string =>
+        typeof value === 'number'
+            ? t('infant.statValue', { value, unit: t(unitKey) })
+            : missing;
+
     const stats = [
         {
             label: t('infant.statWeight'),
-            value: latestWeightGrams ? `${latestWeightGrams} g` : missing,
+            value: measured(latestWeightGrams, 'infant.growth.unitGrams'),
         },
         {
             label: t('infant.statHeight'),
-            value: latestLengthCm ? `${latestLengthCm} cm` : missing,
+            value: measured(latestLengthCm, 'infant.growth.unitCm'),
         },
         {
             label: t('infant.statHead'),
-            value: latestHeadCm ? `${latestHeadCm} cm` : missing,
+            value: measured(latestHeadCm, 'infant.growth.unitCm'),
         },
     ];
 
@@ -247,11 +255,25 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                 onAddChild={startBabyOnboarding}
             />
 
-            {/* <Text style={[styles.ageHeading, globalStyles.fontBold]}>
-                {t('infant.ageHeading', {
-                    age: getChildAgeLabel(selectedChild?.date_of_birth, t),
-                })}
-            </Text> */}
+            {selectedChild?._id && (
+                <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() =>
+                        navigation.navigate('EditChild', {
+                            ...logParams,
+                            birthMeasurements: selectedChild.birth_measurements,
+                        })
+                    }
+                    accessibilityRole="button"
+                    style={styles.editRow}
+                >
+                    <Text style={[styles.editLink, globalStyles.fontSemiBold]}>
+                        {t('infant.editChild.entry', {
+                            name: selectedChild.name ?? t('infant.childFallback'),
+                        })}
+                    </Text>
+                </TouchableOpacity>
+            )}
 
             {/*
               Replaces the static growth-chart JPEG and the "Not yet scored" badge that
@@ -343,10 +365,15 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 
-    ageHeading: {
-        marginTop: 6,
-        fontSize: 17,
-        color: colors.black,
+    editRow: {
+        alignSelf: 'flex-end',
+        paddingHorizontal: 4,
+        paddingBottom: 8,
+    },
+
+    editLink: {
+        fontSize: 12,
+        color: colors.darkPurple,
     },
 
     statRow: {

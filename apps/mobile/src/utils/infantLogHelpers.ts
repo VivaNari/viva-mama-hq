@@ -250,6 +250,62 @@ export const vaccinationDueWindow = (
 };
 
 /**
+ * Whole months since birth, on the calendar rather than on a 30.44-day average.
+ *
+ * A baby born on 14 March is nine months old on 14 December, which is the arithmetic the
+ * MCP card's own age bands assume. Averaged months drift by several days across a year and
+ * would land a child in the wrong band around every boundary.
+ */
+export const getAgeInMonths = (
+  dateOfBirth: Date | string | undefined | null,
+  now: Date = new Date(),
+): number | null => {
+  if (!dateOfBirth) return null;
+
+  const dob = dateOfBirth instanceof Date ? dateOfBirth : new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  const birth = istParts(dob);
+  const today = istParts(now);
+
+  let months = (today.year - birth.year) * 12 + (today.month - birth.month);
+  // The month only counts once the day-of-month has come round again.
+  if (today.day < birth.day) months -= 1;
+
+  return Math.max(0, months);
+};
+
+/**
+ * Which entry in an age-ordered list a child is currently in.
+ *
+ * Shared by the milestone bands and the vaccination visits, which ask the same question of
+ * differently-shaped data: both open on the first entry today, which means a mother of an
+ * eighteen-month-old lands on the newborn band every time she opens the screen.
+ *
+ * Returns the last entry the child has *reached* rather than the nearest one. A parent is
+ * logging what has happened, so the band they are in or have just left is the useful place
+ * to land; the one they have not got to yet is not. Falls back to the first entry when the
+ * date of birth is missing or the child is younger than the earliest entry — a newborn
+ * belongs at the start of the list, which is also where an unknown age is least wrong.
+ */
+export const currentAgeIndex = (
+  ranges: { from: number }[],
+  dateOfBirth: Date | string | undefined | null,
+  now: Date = new Date(),
+): number => {
+  const months = getAgeInMonths(dateOfBirth, now);
+  if (months === null) return 0;
+
+  let index = 0;
+  for (let i = 0; i < ranges.length; i++) {
+    const range = ranges[i];
+    if (range && months >= range.from) index = i;
+  }
+
+  return index;
+};
+
+/**
  * Full date for a line of prose — "14 Jul 2027".
  *
  * The year is what separates this from `formatChipDate`, and a vaccination schedule needs

@@ -145,6 +145,10 @@ export const API_VACCINATION_LOGS = `${API_VERSION_URL}/vaccination-logs`;
 export const API_FEEDING_LOGS = `${API_VERSION_URL}/feeding-logs`;
 export const API_FEEDING_LOG_SETTINGS = `${API_VERSION_URL}/feeding-logs/settings`;
 
+// Child records. GET /user already returns the children embedded on the user, so there is
+// deliberately no list call here — these are the two that change one.
+export const API_CHILD = `${API_VERSION_URL}/child`;
+
 // Viva Club Endpoints
 const VIVA_CLUB_BASE = `${API_VERSION_URL}/viva-club`;
 export const API_VIVA_CLUB_POSTS = `${VIVA_CLUB_BASE}/posts`;

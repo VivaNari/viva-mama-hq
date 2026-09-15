@@ -187,8 +187,10 @@ const ChatWithVivaAI: React.FC = () => {
     // happen here. The server discards anything outside the bounds without complaint, so
     // catching it before submit is what turns a silently lost answer into a fixable one.
     const measurementError = useMemo(
-        () => validateMeasurement(lastMessage, state.inputText),
-        [lastMessage, state.inputText],
+        () => validateMeasurement(lastMessage, state.inputText, t),
+        // `t` belongs here: switching language has to re-render the message, not leave the
+        // previous locale's copy under the input.
+        [lastMessage, state.inputText, t],
     );
 
     const datePickerBounds = useMemo(() => {
