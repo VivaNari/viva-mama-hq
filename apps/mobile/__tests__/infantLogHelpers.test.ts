@@ -8,6 +8,8 @@
 import i18n from '../src/i18n';
 import {
   formatChipDate,
+  formatFullDate,
+  vaccinationDueWindow,
   formatClockTime,
   getAgeInDays,
   isSameDay,
@@ -210,5 +212,81 @@ describe('IST calendar days', () => {
     expect(
       formatChipDate(new Date('2026-09-12T19:00:00Z'), i18n.t.bind(i18n) as never),
     ).toBe('13 Sep');
+  });
+});
+
+/**
+ * When a visit on the immunisation schedule falls due.
+ *
+ * Tested here rather than only through the screen because the whole point of the helper is
+ * the difference between the two units, and one of the two has an edge the calendar has and
+ * arithmetic does not — a baby born on the 31st.
+ */
+describe('vaccinationDueWindow', () => {
+  const dob = '2026-03-14T06:00:00Z'; // 14 March 2026, 11:30 IST
+
+  const key = (date: Date) => istDateKey(date);
+
+  /** Weeks are exact: six weeks after birth is forty-two days after birth, always. */
+  it('counts weeks as days', () => {
+    const window = vaccinationDueWindow(dob, { unit: 'week', from: 6, to: 6 })!;
+
+    expect(key(window.from)).toBe('2026-04-25');
+    expect(key(window.to)).toBe('2026-04-25');
+  });
+
+  /**
+   * Months are calendar months. Nine months after 14 March is 14 December, not 274 days
+   * later — a parent checking the card against a birthday expects the day to match.
+   */
+  it('counts months as calendar months, landing on the same day', () => {
+    const window = vaccinationDueWindow(dob, { unit: 'month', from: 9, to: 12 })!;
+
+    expect(key(window.from)).toBe('2026-12-14');
+    expect(key(window.to)).toBe('2027-03-14');
+  });
+
+  it('carries a window past the end of the year', () => {
+    const window = vaccinationDueWindow(dob, { unit: 'month', from: 16, to: 24 })!;
+
+    expect(key(window.from)).toBe('2027-07-14');
+    expect(key(window.to)).toBe('2028-03-14');
+  });
+
+  /**
+   * The edge the calendar has and the arithmetic does not: there is no 31st of February.
+   *
+   * Clamped to the end of the target month rather than allowed to spill into the next one,
+   * because a visit must not appear to fall due in the month after the one the card names.
+   */
+  it('clamps a day the target month does not have', () => {
+    const lastOfJanuary = '2026-01-31T06:00:00Z';
+
+    expect(
+      key(vaccinationDueWindow(lastOfJanuary, { unit: 'month', from: 1, to: 1 })!.from),
+    ).toBe('2026-02-28');
+
+    // And the leap year it would otherwise get wrong in the other direction.
+    expect(
+      key(vaccinationDueWindow('2028-01-31T06:00:00Z', { unit: 'month', from: 1, to: 1 })!.from),
+    ).toBe('2028-02-29');
+  });
+
+  /** Nothing to say is better than a guess, on this screen most of all. */
+  it('gives nothing back without a usable date of birth', () => {
+    const due = { unit: 'week', from: 6, to: 6 } as const;
+
+    expect(vaccinationDueWindow(undefined, due)).toBeNull();
+    expect(vaccinationDueWindow('', due)).toBeNull();
+    expect(vaccinationDueWindow('not a date', due)).toBeNull();
+  });
+});
+
+describe('formatFullDate', () => {
+  /** The year is what separates this from the chip format: the schedule runs two years out. */
+  it('names the IST day and its year', () => {
+    expect(
+      formatFullDate(new Date('2026-09-12T19:00:00Z'), i18n.t.bind(i18n) as never),
+    ).toBe('13 Sep 2026');
   });
 });

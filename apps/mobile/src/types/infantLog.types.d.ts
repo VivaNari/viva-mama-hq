@@ -1,9 +1,11 @@
 /**
  * Types for the five infant log screens.
  *
- * Nothing here is persisted yet — every log screen holds its entries in component state
- * and loses them on unmount. The shapes are written as if they were the API payload so
- * that wiring a backend later is a swap of the state hook, not a rewrite of the screen.
+ * The shapes that describe *content* live here — schedules, catalogues, the options a
+ * screen offers. What a parent actually logged is a server row and is typed next to its
+ * API client instead (`growthLog.types`, `diaperLog.types`, `milestoneLog.types`,
+ * `vaccinationLog.types`). Feeding is the one screen still holding its entries in
+ * component state and losing them on unmount.
  */
 
 /**
@@ -85,21 +87,55 @@ export interface IDiaperKindConfig {
 
 export type TVaccinationSector = "public" | "private";
 
-export interface IVaccine {
-  /** Brand-neutral vaccine code (BCG, OPV-0). Not translated — these are proper nouns. */
+/**
+ * How the card writes a dose, as a kind rather than the printed string.
+ *
+ * The card says the same thing five ways — "Single dose", "0 (birth dose)", "Birth dose",
+ * a bare number, "Booster-1" — and the generator collapses those into these four so the
+ * label can be translated and the key can be stable. "1st dose" and "1" are the same dose.
+ */
+export type TVaccineDoseKind = "single" | "birth" | "number" | "booster";
+
+export interface IVaccineDose {
+  /**
+   * Stable key from the generated schedule, and the primary key in the database.
+   *
+   * It names the *dose*, not the schedule it appears on: BCG at birth reaches the same key
+   * from both sectors, so a family that switches keeps the ticks that genuinely carry over.
+   */
+  key: string;
+  /** The vaccine as printed on the card. A proper noun — never translated. */
   name: string;
-  /** i18n key for the line under the name. */
-  descriptionKey?: string;
+  doseKind: TVaccineDoseKind;
+  /** Which dose, where the card numbers them. Absent for "Single dose" and a bare booster. */
+  doseNumber?: number;
+  /** Whether `infant.vaccination.notes.<key>` exists — an absent note is not a missing one. */
+  note?: boolean;
+  /** Vitamin A is recorded in the immunisation section but is not a vaccine, and says so. */
+  supplement?: boolean;
+}
+
+/**
+ * When a visit falls due, as an offset from the date of birth.
+ *
+ * Weeks and months rather than a day count, because months are calendar months: the 16–24
+ * month window has to land on the same day of the month as the birthday.
+ */
+export interface IVaccinationDue {
+  unit: "week" | "month";
+  from: number;
+  to: number;
 }
 
 export interface IVaccinationVisit {
   key: string;
+  /** Short, for the chip: "6 weeks". */
   labelKey: string;
-  vaccines: IVaccine[];
+  /** The card's parenthetical, where it has one: "1½ months". */
+  detailKey?: string;
+  due: IVaccinationDue;
+  doses: IVaccineDose[];
 }
-
-/** Which vaccines of a visit are marked given, keyed by vaccine name. */
-export type TVaccinationSelection = Record<string, boolean>;
 
 /* -------------------------------- Milestone --------------------------------- */
 

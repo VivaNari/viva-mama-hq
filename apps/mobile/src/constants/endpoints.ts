@@ -135,6 +135,10 @@ export const API_DIAPER_LOGS = `${API_VERSION_URL}/diaper-logs`;
 // reached once, and re-logging it corrects the date it carries.
 export const API_MILESTONE_LOGS = `${API_VERSION_URL}/milestone-logs`;
 
+// Infant vaccination endpoints. Keyed on the dose rather than the day, and rather than the
+// sector — a dose is given once, and both schedules reach the ones they share by the same key.
+export const API_VACCINATION_LOGS = `${API_VERSION_URL}/vaccination-logs`;
+
 // Viva Club Endpoints
 const VIVA_CLUB_BASE = `${API_VERSION_URL}/viva-club`;
 export const API_VIVA_CLUB_POSTS = `${VIVA_CLUB_BASE}/posts`;

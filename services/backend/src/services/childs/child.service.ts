@@ -23,6 +23,7 @@ import {
 import logger, { createModuleLogger } from "../../utils/logger";
 import DiaperLogService from "../diaper-log/diaper-log.service";
 import MilestoneLogService from "../milestone-log/milestone-log.service";
+import VaccinationLogService from "../vaccination-log/vaccination-log.service";
 import GrowthLogService from "../growth-log/growth-log.service";
 import { ChildNotFoundError } from "./child-ownership";
 
@@ -205,14 +206,16 @@ export default class ChildService {
         // Non-fatal: the child is already gone from the user's document, and failing the
         // request here would report a deletion that did happen as an error.
         try {
-            const [growthLogs, diaperLogs, milestoneLogs] = await Promise.all([
-                new GrowthLogService().deleteForChild(userId, childId),
-                new DiaperLogService().deleteForChild(userId, childId),
-                new MilestoneLogService().deleteForChild(userId, childId),
-            ]);
+            const [growthLogs, diaperLogs, milestoneLogs, vaccinationLogs] =
+                await Promise.all([
+                    new GrowthLogService().deleteForChild(userId, childId),
+                    new DiaperLogService().deleteForChild(userId, childId),
+                    new MilestoneLogService().deleteForChild(userId, childId),
+                    new VaccinationLogService().deleteForChild(userId, childId),
+                ]);
 
             log.info(
-                { userId, childId, growthLogs, diaperLogs, milestoneLogs },
+                { userId, childId, growthLogs, diaperLogs, milestoneLogs, vaccinationLogs },
                 "Child logs deleted",
             );
         } catch (error) {

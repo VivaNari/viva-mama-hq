@@ -19,6 +19,7 @@ import messageModel from "../src/models/message.model";
 import moodLogModel from "../src/models/mood-log.model";
 import diaperLogModel from "../src/models/diaper-log.model";
 import milestoneLogModel from "../src/models/milestone-log.model";
+import vaccinationLogModel from "../src/models/vaccination-log.model";
 import growthLogModel from "../src/models/growth-log.model";
 import recommendationHistoryModel from "../src/models/recommendation-history.model";
 import reportModel from "../src/models/report.model";
@@ -137,6 +138,13 @@ async function seed() {
         milestoneKey: "develops_a_social_smile",
         achievedOn: new Date(),
     });
+    // And a dose from that child's immunisation card.
+    await vaccinationLogModel.create({
+        userId: uid,
+        childId: new Types.ObjectId(),
+        vaccineKey: "bcg",
+        givenOn: new Date(),
+    });
     // Inserted through the driver rather than the model: a valid recommendation
     // history needs a deep tree of per-category scores and copy, none of which the
     // deletion looks at. All that matters here is a row in the right collection
@@ -187,6 +195,7 @@ describe("AccountDeletionService", () => {
         expect(await growthLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await diaperLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await milestoneLogModel.countDocuments({ userId: uid })).toBe(0);
+        expect(await vaccinationLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await recommendationHistoryModel.countDocuments({ userId: uid })).toBe(0);
         expect(await supportModel.countDocuments({ userId: uid })).toBe(0);
         expect(await analyticsEventModel.countDocuments({ user_id: uid })).toBe(0);
@@ -342,7 +351,7 @@ describe("deletion coverage", () => {
             "users", "flow_instances", "flow_responses", "consultations",
             "consultation_reviews", "consultation_credits", "usage_counters",
             "subscriptions", "conversations", "messages", "ai_message_bookmarks",
-            "mood_logs", "growth_logs", "diaper_logs", "milestone_logs",
+            "mood_logs", "growth_logs", "diaper_logs", "milestone_logs", "vaccination_logs",
             "recommendation_histories", "supports",
             "analytics_events",
             "viva_club_posts", "viva_club_comments", "reports",

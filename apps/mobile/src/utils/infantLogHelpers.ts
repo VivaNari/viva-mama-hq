@@ -1,6 +1,6 @@
 import { TFunction } from "i18next";
 
-import { IFeedEntry } from "../types/infantLog.types";
+import { IFeedEntry, IVaccinationDue } from "../types/infantLog.types";
 
 /**
  * Pure helpers behind the infant log screens.
@@ -203,5 +203,74 @@ export const formatChipDate = (date: Date, t: TFunction): string => {
   return t("infant.dateChip", {
     day,
     month: t(`common.monthsShort.${MONTH_KEYS[month] ?? "jan"}`),
+  });
+};
+
+
+/** An instant that reads as midnight of the given IST calendar day. */
+const istMidnight = (year: number, month: number, day: number): Date =>
+  // Date.UTC normalises an out-of-range day or month for us, which is what makes the week
+  // arithmetic below a one-liner: day + 42 rolls into the next month by itself.
+  new Date(Date.UTC(year, month, day) - IST_OFFSET_MINUTES * 60000);
+
+/**
+ * When a visit on the immunisation schedule falls due.
+ *
+ * The card gives an age, not a date — "6 weeks", "16–24 months" — and a parent needs the
+ * date. The two units are handled differently on purpose:
+ *
+ *  - Weeks are exact. Six weeks after birth is forty-two days after birth, always.
+ *  - Months are calendar months. Nine months after 14 March is 14 December, not 274 days
+ *    later, and a parent checking the card against a birthday expects the day to match.
+ *
+ * Which leaves one edge the calendar has and the arithmetic does not: a baby born on the
+ * 31st has no "one month later". The day is clamped to the end of the target month, so 31
+ * January plus one month is 28 February rather than spilling into March — a visit must not
+ * appear to fall due in the month after the one the card names.
+ *
+ * Returns null when the date of birth is missing or unparseable, which is the screen's cue
+ * to say nothing rather than to guess: a wrong due date on a vaccination screen is worse
+ * than no due date.
+ */
+export const vaccinationDueWindow = (
+  dateOfBirth: Date | string | undefined | null,
+  due: IVaccinationDue,
+): { from: Date; to: Date } | null => {
+  if (!dateOfBirth) return null;
+
+  const dob = dateOfBirth instanceof Date ? dateOfBirth : new Date(dateOfBirth);
+  if (Number.isNaN(dob.getTime())) return null;
+
+  const { year, month, day } = istParts(dob);
+
+  const offset = (amount: number): Date => {
+    if (due.unit === "week") return istMidnight(year, month, day + amount * 7);
+
+    const target = month + amount;
+    const targetYear = year + Math.floor(target / 12);
+    const targetMonth = ((target % 12) + 12) % 12;
+    // Day 0 of the following month is the last day of this one.
+    const lastDay = new Date(Date.UTC(targetYear, targetMonth + 1, 0)).getUTCDate();
+
+    return istMidnight(targetYear, targetMonth, Math.min(day, lastDay));
+  };
+
+  return { from: offset(due.from), to: offset(due.to) };
+};
+
+/**
+ * Full date for a line of prose — "14 Jul 2027".
+ *
+ * The year is what separates this from `formatChipDate`, and a vaccination schedule needs
+ * it: the visits run two years out, and "14 Jul" alone leaves a parent working out which
+ * July. Built from translated month abbreviations for the same two reasons given there.
+ */
+export const formatFullDate = (date: Date, t: TFunction): string => {
+  const { year, month, day } = istParts(date);
+
+  return t("infant.dateFull", {
+    day,
+    month: t(`common.monthsShort.${MONTH_KEYS[month] ?? "jan"}`),
+    year,
   });
 };

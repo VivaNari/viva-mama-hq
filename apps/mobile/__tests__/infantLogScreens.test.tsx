@@ -78,6 +78,18 @@ jest.mock('../src/api/infantMilestone.api', () => ({
     forgetMilestone: jest.fn().mockResolvedValue(undefined),
 }));
 
+const {
+    getVaccinationLogs,
+    recordVaccineDose,
+    removeVaccineDose,
+} = require('../src/api/infantVaccination.api');
+
+jest.mock('../src/api/infantVaccination.api', () => ({
+    getVaccinationLogs: jest.fn().mockResolvedValue([]),
+    recordVaccineDose: jest.fn(),
+    removeVaccineDose: jest.fn().mockResolvedValue(undefined),
+}));
+
 jest.mock('../src/analytics', () => ({
     AnalyticsEvent: { VACCINATION_LOG_UPDATED: 'vaccination_log_updated' },
     track: jest.fn(),
@@ -888,33 +900,217 @@ describe('DiaperLog', () => {
 });
 
 describe('VaccinationLog', () => {
-    it('shows the schedule for the sector chosen at onboarding, addressed by name', () => {
-        mockRouteParams = { vaccinationSector: 'private', childName: 'Aarav' };
-
-        const { getByText } = render(<VaccinationLog />);
-
-        expect(getByText('Private sector schedule')).toBeTruthy();
-        expect(getByText('Has Aarav been vaccinated with:')).toBeTruthy();
-        expect(getByText('Hepatitis B1')).toBeTruthy();
+    beforeEach(() => {
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(120) };
+        getVaccinationLogs.mockClear();
+        recordVaccineDose.mockClear();
+        removeVaccineDose.mockClear();
+        getVaccinationLogs.mockResolvedValue([]);
+        recordVaccineDose.mockImplementation(async ({ vaccineKey }: { vaccineKey: string }) => ({
+            _id: 'v1',
+            childId: 'child-1',
+            vaccineKey,
+            givenOn: todayKey(),
+            createdAt: '',
+            updatedAt: '',
+        }));
+        removeVaccineDose.mockResolvedValue(undefined);
     });
 
     /**
-     * The two schedules do not share visit keys ('12m' is private-only), so switching has
-     * to land on the new list's first visit rather than keep the current key.
+     * The content is the MCP card's, generated into infantVaccinationData.ts. These
+     * assertions are against the card's own wording, so a regeneration that mangled a row
+     * or dropped one fails here rather than in a simulator.
      */
-    it('swaps the whole schedule when the sector is switched', () => {
-        mockRouteParams = { vaccinationSector: 'private' };
+    it('renders the birth visit from the MCP card', async () => {
+        const { getByText } = render(<VaccinationLog />);
 
+        await waitFor(() => expect(getVaccinationLogs).toHaveBeenCalledWith('child-1'));
+
+        expect(getByText('BCG')).toBeTruthy();
+        expect(getByText('Tuberculosis')).toBeTruthy();
+        expect(getByText('Hepatitis B')).toBeTruthy();
+        expect(getByText('Give within 24 hours of birth')).toBeTruthy();
+        expect(getByText('0 of 3 given')).toBeTruthy();
+    });
+
+    /**
+     * "Dose 1" rather than the card's bare "1", and no chip at all on a single dose.
+     *
+     * The card writes the same idea five ways and the generator collapses those into four
+     * kinds; this is the only place that mapping becomes something a parent reads.
+     */
+    it('labels the doses the card numbers, and leaves the single ones unlabelled', async () => {
+        const { getByText, getAllByText, queryByText } = render(<VaccinationLog />);
+
+        await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+
+        // Birth: BCG is a single dose, the other two are birth doses.
+        expect(queryByText('Dose 1')).toBeNull();
+        expect(getAllByText('Birth dose')).toHaveLength(2);
+
+        fireEvent.press(getByText('6 weeks · 0/5'));
+
+        expect(getByText('Pentavalent')).toBeTruthy();
+        expect(getAllByText('Dose 1').length).toBeGreaterThan(0);
+    });
+
+    it('shows only the visits through two years', async () => {
+        const { getByText, queryByText } = render(<VaccinationLog />);
+
+        await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+
+        expect(getByText('16–24 months · 0/5')).toBeTruthy();
+        // The card runs to sixteen years; the generator excludes everything past two.
+        expect(queryByText(/5–6 years/)).toBeNull();
+        expect(queryByText(/10 years/)).toBeNull();
+    });
+
+    /**
+     * The due date is the one thing on this screen the card does not print — it is derived
+     * from the child's date of birth, and it is the reason a parent opens the screen before
+     * a visit rather than after one.
+     */
+    it('works out when the visit falls due from the date of birth', async () => {
+        const dob = new Date('2026-03-14T06:00:00Z');
+        mockRouteParams = { childId: 'child-1', childDob: dob.toISOString() };
+
+        const { getByText } = render(<VaccinationLog />);
+
+        await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+        expect(getByText('Due at birth')).toBeTruthy();
+
+        // Six weeks after 14 March 2026 is 25 April 2026 — days, because weeks are exact.
+        fireEvent.press(getByText('6 weeks · 0/5'));
+        expect(getByText('Due around 25 Apr 2026')).toBeTruthy();
+
+        // Nine to twelve calendar months later, landing on the same day of the month.
+        fireEvent.press(getByText('9–12 months · 0/5'));
+        expect(getByText('Due between 14 Dec 2026 and 14 Mar 2027')).toBeTruthy();
+    });
+
+    /** A wrong due date on a vaccination screen is worse than no due date. */
+    it('says nothing about due dates when the date of birth did not come through', async () => {
+        mockRouteParams = { childId: 'child-1' };
+
+        const { getByText, queryByText } = render(<VaccinationLog />);
+
+        await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+        expect(queryByText('Due at birth')).toBeNull();
+    });
+
+    it('records a dose on one tap and lets it be un-recorded again', async () => {
+        const { getByLabelText, getByText } = render(<VaccinationLog />);
+
+        await waitFor(() => expect(getByText('0 of 3 given')).toBeTruthy());
+
+        fireEvent(getByLabelText('BCG'), 'valueChange', true);
+
+        await waitFor(() => expect(getByText('1 of 3 given')).toBeTruthy());
+        expect(recordVaccineDose).toHaveBeenCalledWith({
+            childId: 'child-1',
+            vaccineKey: 'bcg',
+        });
+        // A digit, because BCG's own note from the card is "Given at birth".
+        expect(getByText(/^Given \d/)).toBeTruthy();
+
+        fireEvent(getByLabelText('BCG'), 'valueChange', false);
+
+        await waitFor(() => expect(getByText('0 of 3 given')).toBeTruthy());
+        expect(removeVaccineDose).toHaveBeenCalledWith({
+            childId: 'child-1',
+            vaccineKey: 'bcg',
+        });
+    });
+
+    /**
+     * Optimistic, like the diaper and milestone logs: a failed write has to take its tick
+     * back. The rejection is held open and fired inside `act` so the flush is deterministic.
+     */
+    it('takes the tick back when the save fails', async () => {
+        let fail: (error: Error) => void = () => undefined;
+        recordVaccineDose.mockReturnValue(
+            new Promise((_resolve, reject) => {
+                fail = reject;
+            }),
+        );
+
+        const { getByLabelText, getByText } = render(<VaccinationLog />);
+
+        await waitFor(() => expect(getByText('0 of 3 given')).toBeTruthy());
+
+        fireEvent(getByLabelText('BCG'), 'valueChange', true);
+        expect(getByText('1 of 3 given')).toBeTruthy();
+
+        await act(async () => {
+            fail(new Error('offline'));
+        });
+
+        expect(getByText('0 of 3 given')).toBeTruthy();
+    });
+
+    /**
+     * The two schedules do not share visit keys ('12m' is private-only), so switching has to
+     * land on the new list's first visit rather than keep the current key.
+     */
+    it('swaps the whole schedule when the sector is switched', async () => {
         const { getByText, queryByText, getByLabelText } = render(<VaccinationLog />);
+
+        await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+
+        fireEvent.press(getByText('6 weeks · 0/5'));
+        expect(getByText('Pentavalent')).toBeTruthy();
 
         fireEvent.press(getByLabelText('Switch vaccination schedule'));
 
-        expect(getByText('Government sector schedule')).toBeTruthy();
-        expect(getByText('Hepatitis B — birth dose')).toBeTruthy();
-        expect(queryByText('Hepatitis B1')).toBeNull();
+        expect(getByText('Private sector schedule')).toBeTruthy();
+        expect(getByText('BCG')).toBeTruthy();
+        expect(queryByText('Pentavalent')).toBeNull();
     });
 
-    it('falls back to a neutral name when no child was passed', () => {
+    /**
+     * The decision this screen turns on: a key names the dose, not the sector.
+     *
+     * BCG at birth is the same row on both schedules, so a family that moves from a
+     * government centre to a private paediatrician keeps it. Pentavalent and DTwP are
+     * different products and deliberately do not carry over — equating them would tell a
+     * parent a dose had been given when it had not.
+     */
+    it('keeps a tick that both schedules share, and only the ones they share', async () => {
+        getVaccinationLogs.mockResolvedValue([
+            {
+                _id: 'v1',
+                childId: 'child-1',
+                vaccineKey: 'bcg',
+                givenOn: todayKey(),
+                createdAt: '',
+                updatedAt: '',
+            },
+            {
+                _id: 'v2',
+                childId: 'child-1',
+                vaccineKey: 'pentavalent_1',
+                givenOn: todayKey(),
+                createdAt: '',
+                updatedAt: '',
+            },
+        ]);
+
+        const { getByText, getByLabelText } = render(<VaccinationLog />);
+
+        await waitFor(() => expect(getByText('1 of 3 given')).toBeTruthy());
+        expect(getByText('6 weeks · 1/5')).toBeTruthy();
+
+        fireEvent.press(getByLabelText('Switch vaccination schedule'));
+
+        // BCG carries over; the 6-week visit is DTwP/Hib/HepB there and starts empty.
+        expect(getByText('1 of 3 given')).toBeTruthy();
+        expect(getByText('6 weeks · 0/6')).toBeTruthy();
+    });
+
+    it('falls back to a neutral name when no child was passed', async () => {
+        mockRouteParams = {};
+
         const { getByText } = render(<VaccinationLog />);
 
         expect(getByText('Has your baby been vaccinated with:')).toBeTruthy();

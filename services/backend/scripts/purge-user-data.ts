@@ -79,6 +79,7 @@ const PURGE: readonly string[] = [
     "growth_logs",
     "diaper_logs",
     "milestone_logs",
+    "vaccination_logs",
     "flow_instances",
     "flow_responses",
     "recommendation_histories",
