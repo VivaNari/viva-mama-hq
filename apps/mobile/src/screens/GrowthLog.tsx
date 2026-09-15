@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useRoute } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -81,6 +81,7 @@ const FIELD_TILE_LABEL: Record<IGrowthMeasurementField['key'], string> = {
 const GrowthLog: React.FC = () => {
     const { t } = useTranslation();
     const route = useRoute();
+    const navigation = useNavigation<any>();
     const params = (route.params ?? {}) as InfantLogRouteParams;
 
     const strip = useLogDateStrip(params.childDob);
@@ -283,11 +284,11 @@ const GrowthLog: React.FC = () => {
                 head_circumference_cm: typedMeasurement.head_circumference_cm,
             });
 
-            // Deliberately not clearing the form: reloading re-hydrates it from the row
-            // that was just written, so the mother sees her entry persisted rather than a
-            // blank screen that looks like the save was lost.
-            await loadLogs();
             Toast.show({ type: 'success', text1: t('infant.growth.saved') });
+            // Back to the dashboard rather than re-hydrating the form in place: the
+            // measurement is already what the chart and stat tiles need, and staying here
+            // reads as "log another one" when the whole point was one entry for today.
+            navigation.goBack();
         } catch (error) {
             console.log('[GrowthLog] Failed to save growth log', error);
             Toast.show({ type: 'error', text1: t('infant.growth.saveFailed') });

@@ -23,13 +23,14 @@ const FLInfantCheckInOptions = ({
      */
     params?: InfantLogRouteParams;
     /**
-     * Already-translated line replacing the tile's static one — "3 today" instead of "Not
-     * logged". Only tiles whose data the dashboard has actually loaded pass it; the rest
-     * keep `item.subtitleKey`, which is what a tile with nothing to report should say.
+     * A live line for the tile — "3 today" — passed only by tiles whose data the dashboard
+     * has actually loaded. There is no placeholder fallback any more: a tile with nothing to
+     * report renders no subtitle at all rather than a boilerplate "Not logged yet".
      */
     subtitle?: string;
 }) => {
     const { t } = useTranslation();
+    const subtitleText = subtitle ?? (item.subtitleKey ? t(item.subtitleKey) : undefined);
 
     return (
         <TouchableOpacity
@@ -48,9 +49,9 @@ const FLInfantCheckInOptions = ({
 
             <Text style={[styles.title, globalStyles.fontBold]}>{t(item.titleKey)}</Text>
 
-            <Text style={[styles.subtitle, globalStyles.fontRegular]}>
-                {subtitle ?? t(item.subtitleKey)}
-            </Text>
+            {subtitleText !== undefined && (
+                <Text style={[styles.subtitle, globalStyles.fontRegular]}>{subtitleText}</Text>
+            )}
         </TouchableOpacity>
     );
 };

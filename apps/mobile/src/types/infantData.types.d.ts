@@ -9,13 +9,13 @@ export interface IInfantCheckinOptions {
   /** MaterialDesignIcons glyph name shown above the title. */
   icon: string;
   /**
-   * i18n key for the line under the title.
+   * i18n key for the line under the title, when there is one.
    *
-   * Deliberately a static placeholder for now. The designs show live counts here
-   * ("5 today", "due in 3 days"), but none of the five log backends exist yet, so a real
-   * number would be fabricated. Swap these for computed values as each log lands.
+   * Left unset now that every log has a real backend: a placeholder like "Not logged yet"
+   * read as boilerplate rather than information on a tile that never had anything else to
+   * say. A tile with real data to show (the dashboard's `subtitle` prop) still renders it.
    */
-  subtitleKey: string;
+  subtitleKey?: string;
   /** Renders across both columns. Used for the odd tile out so the grid has no gap. */
   fullWidth?: boolean;
 }

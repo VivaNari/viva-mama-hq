@@ -853,8 +853,6 @@
     "ageMonths": "{{count}} months",
     "ageYear": "{{count}} year",
     "ageYears": "{{count}} years",
-    "tileNotLogged": "Not logged yet",
-    "tileSchedulePending": "Schedule pending",
     "childFallback": "your baby",
     "saveLog": "Save log",
     "addMore": "Add more",

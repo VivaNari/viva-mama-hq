@@ -13,6 +13,10 @@ import { IInfantData } from '../types/infantData.types';
  *
  * Tile order follows the design: Growth and Feeding, then Diaper and Vaccination, with
  * Milestone spanning the last row.
+ *
+ * None carries a `subtitleKey` any more — see the note on `IInfantCheckinOptions`. Diaper
+ * still gets a real line under the title, but it comes from the dashboard's live count
+ * (`FLInfantCheckInOptions`'s `subtitle` prop), not from this static data.
  */
 export const infantData: IInfantData = {
   checkinOptions: [
@@ -20,31 +24,26 @@ export const infantData: IInfantData = {
       titleKey: 'nav.growthLog',
       screen: 'GrowthLog',
       icon: 'ruler',
-      subtitleKey: 'infant.tileNotLogged',
     },
     {
       titleKey: 'nav.feedingLog',
       screen: 'FeedingLog',
       icon: 'baby-bottle-outline',
-      subtitleKey: 'infant.tileNotLogged',
     },
     {
       titleKey: 'nav.diaperLog',
       screen: 'DiaperLog',
       icon: 'water-outline',
-      subtitleKey: 'infant.tileNotLogged',
     },
     {
       titleKey: 'nav.vaccinationLog',
       screen: 'VaccinationLog',
       icon: 'needle',
-      subtitleKey: 'infant.tileSchedulePending',
     },
     {
       titleKey: 'nav.milestoneLog',
       screen: 'MilestoneLog',
       icon: 'foot-print',
-      subtitleKey: 'infant.tileNotLogged',
       fullWidth: true,
     },
   ],

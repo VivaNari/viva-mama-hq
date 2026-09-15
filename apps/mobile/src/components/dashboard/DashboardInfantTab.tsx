@@ -59,6 +59,12 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
      * A failed fetch leaves the chart showing its reference curves with no child points,
      * which is the same thing a child with no logs yet sees. That degrades honestly, so it
      * is not worth a toast on a dashboard the mother did not explicitly ask to refresh.
+     *
+     * Depends on `userData`, not just the child id: the dashboard's pull-to-refresh replaces
+     * `userData` with a fresh object without changing which child is selected, and this tab
+     * has no other way to learn that a refresh happened. Without it, a growth log entered and
+     * then refreshed back to would keep showing the chart from before the entry until the app
+     * was restarted.
      */
     useEffect(() => {
         let cancelled = false;
@@ -81,7 +87,7 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
         return () => {
             cancelled = true;
         };
-    }, [selectedChild?._id]);
+    }, [selectedChild?._id, userData]);
 
     const series = useMemo(() => buildSeries(growthLogs), [growthLogs]);
     const results = useMemo(() => latestResults(growthLogs), [growthLogs]);
@@ -100,6 +106,11 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
      * single most likely way this tile is looked at, and keyed on the child alone it would
      * still be showing the count from before the visit — the one number on the dashboard
      * guaranteed to be stale exactly when a parent goes to check it.
+     *
+     * `userData` is also a dependency of the memoized callback so that a pull-to-refresh —
+     * which happens while this screen is already focused, so a focus event never fires —
+     * still reruns it: `useFocusEffect` invokes the callback immediately whenever its
+     * identity changes and the screen is focused, not only on the focus event itself.
      */
     useFocusEffect(
         useCallback(() => {
@@ -125,7 +136,8 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
             return () => {
                 cancelled = true;
             };
-        }, [selectedChild?._id]),
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [selectedChild?._id, userData]),
     );
 
     /**

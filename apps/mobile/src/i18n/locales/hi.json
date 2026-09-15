@@ -853,8 +853,6 @@
     "ageMonths": "{{count}} महीने",
     "ageYear": "{{count}} साल",
     "ageYears": "{{count}} साल",
-    "tileNotLogged": "अभी लॉग नहीं किया",
-    "tileSchedulePending": "शेड्यूल लंबित",
     "childFallback": "आपका शिशु",
     "saveLog": "लॉग सेव करें",
     "addMore": "और जोड़ें",
