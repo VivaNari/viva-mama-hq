@@ -121,9 +121,15 @@ export const AnalyticsEvent = {
 
   // ---- Health logs (verb only — never the logged value) ------------------
   MOOD_LOG_SUBMITTED: 'mood_log_submitted',
-  // Not emitted: FeedingLog has no save handler at all — the screen is local
-  // state with nothing behind it, so there is no submission to observe. Add
-  // `feeding_log_submitted` when persistence lands.
+  // One event for all three of the feeding log's entry kinds and for its settings.
+  // Which kind it was, what the food was and how much milk she gave are all health
+  // data about a named child, and none of it leaves the device.
+  FEEDING_LOG_SUBMITTED: 'feeding_log_submitted',
+  // Separate because it is a different question: it measures how many families reach
+  // complementary feeding through the app, not how often they log. It carries no date —
+  // "when this baby started solids" would be exactly the value the verb-only rule exists
+  // to keep off the wire.
+  FEEDING_SOLIDS_STARTED: 'feeding_solids_started',
   VACCINATION_LOG_UPDATED: 'vaccination_log_updated',
   CHECKIN_STARTED: 'checkin_started',
   CHECKIN_COMPLETED: 'checkin_completed',

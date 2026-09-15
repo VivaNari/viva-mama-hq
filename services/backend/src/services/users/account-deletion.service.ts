@@ -12,6 +12,7 @@ import messageModel from "../../models/message.model";
 import moodLogModel from "../../models/mood-log.model";
 import diaperLogModel from "../../models/diaper-log.model";
 import milestoneLogModel from "../../models/milestone-log.model";
+import feedingLogModel from "../../models/feeding-log.model";
 import vaccinationLogModel from "../../models/vaccination-log.model";
 import growthLogModel from "../../models/growth-log.model";
 import recommendationHistoryModel from "../../models/recommendation-history.model";
@@ -174,6 +175,7 @@ export class AccountDeletionService {
         await record("vaccination_logs", () =>
             vaccinationLogModel.deleteMany({ userId: _id }),
         );
+        await record("feeding_logs", () => feedingLogModel.deleteMany({ userId: _id }));
         await record("recommendation_history", () =>
             recommendationHistoryModel.deleteMany({ userId: _id }),
         );

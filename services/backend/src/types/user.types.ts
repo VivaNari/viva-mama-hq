@@ -26,6 +26,27 @@ export interface IChild {
     date_of_birth?: Date;
     sex?: "Male" | "Female" | "Other";
     vaccination_sector?: EVaccinationSector;
+    /**
+     * How this child is fed right now, as set from the feeding log.
+     *
+     * Per child rather than per mother, which is where the same question already lives
+     * (`onboarding_data.feeding_method`, asked of postpartum mothers). A mother with a
+     * toddler and a newborn feeds them differently, and the onboarding answer cannot say
+     * so. It shares `FeedingMethodEnum` with her answer deliberately: the child's default
+     * is seeded from hers, and one vocabulary makes that an assignment rather than a
+     * mapping table.
+     *
+     * Absent until she changes it or logs a feed — an absent value falls back to hers.
+     */
+    feeding_method?: FeedingMethodEnum;
+    /**
+     * When complementary feeding started. Absent means it has not.
+     *
+     * A date rather than a flag because the date is the clinically interesting part — the
+     * MCP card treats "started solids at six months" as its own milestone — and because a
+     * flag could not answer "when".
+     */
+    solids_started_on?: Date | null;
     birth_measurements?: IChildBirthMeasurements;
     onboarding_status?: EChildOnboardingStatus;
     onboarded_at?: Date;

@@ -5,6 +5,7 @@ import {
     EUserCategory,
     EUserRole,
     EVaccinationSector,
+    FeedingMethodEnum,
     IChild,
     IUser,
     TUsercategory,
@@ -43,6 +44,19 @@ const childSchema = new Schema<IChild>(
         vaccination_sector: {
             type: String,
             enum: Object.values(EVaccinationSector),
+        },
+        // Set from the feeding log, not from onboarding — the baby flow has no feeding
+        // question. Shares the mother's vocabulary so her answer can seed this one.
+        feeding_method: {
+            type: String,
+            enum: Object.values(FeedingMethodEnum),
+        },
+        // Absent until complementary feeding starts, and settable back to null if it turns
+        // out it had not. Guarded at six months in the controller, not here: a schema
+        // cannot see the date of birth sitting next to it.
+        solids_started_on: {
+            type: Date,
+            default: null,
         },
         birth_measurements: {
             head_circumference_cm: { type: Number },

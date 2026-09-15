@@ -4,9 +4,10 @@
  * The shapes that describe *content* live here — schedules, catalogues, the options a
  * screen offers. What a parent actually logged is a server row and is typed next to its
  * API client instead (`growthLog.types`, `diaperLog.types`, `milestoneLog.types`,
- * `vaccinationLog.types`). Feeding is the one screen still holding its entries in
- * component state and losing them on unmount.
+ * `vaccinationLog.types`, `feedingLog.types`). All five now persist.
  */
+import { FeedingMethodEnum } from "./user.types";
+import { TFoodReaction } from "./feedingLog.types";
 
 /**
  * What the dashboard tiles hand to a log screen.
@@ -40,27 +41,31 @@ export interface IGrowthMeasurementField {
 
 /* --------------------------------- Feeding ---------------------------------- */
 
-export type TFeedingType = "exclusive_breastfeeding" | "formula" | "mixed";
+/**
+ * What a feed row can be attributed to, as the design draws it: two breasts and a bottle.
+ *
+ * One list here, split into `source` + `side` when it is stored — a bottle has no side, and
+ * a column that is sometimes a breast and sometimes a vessel cannot be counted.
+ */
+export type TFeedChoice = "left" | "right" | "bottle";
 
-export type TFeedSide = "left" | "right" | "bottle";
-
-export interface IFeedEntry {
-  /** "HH:MM", free text — a real time picker lands with the backend. */
-  time: string;
-  side: TFeedSide | null;
-  /** Minutes on the breast, or millilitres in the bottle, depending on `side`. */
-  amount: string;
-}
-
-export interface ISolidEntry {
-  time: string;
-  food: string;
-}
-
-export interface IFeedingTypeOption {
-  key: TFeedingType;
+export interface IFeedingMethodOption {
+  /**
+   * `FeedingMethodEnum` — the same vocabulary the mother's own onboarding answer uses.
+   *
+   * Deliberately hers rather than a second set of keys: her answer seeds the child's
+   * default, and one vocabulary makes that an assignment instead of a mapping table that
+   * nobody remembers to update. The labels differ ("Formula fed" here, "Not breastfeeding"
+   * in the flow); the stored value does not.
+   */
+  key: FeedingMethodEnum;
   labelKey: string;
   descriptionKey: string;
+}
+
+export interface IFoodReactionOption {
+  key: TFoodReaction;
+  labelKey: string;
 }
 
 /* ---------------------------------- Diaper ---------------------------------- */

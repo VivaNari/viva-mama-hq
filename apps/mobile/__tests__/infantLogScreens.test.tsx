@@ -90,8 +90,30 @@ jest.mock('../src/api/infantVaccination.api', () => ({
     removeVaccineDose: jest.fn().mockResolvedValue(undefined),
 }));
 
+const {
+    getFeedingLogs,
+    addFeed,
+    addSolid,
+    addWater,
+    removeFeedingEntry,
+    updateFeedingSettings,
+} = require('../src/api/infantFeeding.api');
+
+jest.mock('../src/api/infantFeeding.api', () => ({
+    getFeedingLogs: jest.fn(),
+    addFeed: jest.fn(),
+    addSolid: jest.fn(),
+    addWater: jest.fn(),
+    removeFeedingEntry: jest.fn().mockResolvedValue(undefined),
+    updateFeedingSettings: jest.fn(),
+}));
+
 jest.mock('../src/analytics', () => ({
-    AnalyticsEvent: { VACCINATION_LOG_UPDATED: 'vaccination_log_updated' },
+    AnalyticsEvent: {
+        VACCINATION_LOG_UPDATED: 'vaccination_log_updated',
+        FEEDING_LOG_SUBMITTED: 'feeding_log_submitted',
+        FEEDING_SOLIDS_STARTED: 'feeding_solids_started',
+    },
     track: jest.fn(),
 }));
 
@@ -495,83 +517,394 @@ describe('GrowthLog', () => {
 });
 
 describe('FeedingLog', () => {
-    it('starts a young baby on the 0–6 month log', () => {
-        mockRouteParams = { childDob: dobDaysAgo(30) };
+    /** The settings envelope the screen opens with. */
+    const settings = (over: Partial<Record<string, unknown>> = {}) => ({
+        feedingMethod: 'only_breastmilk',
+        feedingMethodSource: 'child',
+        solidsStartedOn: null,
+        solidsAvailable: false,
+        ...over,
+    });
 
-        const { getByText, queryByText } = render(<FeedingLog />);
+    const respondWith = (over: Partial<Record<string, unknown>> = {}, days: unknown[] = []) =>
+        getFeedingLogs.mockResolvedValue({ settings: settings(over), days });
+
+    /** One stored day in the shape the API returns. */
+    const day = (
+        loggedOn: string,
+        parts: { feeds?: unknown[]; solids?: unknown[]; water?: unknown[] } = {},
+    ) => ({
+        _id: `day-${loggedOn}`,
+        childId: 'child-1',
+        loggedOn,
+        feedingMethod: 'only_breastmilk',
+        feeds: parts.feeds ?? [],
+        solids: parts.solids ?? [],
+        water: parts.water ?? [],
+        totals: { feeds: 0, longestGapMinutes: null, solids: 0, waterMl: 0 },
+        createdAt: '',
+        updatedAt: '',
+    });
+
+    const breastFeed = (id: string, at: Date, minutes = 12) => ({
+        _id: id,
+        source: 'breast',
+        side: 'left',
+        minutes,
+        feedAt: at.toISOString(),
+    });
+
+    beforeEach(() => {
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(30) };
+
+        // The suite does not set `clearMocks`, so call history survives between tests.
+        getFeedingLogs.mockClear();
+        addFeed.mockClear();
+        addSolid.mockClear();
+        addWater.mockClear();
+        removeFeedingEntry.mockClear();
+        updateFeedingSettings.mockClear();
+
+        respondWith();
+    });
+
+    it('opens on the method the server resolved', async () => {
+        respondWith({ feedingMethod: 'mixed' });
+
+        const { getByText, getAllByRole } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
 
         expect(getByText('Feeding type')).toBeTruthy();
-        expect(getByText('Exclusively breastfeeding')).toBeTruthy();
-        expect(queryByText('Solids')).toBeNull();
-    });
 
-    it('starts an older baby on the solids log, addressed by name', () => {
-        mockRouteParams = { childDob: dobDaysAgo(200), childName: 'Aarav' };
-
-        const { getByText } = render(<FeedingLog />);
-
-        expect(
-            getByText(
-                'Aarav is 6 months+ — solids and water are now part of the daily log.',
-            ),
-        ).toBeTruthy();
-        expect(getByText('Solids')).toBeTruthy();
-    });
-
-    it('switches between the two versions from the link at the foot', () => {
-        mockRouteParams = { childDob: dobDaysAgo(30) };
-
-        const { getByText, queryByText } = render(<FeedingLog />);
-
-        fireEvent.press(getByText('Preview 6 months+ version →'));
-
-        expect(getByText('Water')).toBeTruthy();
-        expect(queryByText('Feeding type')).toBeNull();
+        const selected = getAllByRole('radio').filter(
+            (node) => node.props.accessibilityState?.selected,
+        );
+        expect(selected).toHaveLength(1);
     });
 
     /**
-     * The feeding type decides which fields a row offers — the PRD's "based on the chosen
-     * option we will enable the mother to insert the logs". A mother who is exclusively
-     * breastfeeding is not asked about a bottle.
+     * The whole point of sharing the mother's vocabulary: her onboarding answer arrives as
+     * the child's default, and the screen says where it came from rather than presenting
+     * it as something she chose here.
      */
-    it('offers only the sides that match the chosen feeding type', () => {
-        mockRouteParams = { childDob: dobDaysAgo(30) };
+    it('says when the default came from her onboarding answer', async () => {
+        respondWith({ feedingMethodSource: 'onboarding' });
 
+        const { getByText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        expect(getByText('From your onboarding answer — change it any time.')).toBeTruthy();
+    });
+
+    /**
+     * The PRD's "based on the chosen option we will enable the mother to insert the logs".
+     * A mother who is exclusively breastfeeding is not asked about a bottle.
+     */
+    it('offers only the choices that match the chosen method', async () => {
         const { getByText, queryByText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
 
         expect(getByText('Left')).toBeTruthy();
         expect(queryByText('Bottle')).toBeNull();
 
+        updateFeedingSettings.mockResolvedValue(settings({ feedingMethod: 'mixed' }));
         fireEvent.press(getByText('Mixed feeding'));
 
-        expect(getByText('Bottle')).toBeTruthy();
+        await waitFor(() => expect(getByText('Bottle')).toBeTruthy());
+        expect(updateFeedingSettings).toHaveBeenCalledWith({
+            childId: 'child-1',
+            feedingMethod: 'mixed',
+        });
     });
 
-    it('counts the feeds and the longest gap from what was entered', () => {
-        mockRouteParams = { childDob: dobDaysAgo(30) };
+    it('writes a feed optimistically and keeps the stored row', async () => {
+        const at = new Date();
+        addFeed.mockResolvedValue({
+            childId: 'child-1',
+            loggedOn: dateKey(at),
+            kind: 'feed',
+            entry: breastFeed('feed-1', at, 20),
+            totals: { feeds: 1, longestGapMinutes: null, solids: 0, waterMl: 0 },
+        });
 
-        const { getByText, getAllByLabelText } = render(<FeedingLog />);
+        const { getByText, getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
 
-        fireEvent.changeText(getAllByLabelText('Time')[0], '06:40');
-        fireEvent.press(getByText('Add more'));
-        fireEvent.changeText(getAllByLabelText('Time')[1], '09:50');
+        fireEvent.press(getByText('Left'));
+        fireEvent.changeText(getByLabelText('min'), '20');
+        fireEvent.press(getByText('Add feed'));
+
+        await waitFor(() => expect(addFeed).toHaveBeenCalled());
+        expect(addFeed.mock.calls[0][0]).toMatchObject({
+            childId: 'child-1',
+            source: 'breast',
+            side: 'left',
+            minutes: 20,
+        });
+        expect(getByText('Left · 20 min')).toBeTruthy();
+    });
+
+    /** An optimistic row that the server refuses has to leave again. */
+    it('rolls the feed back when the write fails', async () => {
+        addFeed.mockRejectedValue(new Error('offline'));
+
+        const { getByText, queryByText, getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        fireEvent.press(getByText('Left'));
+        fireEvent.changeText(getByLabelText('min'), '20');
+        fireEvent.press(getByText('Add feed'));
+
+        await waitFor(() => expect(queryByText('Left · 20 min')).toBeNull());
+        expect(getByText('No feeds logged yet today.')).toBeTruthy();
+    });
+
+    it('refuses to send a feed with no amount', async () => {
+        const { getByText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        fireEvent.press(getByText('Left'));
+        fireEvent.press(getByText('Add feed'));
+
+        expect(addFeed).not.toHaveBeenCalled();
+    });
+
+    it('counts the feeds and the longest gap from what is stored', async () => {
+        const now = new Date();
+        const key = dateKey(now);
+        respondWith({}, [
+            day(key, {
+                feeds: [
+                    breastFeed('a', new Date(now.getTime() - 190 * 60000)),
+                    breastFeed('b', now),
+                ],
+            }),
+        ]);
+
+        const { getByText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
 
         expect(getByText('2')).toBeTruthy();
         expect(getByText('3h 10m')).toBeTruthy();
     });
 
-    it('adds up the water tally and can reset it after a mis-tap', () => {
-        mockRouteParams = { childDob: dobDaysAgo(200) };
+    /* --------------------------- the six-month gate --------------------------- */
+
+    describe('the six-month gate', () => {
+        /**
+         * The reason this screen has no manual override any more.
+         *
+         * WHO and IAP both advise exclusive milk feeding to six completed months, so under
+         * six months solids and water are not hidden behind a link a curious parent can
+         * find — they are not rendered at all.
+         */
+        it('offers no solids, no water and no way to reach them under six months', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(120) };
+
+            const { getByText, queryByText } = render(<FeedingLog />);
+            await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+            expect(queryByText('Solids')).toBeNull();
+            expect(queryByText('Water')).toBeNull();
+            expect(queryByText('Ready for solids?')).toBeNull();
+            expect(
+                getByText(
+                    'Only milk for the first six months — no solids and no water. They appear here once your baby turns six months old.',
+                ),
+            ).toBeTruthy();
+        });
+
+        /** Six months old is not the same as eating. The screen asks and waits. */
+        it('asks before opening the solids sections', async () => {
+            mockRouteParams = {
+                childId: 'child-1',
+                childDob: dobDaysAgo(200),
+                childName: 'Aarav',
+            };
+            respondWith({ solidsAvailable: true });
+
+            const { getByText, queryByText } = render(<FeedingLog />);
+            await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+            expect(getByText('Ready for solids?')).toBeTruthy();
+            expect(queryByText('Solids')).toBeNull();
+            expect(queryByText('Water')).toBeNull();
+        });
+
+        /**
+         * "Not yet" is a real answer, and it has to do something visible — a card that
+         * looks like a choice and swallows the tap reads as broken. It is held for this
+         * visit only: a baby not on solids this week may be next week.
+         */
+        it('puts the question away for this visit when she says not yet', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(200) };
+            respondWith({ solidsAvailable: true });
+
+            const { getByText, queryByText } = render(<FeedingLog />);
+            await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+            fireEvent.press(getByText('Not yet'));
+
+            expect(queryByText('Ready for solids?')).toBeNull();
+            expect(queryByText('Solids')).toBeNull();
+            // Nothing was written: she said not yet, not "never".
+            expect(updateFeedingSettings).not.toHaveBeenCalled();
+        });
+
+        it('opens them once she says solids have started', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(200) };
+            respondWith({ solidsAvailable: true });
+            updateFeedingSettings.mockResolvedValue(
+                settings({ solidsAvailable: true, solidsStartedOn: dateKey(new Date()) }),
+            );
+
+            const { getByText } = render(<FeedingLog />);
+            await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+            fireEvent.press(getByText("We've started"));
+
+            await waitFor(() => expect(getByText('Solids')).toBeTruthy());
+            expect(getByText('Water')).toBeTruthy();
+            expect(updateFeedingSettings.mock.calls[0][0].solidsStartedOn).toBe(
+                dateKey(new Date()),
+            );
+        });
+
+        /**
+         * Additive, not a replacement. Milk is still the main meal from six to twelve
+         * months, and the original design dropped the feed section at exactly the point
+         * the baby is still getting most of its nutrition from it.
+         */
+        it('keeps the milk section once solids are on', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(220) };
+            respondWith({ solidsAvailable: true, solidsStartedOn: '2026-08-01' });
+
+            const { getByText } = render(<FeedingLog />);
+            await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+            expect(getByText('Milk feeds')).toBeTruthy();
+            expect(getByText('Still breastfeeding?')).toBeTruthy();
+            expect(getByText('Solids')).toBeTruthy();
+            expect(getByText('Water')).toBeTruthy();
+        });
+
+        /** A mother whose baby refuses solids must be able to take the answer back. */
+        it('can be turned off again without losing what was logged', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(220) };
+            respondWith({ solidsAvailable: true, solidsStartedOn: '2026-08-01' });
+            updateFeedingSettings.mockResolvedValue(
+                settings({ solidsAvailable: true, solidsStartedOn: null }),
+            );
+
+            const { getByText } = render(<FeedingLog />);
+            await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+            fireEvent.press(getByText('Not started yet'));
+
+            await waitFor(() => expect(getByText('Ready for solids?')).toBeTruthy());
+            expect(updateFeedingSettings.mock.calls[0][0].solidsStartedOn).toBeNull();
+        });
+    });
+
+    it('adds up the water tally from what is stored', async () => {
+        const now = new Date();
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(220) };
+        respondWith({ solidsAvailable: true, solidsStartedOn: '2026-08-01' }, [
+            day(dateKey(now), {
+                water: [
+                    { _id: 'w1', ml: 30, drankAt: now.toISOString() },
+                    { _id: 'w2', ml: 15, drankAt: now.toISOString() },
+                ],
+            }),
+        ]);
+
+        const { getByText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        expect(getByText('45')).toBeTruthy();
+    });
+
+    it('logs a sip of water and can undo the last one', async () => {
+        const now = new Date();
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(220) };
+        respondWith({ solidsAvailable: true, solidsStartedOn: '2026-08-01' });
+        addWater.mockResolvedValue({
+            childId: 'child-1',
+            loggedOn: dateKey(now),
+            kind: 'water',
+            entry: { _id: 'w1', ml: 30, drankAt: now.toISOString() },
+            totals: { feeds: 0, longestGapMinutes: null, solids: 0, waterMl: 30 },
+        });
 
         const { getByText, queryByText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
 
         fireEvent.press(getByText('+30 ml'));
-        fireEvent.press(getByText('+15 ml'));
-        expect(getByText('45')).toBeTruthy();
+        await waitFor(() => expect(getByText('30')).toBeTruthy());
 
-        fireEvent.press(getByText('Reset'));
-        expect(getByText('0')).toBeTruthy();
-        expect(queryByText('Reset')).toBeNull();
+        fireEvent.press(getByText('Undo last'));
+
+        await waitFor(() => expect(removeFeedingEntry).toHaveBeenCalled());
+        expect(removeFeedingEntry.mock.calls[0][0]).toMatchObject({
+            kind: 'water',
+            entryId: 'w1',
+        });
+        // The link rather than the total: "0" is also the feed count and the solids count,
+        // and an empty tally is exactly when there is nothing left to undo.
+        await waitFor(() => expect(queryByText('Undo last')).toBeNull());
+    });
+
+    it('records a solid with the reactions to it', async () => {
+        const now = new Date();
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(220) };
+        respondWith({ solidsAvailable: true, solidsStartedOn: '2026-08-01' });
+        addSolid.mockResolvedValue({
+            childId: 'child-1',
+            loggedOn: dateKey(now),
+            kind: 'solid',
+            entry: {
+                _id: 's1',
+                food: 'Mashed banana',
+                reactions: ['liked'],
+                feedAt: now.toISOString(),
+            },
+            totals: { feeds: 0, longestGapMinutes: null, solids: 1, waterMl: 0 },
+        });
+
+        const { getByText, getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        fireEvent.changeText(getByLabelText('Food'), 'Mashed banana');
+        fireEvent.press(getByText('Liked it'));
+        fireEvent.press(getByText('Add food'));
+
+        await waitFor(() => expect(addSolid).toHaveBeenCalled());
+        expect(addSolid.mock.calls[0][0]).toMatchObject({
+            food: 'Mashed banana',
+            reactions: ['liked'],
+        });
+        expect(getByText('Mashed banana')).toBeTruthy();
+    });
+
+    /**
+     * Past days are readable and closed, the rule the growth and diaper logs follow. The
+     * server enforces it too, so hiding the composer here is a courtesy rather than a guard.
+     */
+    it('shows a past day without a way to write to it', async () => {
+        const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const key = dateKey(yesterday);
+        respondWith({}, [
+            day(key, { feeds: [breastFeed('a', yesterday, 16)] }),
+        ]);
+
+        const { getByText, queryByText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        fireEvent.press(getByText(formatChipLabel(yesterday)));
+
+        expect(getByText('Left · 16 min')).toBeTruthy();
+        expect(queryByText('Add feed')).toBeNull();
+        expect(getByText('Earlier days are read-only.')).toBeTruthy();
     });
 });
 

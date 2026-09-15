@@ -16,14 +16,20 @@ import {
   isSameIstDay,
   isSixMonthsOrOlder,
   istDateKey,
-  parseClockTime,
   recentDates,
   splitDuration,
-  summariseFeeds,
+  summariseFeedDay,
 } from '../src/utils/infantLogHelpers';
-import { IFeedEntry } from '../src/types/infantLog.types';
+import { IFeedEntry } from '../src/types/feedingLog.types';
 
-const feed = (time: string): IFeedEntry => ({ time, side: null, amount: '' });
+/** A stored breast feed at a given time on one fixed day. */
+const feed = (time: string): IFeedEntry => ({
+  _id: time,
+  source: 'breast',
+  side: 'left',
+  minutes: 12,
+  feedAt: `2026-09-13T${time}:00.000Z`,
+});
 
 describe('getAgeInDays', () => {
   it('counts whole days since birth', () => {
@@ -71,37 +77,28 @@ describe('isSixMonthsOrOlder', () => {
   });
 });
 
-describe('parseClockTime', () => {
-  it('reads both 6:40 and 06:40', () => {
-    expect(parseClockTime('6:40')).toBe(400);
-    expect(parseClockTime('06:40')).toBe(400);
+describe('summariseFeedDay', () => {
+  it('counts the feeds on the day', () => {
+    expect(summariseFeedDay({ feeds: [feed('06:40'), feed('09:50')] }).feeds).toBe(2);
   });
 
-  /**
-   * Strictness matters: a half-typed "6:" parsing as 06:00 would put a feed in the summary
-   * that never happened.
-   */
-  it('rejects half-typed and impossible times', () => {
-    expect(parseClockTime('6:')).toBeNull();
-    expect(parseClockTime('')).toBeNull();
-    expect(parseClockTime('24:00')).toBeNull();
-    expect(parseClockTime('10:75')).toBeNull();
-    expect(parseClockTime('morning')).toBeNull();
-  });
-});
+  it('ignores an entry whose time will not parse', () => {
+    const summary = summariseFeedDay({
+      feeds: [feed('06:40'), { ...feed('09:50'), feedAt: 'not a time' }],
+    });
 
-describe('summariseFeeds', () => {
-  it('counts only rows with a readable time', () => {
-    const summary = summariseFeeds([feed('06:40'), feed(''), feed('nope')]);
     expect(summary.feeds).toBe(1);
   });
 
   it('has no gap to report until there are two feeds', () => {
-    expect(summariseFeeds([feed('06:40')]).longestGapMinutes).toBeNull();
+    expect(summariseFeedDay({ feeds: [feed('06:40')] }).longestGapMinutes).toBeNull();
+    expect(summariseFeedDay({}).longestGapMinutes).toBeNull();
   });
 
   it('measures the longest gap between consecutive feeds', () => {
-    const summary = summariseFeeds([feed('06:40'), feed('09:50'), feed('11:00')]);
+    const summary = summariseFeedDay({
+      feeds: [feed('06:40'), feed('09:50'), feed('11:00')],
+    });
 
     expect(summary.feeds).toBe(3);
     expect(summary.longestGapMinutes).toBe(190);
@@ -113,10 +110,20 @@ describe('summariseFeeds', () => {
 
   /** A mother who remembers the 06:40 feed last still gets the right gap. */
   it('sorts times before measuring, so entry order does not matter', () => {
-    const inOrder = summariseFeeds([feed('06:40'), feed('09:50')]);
-    const outOfOrder = summariseFeeds([feed('09:50'), feed('06:40')]);
+    const inOrder = summariseFeedDay({ feeds: [feed('06:40'), feed('09:50')] });
+    const outOfOrder = summariseFeedDay({ feeds: [feed('09:50'), feed('06:40')] });
 
     expect(outOfOrder).toEqual(inOrder);
+  });
+
+  it('counts solids and adds water up', () => {
+    const summary = summariseFeedDay({
+      solids: [{ _id: 'a' }, { _id: 'b' }],
+      water: [{ ml: 15 }, { ml: 30 }],
+    });
+
+    expect(summary.solids).toBe(2);
+    expect(summary.waterMl).toBe(45);
   });
 });
 

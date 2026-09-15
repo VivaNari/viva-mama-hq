@@ -139,6 +139,12 @@ export const API_MILESTONE_LOGS = `${API_VERSION_URL}/milestone-logs`;
 // sector — a dose is given once, and both schedules reach the ones they share by the same key.
 export const API_VACCINATION_LOGS = `${API_VERSION_URL}/vaccination-logs`;
 
+// Infant feeding endpoints. Day-keyed like the diaper log, with three entry kinds — milk
+// feeds, solids and water — behind one POST discriminated on `kind`. `/settings` writes the
+// child's own feeding method and solids start date rather than a log row.
+export const API_FEEDING_LOGS = `${API_VERSION_URL}/feeding-logs`;
+export const API_FEEDING_LOG_SETTINGS = `${API_VERSION_URL}/feeding-logs/settings`;
+
 // Viva Club Endpoints
 const VIVA_CLUB_BASE = `${API_VERSION_URL}/viva-club`;
 export const API_VIVA_CLUB_POSTS = `${VIVA_CLUB_BASE}/posts`;

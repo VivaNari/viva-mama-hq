@@ -1,6 +1,7 @@
 import { TFunction } from "i18next";
 
-import { IFeedEntry, IVaccinationDue } from "../types/infantLog.types";
+import { IFeedEntry, IFeedingTotals } from "../types/feedingLog.types";
+import { IVaccinationDue } from "../types/infantLog.types";
 
 /**
  * Pure helpers behind the infant log screens.
@@ -42,26 +43,6 @@ export const isSixMonthsOrOlder = (
   return days !== null && days >= 183;
 };
 
-/**
- * Minutes past midnight for a "HH:MM" string, or null if it is not a time.
- *
- * Deliberately strict: the summary below counts entries and measures gaps, and a half-typed
- * "6:" silently parsing as 06:00 would report a feed that never happened.
- */
-export const parseClockTime = (value: string | undefined | null): number | null => {
-  if (!value) return null;
-
-  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
-  if (!match) return null;
-
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-
-  if (hours > 23 || minutes > 59) return null;
-
-  return hours * 60 + minutes;
-};
-
 /** "HH:MM" in 24-hour form, which is how the design renders every logged time. */
 export const formatClockTime = (date: Date = new Date()): string => {
   const hours = String(date.getHours()).padStart(2, "0");
@@ -69,36 +50,46 @@ export const formatClockTime = (date: Date = new Date()): string => {
   return `${hours}:${minutes}`;
 };
 
-export interface IFeedingSummary {
-  /** Rows with a readable time. A half-filled row is not a feed. */
-  feeds: number;
-  /** Largest span between consecutive feeds, in minutes. Null until there are two. */
-  longestGapMinutes: number | null;
-}
-
 /**
  * The "Today" card on the feeding log.
  *
- * Times are sorted before measuring, so a parent who remembers the 06:40 feed after
- * entering the 09:50 one still gets the right gap. Feeds crossing midnight are not
- * modelled — each log is one calendar day, which is the unit the screen is built around.
+ * The server sends the same figures back with every day it returns, and this is not a
+ * second opinion: it is what fills the gap while an optimistic entry is still in flight,
+ * so the count under a mother's thumb moves the moment she taps rather than a round trip
+ * later. The two must agree, which is why the arithmetic here mirrors `totalsFor` in
+ * `services/feeding-log/feeding-log.service.ts` exactly.
+ *
+ * Feeds are sorted before the gap is measured, so a mother who remembers the 06:40 feed
+ * after entering the 09:50 one still gets the right answer. Feeds crossing midnight are not
+ * modelled — each log is one IST calendar day, the unit the screen is built around.
  */
-export const summariseFeeds = (entries: IFeedEntry[]): IFeedingSummary => {
-  const times = entries
-    .map((entry) => parseClockTime(entry.time))
-    .filter((minutes): minutes is number => minutes !== null)
+export const summariseFeedDay = (day: {
+  feeds?: IFeedEntry[];
+  solids?: { _id: string }[];
+  water?: { ml: number }[];
+}): IFeedingTotals => {
+  const times = (day.feeds ?? [])
+    .map((entry) => new Date(entry.feedAt).getTime())
+    .filter((time) => !Number.isNaN(time))
     .sort((a, b) => a - b);
 
-  if (times.length < 2) {
-    return { feeds: times.length, longestGapMinutes: null };
-  }
-
-  let longest = 0;
+  let longestGapMinutes: number | null = null;
   for (let i = 1; i < times.length; i++) {
-    longest = Math.max(longest, times[i] - times[i - 1]);
+    const current = times[i];
+    const previous = times[i - 1];
+    if (current === undefined || previous === undefined) continue;
+
+    const gap = Math.round((current - previous) / 60000);
+    longestGapMinutes =
+      longestGapMinutes === null ? gap : Math.max(longestGapMinutes, gap);
   }
 
-  return { feeds: times.length, longestGapMinutes: longest };
+  return {
+    feeds: times.length,
+    longestGapMinutes,
+    solids: (day.solids ?? []).length,
+    waterMl: (day.water ?? []).reduce((sum, entry) => sum + (entry.ml ?? 0), 0),
+  };
 };
 
 /** Splits minutes into the hours/minutes pair the "3h 10m" label interpolates. */

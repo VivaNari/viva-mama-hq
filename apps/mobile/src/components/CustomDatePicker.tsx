@@ -16,6 +16,12 @@ interface ICustomDatePickerProps {
      */
     minimumDate?: boolean | Date;
     maximumDate?: Date;
+    /**
+     * What the picker asks for. Defaults to a date, which is what every existing caller
+     * wants; the feeding log asks for a time, because a feed is an instant within today
+     * rather than a day.
+     */
+    mode?: 'date' | 'time';
 }
 
 const resolveMinimumDate = (minimumDate: boolean | Date | undefined): Date | undefined => {
@@ -29,7 +35,8 @@ const CustomDatePicker = ({
     selectedDate,
     onSelect,
     minimumDate = false,
-    maximumDate
+    maximumDate,
+    mode = 'date'
 }: ICustomDatePickerProps) => {
 
     const handleChange = (event: DateTimePickerEvent, date?: Date) => {
@@ -45,7 +52,7 @@ const CustomDatePicker = ({
             {show && (
                 <RNDateTimePicker
                     value={selectedDate || new Date()}
-                    mode="date"
+                    mode={mode}
                     display="default"
                     onChange={handleChange}
                     minimumDate={resolveMinimumDate(minimumDate)}

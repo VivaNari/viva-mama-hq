@@ -123,6 +123,24 @@ export const messages = {
     VACCINATION_LOG_FUTURE_NOT_ALLOWED: "Cannot record a vaccination for a future date",
     VACCINATION_LOG_BEFORE_BIRTH: "Cannot record a vaccination for a date before the child was born",
     VACCINATION_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+
+    FEEDING_LOG_SAVED_SUCCESS: "Feeding logged successfully",
+    FEEDING_LOG_FETCH_SUCCESS: "Feeding logs fetched successfully",
+    FEEDING_LOG_DELETED_SUCCESS: "Feeding log entry removed successfully",
+    FEEDING_LOG_SETTINGS_SUCCESS: "Feeding settings updated successfully",
+    FEEDING_LOG_NOT_FOUND: "Feeding log entry not found",
+    FEEDING_LOG_INVALID_DATE: "The entry time must be a valid date",
+    FEEDING_LOG_FUTURE_NOT_ALLOWED: "Cannot log a feed in the future",
+    FEEDING_LOG_BEFORE_BIRTH: "Cannot log a feed for a time before the child was born",
+    FEEDING_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+    FEEDING_LOG_DAY_CLOSED:
+        "Only today's feeds can be added or removed. Earlier days are read-only.",
+    // Solids and water are refused below six months on clinical guidance, not preference:
+    // WHO and IAP both advise exclusive milk feeding to six completed months.
+    FEEDING_LOG_SOLIDS_TOO_EARLY:
+        "Solids and water can only be logged once the baby is six months old",
+    FEEDING_LOG_SOLIDS_NOT_STARTED:
+        "Record that solids have started before logging solids or water",
     SUBSCRIPTION_FETCH_SUCCESS: "Subscription fetched successfully",
     SUBSCRIPTION_PLANS_FETCH_SUCCESS: "Subscription plans fetched successfully",
     TRIAL_STARTED_SUCCESS: "Free trial started successfully",
