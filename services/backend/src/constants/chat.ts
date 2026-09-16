@@ -228,6 +228,80 @@ export const getScoreReadyNotification = (
 };
 
 // ============================================
+// Growth-log nudge push notification
+// ============================================
+
+/**
+ * Localized push-notification copy sent right after a vaccination dose is logged, nudging
+ * the parent to also log today's growth. `{{child_name}}` is interpolated at send time,
+ * matching the placeholder convention the baby-onboarding flow already uses.
+ */
+export const GROWTH_LOG_NUDGE_NOTIFICATION_I18N: Record<FlowLanguage, NotificationCopy> = {
+    en: {
+        title: "Don't forget growth!",
+        body: "You just logged a vaccination for {{child_name}}. While you're at it, log today's growth too.",
+    },
+    hi: {
+        title: "ग्रोथ लॉग करना न भूलें!",
+        body: "आपने अभी {{child_name}} का टीकाकरण लॉग किया है। साथ ही आज की ग्रोथ भी लॉग कर लें।",
+    },
+};
+
+/** Resolve the growth-log nudge notification copy for the given language. */
+export const getGrowthLogNudgeNotification = (
+    lang: FlowLanguage = DEFAULT_FLOW_LANGUAGE,
+): NotificationCopy => {
+    return GROWTH_LOG_NUDGE_NOTIFICATION_I18N[lang] ?? GROWTH_LOG_NUDGE_NOTIFICATION_I18N.en;
+};
+
+// ============================================
+// Baby age-reminder push notifications (vaccination/milestone due)
+// ============================================
+
+/**
+ * Localized push copy for the daily age-reminder job. `{{child_name}}` and `{{count}}`
+ * are interpolated at send time. Deliberately generic about *which* visit/band — the
+ * catalogue that would name it is display-only data that lives in the mobile app's own
+ * generated files, not in the backend (see `@vivamama/infant-schedules`'s own doc comment
+ * on why), so the push says "what" (count) and the app screen says "which" once opened.
+ */
+export const VACCINATION_DUE_NOTIFICATION_I18N: Record<FlowLanguage, NotificationCopy> = {
+    en: {
+        title: "Vaccination due",
+        body: "{{count}} vaccination(s) may be due for {{child_name}}. Open the Vaccination Log to check.",
+    },
+    hi: {
+        title: "टीकाकरण देय है",
+        body: "{{child_name}} के लिए {{count}} टीकाकरण देय हो सकते हैं। जाँचने के लिए टीकाकरण लॉग खोलें।",
+    },
+};
+
+/** Resolve the vaccination-due notification copy for the given language. */
+export const getVaccinationDueNotification = (
+    lang: FlowLanguage = DEFAULT_FLOW_LANGUAGE,
+): NotificationCopy => {
+    return VACCINATION_DUE_NOTIFICATION_I18N[lang] ?? VACCINATION_DUE_NOTIFICATION_I18N.en;
+};
+
+export const MILESTONE_DUE_NOTIFICATION_I18N: Record<FlowLanguage, NotificationCopy> = {
+    en: {
+        title: "New milestones to check",
+        body: "{{child_name}} may have reached new milestones. Open the Milestone Log to check them off.",
+    },
+    hi: {
+        title: "नए माइलस्टोन देखें",
+        body: "{{child_name}} ने नए माइलस्टोन हासिल किए हो सकते हैं। जाँचने के लिए माइलस्टोन लॉग खोलें।",
+    },
+};
+
+/** Resolve the milestone-due notification copy for the given language. */
+export const getMilestoneDueNotification = (
+    lang: FlowLanguage = DEFAULT_FLOW_LANGUAGE,
+): NotificationCopy => {
+    return MILESTONE_DUE_NOTIFICATION_I18N[lang] ?? MILESTONE_DUE_NOTIFICATION_I18N.en;
+};
+
+// ============================================
 // SSE Event Types
 // ============================================
 

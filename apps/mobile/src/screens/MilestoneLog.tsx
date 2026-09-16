@@ -23,7 +23,7 @@ import { globalStyles } from '../public/styles';
 import { infantLogStyles } from '../public/styles/infantLogStyles';
 import { InfantLogRouteParams } from '../types/infantLog.types';
 import { IMilestoneLog } from '../types/milestoneLog.types';
-import { currentAgeIndex } from '../utils/infantLogHelpers';
+import { currentAgeIndex, reachedAgeIndices } from '../utils/infantLogHelpers';
 
 /**
  * Milestone Log (PRD 4.2) — the India MCP card's age-wise development milestones.
@@ -54,6 +54,11 @@ const MilestoneLog: React.FC = () => {
     const params = (route.params ?? {}) as InfantLogRouteParams;
     const { width } = useWindowDimensions();
 
+    const bandAgeRanges = useMemo(
+        () => MILESTONE_BANDS.map((entry) => entry.ageMonths),
+        [],
+    );
+
     /**
      * Opens on the band the child is actually in, not on the first one.
      *
@@ -61,13 +66,7 @@ const MilestoneLog: React.FC = () => {
      * would only ever fight a mother who has deliberately looked at another one.
      */
     const [activeBandKey, setActiveBandKey] = useState(
-        () =>
-            MILESTONE_BANDS[
-                currentAgeIndex(
-                    MILESTONE_BANDS.map((entry) => entry.ageMonths),
-                    params.childDob,
-                )
-            ]!.key,
+        () => MILESTONE_BANDS[currentAgeIndex(bandAgeRanges, params.childDob)]!.key,
     );
     const [logs, setLogs] = useState<IMilestoneLog[]>([]);
     const [loading, setLoading] = useState(false);
@@ -76,6 +75,16 @@ const MilestoneLog: React.FC = () => {
     const band =
         MILESTONE_BANDS.find((candidate) => candidate.key === activeBandKey) ??
         MILESTONE_BANDS[0];
+
+    /**
+     * Only bands the child has reached are offered as tabs — a band due in six months is not
+     * one a parent can usefully open today. Bands already passed stay visible: a milestone
+     * reached later than average still needs a place to be logged.
+     */
+    const visibleBands = useMemo(() => {
+        const reached = reachedAgeIndices(bandAgeRanges, params.childDob);
+        return MILESTONE_BANDS.filter((_, index) => reached.has(index));
+    }, [bandAgeRanges, params.childDob]);
 
     const loadLogs = useCallback(async () => {
         if (!params.childId) return;
@@ -176,7 +185,7 @@ const MilestoneLog: React.FC = () => {
     return (
         <SafeAreaView style={infantLogStyles.screen} edges={['bottom', 'left', 'right']}>
             <LogChipTabs
-                tabs={MILESTONE_BANDS.map((candidate) => ({
+                tabs={visibleBands.map((candidate) => ({
                     key: candidate.key,
                     label: t(candidate.labelKey),
                 }))}

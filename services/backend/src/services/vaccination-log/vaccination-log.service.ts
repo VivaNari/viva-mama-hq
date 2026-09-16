@@ -1,10 +1,19 @@
+import { getGrowthLogNudgeNotification } from "../../constants/chat";
+import growthLogModel from "../../models/growth-log.model";
+import UserModel from "../../models/user.model";
 import vaccinationLogModel from "../../models/vaccination-log.model";
 import { IVaccinationLog } from "../../types/vaccination-log.types";
+import { resolveLanguage } from "../../utils/i18n/localizeFlowDefinition";
+import logger, { createModuleLogger } from "../../utils/logger";
+import { sendPushNotification } from "../../utils/sendPushNotification";
 import BaseService from "../base.service";
 import { ChildNotFoundError, getOwnedChild } from "../childs/child-ownership";
+import { getISTCalendarDate } from "../date/date.service";
 
 /** Re-exported for the controller and tests that import it from here. */
 export { ChildNotFoundError };
+
+const log = createModuleLogger(logger, "vaccination-log.service");
 
 export interface RecordDoseParams {
     userId: string;
@@ -35,7 +44,7 @@ class VaccinationLogService extends BaseService<IVaccinationLog> {
         vaccineKey,
         givenOn,
     }: RecordDoseParams): Promise<IVaccinationLog> => {
-        await getOwnedChild(userId, childId);
+        const child = await getOwnedChild(userId, childId);
 
         const document = await vaccinationLogModel.findOneAndUpdate(
             { userId, childId, vaccineKey },
@@ -46,7 +55,46 @@ class VaccinationLogService extends BaseService<IVaccinationLog> {
             { upsert: true, new: true, setDefaultsOnInsert: true },
         );
 
+        // Fire-and-forget: a notification failure must never fail the dose that was just
+        // recorded, and the caller should not wait on a push send.
+        this.notifyGrowthLogNudge(userId, childId, child.name).catch((error) => {
+            log.error({ error, userId, childId }, "Failed to send growth-log nudge notification");
+        });
+
         return document as IVaccinationLog;
+    };
+
+    /**
+     * Nudge the parent to log today's growth right after a vaccination dose is recorded.
+     *
+     * Skipped when growth was already logged today — the point is to close the gap between
+     * the two logs, not to notify on every dose regardless of what she's already done.
+     */
+    private notifyGrowthLogNudge = async (
+        userId: string,
+        childId: string,
+        childName?: string,
+    ): Promise<void> => {
+        const user = await UserModel.findById(userId).lean();
+        if (!user?.FCM_token) return;
+
+        const today = getISTCalendarDate();
+        const alreadyLoggedToday = await growthLogModel.exists({
+            userId,
+            childId,
+            measuredOn: today,
+        });
+        if (alreadyLoggedToday) return;
+
+        const lang = resolveLanguage(user.preferred_language);
+        const copy = getGrowthLogNudgeNotification(lang);
+
+        await sendPushNotification({
+            token: user.FCM_token,
+            title: copy.title,
+            body: copy.body.replace("{{child_name}}", childName || "your baby"),
+            data: { type: "GROWTH_LOG_NUDGE", childId: String(childId) },
+        });
     };
 
     /**

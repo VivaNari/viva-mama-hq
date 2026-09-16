@@ -71,6 +71,33 @@ const childSchema = new Schema<IChild>(
         onboarded_at: {
             type: Date,
         },
+        // Tracking rows for the daily age-reminder job, not user-facing data — `_id: false`
+        // because nothing ever addresses one on its own. `default: []` covers every child
+        // created from here on; children that predate this field are backfilled by
+        // backfill-baby-reminder-fields.step.ts, since Mongoose does not retroactively
+        // apply a schema default to a document that is only read, never re-saved.
+        pending_vaccination_reminders: {
+            type: [
+                {
+                    _id: false,
+                    visitKey: { type: String, required: true },
+                    firstDueOn: { type: Date, required: true },
+                    lastRemindedOn: { type: Date, default: null },
+                },
+            ],
+            default: [],
+        },
+        pending_milestone_reminders: {
+            type: [
+                {
+                    _id: false,
+                    bandKey: { type: String, required: true },
+                    firstDueOn: { type: Date, required: true },
+                    lastRemindedOn: { type: Date, default: null },
+                },
+            ],
+            default: [],
+        },
     },
     {
         timestamps: true,

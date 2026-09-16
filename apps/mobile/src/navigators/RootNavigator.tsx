@@ -8,6 +8,7 @@ import { useAuth } from "../context/AuthContext";
 import { colors } from "../public/assets/colors";
 import { AnalyticsEvent, track, trackScreen } from "../analytics";
 import type { NotificationSource } from "../analytics";
+import { resolveInfantLogParams } from "../utils/resolveInfantLogParams";
 
 import PaywallSheet from "../components/subscriptions/PaywallSheet";
 import AppStack from "./stacks/AppStack";
@@ -23,6 +24,8 @@ interface NotificationData {
     contentId?: string;
     /** Which pre-call reminder this is: "60" or "15" minutes before the call. */
     minutesBefore?: string;
+    /** Carried by GROWTH_LOG_NUDGE, VACCINATION_DUE and MILESTONE_DUE. */
+    childId?: string;
 }
 
 export default function RootNavigator() {
@@ -39,12 +42,13 @@ export default function RootNavigator() {
     });
 
     useEffect(() => {
-        const handleNotification = (
+        const handleNotification = async (
             remoteMessage: FirebaseMessagingTypes.RemoteMessage,
             source: NotificationSource,
         ) => {
             console.log('[ROOT_NAVIGATOR] Handling notification:', remoteMessage);
-            const { flowSlug, consultationId, type, contentId } = remoteMessage.data as unknown as NotificationData;
+            const { flowSlug, consultationId, type, contentId, childId } =
+                remoteMessage.data as unknown as NotificationData;
 
             // Logged before the onboarding gate below, so pushes that land on a
             // user who cannot act on them are still visible in the funnel — that
@@ -93,6 +97,28 @@ export default function RootNavigator() {
                     navigationRef.current?.navigate("AppStack", {
                         screen: "DashboardTabNavigator",
                     });
+                } else if (
+                    (type === 'GROWTH_LOG_NUDGE' ||
+                        type === 'VACCINATION_DUE' ||
+                        type === 'MILESTONE_DUE') &&
+                    childId
+                ) {
+                    const screen =
+                        type === 'GROWTH_LOG_NUDGE'
+                            ? 'GrowthLog'
+                            : type === 'VACCINATION_DUE'
+                                ? 'VaccinationLog'
+                                : 'MilestoneLog';
+
+                    const params = await resolveInfantLogParams(childId);
+                    if (params) {
+                        console.log(`[ROOT_NAVIGATOR] Navigating to ${screen}`);
+                        navigationRef.current?.navigate("AppStack", { screen, params });
+                    } else {
+                        console.log(
+                            `[ROOT_NAVIGATOR] Could not resolve child ${childId} for ${type}`,
+                        );
+                    }
                 } else if (flowSlug) {
                     // Deliberately last: this is the catch-all for chat flows, and every
                     // typed branch above must get its chance first. It used to sit above

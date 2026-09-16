@@ -1305,9 +1305,17 @@ describe('VaccinationLog', () => {
      * kinds; this is the only place that mapping becomes something a parent reads.
      */
     it('labels the doses the card numbers, and leaves the single ones unlabelled', async () => {
+        // Old enough to have reached the 6-week visit this test presses into — the
+        // beforeEach's newborn default only has the birth visit as a tab.
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(60) };
+
         const { getByText, getAllByText, queryByText } = render(<VaccinationLog />);
 
-        await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+        // Old enough that the screen no longer opens on the birth visit by default —
+        // asked for explicitly, same as "works out when the visit falls due" above.
+        await waitFor(() => expect(getByText('6 weeks · 0/5')).toBeTruthy());
+        fireEvent.press(getByText('Birth · 0/3'));
+        expect(getByText('BCG')).toBeTruthy();
 
         // Birth: BCG is a single dose, the other two are birth doses.
         expect(queryByText('Dose 1')).toBeNull();
@@ -1320,9 +1328,15 @@ describe('VaccinationLog', () => {
     });
 
     it('shows only the visits through two years', async () => {
+        // Old enough to have reached every visit, including the last one this test checks
+        // for — otherwise the beforeEach's newborn default hides it as not-yet-due.
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(900) };
+
         const { getByText, queryByText } = render(<VaccinationLog />);
 
-        await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+        // Old enough that the screen opens on the last visit, not the birth one, so BCG
+        // is not what signals the load — the chip strip itself is.
+        await waitFor(() => expect(getVaccinationLogs).toHaveBeenCalledWith('child-1'));
 
         expect(getByText('16–24 months · 0/5')).toBeTruthy();
         // The card runs to sixteen years; the generator excludes everything past two.
@@ -1336,26 +1350,29 @@ describe('VaccinationLog', () => {
      * a visit rather than after one.
      */
     it('works out when the visit falls due from the date of birth', async () => {
-        const dob = new Date('2026-03-14T06:00:00Z');
+        // Fixed rather than relative to "now", because the due-date labels asserted below
+        // are calendar-exact — but old enough (well past two years) that every visit is a
+        // reached, pressable tab regardless of which real day this test runs on.
+        const dob = new Date('2015-03-14T06:00:00Z');
         mockRouteParams = { childId: 'child-1', childDob: dob.toISOString() };
 
         const { getByText } = render(<VaccinationLog />);
 
-        // This child is months old, so the screen opens further down the schedule; the
-        // birth visit has to be asked for.
+        // This child is years old, so the screen opens on the last visit; the birth visit
+        // has to be asked for.
         await waitFor(() => expect(getByText('Birth · 0/3')).toBeTruthy());
         fireEvent.press(getByText('Birth · 0/3'));
 
         expect(getByText('BCG')).toBeTruthy();
         expect(getByText('Due at birth')).toBeTruthy();
 
-        // Six weeks after 14 March 2026 is 25 April 2026 — days, because weeks are exact.
+        // Six weeks after 14 March 2015 is 25 April 2015 — days, because weeks are exact.
         fireEvent.press(getByText('6 weeks · 0/5'));
-        expect(getByText('Due around 25 Apr 2026')).toBeTruthy();
+        expect(getByText('Due around 25 Apr 2015')).toBeTruthy();
 
         // Nine to twelve calendar months later, landing on the same day of the month.
         fireEvent.press(getByText('9–12 months · 0/5'));
-        expect(getByText('Due between 14 Dec 2026 and 14 Mar 2027')).toBeTruthy();
+        expect(getByText('Due between 14 Dec 2015 and 14 Mar 2016')).toBeTruthy();
     });
 
     /** A wrong due date on a vaccination screen is worse than no due date. */
@@ -1428,11 +1445,17 @@ describe('VaccinationLog', () => {
      */
     describe('the schedule the child is on', () => {
         it('renders the government schedule and offers no way out of it', async () => {
+            // Old enough to have reached the 6-week visit this test presses into.
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(60) };
+
             const { getByText, queryByText, queryByLabelText } = render(<VaccinationLog />);
 
-            await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+            // Old enough that the screen no longer opens on the birth visit by default —
+            // asked for explicitly, same as "works out when the visit falls due" above.
+            await waitFor(() => expect(getByText('Government sector schedule')).toBeTruthy());
+            fireEvent.press(getByText('Birth · 0/3'));
 
-            expect(getByText('Government sector schedule')).toBeTruthy();
+            expect(getByText('BCG')).toBeTruthy();
             expect(getByText('set when you added your baby')).toBeTruthy();
             expect(queryByLabelText('Switch vaccination schedule')).toBeNull();
 
@@ -1442,17 +1465,21 @@ describe('VaccinationLog', () => {
         });
 
         it('renders the private schedule for a private-sector child', async () => {
+            // Old enough to have reached the 6-week visit this test presses into.
             mockRouteParams = {
                 childId: 'child-1',
-                childDob: dobDaysAgo(5),
+                childDob: dobDaysAgo(60),
                 vaccinationSector: 'private',
             };
 
             const { getByText, queryByText } = render(<VaccinationLog />);
 
-            await waitFor(() => expect(getByText('BCG')).toBeTruthy());
+            // Old enough that the screen no longer opens on the birth visit by default —
+            // asked for explicitly, same as "works out when the visit falls due" above.
+            await waitFor(() => expect(getByText('Private sector schedule')).toBeTruthy());
+            fireEvent.press(getByText('Birth · 0/3'));
 
-            expect(getByText('Private sector schedule')).toBeTruthy();
+            expect(getByText('BCG')).toBeTruthy();
 
             fireEvent.press(getByText('6 weeks · 0/6'));
             expect(getByText('DTwP/DTaP')).toBeTruthy();
@@ -1670,9 +1697,17 @@ describe('MilestoneLog', () => {
     });
 
     it('changes band when another age chip is chosen', async () => {
+        // Old enough that every band is a reached, pressable tab — the beforeEach's
+        // newborn default only has the 2-3 month one. This also means the screen no
+        // longer opens on 2-3 months by default, so that band is pressed into first.
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(900) };
+
         const { getByText, queryByText } = render(<MilestoneLog />);
 
-        await waitFor(() => expect(getByText('Develops a social smile')).toBeTruthy());
+        await waitFor(() => expect(getMilestoneLogs).toHaveBeenCalled());
+
+        fireEvent.press(getByText('2–3 months'));
+        expect(getByText('Develops a social smile')).toBeTruthy();
 
         fireEvent.press(getByText('10–12 months'));
 
@@ -1686,6 +1721,10 @@ describe('MilestoneLog', () => {
      * with no milestones behind it would be worse than no tab.
      */
     it('covers six bands, through two years, and not the third year', async () => {
+        // Old enough to have reached every shipped band, including the last one this test
+        // checks for.
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(900) };
+
         const { getByText, queryByText } = render(<MilestoneLog />);
 
         await waitFor(() => expect(getByText('2–3 months')).toBeTruthy());

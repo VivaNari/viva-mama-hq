@@ -17,6 +17,26 @@ export interface IChildBirthMeasurements {
     weight_grams?: number;
 }
 
+/**
+ * A vaccination visit the daily age-reminder job is still nudging about for this child.
+ *
+ * Added the day the visit's due window opens; removed once every dose in it is logged,
+ * which is what stops the recurrence — the same "clear it once satisfied" shape
+ * `reminders_sent` uses on `consultation.schema.ts`.
+ */
+export interface IPendingVaccinationReminder {
+    visitKey: string;
+    firstDueOn: Date;
+    lastRemindedOn?: Date | null;
+}
+
+/** Same shape as `IPendingVaccinationReminder`, for a milestone band instead of a visit. */
+export interface IPendingMilestoneReminder {
+    bandKey: string;
+    firstDueOn: Date;
+    lastRemindedOn?: Date | null;
+}
+
 export interface IChild {
     _id?: Schema.Types.ObjectId;
     // Optional at the type/schema level so the baby-onboarding flow can push a DRAFT child
@@ -51,6 +71,10 @@ export interface IChild {
     onboarding_status?: EChildOnboardingStatus;
     onboarded_at?: Date;
     child_id?: number;
+    /** Vaccination visits the daily age-reminder job is currently nudging this child about. */
+    pending_vaccination_reminders?: IPendingVaccinationReminder[];
+    /** Milestone bands the daily age-reminder job is currently nudging this child about. */
+    pending_milestone_reminders?: IPendingMilestoneReminder[];
 }
 
 export enum ESex {

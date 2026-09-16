@@ -16,6 +16,7 @@ import {
   isSameIstDay,
   isSixMonthsOrOlder,
   istDateKey,
+  reachedAgeIndices,
   recentDates,
   splitDuration,
   summariseFeedDay,
@@ -286,6 +287,51 @@ describe('vaccinationDueWindow', () => {
     expect(vaccinationDueWindow(undefined, due)).toBeNull();
     expect(vaccinationDueWindow('', due)).toBeNull();
     expect(vaccinationDueWindow('not a date', due)).toBeNull();
+  });
+});
+
+describe('reachedAgeIndices', () => {
+  const dob = '2026-01-14T06:00:00Z'; // 14 Jan 2026
+  const sevenMonthsOld = new Date('2026-08-14T06:00:00Z'); // exactly 7 months later
+  const ranges = [{ from: 0 }, { from: 2 }, { from: 6 }, { from: 7 }, { from: 12 }];
+
+  /** Everything up to and including the current band, nothing beyond it — same "reached" test currentAgeIndex uses. */
+  it('keeps every entry the child has reached, drops the rest', () => {
+    expect(reachedAgeIndices(ranges, dob, sevenMonthsOld)).toEqual(new Set([0, 1, 2, 3]));
+  });
+
+  /** The boundary itself counts as reached, not just entries strictly before it. */
+  it('includes an entry due exactly today', () => {
+    expect(reachedAgeIndices(ranges, dob, sevenMonthsOld).has(3)).toBe(true);
+  });
+
+  it('keeps only the newborn entry for a baby born today', () => {
+    expect(reachedAgeIndices(ranges, dob, new Date(dob))).toEqual(new Set([0]));
+  });
+
+  /**
+   * The milestone bands, unlike this fixture, don't start at month 0 — the earliest is
+   * "2-3 months". A child younger than even that has to still see it, the same way
+   * `currentAgeIndex` falls back to index 0 rather than landing nowhere: an empty tab
+   * strip with content rendered underneath it would be worse than a tab shown a bit early.
+   */
+  it('keeps the first entry even when the child has not reached its own threshold', () => {
+    const rangesStartingLate = [{ from: 2 }, { from: 4 }, { from: 7 }];
+    expect(reachedAgeIndices(rangesStartingLate, dob, new Date(dob))).toEqual(new Set([0]));
+  });
+
+  it('keeps everything once the child has outgrown every entry', () => {
+    const twoYearsOld = new Date('2028-01-14T06:00:00Z');
+    expect(reachedAgeIndices(ranges, dob, twoYearsOld)).toEqual(
+      new Set(ranges.map((_, index) => index)),
+    );
+  });
+
+  /** Fails open without a date of birth — hiding tabs with nothing to blame it on is worse. */
+  it('shows everything when the date of birth is missing', () => {
+    expect(reachedAgeIndices(ranges, undefined)).toEqual(
+      new Set(ranges.map((_, index) => index)),
+    );
   });
 });
 

@@ -306,6 +306,35 @@ export const currentAgeIndex = (
 };
 
 /**
+ * Which entries in the same age-ordered list the child has actually reached.
+ *
+ * The vaccination and milestone tab strips show every entry today, including ones months in
+ * the future — a parent can scroll straight to a band their child isn't in yet. This is the
+ * contiguous prefix ending at `currentAgeIndex`'s answer, not each entry re-tested
+ * individually against its own `from` — a child younger than the *first* entry's own
+ * threshold still has to see that entry, exactly as `currentAgeIndex` already falls back to
+ * it rather than nothing. Deriving straight from `currentAgeIndex` is what guarantees the
+ * two can never disagree, rather than two similar-looking loops staying in agreement by
+ * coincidence.
+ *
+ * Fails open (every index included) when the date of birth is missing, same as
+ * `currentAgeIndex` falling back to index 0 — hiding tabs a parent has no way to attribute
+ * the hiding to would be worse than showing one early.
+ */
+export const reachedAgeIndices = (
+  ranges: { from: number }[],
+  dateOfBirth: Date | string | undefined | null,
+  now: Date = new Date(),
+): Set<number> => {
+  if (getAgeInMonths(dateOfBirth, now) === null) {
+    return new Set(ranges.map((_, index) => index));
+  }
+
+  const lastReached = currentAgeIndex(ranges, dateOfBirth, now);
+  return new Set(Array.from({ length: lastReached + 1 }, (_, index) => index));
+};
+
+/**
  * Full date for a line of prose — "14 Jul 2027".
  *
  * The year is what separates this from `formatChipDate`, and a vaccination schedule needs

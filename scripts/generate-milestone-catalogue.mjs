@@ -14,10 +14,13 @@
  * nothing. `exceljs` resolves from the repo root because .npmrc pins node-linker=hoisted,
  * which puts every workspace dependency in the root node_modules by design.
  *
- * Emits three files; all three are generated and must not be hand-edited:
- *   apps/mobile/src/data/infantMilestoneData.ts      bands, keys, i18n key names
- *   services/backend/src/constants/milestone-keys.ts the key list, for request validation
- *   scripts/out/milestone-en.json                    English copy, merged into en.json
+ * Emits four files; all four are generated and must not be hand-edited:
+ *   apps/mobile/src/data/infantMilestoneData.ts       bands, keys, i18n key names
+ *   services/backend/src/constants/milestone-keys.ts  the key list, for request validation
+ *   packages/infant-schedules/src/data/milestone-schedule.ts
+ *                                                      band age windows only, for the
+ *                                                      backend's reminder jobs — no copy
+ *   scripts/out/milestone-en.json                     English copy, merged into en.json
  */
 import { createHash } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
@@ -223,6 +226,27 @@ ${bands.flatMap((b) => b.milestones).map((m) => `    "${m.key}",`).join("\n")}
 ];
 `;
 
+    // ── packages/infant-schedules/src/data/milestone-schedule.ts ─────────────────────
+    const windowSource = (band) => `    {
+        key: "${band.key}",
+        ageMonths: { from: ${band.from}, to: ${band.to} },
+        milestoneKeys: [
+${band.milestones.map((m) => `            "${m.key}",`).join("\n")}
+        ],
+    },`;
+
+    const schedulePackage = `${header(
+        "The narrower slice @vivamama/infant-schedules needs: which bands exist, their age\n * window, and which milestone keys they cover. No copy — that stays in\n * apps/mobile/src/data/infantMilestoneData.ts, the one place that renders it.",
+        sha,
+        counts,
+    )}
+import { MilestoneBandWindow } from "../types";
+
+export const MILESTONE_BAND_WINDOWS: MilestoneBandWindow[] = [
+${bands.map(windowSource).join("\n")}
+];
+`;
+
     // ── services/backend/src/constants/milestone-keys.ts ─────────────────────────────
     const backend = `${header(
         "The API validates `milestoneKey` against this list, so a stale or tampered client\n * cannot store a row that no screen can ever render. Mirrors MILESTONE_KEYS in\n * apps/mobile/src/data/infantMilestoneData.ts — both are emitted from the same sheet in\n * the same run, which is what keeps them from drifting.",
@@ -247,8 +271,13 @@ export const isMilestoneKey = (value: unknown): value is MilestoneKey =>
     };
 
     await mkdir(path.join(ROOT, "scripts/out"), { recursive: true });
+    await mkdir(path.join(ROOT, "packages/infant-schedules/src/data"), { recursive: true });
     await writeFile(path.join(ROOT, "apps/mobile/src/data/infantMilestoneData.ts"), mobile);
     await writeFile(path.join(ROOT, "services/backend/src/constants/milestone-keys.ts"), backend);
+    await writeFile(
+        path.join(ROOT, "packages/infant-schedules/src/data/milestone-schedule.ts"),
+        schedulePackage,
+    );
     await writeFile(path.join(ROOT, "scripts/out/milestone-en.json"), `${JSON.stringify(en, null, 2)}\n`);
 
     console.log(`Generated ${counts}`);

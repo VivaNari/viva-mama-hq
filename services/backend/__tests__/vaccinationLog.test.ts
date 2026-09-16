@@ -20,6 +20,9 @@ jest.mock(require.resolve("../src/config/redis.config"), () => ({ __esModule: tr
 jest.mock("razorpay", () =>
     jest.fn().mockImplementation(() => ({ orders: { create: jest.fn() } })),
 );
+jest.mock("../src/utils/sendPushNotification", () => ({
+    sendPushNotification: jest.fn().mockResolvedValue(undefined),
+}));
 
 import { Response } from "express";
 import { Types } from "mongoose";
@@ -29,10 +32,12 @@ import VaccinationLogController from "../src/api/v1/controllers/vaccination-log/
 import { vaccinationLogRecordValidator } from "../src/api/v1/validators/vaccination-log/vaccination-log.validator";
 import { messages } from "../src/constants/messages";
 import { VACCINE_KEYS, isVaccineKey } from "../src/constants/vaccine-keys";
+import growthLogModel from "../src/models/growth-log.model";
 import UserModel from "../src/models/user.model";
 import vaccinationLogModel from "../src/models/vaccination-log.model";
 import ChildService from "../src/services/childs/child.service";
 import { formatDateToISO, getISTCalendarDate } from "../src/services/date/date.service";
+import { sendPushNotification } from "../src/utils/sendPushNotification";
 import VaccinationLogService, {
     ChildNotFoundError,
 } from "../src/services/vaccination-log/vaccination-log.service";
@@ -41,6 +46,24 @@ import {
     ESex,
     EVaccinationSector,
 } from "../src/types/user.types";
+
+const sendPushNotificationMock = sendPushNotification as jest.Mock;
+
+/** Polls until the fire-and-forget nudge has run, instead of guessing a fixed delay. */
+async function waitForCalls(mockFn: jest.Mock, timeoutMs = 3000): Promise<void> {
+    const start = Date.now();
+    while (mockFn.mock.calls.length === 0) {
+        if (Date.now() - start > timeoutMs) {
+            throw new Error("Timed out waiting for sendPushNotification to be called");
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+}
+
+/** For a negative assertion: give the fire-and-forget path time to run, then check it didn't. */
+async function flush(delayMs = 200): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
 
 jest.setTimeout(120000);
 
@@ -83,6 +106,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await clearTestDb();
+    sendPushNotificationMock.mockClear();
 });
 
 describe("the generated schedule", () => {
@@ -209,6 +233,98 @@ describe("record", () => {
                 givenOn: new Date(),
             }),
         ).rejects.toThrow();
+    });
+});
+
+/**
+ * Recording a dose fires a "log growth too" push, but only when there's actually a gap to
+ * close: a token to send to, and no growth entry already sitting there for today.
+ *
+ * The send is fire-and-forget (`record` does not await it), so every positive assertion here
+ * polls for the call instead of asserting immediately after `record` resolves.
+ */
+describe("the growth-log nudge", () => {
+    async function createUserWithChildAndToken(
+        overrides: { FCM_token?: string | null } = {},
+    ) {
+        const childId = new Types.ObjectId();
+
+        const user = await UserModel.create({
+            phone_number: `9${Math.floor(100000000 + Math.random() * 899999999)}`,
+            FCM_token: "FCM_TOKEN_ONE",
+            childs: [
+                {
+                    _id: childId,
+                    name: "Aarav",
+                    date_of_birth: new Date("2026-03-14"),
+                    sex: ESex.MALE,
+                    onboarding_status: EChildOnboardingStatus.COMPLETED,
+                },
+            ],
+            ...overrides,
+        });
+
+        return { userId: user._id.toString(), childId: childId.toString() };
+    }
+
+    const percentiles = {
+        weight_for_age: { status: "OK" },
+        length_for_age: { status: "OK" },
+        head_circumference_for_age: { status: "OK" },
+        weight_for_length: { status: "OK" },
+    };
+
+    it("sends the nudge once growth hasn't been logged today", async () => {
+        const { userId, childId } = await createUserWithChildAndToken();
+
+        await service.record({ userId, childId, vaccineKey: BCG, givenOn: new Date() });
+        await waitForCalls(sendPushNotificationMock);
+
+        expect(sendPushNotificationMock).toHaveBeenCalledTimes(1);
+        const [payload] = sendPushNotificationMock.mock.calls[0];
+        expect(payload.token).toBe("FCM_TOKEN_ONE");
+        expect(payload.data).toEqual({ type: "GROWTH_LOG_NUDGE", childId });
+        expect(payload.body).toContain("Aarav");
+    });
+
+    it("skips the nudge when growth was already logged today", async () => {
+        const { userId, childId } = await createUserWithChildAndToken();
+
+        await growthLogModel.create({
+            userId,
+            childId,
+            measuredOn: getISTCalendarDate(),
+            ageInDays: 10,
+            sex: "Male",
+            measurements: { weight_kg: 4, length_cm: 55, head_circumference_cm: 36 },
+            percentiles,
+            standard: { version: "test" },
+        });
+
+        await service.record({ userId, childId, vaccineKey: BCG, givenOn: new Date() });
+        await flush();
+
+        expect(sendPushNotificationMock).not.toHaveBeenCalled();
+    });
+
+    it("skips the nudge when the user has no FCM token", async () => {
+        const { userId, childId } = await createUserWithChildAndToken({ FCM_token: null });
+
+        await service.record({ userId, childId, vaccineKey: BCG, givenOn: new Date() });
+        await flush();
+
+        expect(sendPushNotificationMock).not.toHaveBeenCalled();
+    });
+
+    it("still records the dose even if the send fails", async () => {
+        const { userId, childId } = await createUserWithChildAndToken();
+        sendPushNotificationMock.mockRejectedValueOnce(new Error("FCM is down"));
+
+        const entry = await service.record({ userId, childId, vaccineKey: BCG, givenOn: new Date() });
+        await flush();
+
+        expect(entry.vaccineKey).toBe(BCG);
+        expect(await vaccinationLogModel.countDocuments({ userId, childId })).toBe(1);
     });
 });
 

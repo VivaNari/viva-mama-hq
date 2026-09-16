@@ -7,6 +7,7 @@ import { dailyVivaInteraction } from "./dailyVivaInteraction";
 import { weeklyContentNotification } from "./weeklyContentNotification";
 import { subscriptionLifecycle } from "./subscriptionLifecycle";
 import { consultationReminders } from "./consultationReminders";
+import { babyAgeReminders } from "./babyAgeReminders";
 import { randomUUID } from "crypto";
 import { SpanStatusCode, trace } from "@opentelemetry/api";
 import env from "../config/env";
@@ -102,4 +103,9 @@ export const initScheduledJobs = () => {
     // only takes effect after a restart, and a run landing exactly on T-15 sits on the
     // boundary of "not yet due".
     schedule("*/5 * * * *", consultationReminders, "consultation-reminders");
+
+    // 00:30 — has a child reached a vaccination visit or milestone band with something
+    // still unlogged in it. After pregnancy-transition/week-progression in the overnight
+    // block, ahead of the day's traffic. See babyAgeReminders.ts.
+    schedule("30 0 * * *", babyAgeReminders, "baby-age-reminders");
 };

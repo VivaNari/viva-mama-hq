@@ -8,10 +8,13 @@
  * the Universal Immunization Programme / NIS schedule), and the dose keys are primary keys
  * in the database. Being able to re-run this and get an empty `git diff` is the audit trail.
  *
- * Emits three files; all three are generated and must not be hand-edited:
- *   apps/mobile/src/data/infantVaccinationData.ts  visits, dose keys, due windows
- *   services/backend/src/constants/vaccine-keys.ts the key list, for request validation
- *   scripts/out/vaccination-en.json                English copy, merged into en.json
+ * Emits four files; all four are generated and must not be hand-edited:
+ *   apps/mobile/src/data/infantVaccinationData.ts       visits, dose keys, due windows
+ *   services/backend/src/constants/vaccine-keys.ts      the key list, for request validation
+ *   packages/infant-schedules/src/data/vaccination-schedule.ts
+ *                                                        due windows only, for the backend's
+ *                                                        reminder jobs — no display copy
+ *   scripts/out/vaccination-en.json                     English copy, merged into en.json
  */
 import { createHash } from "node:crypto";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
@@ -514,6 +517,35 @@ ${orderedKeys.map((key) => `    "${key}",`).join("\n")}
 ];
 `;
 
+    // ── packages/infant-schedules/src/data/vaccination-schedule.ts ───────────────────
+    const windowSource = (visit) => {
+        const label = visitLabels.get(visit.key);
+        return `        {
+            key: "${visit.key}",
+            due: { unit: "${label.unit}", from: ${label.from}, to: ${label.to} },
+            doseKeys: [
+${visit.doses.map((key) => `                "${key}",`).join("\n")}
+            ],
+        },`;
+    };
+
+    const schedulePackage = `${header(
+        "The narrower slice @vivamama/infant-schedules needs: which visits exist, when each is\n * due, and which dose keys it covers. No display copy — that stays in\n * apps/mobile/src/data/infantVaccinationData.ts, the one place that renders it.",
+        sha,
+        counts,
+    )}
+import { VaccinationSector, VaccinationVisitWindow } from "../types";
+
+export const VACCINATION_SCHEDULE_WINDOWS: Record<VaccinationSector, VaccinationVisitWindow[]> = {
+    public: [
+${publicVisits.map(windowSource).join("\n")}
+    ],
+    private: [
+${privateVisits.map(windowSource).join("\n")}
+    ],
+};
+`;
+
     // ── services/backend/src/constants/vaccine-keys.ts ───────────────────────────────
     const backend = `${header(
         "The API validates `vaccineKey` against this list, so a stale or tampered client cannot\n * store a row that no screen can ever render. Mirrors VACCINE_KEYS in\n * apps/mobile/src/data/infantVaccinationData.ts — both are emitted from the same run, which\n * is what keeps them from drifting.",
@@ -572,8 +604,13 @@ export const isVaccineKeyForSector = (value: unknown, sector: VaccinationSector)
     };
 
     await mkdir(path.join(ROOT, "scripts/out"), { recursive: true });
+    await mkdir(path.join(ROOT, "packages/infant-schedules/src/data"), { recursive: true });
     await writeFile(path.join(ROOT, "apps/mobile/src/data/infantVaccinationData.ts"), mobile);
     await writeFile(path.join(ROOT, "services/backend/src/constants/vaccine-keys.ts"), backend);
+    await writeFile(
+        path.join(ROOT, "packages/infant-schedules/src/data/vaccination-schedule.ts"),
+        schedulePackage,
+    );
     await writeFile(
         path.join(ROOT, "scripts/out/vaccination-en.json"),
         `${JSON.stringify(en, null, 2)}\n`,

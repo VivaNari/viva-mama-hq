@@ -8,6 +8,7 @@ import { weekProgression } from "../../../../cron-jobs/weekProgression";
 import { checkinNotification } from "../../../../cron-jobs/checkinNotification";
 import { subscriptionLifecycle } from "../../../../cron-jobs/subscriptionLifecycle";
 import { consultationReminders } from "../../../../cron-jobs/consultationReminders";
+import { babyAgeReminders } from "../../../../cron-jobs/babyAgeReminders";
 
 const log = createModuleLogger(logger, "cron-jobs.controller");
 
@@ -72,3 +73,6 @@ export const runSubscriptionLifecycle = (_req: Request, res: Response): Promise<
 
 export const runConsultationReminders = (_req: Request, res: Response): Promise<void> =>
     runJob(res, "consultation-reminders", () => consultationReminders());
+
+export const runBabyAgeReminders = (_req: Request, res: Response): Promise<void> =>
+    runJob(res, "baby-age-reminders", () => babyAgeReminders());

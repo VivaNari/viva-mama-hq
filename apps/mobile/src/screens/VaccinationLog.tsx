@@ -35,6 +35,7 @@ import { IVaccinationLog } from '../types/vaccinationLog.types';
 import {
     currentAgeIndex,
     formatFullDate,
+    reachedAgeIndices,
     vaccinationDueWindow,
 } from '../utils/infantLogHelpers';
 
@@ -98,25 +99,26 @@ const VaccinationLog: React.FC = () => {
 
     const visits = VACCINATION_SCHEDULE[sector];
     /**
-     * Opens on the visit the child has reached, not on the birth visit.
-     *
      * The due windows are already in weeks or months; normalised to months here so one
-     * helper serves both this screen and the milestone bands. A visit given in weeks is
-     * under three months old, so integer division is precise enough to order them.
+     * helper serves both this screen and the milestone bands, and both the initial tab and
+     * the visibility filter below agree on what "reached" means for the same visit. A visit
+     * given in weeks is under three months old, so integer division is precise enough to
+     * order them.
      */
-    const [activeVisitKey, setActiveVisitKey] = useState<string>(
+    const visitAgeRanges = useMemo(
         () =>
-            visits[
-                currentAgeIndex(
-                    visits.map((visit) => ({
-                        from:
-                            visit.due.unit === 'week'
-                                ? Math.floor((visit.due.from * 7) / 30)
-                                : visit.due.from,
-                    })),
-                    params.childDob,
-                )
-            ]!.key,
+            visits.map((visit) => ({
+                from:
+                    visit.due.unit === 'week'
+                        ? Math.floor((visit.due.from * 7) / 30)
+                        : visit.due.from,
+            })),
+        [visits],
+    );
+
+    /** Opens on the visit the child has reached, not on the birth visit. */
+    const [activeVisitKey, setActiveVisitKey] = useState<string>(
+        () => visits[currentAgeIndex(visitAgeRanges, params.childDob)]!.key,
     );
     const [logs, setLogs] = useState<IVaccinationLog[]>([]);
     const [loading, setLoading] = useState(false);
@@ -125,6 +127,16 @@ const VaccinationLog: React.FC = () => {
         () => visits.find((visit) => visit.key === activeVisitKey) ?? visits[0],
         [visits, activeVisitKey],
     );
+
+    /**
+     * Only visits the child has reached are offered as tabs — a visit due in four months is
+     * not a tab a parent can usefully open today. Visits already passed stay visible: a
+     * parent logging a late dose, or one given early, still needs to reach them.
+     */
+    const visibleVisits = useMemo(() => {
+        const reached = reachedAgeIndices(visitAgeRanges, params.childDob);
+        return visits.filter((_, index) => reached.has(index));
+    }, [visits, visitAgeRanges, params.childDob]);
 
     const loadLogs = useCallback(async () => {
         if (!params.childId) return;
@@ -277,7 +289,7 @@ const VaccinationLog: React.FC = () => {
             </View>
 
             <LogChipTabs
-                tabs={visits.map((visit) => ({
+                tabs={visibleVisits.map((visit) => ({
                     key: visit.key,
                     label: t('infant.vaccination.visitChip', {
                         visit: t(visit.labelKey),

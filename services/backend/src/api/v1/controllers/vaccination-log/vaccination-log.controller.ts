@@ -27,7 +27,7 @@ import sendResponse from "../../../../utils/commonFunctions/sendResponse";
  * schedule, which is the one printed on the MCP card every Indian family is given. The
  * client applies the same fallback, and the two must not disagree about which doses exist.
  */
-const sectorOf = (child: IChild): VaccinationSector =>
+export const sectorOf = (child: IChild): VaccinationSector =>
     child.vaccination_sector === EVaccinationSector.PRIVATE ? "private" : "public";
 
 export default class VaccinationLogController {

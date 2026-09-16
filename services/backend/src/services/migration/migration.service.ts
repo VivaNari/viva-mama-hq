@@ -33,6 +33,7 @@ import { migrate as rebrandPerinatalFlowCopy } from "./steps/rebrand-perinatal-f
 import { migrate as resolveFlowInstanceDuplicates } from "./steps/resolve-flow-instance-duplicates.step";
 import { migrate as reindexFlowInstancesSubject } from "./steps/reindex-flow-instances-subject.step";
 import { migrate as seedBabyOnboardingFlow } from "./steps/seed-baby-onboarding-flow.step";
+import { migrate as backfillBabyReminderFields } from "./steps/backfill-baby-reminder-fields.step";
 
 export interface MigrationStepResult {
     step: string;
@@ -113,6 +114,10 @@ const STEPS: Array<{ name: string; fn: () => Promise<unknown> }> = [
     { name: "resolve-flow-instance-duplicates(report)", fn: () => resolveFlowInstanceDuplicates() },
     { name: "reindex-flow-instances-subject", fn: reindexFlowInstancesSubject },
     { name: "seed-baby-onboarding-flow", fn: seedBabyOnboardingFlow },
+    // Independent of every step above it: a plain $exists backfill on childs[], unrelated
+    // to flow definitions or flow_instances. Placed after the baby-onboarding steps only
+    // because it belongs to the same feature, not because anything here depends on it.
+    { name: "backfill-baby-reminder-fields", fn: backfillBabyReminderFields },
 ];
 
 export async function runAllMigrations(): Promise<MigrationRunResult> {
