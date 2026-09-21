@@ -36,9 +36,58 @@ export interface GrowthChartCardProps {
     seriesByIndicator: Record<Indicator, ChildPoint[]>;
     /** The most recent scored result per indicator, for the headline and copy. */
     latestByIndicator: Record<Indicator, IndicatorResult>;
+    /**
+     * Whole months since birth, for the length rule below. Omitted where the age is not
+     * known, which simply means no action line is ever offered.
+     */
+    ageMonths?: number | null;
 }
 
 const isSex = (value: unknown): value is Sex => value === 'Male' || value === 'Female';
+
+/**
+ * From which age a low length-for-age is worth raising.
+ *
+ * Mirrors `THRESHOLDS.lengthTriggersFromMonths` in the backend's infant-wellbeing service,
+ * which decides the same thing for the dashboard's wellbeing card. Duplicated rather than
+ * shared because the chart also runs on the Growth Log screen, where no wellbeing payload
+ * is fetched — but the two must move together, so change both or neither.
+ */
+const LENGTH_TRIGGERS_FROM_MONTHS = 3;
+
+/**
+ * Whether this measurement is worth raising with a clinician.
+ *
+ * Deliberately not "is this baby doing well". The rules are the wellbeing card's, so the
+ * chart and the card can never tell a mother two different things about one measurement:
+ *
+ *  - only the low side, at WHO's own -2 SD. A large baby is not a finding with an action
+ *    behind it;
+ *  - weight at any age, length only from three months — a newborn's length is measured
+ *    with the baby still curled up, and the reading is unreliable enough that flagging it
+ *    would be flagging the tape measure;
+ *  - head circumference and weight-for-length never, matching the card. Head size is
+ *    strongly familial and the urgent signal there is a rapid *increase*, which a low-side
+ *    rule would miss while looking like coverage.
+ */
+const needsRaising = (
+    indicator: Indicator,
+    result: IndicatorResult | undefined,
+    ageMonths: number | null | undefined,
+): boolean => {
+    if (result?.status !== 'OK' || result.z === null) return false;
+
+    if (indicator === 'weight_for_age') {
+        // fall through
+    } else if (indicator === 'length_for_age') {
+        if (ageMonths == null || ageMonths < LENGTH_TRIGGERS_FROM_MONTHS) return false;
+    } else {
+        return false;
+    }
+
+    const band = bandForZ(result.z);
+    return band === 'below' || band === 'far_below';
+};
 
 /**
  * The growth card: one chart at a time, switched by a tab strip.
@@ -56,6 +105,7 @@ const GrowthChartCard: React.FC<GrowthChartCardProps> = ({
     childName,
     seriesByIndicator,
     latestByIndicator,
+    ageMonths,
 }) => {
     const { t } = useTranslation();
 
@@ -93,6 +143,9 @@ const GrowthChartCard: React.FC<GrowthChartCardProps> = ({
         });
     };
 
+    /** Whether the amber action line below will render, which the copy has to account for. */
+    const raising = needsRaising(indicator, result, ageMonths);
+
     /** The sentence under the chart — what the number means, in counting terms. */
     const explanation = (): string => {
         if (!isSex(sex)) {
@@ -108,7 +161,17 @@ const GrowthChartCard: React.FC<GrowthChartCardProps> = ({
         }
 
         if (!isPercentileQuotable(result.percentile)) {
-            return t('infant.growth.comparisonExtreme', { name: childName });
+            // This sentence carries its own "worth mentioning" tail, which is right when
+            // nothing else says it — an extreme head circumference, or an extreme length
+            // in the newborn weeks, neither of which gets an action line. When the action
+            // line *is* rendering, the tail would be the same instruction twice, a word
+            // apart, stacked.
+            return t(
+                raising
+                    ? 'infant.growth.comparisonExtremeNeutral'
+                    : 'infant.growth.comparisonExtreme',
+                { name: childName },
+            );
         }
 
         return t(indicatorComparisonKey(indicator), {
@@ -163,6 +226,28 @@ const GrowthChartCard: React.FC<GrowthChartCardProps> = ({
             <Text style={[styles.explanation, globalStyles.fontRegular]}>
                 {explanation()}
             </Text>
+
+            {/*
+              The action, and only the action, carries a colour.
+
+              The sentence above stays in neutral text however the measurement lands. It
+              ends with "healthy babies sit anywhere across this range", and tinting *that*
+              amber would have the colour contradict the words — colour wins, and a mother
+              stops reading. Tinting it green would be worse: it grades a position, implying
+              the ~5% of healthy babies outside the range are failing and that a higher
+              percentile is a better one. Both are what `growthCopy`'s rules forbid.
+
+              So nothing is ever green here. A line appears only when there is something to
+              do, which is the one thing a colour can say honestly.
+            */}
+            {raising && (
+                <View style={styles.action}>
+                    <View style={styles.actionDot} />
+                    <Text style={[styles.actionText, globalStyles.fontSemiBold]}>
+                        {t('infant.growth.actionDiscuss')}
+                    </Text>
+                </View>
+            )}
 
             {/*
               Non-dismissible on every chart, by design. These numbers look clinical and a
@@ -224,6 +309,33 @@ const styles = StyleSheet.create({
         fontSize: 13,
         lineHeight: 20,
         color: colors.darkGray,
+    },
+
+    /** Tinted rather than boxed: a banner here would read as an alarm. */
+    action: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+        marginTop: 10,
+        paddingVertical: 8,
+        paddingHorizontal: 10,
+        borderRadius: 10,
+        backgroundColor: colors.yellowBadgeBG,
+    },
+
+    actionDot: {
+        width: 6,
+        height: 6,
+        borderRadius: 3,
+        marginTop: 7,
+        backgroundColor: colors.yellowBadgeText,
+    },
+
+    actionText: {
+        flex: 1,
+        fontSize: 12,
+        lineHeight: 18,
+        color: colors.yellowBadgeText,
     },
 
     unavailable: {

@@ -219,4 +219,139 @@ describe('GrowthChartCard', () => {
             }
         });
     });
+
+    /**
+     * The action line under the chart.
+     *
+     * The comparison sentence itself is never tinted, whichever way the measurement lands.
+     * It ends with "healthy babies sit anywhere across this range", so amber on it would
+     * have the colour contradict the words, and green on it would grade a position. Only
+     * the action carries a colour, and only when there is one.
+     */
+    describe('the action line', () => {
+        const ACTION = 'Worth mentioning at your next clinic visit.';
+
+        const low = (indicator: Indicator) => ({
+            ...allScored(),
+            [indicator]: result(indicator, { z: -2.4, percentile: 0.8 }),
+        });
+
+        it('says nothing at all for a measurement inside the range', () => {
+            const { queryByText } = renderCard({ ageMonths: 6 });
+
+            expect(queryByText(ACTION)).toBeNull();
+        });
+
+        /** No green anywhere: being average is not an achievement to congratulate. */
+        it('offers no reassurance line to balance it', () => {
+            const { queryByText } = renderCard({ ageMonths: 6 });
+
+            for (const phrase of [/on track/i, /doing well/i, /looks good/i]) {
+                expect(queryByText(phrase)).toBeNull();
+            }
+        });
+
+        it('appears for a weight below the reference, at any age', () => {
+            const { getByText } = renderCard({
+                latestByIndicator: low('weight_for_age'),
+                ageMonths: 0,
+            });
+
+            expect(getByText(ACTION)).toBeTruthy();
+            // And the neutral sentence is still there, untouched, beside it.
+            expect(getByText(/of every 100 babies the same age and sex/)).toBeTruthy();
+        });
+
+        it('holds back a low length in the newborn weeks', () => {
+            const { getByText, queryByText } = renderCard({
+                latestByIndicator: low('length_for_age'),
+                ageMonths: 0,
+            });
+
+            fireEvent.press(getByText('Length'));
+            expect(queryByText(ACTION)).toBeNull();
+        });
+
+        it('offers it for the same length once the child is three months', () => {
+            const { getByText } = renderCard({
+                latestByIndicator: low('length_for_age'),
+                ageMonths: 3,
+            });
+
+            fireEvent.press(getByText('Length'));
+            expect(getByText(ACTION)).toBeTruthy();
+        });
+
+        /**
+         * Matches the wellbeing card, which stays silent on both. Flagging them here would
+         * re-open that decision through the back door and let the two surfaces disagree.
+         */
+        it.each(['Head', 'Weight/Length'])('stays silent on the %s tab', (tab) => {
+            const { getByText, queryByText } = renderCard({
+                latestByIndicator: {
+                    ...allScored(),
+                    head_circumference_for_age: result('head_circumference_for_age', {
+                        z: -2.8,
+                        percentile: 0.3,
+                    }),
+                    weight_for_length: result('weight_for_length', {
+                        z: -2.8,
+                        percentile: 0.3,
+                    }),
+                },
+                ageMonths: 12,
+            });
+
+            fireEvent.press(getByText(tab));
+            expect(queryByText(ACTION)).toBeNull();
+        });
+
+        /**
+         * The extreme sentence carries its own "worth mentioning" tail. With the action
+         * line beside it that was the same instruction twice, a word apart, stacked.
+         */
+        it('does not repeat the instruction the extreme sentence already carries', () => {
+            const { getByText, queryByText } = renderCard({
+                latestByIndicator: {
+                    ...allScored(),
+                    length_for_age: result('length_for_age', { z: -3.6, percentile: 0.02 }),
+                },
+                ageMonths: 4,
+            });
+
+            fireEvent.press(getByText('Length'));
+
+            expect(getByText(ACTION)).toBeTruthy();
+            expect(getByText(/sits outside the range these curves cover\.$/)).toBeTruthy();
+            expect(queryByText(/Worth mentioning at your next visit\./)).toBeNull();
+        });
+
+        /** But it keeps that tail where no action line will render to carry it. */
+        it('keeps the instruction in the sentence when no action line renders', () => {
+            const { getByText } = renderCard({
+                latestByIndicator: {
+                    ...allScored(),
+                    length_for_age: result('length_for_age', { z: -3.6, percentile: 0.02 }),
+                },
+                ageMonths: 1,
+            });
+
+            fireEvent.press(getByText('Length'));
+
+            expect(getByText(/Worth mentioning at your next visit\./)).toBeTruthy();
+        });
+
+        /** A large baby is not a finding with an action behind it. */
+        it('never appears for a measurement above the reference', () => {
+            const { queryByText } = renderCard({
+                latestByIndicator: {
+                    ...allScored(),
+                    weight_for_age: result('weight_for_age', { z: 3.2, percentile: 99.9 }),
+                },
+                ageMonths: 6,
+            });
+
+            expect(queryByText(ACTION)).toBeNull();
+        });
+    });
 });

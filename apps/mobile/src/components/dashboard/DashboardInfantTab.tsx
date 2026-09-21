@@ -20,7 +20,7 @@ import { IChild } from '../../types/user.types';
 import { IUserAllData } from '../../types/dashboard.types';
 import { InfantLogRouteParams } from '../../types/infantLog.types';
 import { getVisibleChildren } from '../../utils/childAge';
-import { istDateKey } from '../../utils/infantLogHelpers';
+import { getAgeInMonths, istDateKey } from '../../utils/infantLogHelpers';
 import DashboardCard from './DashboardCard';
 import ChildAvatarStrip from './ChildAvatarStrip';
 import FLInfantCheckInOptions from './FLInfantCheckInOptions';
@@ -352,6 +352,7 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                 childName={selectedChild?.name ?? t('infant.childFallback')}
                 seriesByIndicator={series}
                 latestByIndicator={results}
+                ageMonths={getAgeInMonths(selectedChild?.date_of_birth)}
             />
 
             <View style={styles.statRow}>

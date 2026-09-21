@@ -936,6 +936,8 @@
       "loadFailed": "Could not load earlier measurements.",
       "noChild": "Add your baby before logging a measurement.",
       "comparisonExtreme": "{{name}}'s measurement sits outside the range these curves cover. Worth mentioning at your next visit.",
+      "comparisonExtremeNeutral": "{{name}}'s measurement sits outside the range these curves cover.",
+      "actionDiscuss": "Worth mentioning at your next clinic visit.",
       "tab": {
         "weight_for_age": "Weight",
         "length_for_age": "Length",
