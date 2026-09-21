@@ -1,5 +1,6 @@
 import { Router } from "express";
 import requestValidator from "../../../../middlewares/requestValidator.middleware";
+import InfantWellbeingController from "../../controllers/dashboard/infant-wellbeing.controller";
 import UserController from "../../controllers/users/user.controller";
 import googleAuthValidator from "../../validators/users/googleAuth.validator";
 import { sentOTPValidator, verifyOTPValidator } from "../../validators/users/otp.validator";
@@ -7,6 +8,7 @@ import authMiddleware from "../../../../middlewares/authorization.middleware";
 
 const userRouter = Router();
 const userController = new UserController();
+const infantWellbeingController = new InfantWellbeingController();
 
 userRouter.get("/user", authMiddleware(), userController.getUserbyAuthToken);
 
@@ -36,6 +38,14 @@ userRouter.patch(
     "/dashboard/emergency-alert/:id/dismiss",
     authMiddleware("header"),
     userController.dismissEmergencyAlert,
+);
+
+// The infant half of the dashboard. Takes ?childId= rather than dropping it on the path,
+// matching the per-child log GETs the card summarises.
+userRouter.get(
+    "/dashboard/infant-wellbeing",
+    authMiddleware("header"),
+    infantWellbeingController.getInfantWellbeing,
 );
 
 userRouter.put("/user/update-user-data", authMiddleware("header"), userController.updateUserData);

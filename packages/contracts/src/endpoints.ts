@@ -50,6 +50,7 @@ export const apiRoutes = {
 
   dashboard: {
     vivaScore: `${v}/dashboard/viva-score`,
+    infantWellbeing: `${v}/dashboard/infant-wellbeing`,
     recommendationsFormatted: `${v}/user/recommendations-formatted`,
   },
 

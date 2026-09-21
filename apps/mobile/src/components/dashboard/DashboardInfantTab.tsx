@@ -7,6 +7,9 @@ import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
 import { getDiaperLogs } from '../../api/infantDiaper.api';
 import { getGrowthLogs } from '../../api/infantGrowth.api';
+import { getInfantWellbeing } from '../../api/infantWellbeing.api';
+import { IInfantWellbeing } from '../../types/infantWellbeing.types';
+import InfantWellbeingCard from './InfantWellbeingCard';
 import GrowthChartCard from '../growth/GrowthChartCard';
 import { buildSeries, latestResults } from '../../utils/growthSeries';
 import { IGrowthLog } from '../../types/growthLog.types';
@@ -91,6 +94,46 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
 
     const series = useMemo(() => buildSeries(growthLogs), [growthLogs]);
     const results = useMemo(() => latestResults(growthLogs), [growthLogs]);
+
+    const [wellbeing, setWellbeing] = useState<IInfantWellbeing | null>(null);
+
+    /**
+     * The wellbeing summary, on focus rather than on mount.
+     *
+     * This card summarises all five logs, so returning from *any* of them is the moment it
+     * is most likely to be wrong — a mother who ticks off an overdue vaccine and comes
+     * straight back should not still be told it is overdue. `userData` is in the deps for
+     * the same reason the diaper fetch has it: a pull-to-refresh fires no focus event.
+     *
+     * Fails silently to null, which simply hides the card. The four log screens underneath
+     * are the source of truth and are all still reachable, so a summary that could not load
+     * is worth less than the toast it would cost.
+     */
+    useFocusEffect(
+        useCallback(() => {
+            let cancelled = false;
+            const childId = selectedChild?._id;
+
+            if (!childId) {
+                setWellbeing(null);
+                return;
+            }
+
+            getInfantWellbeing(childId)
+                .then((summary) => {
+                    if (!cancelled) setWellbeing(summary);
+                })
+                .catch((error) => {
+                    console.log('[DashboardInfantTab] Failed to load the wellbeing summary', error);
+                    if (!cancelled) setWellbeing(null);
+                });
+
+            return () => {
+                cancelled = true;
+            };
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [selectedChild?._id, userData]),
+    );
 
     const [diaperToday, setDiaperToday] = useState<number>(0);
 
@@ -285,6 +328,18 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                         })}
                     </Text>
                 </TouchableOpacity>
+            )}
+
+            {/*
+              Above the chart on purpose: the answer to "is my baby OK?" should not be
+              something a mother has to scroll past a graph to reach.
+            */}
+            {wellbeing && (
+                <InfantWellbeingCard
+                    wellbeing={wellbeing}
+                    childName={selectedChild?.name ?? t('infant.childFallback')}
+                    onOpenDomain={(screen) => navigation.navigate(screen, logParams)}
+                />
             )}
 
             {/*

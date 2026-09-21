@@ -830,6 +830,60 @@
     "playOpenFailed": "We couldn't open Google Play. You can manage your subscription from the Play Store app under Payments and subscriptions."
   },
   "infant": {
+    "wellbeing": {
+      "title": "Overall wellbeing",
+      "statusOnTrack": "On track",
+      "statusAttention": "Needs a look",
+      "domain": {
+        "growth": "Growth",
+        "feeding": "Feeding",
+        "vaccines": "Vaccines",
+        "milestones": "Milestones"
+      },
+      "measure": {
+        "weight_for_age": "weight",
+        "length_for_age": "length"
+      },
+      "summary": {
+        "firstRun": "Start logging {{name}}'s feeds, weight and vaccines, and this card will show how things are going at a glance.",
+        "onTrack": "Everything {{name}} needs is up to date. Keep logging as you go.",
+        "one": {
+          "growth": "{{name}} is doing well — one thing to look at under Growth.",
+          "feeding": "{{name}} is doing well — one thing to look at under Feeding.",
+          "vaccines": "{{name}} is doing well — one thing to look at under Vaccines.",
+          "milestones": "{{name}} is doing well — one thing to look at under Milestones."
+        },
+        "several": "{{count}} things are worth a look for {{name}}."
+      },
+      "growth": {
+        "percentile": "{{percentile}}{{suffix}}",
+        "recorded": "Recorded",
+        "none": "Not logged",
+        "actionFirst": "Add {{name}}'s weight and length to start tracking growth.",
+        "actionStale": "It has been {{days}} days since {{name}} was weighed — time for a new measurement.",
+        "actionDiscuss": "{{name}}'s {{measure}} is below the WHO reference range. Worth mentioning at your next clinic visit."
+      },
+      "feeding": {
+        "today": "{{count}} today",
+        "actionNone": "No feeds logged for {{name}} in the last two days.",
+        "actionFewer": "{{count}} feeds logged yesterday, fewer than the usual {{floor}} for this age.",
+        "actionSolids": "Solids usually start around six months. Record when {{name}} starts."
+      },
+      "vaccines": {
+        "next": "Due {{visit}}",
+        "overdue": "{{count}} overdue",
+        "allDone": "Up to date",
+        "actionOverdue": "{{count}} doses from the {{visit}} visit are not recorded yet. Book a visit, or log them if they have been given.",
+        "unknown": "Add birth date",
+        "actionNoDob": "Add {{name}}'s date of birth to see which vaccines are due and when."
+      },
+      "milestones": {
+        "progress": "{{logged}} / {{total}}",
+        "none": "Not logged",
+        "actionUnlogged": "{{count}} milestones from the {{band}} group are not logged yet.",
+        "notYet": "—"
+      }
+    },
     "tabMother": "Mother",
     "tabInfant": "Infant",
     "emptyTitle": "No baby added yet",

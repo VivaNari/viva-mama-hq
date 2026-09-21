@@ -145,6 +145,10 @@ export const messages = {
         "Solids and water can only be logged once the baby is six months old",
     FEEDING_LOG_SOLIDS_NOT_STARTED:
         "Record that solids have started before logging solids or water",
+
+    WELLBEING_FETCH_SUCCESS: "Wellbeing summary fetched successfully",
+    WELLBEING_CHILD_REQUIRED: "A child is required to read a wellbeing summary",
+    WELLBEING_CHILD_NOT_FOUND: "Child not found for this user",
     SUBSCRIPTION_FETCH_SUCCESS: "Subscription fetched successfully",
     SUBSCRIPTION_PLANS_FETCH_SUCCESS: "Subscription plans fetched successfully",
     TRIAL_STARTED_SUCCESS: "Free trial started successfully",
