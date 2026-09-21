@@ -117,6 +117,21 @@ jest.mock('../src/analytics', () => ({
     track: jest.fn(),
 }));
 
+/**
+ * The bottom sheet, stubbed at the context rather than wrapped in its real provider.
+ *
+ * `BottomSheetProvider` lives in App.tsx and renders a portal-mounted modal; pulling it in
+ * here would test @gorhom/bottom-sheet rather than the screen. What the screen is
+ * responsible for is handing the sheet the right content, so `open` is captured and the
+ * node it was called with is rendered on its own where a test needs to read it.
+ */
+// `mock`-prefixed so jest's hoisting of the factory above this line is allowed.
+const mockOpenSheet = jest.fn();
+
+jest.mock('../src/components/bottomSheet/AppBottomSheet', () => ({
+    useBottomSheet: () => ({ open: mockOpenSheet, close: jest.fn() }),
+}));
+
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 // The app keys days on IST to match the server, so these helpers must too — otherwise the
@@ -548,7 +563,8 @@ describe('FeedingLog', () => {
 
     const breastFeed = (id: string, at: Date, minutes = 12) => ({
         _id: id,
-        source: 'breast',
+        milkSource: 'breastmilk',
+        deliveryMethod: 'direct',
         side: 'left',
         minutes,
         feedAt: at.toISOString(),
@@ -598,23 +614,116 @@ describe('FeedingLog', () => {
 
     /**
      * The PRD's "based on the chosen option we will enable the mother to insert the logs".
-     * A mother who is exclusively breastfeeding is not asked about a bottle.
+     * A mother breastfeeding at the breast is asked for a side; one feeding both milks is
+     * asked which milk, and never about a vessel.
      */
     it('offers only the choices that match the chosen method', async () => {
         const { getByText, queryByText } = render(<FeedingLog />);
         await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
 
         expect(getByText('Left')).toBeTruthy();
-        expect(queryByText('Bottle')).toBeNull();
+        expect(getByText('Both')).toBeTruthy();
+        expect(queryByText('Paladai')).toBeNull();
 
         updateFeedingSettings.mockResolvedValue(settings({ feedingMethod: 'mixed' }));
         fireEvent.press(getByText('Mixed feeding'));
 
-        await waitFor(() => expect(getByText('Bottle')).toBeTruthy());
+        await waitFor(() => expect(getByText('What was given')).toBeTruthy());
+        expect(getByText('Breastmilk')).toBeTruthy();
+        expect(queryByText('Left')).toBeNull();
+        expect(queryByText('Paladai')).toBeNull();
         expect(updateFeedingSettings).toHaveBeenCalledWith({
             childId: 'child-1',
             feedingMethod: 'mixed',
         });
+    });
+
+    /**
+     * Expressed milk is still exclusive breastfeeding, and the old form had no way to say
+     * so: it offered Left, Right and a duration, so a 60 ml katori feed went in as minutes
+     * at a breast the baby never touched.
+     */
+    it('swaps the breast fields for a vessel and a volume when milk is expressed', async () => {
+        const { getByText, queryByText, getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        expect(getByLabelText('min')).toBeTruthy();
+
+        fireEvent.press(getByText('Expressed (paladai, katori, cup…)'));
+
+        expect(getByText('How it was fed')).toBeTruthy();
+        expect(getByText('Paladai')).toBeTruthy();
+        expect(getByText('Spoon (chammach)')).toBeTruthy();
+        expect(queryByText('Left')).toBeNull();
+        expect(getByLabelText('ml')).toBeTruthy();
+    });
+
+    it('writes expressed breastmilk as a vessel feed with millilitres', async () => {
+        const at = new Date();
+        addFeed.mockResolvedValue({
+            childId: 'child-1',
+            loggedOn: dateKey(at),
+            kind: 'feed',
+            entry: {
+                _id: 'feed-1',
+                milkSource: 'breastmilk',
+                deliveryMethod: 'katori',
+                ml: 60,
+                feedAt: at.toISOString(),
+            },
+            totals: { feeds: 1, longestGapMinutes: null, solids: 0, waterMl: 0 },
+        });
+
+        const { getByText, getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        fireEvent.press(getByText('Expressed (paladai, katori, cup…)'));
+        fireEvent.press(getByText('Katori'));
+        fireEvent.changeText(getByLabelText('ml'), '60');
+        fireEvent.press(getByText('Add feed'));
+
+        await waitFor(() => expect(addFeed).toHaveBeenCalled());
+        expect(addFeed.mock.calls[0][0]).toMatchObject({
+            childId: 'child-1',
+            milkSource: 'breastmilk',
+            deliveryMethod: 'katori',
+            ml: 60,
+        });
+        expect(addFeed.mock.calls[0][0].minutes).toBeUndefined();
+        expect(getByText('Breastmilk · Katori · 60 ml')).toBeTruthy();
+    });
+
+    /** A mixed feed records which milk it was, and carries no vessel at all. */
+    it('writes a mixed feed as the milk that was given', async () => {
+        const at = new Date();
+        respondWith({ feedingMethod: 'mixed' });
+        addFeed.mockResolvedValue({
+            childId: 'child-1',
+            loggedOn: dateKey(at),
+            kind: 'feed',
+            entry: {
+                _id: 'feed-1',
+                milkSource: 'formula',
+                ml: 120,
+                feedAt: at.toISOString(),
+            },
+            totals: { feeds: 1, longestGapMinutes: null, solids: 0, waterMl: 0 },
+        });
+
+        const { getByText, getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        fireEvent.press(getByText('Formula'));
+        fireEvent.changeText(getByLabelText('ml'), '120');
+        fireEvent.press(getByText('Add feed'));
+
+        await waitFor(() => expect(addFeed).toHaveBeenCalled());
+        expect(addFeed.mock.calls[0][0]).toMatchObject({
+            milkSource: 'formula',
+            ml: 120,
+        });
+        expect(addFeed.mock.calls[0][0].deliveryMethod).toBeUndefined();
+        expect(getByText('Formula · 120 ml')).toBeTruthy();
     });
 
     it('writes a feed optimistically and keeps the stored row', async () => {
@@ -637,7 +746,8 @@ describe('FeedingLog', () => {
         await waitFor(() => expect(addFeed).toHaveBeenCalled());
         expect(addFeed.mock.calls[0][0]).toMatchObject({
             childId: 'child-1',
-            source: 'breast',
+            milkSource: 'breastmilk',
+            deliveryMethod: 'direct',
             side: 'left',
             minutes: 20,
         });
@@ -913,6 +1023,93 @@ describe('FeedingLog', () => {
             reactions: ['liked'],
         });
         expect(getByText('Mashed banana')).toBeTruthy();
+    });
+
+    /**
+     * The portion and the texture a paediatrician asks about, and the allergy chip the
+     * reaction row was missing — the one reaction that changes what a family does next.
+     */
+    it('records a portion, a texture and an allergy against the food', async () => {
+        const now = new Date();
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(220) };
+        respondWith({ solidsAvailable: true, solidsStartedOn: '2026-08-01' });
+        addSolid.mockResolvedValue({
+            childId: 'child-1',
+            loggedOn: dateKey(now),
+            kind: 'solid',
+            entry: {
+                _id: 's1',
+                food: 'Egg yolk',
+                reactions: ['allergy'],
+                quantity: 2,
+                quantityUnit: 'spoon',
+                texture: 'smooth_mash',
+                feedAt: now.toISOString(),
+            },
+            totals: { feeds: 0, longestGapMinutes: null, solids: 1, waterMl: 0 },
+        });
+
+        const { getByText, getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        fireEvent.changeText(getByLabelText('Food'), 'Egg yolk');
+        fireEvent.changeText(getByLabelText('How much'), '2');
+        fireEvent.press(getByText('Spoon (chammach)'));
+        fireEvent.press(getByText('Smooth mash'));
+        fireEvent.press(getByText('Allergy'));
+        fireEvent.press(getByText('Add food'));
+
+        await waitFor(() => expect(addSolid).toHaveBeenCalled());
+        expect(addSolid.mock.calls[0][0]).toMatchObject({
+            food: 'Egg yolk',
+            reactions: ['allergy'],
+            quantity: 2,
+            quantityUnit: 'spoon',
+            texture: 'smooth_mash',
+        });
+        expect(getByText('2 × Spoon (chammach) · Smooth mash · Allergy')).toBeTruthy();
+    });
+
+    /** A portion nobody measured must not be invented, so the keys stay off the request. */
+    it('sends no portion when only the food was entered', async () => {
+        const now = new Date();
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(220) };
+        respondWith({ solidsAvailable: true, solidsStartedOn: '2026-08-01' });
+        addSolid.mockResolvedValue({
+            childId: 'child-1',
+            loggedOn: dateKey(now),
+            kind: 'solid',
+            entry: {
+                _id: 's1',
+                food: 'Khichdi',
+                reactions: [],
+                feedAt: now.toISOString(),
+            },
+            totals: { feeds: 0, longestGapMinutes: null, solids: 1, waterMl: 0 },
+        });
+
+        const { getByText, getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        fireEvent.changeText(getByLabelText('Food'), 'Khichdi');
+        fireEvent.press(getByText('Add food'));
+
+        await waitFor(() => expect(addSolid).toHaveBeenCalled());
+        const payload = addSolid.mock.calls[0][0];
+        expect(payload.quantity).toBeUndefined();
+        expect(payload.quantityUnit).toBeUndefined();
+        expect(payload.texture).toBeUndefined();
+    });
+
+    /** The time a meal happened is its own field now, auto-filled and editable. */
+    it('offers an editable time on a solid', async () => {
+        mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(220) };
+        respondWith({ solidsAvailable: true, solidsStartedOn: '2026-08-01' });
+
+        const { getByLabelText } = render(<FeedingLog />);
+        await waitFor(() => expect(getFeedingLogs).toHaveBeenCalled());
+
+        expect(getByLabelText('Food time')).toBeTruthy();
     });
 
     /**
@@ -1296,6 +1493,68 @@ describe('VaccinationLog', () => {
         expect(getByText('Hepatitis B')).toBeTruthy();
         expect(getByText('Give within 24 hours of birth')).toBeTruthy();
         expect(getByText('0 of 3 given')).toBeTruthy();
+    });
+
+    /**
+     * The info button, and what it puts in the sheet.
+     *
+     * The description is keyed on the vaccine rather than the dose, so this also guards the
+     * generator's `vaccine` field: a dose emitted without one would look up
+     * `descriptions.undefined` and the sheet would render the raw key back at the parent.
+     */
+    describe('the vaccine info sheet', () => {
+        beforeEach(() => mockOpenSheet.mockClear());
+
+        it('opens a sheet describing the vaccine that was tapped', async () => {
+            const { getByLabelText } = render(<VaccinationLog />);
+            await waitFor(() => expect(getVaccinationLogs).toHaveBeenCalled());
+
+            fireEvent.press(getByLabelText('About BCG'));
+
+            expect(mockOpenSheet).toHaveBeenCalledTimes(1);
+
+            // The screen hands the sheet a node; render it on its own to read it.
+            const { getByText } = render(mockOpenSheet.mock.calls[0][0]);
+            expect(getByText('BCG')).toBeTruthy();
+            expect(getByText('Tuberculosis')).toBeTruthy();
+            expect(
+                getByText(/Protects against tuberculosis \(TB\)/),
+            ).toBeTruthy();
+            expect(getByText(/not medical advice/)).toBeTruthy();
+        });
+
+        /** Vitamin A is on the immunisation schedule but is not a vaccine, and says so. */
+        it('marks a supplement as a supplement', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(300) };
+
+            const { getByLabelText, getByText: getTab } = render(<VaccinationLog />);
+            await waitFor(() => expect(getVaccinationLogs).toHaveBeenCalled());
+
+            // Vitamin A sits on the government card's 9–12 month visit.
+            fireEvent.press(getTab('9–12 months · 0/5'));
+            fireEvent.press(getByLabelText('About Vitamin A'));
+
+            const { getByText } = render(mockOpenSheet.mock.calls[0][0]);
+            expect(getByText('Supplement — not a vaccine')).toBeTruthy();
+            expect(getByText(/supplement rather than a vaccine/)).toBeTruthy();
+        });
+
+        /** Three doses of PCV are one vaccine, and must not describe themselves differently. */
+        it('gives every dose of one vaccine the same description', async () => {
+            mockRouteParams = { childId: 'child-1', childDob: dobDaysAgo(60) };
+
+            const { getByLabelText, getAllByLabelText } = render(<VaccinationLog />);
+            await waitFor(() => expect(getVaccinationLogs).toHaveBeenCalled());
+
+            fireEvent.press(getByLabelText('About PCV'));
+            fireEvent.press(getAllByLabelText('About OPV')[0]);
+
+            const pcv = render(mockOpenSheet.mock.calls[0][0]);
+            const opv = render(mockOpenSheet.mock.calls[1][0]);
+
+            expect(pcv.getByText(/Pneumococcal Conjugate Vaccine/)).toBeTruthy();
+            expect(opv.getByText(/Oral Polio Vaccine/)).toBeTruthy();
+        });
     });
 
     /**

@@ -152,7 +152,15 @@ async function seed() {
         childId: new Types.ObjectId(),
         loggedOn: new Date(),
         feedingMethod: "only_breastmilk",
-        feeds: [{ source: "breast", side: "left", minutes: 15, feedAt: new Date() }],
+        feeds: [
+            {
+                milkSource: "breastmilk",
+                deliveryMethod: "direct",
+                side: "left",
+                minutes: 15,
+                feedAt: new Date(),
+            },
+        ],
     });
     // Inserted through the driver rather than the model: a valid recommendation
     // history needs a deep tree of per-category scores and copy, none of which the

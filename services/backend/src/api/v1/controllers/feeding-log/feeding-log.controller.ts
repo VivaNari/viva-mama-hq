@@ -78,7 +78,7 @@ export default class FeedingLogController {
      * appended, and the client needs that id to be able to remove the row again.
      *
      * The body has already been through the validator, which is what guarantees `side` and
-     * `minutes` are present for a breast feed and `ml` for a bottle. `reactions` is defaulted
+     * `minutes` are present for a direct feed and `ml` for every other. `reactions` is defaulted
      * here rather than relying on the validator's `.default([])` — `requestValidator`
      * discards Joi's coerced value and passes the raw body on.
      */
@@ -104,6 +104,12 @@ export default class FeedingLogController {
                     _id,
                     food: String(body.food).trim(),
                     reactions: (body.reactions ?? []) as TFoodReaction[],
+                    // Spread only when sent, so a portion nobody measured is absent from
+                    // the document rather than stored as an explicit undefined.
+                    ...(body.quantity !== undefined
+                        ? { quantity: body.quantity, quantityUnit: body.quantityUnit }
+                        : {}),
+                    ...(body.texture !== undefined ? { texture: body.texture } : {}),
                     feedAt,
                 } as unknown as TFeedingEntry,
                 at: feedAt,
@@ -113,8 +119,11 @@ export default class FeedingLogController {
         return {
             entry: {
                 _id,
-                source: body.source,
-                ...(body.source === "breast"
+                milkSource: body.milkSource,
+                ...(body.deliveryMethod !== undefined
+                    ? { deliveryMethod: body.deliveryMethod }
+                    : {}),
+                ...(body.deliveryMethod === "direct"
                     ? { side: body.side, minutes: body.minutes }
                     : { ml: body.ml }),
                 feedAt,

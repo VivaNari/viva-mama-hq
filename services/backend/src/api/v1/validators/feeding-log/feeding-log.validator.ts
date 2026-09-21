@@ -1,10 +1,13 @@
 import Joi from "joi";
 
 import {
+    DELIVERY_METHODS,
     FEEDING_ENTRY_KINDS,
     FEED_SIDES,
-    FEED_SOURCES,
     FOOD_REACTIONS,
+    MILK_SOURCES,
+    SOLID_QUANTITY_UNITS,
+    SOLID_TEXTURES,
 } from "../../../../types/feeding-log.types";
 import { FeedingMethodEnum } from "../../../../types/user.types";
 
@@ -13,9 +16,9 @@ import { FeedingMethodEnum } from "../../../../types/user.types";
  *
  * The three entry kinds share one endpoint and one validator, discriminated on `kind`, so
  * the route table stays the trio every other log has. What that buys has to be paid for
- * here: `feed` is itself discriminated a second time on `source`, because minutes on the
- * breast and millilitres in a bottle are different fields and neither is optional on the
- * side it belongs to.
+ * here: `feed` is itself discriminated a second time on `deliveryMethod`, because minutes
+ * at the breast and millilitres in a vessel are different fields and neither is optional
+ * on the side it belongs to.
  *
  * `feedAt` is a full instant rather than a date. The time of day is the whole point of a
  * feeding schedule, and an entry recorded at 07:00 for the 03:10 feed has to keep 03:10.
@@ -31,36 +34,49 @@ const isoDate = Joi.string()
 /**
  * A milk feed.
  *
- * `side` and `minutes` belong to the breast and `ml` to the bottle, and each is forbidden
- * on the other. Forbidding rather than ignoring: a client sending `{source: 'bottle',
- * minutes: 20}` has a bug, and quietly dropping the field would store a bottle feed with no
- * volume and tell nobody.
+ * `side` and `minutes` belong to the breast and `ml` to every vessel, and each is forbidden
+ * on the other. Forbidding rather than ignoring: a client sending `{deliveryMethod:
+ * 'bottle', minutes: 20}` has a bug, and quietly dropping the field would store a bottle
+ * feed with no volume and tell nobody.
+ *
+ * `deliveryMethod` is optional because a mixed feed has none — the screen asks a mother
+ * feeding both only what was given and how much. An absent one therefore still requires
+ * `ml`, which is what the `is: "direct"` test rather than a presence test gives us.
  */
 const feedPayload = {
-    source: Joi.string()
-        .valid(...FEED_SOURCES)
+    milkSource: Joi.string()
+        .valid(...MILK_SOURCES)
         .required(),
-    side: Joi.when("source", {
-        is: "breast",
+    deliveryMethod: Joi.string().valid(...DELIVERY_METHODS),
+    side: Joi.when("deliveryMethod", {
+        is: "direct",
         then: Joi.string()
             .valid(...FEED_SIDES)
             .required(),
         otherwise: Joi.forbidden(),
     }),
-    minutes: Joi.when("source", {
-        is: "breast",
+    minutes: Joi.when("deliveryMethod", {
+        is: "direct",
         then: Joi.number().integer().min(1).max(180).required(),
         otherwise: Joi.forbidden(),
     }),
-    ml: Joi.when("source", {
-        is: "bottle",
-        then: Joi.number().integer().min(1).max(500).required(),
-        otherwise: Joi.forbidden(),
+    ml: Joi.when("deliveryMethod", {
+        is: "direct",
+        then: Joi.forbidden(),
+        otherwise: Joi.number().integer().min(1).max(500).required(),
     }),
     // Joi's ISO mode, so "2026-09-15T03:10:00.000Z" is accepted and a bare "today" is not.
     feedAt: Joi.date().iso().required(),
 };
 
+/**
+ * A solid food.
+ *
+ * Everything but the food's name is optional. A mother logging a first taste one-handed
+ * should not be held at the form by a portion she never measured, and the name is the part
+ * a rash is later attributed to. `quantityUnit` is required alongside a `quantity`, though:
+ * a bare "2" is not a portion anyone can read back.
+ */
 const solidPayload = {
     food: Joi.string().trim().min(1).max(80).required(),
     // Optional and multi-select: "liked it" and "loose stool" are not mutually exclusive,
@@ -70,6 +86,11 @@ const solidPayload = {
         .unique()
         .max(FOOD_REACTIONS.length)
         .default([]),
+    quantity: Joi.number().integer().min(1).max(20),
+    quantityUnit: Joi.string()
+        .valid(...SOLID_QUANTITY_UNITS)
+        .when("quantity", { is: Joi.exist(), then: Joi.required() }),
+    texture: Joi.string().valid(...SOLID_TEXTURES),
     feedAt: Joi.date().iso().required(),
 };
 

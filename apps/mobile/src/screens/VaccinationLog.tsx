@@ -7,9 +7,11 @@ import {
     StyleSheet,
     Switch,
     Text,
+    TouchableOpacity,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Lucide from '@react-native-vector-icons/lucide';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 import Toast from 'react-native-toast-message';
 
@@ -19,6 +21,8 @@ import {
     recordVaccineDose,
     removeVaccineDose,
 } from '../api/infantVaccination.api';
+import { useBottomSheet } from '../components/bottomSheet/AppBottomSheet';
+import VaccineInfo from '../components/bottomSheet/VaccineInfo';
 import LogChipTabs from '../components/infant/LogChipTabs';
 import LogSectionCard from '../components/infant/LogSectionCard';
 import { VACCINATION_SCHEDULE } from '../data/infantVaccinationData';
@@ -90,6 +94,8 @@ const doseLabel = (dose: IVaccineDose, t: ReturnType<typeof useTranslation>['t']
 const VaccinationLog: React.FC = () => {
     const { t } = useTranslation();
     const route = useRoute();
+    // Mounted app-wide in App.tsx, so the sheet needs no plumbing of its own here.
+    const { open: openSheet } = useBottomSheet();
     const params = (route.params ?? {}) as InfantLogRouteParams;
 
     const childName = params.childName?.trim() || t('infant.childFallback');
@@ -357,6 +363,32 @@ const VaccinationLog: React.FC = () => {
                                             >
                                                 {dose.name}
                                             </Text>
+
+                                            {/*
+                                              What the injection in front of her is for.
+                                              Beside the name rather than behind the row,
+                                              because the question is about the vaccine and
+                                              the row's own tap target is the Switch — one
+                                              that records a dose she may not have given yet.
+                                            */}
+                                            <TouchableOpacity
+                                                activeOpacity={0.7}
+                                                onPress={() =>
+                                                    openSheet(<VaccineInfo dose={dose} />)
+                                                }
+                                                accessibilityRole="button"
+                                                accessibilityLabel={t(
+                                                    'infant.vaccination.infoAbout',
+                                                    { vaccine: dose.name },
+                                                )}
+                                                hitSlop={10}
+                                            >
+                                                <Lucide
+                                                    name="info"
+                                                    size={15}
+                                                    color={colors.darkPurple}
+                                                />
+                                            </TouchableOpacity>
 
                                             {!!dosage && (
                                                 <View style={styles.doseChip}>

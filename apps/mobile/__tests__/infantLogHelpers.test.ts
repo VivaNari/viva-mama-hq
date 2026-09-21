@@ -23,10 +23,11 @@ import {
 } from '../src/utils/infantLogHelpers';
 import { IFeedEntry } from '../src/types/feedingLog.types';
 
-/** A stored breast feed at a given time on one fixed day. */
+/** A stored direct breast feed at a given time on one fixed day. */
 const feed = (time: string): IFeedEntry => ({
   _id: time,
-  source: 'breast',
+  milkSource: 'breastmilk',
+  deliveryMethod: 'direct',
   side: 'left',
   minutes: 12,
   feedAt: `2026-09-13T${time}:00.000Z`,

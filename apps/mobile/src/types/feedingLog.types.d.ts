@@ -11,9 +11,29 @@ import { FeedingMethodEnum } from "./user.types";
  * them as `Date` would be a lie the compiler could not catch.
  */
 
-export type TFeedSource = "breast" | "bottle";
-export type TFeedSide = "left" | "right";
-export type TFoodReaction = "liked" | "refused" | "rash" | "loose_stool";
+/** What the baby was given. Orthogonal to how it reached them — see `TDeliveryMethod`. */
+export type TMilkSource = "breastmilk" | "formula";
+/** How it reached them: the breast itself, or one of the vessels the design offers. */
+export type TDeliveryMethod =
+  | "direct"
+  | "paladai"
+  | "katori"
+  | "cup"
+  | "spoon"
+  | "bottle";
+export type TFeedSide = "left" | "right" | "both";
+export type TFoodReaction =
+  | "liked"
+  | "refused"
+  | "rash"
+  | "loose_stool"
+  | "allergy";
+export type TSolidQuantityUnit = "spoon" | "katori" | "piece";
+export type TSolidTexture =
+  | "smooth_mash"
+  | "mashed_with_lumps"
+  | "finely_chopped"
+  | "finger_food";
 
 /** Which of the day's three arrays a write addresses. */
 export type TFeedingEntryKind = "feed" | "solid" | "water";
@@ -21,18 +41,23 @@ export type TFeedingEntryKind = "feed" | "solid" | "water";
 /**
  * One milk feed.
  *
- * `minutes` and `ml` are separate fields on purpose. Minutes at the breast and millilitres
- * in a bottle are different quantities, and the single `amount` string this screen used to
+ * What was given and how it was given are two fields, not one: expressed breastmilk from a
+ * katori and formula from a katori are the same act with different milk.
+ *
+ * `minutes` and `ml` are separate for the same reason. Minutes at the breast and millilitres
+ * in a vessel are different quantities, and the single `amount` string this screen used to
  * keep meant either one depending on a sibling field.
  */
 export interface IFeedEntry {
   _id: string;
-  source: TFeedSource;
-  /** Which breast. Present for `breast` only. */
+  milkSource: TMilkSource;
+  /** Absent on a mixed feed, where the design asks only what was given and how much. */
+  deliveryMethod?: TDeliveryMethod;
+  /** Which breast. Present for `direct` only. */
   side?: TFeedSide;
-  /** Time at the breast. Present for `breast` only. */
+  /** Time at the breast. Present for `direct` only. */
   minutes?: number;
-  /** Volume taken. Present for `bottle` only. */
+  /** Volume taken. Present for everything except `direct`. */
   ml?: number;
   /** ISO instant — when the feed happened, not when it was typed in. */
   feedAt: string;
@@ -43,6 +68,11 @@ export interface ISolidEntry {
   food: string;
   /** Held on the food, because which food caused the rash is the question being asked. */
   reactions: TFoodReaction[];
+  /** How much was eaten, in `quantityUnit`. Optional — the food's name is what matters. */
+  quantity?: number;
+  quantityUnit?: TSolidQuantityUnit;
+  /** How the food was prepared. Optional for the same reason. */
+  texture?: TSolidTexture;
   feedAt: string;
 }
 

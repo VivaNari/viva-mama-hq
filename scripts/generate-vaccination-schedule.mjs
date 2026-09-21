@@ -202,6 +202,47 @@ const IAP = [
     },
 ];
 
+/**
+ * What each vaccine is for, in a parent's words. Shown in the info sheet on the log.
+ *
+ * Keyed on the *vaccine*, not the dose. BCG is BCG whether it is a birth dose or a
+ * booster, and keying these per dose would mean three descriptions of PCV that can drift
+ * apart — the row already carries the dose number, and nothing about the purpose changes
+ * with it.
+ *
+ * ─────────────────────────────────────────────────────────────────────────────────────────
+ * CLINICAL REVIEW REQUIRED. Drafted for review, not transcribed from a source document —
+ * the same standing as the IAP table above. This is copy a mother reads to decide what to
+ * do about her baby, so every line needs a clinician's sign-off before release.
+ *
+ * Deliberately excluded, and to be added only on clinical advice: side effects, what to do
+ * about a reaction, dosing amounts, and any instruction to delay or skip a dose.
+ * ─────────────────────────────────────────────────────────────────────────────────────────
+ *
+ * Every vaccine reached by either schedule must appear here — `main` throws on a missing
+ * one rather than emitting a screen with a blank sheet on it.
+ */
+const VACCINE_DESCRIPTIONS = {
+    bcg: "Protects against tuberculosis (TB), including the severe forms that can affect a baby's brain and spread through the body. Newborns have very little defence of their own against TB, so it is given as a single injection in the upper arm soon after birth.",
+    opv: "Oral Polio Vaccine protects against polio, a virus that can cause lifelong paralysis. It is given as drops into the baby's mouth, and it is the repeated doses over the first months that build lasting protection.",
+    ipv: "Inactivated Polio Vaccine protects against polio using a killed virus, given as an injection. It is used alongside the oral drops so that protection against paralysis is as complete as possible.",
+    fipv_ipv: "Fractional IPV is a smaller, injected dose of the inactivated polio vaccine, given into the skin of the upper arm. It strengthens the protection the oral drops give against polio paralysis.",
+    hepatitis_b: "Protects against hepatitis B, a virus that infects the liver and can cause lasting liver damage. Babies who catch it early are the most likely to carry it for life, which is why the first dose is given within 24 hours of birth.",
+    hepatitis_a: "Protects against hepatitis A, an infection of the liver that spreads through contaminated food and water. It is given as an injection, in two doses.",
+    pentavalent: "One injection covering five diseases at once: diphtheria, whooping cough (pertussis), tetanus, hepatitis B, and Hib. Combining them means fewer injections for your baby and the same protection.",
+    dpt: "Protects against diphtheria, whooping cough (pertussis) and tetanus. Protection from the early doses fades as a child grows, and the booster is what keeps it up.",
+    dtwp_dtap: "Protects against diphtheria, whooping cough (pertussis) and tetanus. DTwP and DTaP are two forms of the same protection; your paediatrician will advise which one your baby is given.",
+    hib: "Protects against Haemophilus influenzae type b, a bacterium that can cause meningitis and severe pneumonia in young children. It is given as an injection.",
+    pcv: "Pneumococcal Conjugate Vaccine protects against the bacteria behind many cases of pneumonia, meningitis and blood infection. Pneumonia is one of the biggest causes of death in young children, and this is given as an injection.",
+    rotavirus_rvv: "Protects against rotavirus, the most common cause of severe diarrhoea and dehydration in babies. It is given as drops into the mouth.",
+    measles_rubella_mr: "Protects against measles and rubella. Measles spreads very easily and can lead to pneumonia and brain inflammation; rubella is mild in children but can seriously harm an unborn baby if it reaches someone who is pregnant.",
+    mmr: "Protects against measles, mumps and rubella in a single injection. Measles can lead to pneumonia and brain inflammation, mumps can affect hearing, and rubella can seriously harm an unborn baby if it reaches someone who is pregnant.",
+    je: "Protects against Japanese encephalitis, an infection spread by mosquitoes that causes swelling of the brain. It is given in the districts where the disease occurs.",
+    influenza: "Protects against seasonal flu, which tends to hit young children harder than adults. Flu viruses change from year to year, so this protection is renewed yearly rather than given once.",
+    varicella: "Protects against chickenpox (varicella). Most children recover well, but it spreads very easily and can lead to skin infections and more serious illness in some children.",
+    vitamin_a: "Vitamin A is a supplement rather than a vaccine. It supports your child's eyesight and helps the body fight infection, and a shortage of it is a leading preventable cause of childhood blindness. It is given as a liquid by mouth.",
+};
+
 const slug = (text) =>
     String(text)
         .toLowerCase()
@@ -328,13 +369,21 @@ async function main() {
         const supplement = /^supplement/i.test(note ?? "");
         const cleanNote = supplement ? "" : String(note ?? "").trim();
 
-        const entry = { key, name, protects: String(protects).trim(), note: cleanNote, supplement };
+        const entry = {
+            key,
+            name,
+            // The vaccine without its dose suffix — what the info sheet's copy is keyed on.
+            vaccine: slug(name),
+            protects: String(protects).trim(),
+            note: cleanNote,
+            supplement,
+        };
         if (parsed.number !== undefined) entry.number = parsed.number;
         entry.kind = parsed.kind;
 
         const existing = doses.get(key);
         if (existing) {
-            const differs = ["name", "protects", "kind", "number", "supplement"].find(
+            const differs = ["name", "vaccine", "protects", "kind", "number", "supplement"].find(
                 (field) => existing[field] !== entry[field],
             );
             // A note present on one schedule and absent on the other is not a conflict —
@@ -460,7 +509,12 @@ async function main() {
      */
     const doseSource = (key) => {
         const dose = doses.get(key);
-        const fields = [`key: "${dose.key}"`, `name: ${JSON.stringify(dose.name)}`, `doseKind: "${dose.kind}"`];
+        const fields = [
+            `key: "${dose.key}"`,
+            `name: ${JSON.stringify(dose.name)}`,
+            `vaccine: "${dose.vaccine}"`,
+            `doseKind: "${dose.kind}"`,
+        ];
         if (dose.number !== undefined) fields.push(`doseNumber: ${dose.number}`);
         if (dose.note) fields.push("note: true");
         if (dose.supplement) fields.push("supplement: true");
@@ -592,7 +646,31 @@ export const isVaccineKeyForSector = (value: unknown, sector: VaccinationSector)
 `;
 
     // ── scripts/out/vaccination-en.json ──────────────────────────────────────────────
+
+    /**
+     * Every vaccine either schedule reaches, in the order the doses appear.
+     *
+     * Thrown on rather than defaulted: a vaccine with no description would render an info
+     * button that opens an empty sheet, and the parent who tapped it would be told nothing
+     * about the injection in front of them.
+     */
+    const vaccines = [];
+    for (const key of orderedKeys) {
+        const { vaccine } = doses.get(key);
+        if (!vaccines.includes(vaccine)) vaccines.push(vaccine);
+    }
+
+    const undescribed = vaccines.filter((vaccine) => !VACCINE_DESCRIPTIONS[vaccine]);
+    if (undescribed.length) {
+        throw new Error(
+            `No description for: ${undescribed.join(", ")} — add it to VACCINE_DESCRIPTIONS`,
+        );
+    }
+
     const en = {
+        descriptions: Object.fromEntries(
+            vaccines.map((vaccine) => [vaccine, VACCINE_DESCRIPTIONS[vaccine]]),
+        ),
         visits: Object.fromEntries([...visitLabels].map(([key, label]) => [key, label.short])),
         visitDetail: Object.fromEntries(
             [...visitLabels].filter(([, l]) => l.detail).map(([key, l]) => [key, l.detail]),

@@ -31,10 +31,14 @@ import LogDatePickerChip from '../components/infant/LogDatePickerChip';
 import LogInfoBanner from '../components/infant/LogInfoBanner';
 import LogSectionCard from '../components/infant/LogSectionCard';
 import {
-    CHOICES_FOR_METHOD,
-    CHOICE_LABEL_KEYS,
+    BREASTFEEDING_MODES,
     FEEDING_METHODS,
+    FEEDING_VESSELS,
+    FEED_SIDES,
     FOOD_REACTIONS,
+    MIXED_MILK_SOURCES,
+    SOLID_QUANTITY_UNITS,
+    SOLID_TEXTURES,
     WATER_INCREMENTS_ML,
 } from '../data/infantFeedingData';
 import { useLogDateStrip } from '../hooks/useLogDateStrip';
@@ -47,10 +51,19 @@ import {
     IFeedingSettings,
     ISolidEntry,
     IWaterEntry,
+    TDeliveryMethod,
+    TFeedSide,
     TFeedingEntryKind,
     TFoodReaction,
+    TMilkSource,
+    TSolidQuantityUnit,
+    TSolidTexture,
 } from '../types/feedingLog.types';
-import { InfantLogRouteParams, TFeedChoice } from '../types/infantLog.types';
+import {
+    ILogChoiceOption,
+    InfantLogRouteParams,
+    TBreastfeedingMode,
+} from '../types/infantLog.types';
 import { FeedingMethodEnum } from '../types/user.types';
 import {
     formatChipDate,
@@ -124,13 +137,30 @@ const FeedingLog: React.FC = () => {
     const [settingsFailed, setSettingsFailed] = useState(false);
 
     // Composer state. Not the log — what has not been committed yet.
-    const [feedChoice, setFeedChoice] = useState<TFeedChoice | null>(null);
+    /**
+     * Direct or expressed, under exclusive breastfeeding.
+     *
+     * Composer state rather than a stored setting: a mother who pumps at work and feeds at
+     * the breast at home does both on the same day, so the last feed must not decide the
+     * next one. Each entry keeps the answer that was true for it.
+     */
+    const [breastfeedingMode, setBreastfeedingMode] =
+        useState<TBreastfeedingMode>('direct');
+    const [feedSide, setFeedSide] = useState<TFeedSide | null>(null);
+    const [feedVessel, setFeedVessel] = useState<TDeliveryMethod | null>(null);
+    const [mixedMilk, setMixedMilk] = useState<TMilkSource | null>(null);
     const [feedAmount, setFeedAmount] = useState('');
     const [feedAt, setFeedAt] = useState<Date>(() => new Date());
     const [timePickerOpen, setTimePickerOpen] = useState(false);
 
     const [solidFood, setSolidFood] = useState('');
     const [solidReactions, setSolidReactions] = useState<TFoodReaction[]>([]);
+    const [solidQuantity, setSolidQuantity] = useState('');
+    const [solidUnit, setSolidUnit] = useState<TSolidQuantityUnit | null>(null);
+    const [solidTexture, setSolidTexture] = useState<TSolidTexture | null>(null);
+    /** Auto-filled and editable, the same contract the feed row's time has. */
+    const [solidAt, setSolidAt] = useState<Date>(() => new Date());
+    const [solidTimePickerOpen, setSolidTimePickerOpen] = useState(false);
 
     /**
      * "Not yet", held for this visit only.
@@ -150,6 +180,20 @@ const FeedingLog: React.FC = () => {
     daysRef.current = days;
 
     const method = settings?.feedingMethod ?? FeedingMethodEnum.ONLY_BREASTMILK;
+
+    /**
+     * Which composer the feed row draws, from the method and — under exclusive
+     * breastfeeding — the mode.
+     *
+     * Three shapes rather than one form with everything on it: a breast takes a side and a
+     * duration, a vessel takes a volume, and a mixed feed takes only what was given and how
+     * much. Asking for all of it every time would be asking for fields that do not apply.
+     */
+    const isDirectFeed =
+        method === FeedingMethodEnum.ONLY_BREASTMILK && breastfeedingMode === 'direct';
+    const isMixedFeed = method === FeedingMethodEnum.MIXED;
+    /** Expressed breastmilk and formula are the same row: a vessel and millilitres. */
+    const isVesselFeed = !isDirectFeed && !isMixedFeed;
 
     /**
      * Whether solids and water are on this screen at all.
@@ -319,7 +363,9 @@ const FeedingLog: React.FC = () => {
         setSettings(current => (current ? { ...current, feedingMethod: next } : current));
         // The composer's choices are method-dependent, so a choice the new method does not
         // offer has to go rather than be silently submitted.
-        setFeedChoice(null);
+        setFeedSide(null);
+        setFeedVessel(null);
+        setMixedMilk(null);
 
         try {
             const updated = await updateFeedingSettings({
@@ -334,6 +380,22 @@ const FeedingLog: React.FC = () => {
             setSettings(previous);
             Toast.show({ type: 'error', text1: t('infant.feeding.saveFailed') });
         }
+    };
+
+    /**
+     * Switching between the breast and a vessel clears what was half-typed.
+     *
+     * The same reason `changeMethod` drops the choice: "20" meant twenty minutes a moment
+     * ago and would mean twenty millilitres now, and carrying it across would silently
+     * submit a feed nobody described.
+     */
+    const changeBreastfeedingMode = (next: TBreastfeedingMode) => {
+        if (next === breastfeedingMode) return;
+
+        setBreastfeedingMode(next);
+        setFeedSide(null);
+        setFeedVessel(null);
+        setFeedAmount('');
     };
 
     const setSolidsStarted = async (started: boolean) => {
@@ -365,32 +427,73 @@ const FeedingLog: React.FC = () => {
 
     /* -------------------------------- entries ------------------------------- */
 
+    /**
+     * The fields this feed carries, from whichever composer is on screen.
+     *
+     * Built once and spread into both the request and the optimistic row, so the entry a
+     * mother sees appear and the entry the server stores cannot drift apart. Null means the
+     * form is not complete enough to send.
+     */
+    const feedFields = ():
+        | Pick<IFeedEntry, 'milkSource' | 'deliveryMethod' | 'side' | 'minutes' | 'ml'>
+        | null => {
+        const amount = Math.round(Number(feedAmount));
+        if (!Number.isFinite(amount) || amount <= 0) return null;
+
+        if (isDirectFeed) {
+            return feedSide
+                ? {
+                      milkSource: 'breastmilk',
+                      deliveryMethod: 'direct',
+                      side: feedSide,
+                      minutes: amount,
+                  }
+                : null;
+        }
+
+        // A mixed feed carries no vessel: the design asks only what was given and how much.
+        if (isMixedFeed) {
+            return mixedMilk ? { milkSource: mixedMilk, ml: amount } : null;
+        }
+
+        return feedVessel
+            ? {
+                  milkSource:
+                      method === FeedingMethodEnum.NOT_BREASTFEEDING
+                          ? 'formula'
+                          : 'breastmilk',
+                  deliveryMethod: feedVessel,
+                  ml: amount,
+              }
+            : null;
+    };
+
     const submitFeed = async () => {
         if (!guardWritable() || !params.childId) return;
 
-        const amount = Number(feedAmount);
-        if (!feedChoice || !Number.isFinite(amount) || amount <= 0) {
-            Toast.show({ type: 'error', text1: t('infant.feeding.feedIncomplete') });
+        const fields = feedFields();
+        if (!fields) {
+            Toast.show({
+                type: 'error',
+                text1: t(
+                    isDirectFeed
+                        ? 'infant.feeding.feedIncompleteDirect'
+                        : 'infant.feeding.feedIncomplete',
+                ),
+            });
             return;
         }
 
-        const source = feedChoice === 'bottle' ? 'bottle' : 'breast';
         const payload = {
             childId: params.childId,
-            source: source as 'breast' | 'bottle',
-            ...(source === 'breast'
-                ? { side: feedChoice as 'left' | 'right', minutes: Math.round(amount) }
-                : { ml: Math.round(amount) }),
+            ...fields,
             feedAt: feedAt.toISOString(),
         };
 
         const localId = pendingId();
         const optimistic: IFeedEntry = {
             _id: localId,
-            source: payload.source,
-            ...(source === 'breast'
-                ? { side: feedChoice as 'left' | 'right', minutes: Math.round(amount) }
-                : { ml: Math.round(amount) }),
+            ...fields,
             feedAt: payload.feedAt,
         };
 
@@ -431,23 +534,41 @@ const FeedingLog: React.FC = () => {
             return;
         }
 
-        const at = new Date().toISOString();
+        const at = solidAt.toISOString();
         const localId = pendingId();
         const reactions = [...solidReactions];
 
+        // Quantity and unit travel together or not at all — a bare "2" is not a portion
+        // anyone can read back, which is the pairing the server's validator also enforces.
+        const quantity = Math.round(Number(solidQuantity));
+        const portion =
+            solidUnit && Number.isFinite(quantity) && quantity > 0
+                ? { quantity, quantityUnit: solidUnit }
+                : {};
+        const texture = solidTexture ? { texture: solidTexture } : {};
+
         mutateDay(selectedKey, current => ({
             ...current,
-            solids: [...current.solids, { _id: localId, food, reactions, feedAt: at }],
+            solids: [
+                ...current.solids,
+                { _id: localId, food, reactions, ...portion, ...texture, feedAt: at },
+            ],
         }));
 
         setSolidFood('');
         setSolidReactions([]);
+        setSolidQuantity('');
+        setSolidUnit(null);
+        setSolidTexture(null);
+        setSolidAt(new Date());
 
         try {
             const created = await addSolid({
                 childId: params.childId,
                 food,
                 reactions,
+                ...portion,
+                ...texture,
                 feedAt: at,
             });
             mutateDay(created.loggedOn, current => ({
@@ -545,19 +666,100 @@ const FeedingLog: React.FC = () => {
             prev.includes(key) ? prev.filter(item => item !== key) : [...prev, key],
         );
 
-    /** Minutes at the breast, millilitres in a bottle. Never one field meaning both. */
-    const amountPlaceholder = (choice: TFeedChoice | null): string =>
-        choice === 'bottle'
-            ? t('infant.feeding.amountMl')
-            : t('infant.feeding.amountMinutes');
+    /** Minutes at the breast, millilitres in everything else. Never one field meaning both. */
+    const amountPlaceholder = isDirectFeed
+        ? t('infant.feeding.amountMinutes')
+        : t('infant.feeding.amountMl');
 
-    const feedSummary = (entry: IFeedEntry): string =>
-        entry.source === 'bottle'
-            ? t('infant.feeding.feedBottle', { ml: entry.ml ?? 0 })
-            : t('infant.feeding.feedBreast', {
-                  side: t(CHOICE_LABEL_KEYS[(entry.side ?? 'left') as TFeedChoice]),
-                  minutes: entry.minutes ?? 0,
-              });
+    /** The translated label for one option key, for a row that has already been stored. */
+    const labelFor = <TKey extends string>(
+        options: ILogChoiceOption<TKey>[],
+        key: TKey | undefined,
+    ): string => {
+        const option = options.find(item => item.key === key);
+        return option ? t(option.labelKey) : '';
+    };
+
+    /**
+     * What a stored feed reads as.
+     *
+     * A vessel feed names its milk as well as its vessel. The day's method is not enough to
+     * infer it — a mother can change method mid-day, and the row has to stand on its own
+     * months later.
+     */
+    const feedSummary = (entry: IFeedEntry): string => {
+        if (entry.deliveryMethod === 'direct') {
+            return t('infant.feeding.feedBreast', {
+                side: labelFor(FEED_SIDES, entry.side),
+                minutes: entry.minutes ?? 0,
+            });
+        }
+
+        const milk = labelFor(MIXED_MILK_SOURCES, entry.milkSource);
+
+        return entry.deliveryMethod
+            ? t('infant.feeding.feedMilkVessel', {
+                  milk,
+                  vessel: labelFor(FEEDING_VESSELS, entry.deliveryMethod),
+                  ml: entry.ml ?? 0,
+              })
+            : t('infant.feeding.feedMilk', { milk, ml: entry.ml ?? 0 });
+    };
+
+    /** Portion, texture and reactions on one line under the food's name. */
+    const solidDetails = (entry: ISolidEntry): string =>
+        [
+            entry.quantity && entry.quantityUnit
+                ? t('infant.feeding.solidQuantity', {
+                      quantity: entry.quantity,
+                      unit: labelFor(SOLID_QUANTITY_UNITS, entry.quantityUnit),
+                  })
+                : '',
+            labelFor(SOLID_TEXTURES, entry.texture),
+            ...entry.reactions.map(key => labelFor(FOOD_REACTIONS, key)),
+        ]
+            .filter(Boolean)
+            .join(' · ');
+
+    /**
+     * One single-select chip row.
+     *
+     * Five of these on the screen — vessels, sides, what was given, portion units, textures
+     * — differing only in their options and where the answer goes. Written once so they
+     * cannot drift apart visually.
+     */
+    const renderChoices = <TKey extends string>(
+        options: ILogChoiceOption<TKey>[],
+        value: TKey | null,
+        onSelect: (key: TKey) => void,
+    ) => (
+        <View style={styles.chipWrap}>
+            {options.map(option => {
+                const selected = option.key === value;
+
+                return (
+                    <TouchableOpacity
+                        key={option.key}
+                        activeOpacity={0.8}
+                        onPress={() => onSelect(option.key)}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected }}
+                        style={[styles.chip, selected && styles.chipSelected]}
+                    >
+                        <Text
+                            style={[
+                                styles.chipLabel,
+                                selected && styles.chipLabelSelected,
+                                globalStyles.fontRegular,
+                            ]}
+                        >
+                            {t(option.labelKey)}
+                        </Text>
+                    </TouchableOpacity>
+                );
+            })}
+        </View>
+    );
 
     const removeButton = (kind: TFeedingEntryKind, entryId: string) =>
         isToday ? (
@@ -619,12 +821,58 @@ const FeedingLog: React.FC = () => {
                     </TouchableOpacity>
                 );
             })}
+
+            {/*
+             * Expressed milk is still exclusive breastfeeding, and until now there was no
+             * way to say so: the row offered Left, Right and a duration, so a 60 ml katori
+             * feed went in as minutes at a breast the baby never touched.
+             *
+             * Two options, so a segmented pair rather than the mockup's dropdown — a modal
+             * picker to choose between two things is a tap and a wait for nothing.
+             */}
+            {method === FeedingMethodEnum.ONLY_BREASTMILK && (
+                <>
+                    <Text style={[styles.subheading, globalStyles.fontSemiBold]}>
+                        {t('infant.feeding.modeLabel')}
+                    </Text>
+
+                    <View style={infantLogStyles.row}>
+                        {BREASTFEEDING_MODES.map(option => {
+                            const selected = option.key === breastfeedingMode;
+
+                            return (
+                                <TouchableOpacity
+                                    key={option.key}
+                                    activeOpacity={0.8}
+                                    disabled={!isToday}
+                                    onPress={() => changeBreastfeedingMode(option.key)}
+                                    accessibilityRole="radio"
+                                    accessibilityState={{ selected, disabled: !isToday }}
+                                    style={[
+                                        styles.choice,
+                                        selected && styles.choiceSelected,
+                                    ]}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.choiceLabel,
+                                            selected && styles.choiceLabelSelected,
+                                            globalStyles.fontRegular,
+                                        ]}
+                                    >
+                                        {t(option.labelKey)}
+                                    </Text>
+                                </TouchableOpacity>
+                            );
+                        })}
+                    </View>
+                </>
+            )}
         </LogSectionCard>
     );
 
     const renderFeedsCard = () => {
         const feeds = byTimeDesc(day.feeds);
-        const choices = CHOICES_FOR_METHOD[method] ?? [];
 
         return (
             <LogSectionCard
@@ -674,71 +922,51 @@ const FeedingLog: React.FC = () => {
 
                 {isToday && (
                     <View style={styles.composer}>
-                        <View style={styles.feedRow}>
-                            <TouchableOpacity
-                                activeOpacity={0.8}
-                                onPress={() => setTimePickerOpen(true)}
-                                accessibilityRole="button"
-                                accessibilityLabel={t('infant.feeding.feedTime')}
-                                style={[infantLogStyles.input, styles.timeButton]}
-                            >
-                                <Text
-                                    style={[styles.timeText, globalStyles.fontRegular]}
-                                >
-                                    {formatClockTime(feedAt)}
-                                </Text>
-                            </TouchableOpacity>
+                        <TouchableOpacity
+                            activeOpacity={0.8}
+                            onPress={() => setTimePickerOpen(true)}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('infant.feeding.feedTime')}
+                            style={[infantLogStyles.input, styles.timeButton]}
+                        >
+                            <Text style={[styles.timeText, globalStyles.fontRegular]}>
+                                {formatClockTime(feedAt)}
+                            </Text>
+                        </TouchableOpacity>
 
-                            <View style={styles.sideGroup}>
-                                {choices.map(choice => {
-                                    const selected = feedChoice === choice;
+                        <Text style={[styles.subheading, globalStyles.fontSemiBold]}>
+                            {t(
+                                isDirectFeed
+                                    ? 'infant.feeding.sideTitle'
+                                    : isMixedFeed
+                                      ? 'infant.feeding.whatGivenTitle'
+                                      : 'infant.feeding.howFedTitle',
+                            )}
+                        </Text>
 
-                                    return (
-                                        <TouchableOpacity
-                                            key={choice}
-                                            activeOpacity={0.8}
-                                            onPress={() => setFeedChoice(choice)}
-                                            accessibilityRole="radio"
-                                            accessibilityState={{ selected }}
-                                            style={styles.side}
-                                        >
-                                            <Text
-                                                style={[
-                                                    styles.sideLabel,
-                                                    globalStyles.fontRegular,
-                                                ]}
-                                            >
-                                                {t(CHOICE_LABEL_KEYS[choice])}
-                                            </Text>
-                                            <View
-                                                style={[
-                                                    styles.radio,
-                                                    selected && styles.radioSelected,
-                                                ]}
-                                            >
-                                                {selected && (
-                                                    <View style={styles.radioDot} />
-                                                )}
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
+                        {isDirectFeed && renderChoices(FEED_SIDES, feedSide, setFeedSide)}
+                        {isMixedFeed &&
+                            renderChoices(MIXED_MILK_SOURCES, mixedMilk, setMixedMilk)}
+                        {isVesselFeed &&
+                            renderChoices(FEEDING_VESSELS, feedVessel, setFeedVessel)}
 
-                            <TextInput
-                                value={feedAmount}
-                                onChangeText={setFeedAmount}
-                                placeholder={amountPlaceholder(feedChoice)}
-                                placeholderTextColor={colors.gray}
-                                keyboardType="number-pad"
-                                style={[
-                                    infantLogStyles.input,
-                                    styles.amountInput,
-                                    globalStyles.fontRegular,
-                                ]}
-                                accessibilityLabel={amountPlaceholder(feedChoice)}
-                            />
-                        </View>
+                        <Text style={[styles.subheading, globalStyles.fontSemiBold]}>
+                            {t('infant.feeding.howMuchTitle')}
+                        </Text>
+
+                        <TextInput
+                            value={feedAmount}
+                            onChangeText={setFeedAmount}
+                            placeholder={amountPlaceholder}
+                            placeholderTextColor={colors.gray}
+                            keyboardType="number-pad"
+                            style={[
+                                infantLogStyles.input,
+                                styles.amountInput,
+                                globalStyles.fontRegular,
+                            ]}
+                            accessibilityLabel={amountPlaceholder}
+                        />
 
                         <TouchableOpacity
                             activeOpacity={0.7}
@@ -857,22 +1085,14 @@ const FeedingLog: React.FC = () => {
                                 >
                                     {entry.food}
                                 </Text>
-                                {entry.reactions.length > 0 && (
+                                {solidDetails(entry) !== '' && (
                                     <Text
                                         style={[
                                             styles.entrySubtitle,
                                             globalStyles.fontRegular,
                                         ]}
                                     >
-                                        {entry.reactions
-                                            .map(key =>
-                                                t(
-                                                    FOOD_REACTIONS.find(
-                                                        item => item.key === key,
-                                                    )?.labelKey ?? key,
-                                                ),
-                                            )
-                                            .join(' · ')}
+                                        {solidDetails(entry)}
                                     </Text>
                                 )}
                             </View>
@@ -888,15 +1108,71 @@ const FeedingLog: React.FC = () => {
 
                 {isToday && (
                     <View style={styles.composer}>
-                        <TextInput
-                            value={solidFood}
-                            onChangeText={setSolidFood}
-                            placeholder={t('infant.feeding.foodPlaceholder')}
-                            placeholderTextColor={colors.gray}
-                            maxLength={80}
-                            style={[infantLogStyles.input, globalStyles.fontRegular]}
-                            accessibilityLabel={t('infant.feeding.foodPlaceholder')}
-                        />
+                        <View style={styles.feedRow}>
+                            <TouchableOpacity
+                                activeOpacity={0.8}
+                                onPress={() => setSolidTimePickerOpen(true)}
+                                accessibilityRole="button"
+                                accessibilityLabel={t('infant.feeding.solidTime')}
+                                style={[infantLogStyles.input, styles.timeButton]}
+                            >
+                                <Text
+                                    style={[styles.timeText, globalStyles.fontRegular]}
+                                >
+                                    {formatClockTime(solidAt)}
+                                </Text>
+                            </TouchableOpacity>
+
+                            <TextInput
+                                value={solidFood}
+                                onChangeText={setSolidFood}
+                                placeholder={t('infant.feeding.foodPlaceholder')}
+                                placeholderTextColor={colors.gray}
+                                maxLength={80}
+                                style={[
+                                    infantLogStyles.input,
+                                    styles.flex,
+                                    globalStyles.fontRegular,
+                                ]}
+                                accessibilityLabel={t('infant.feeding.foodPlaceholder')}
+                            />
+                        </View>
+
+                        <Text style={[styles.subheading, globalStyles.fontSemiBold]}>
+                            {t('infant.feeding.solidQuantityTitle')}
+                        </Text>
+
+                        <View style={styles.feedRow}>
+                            <TextInput
+                                value={solidQuantity}
+                                onChangeText={setSolidQuantity}
+                                placeholder="1"
+                                placeholderTextColor={colors.gray}
+                                keyboardType="number-pad"
+                                style={[
+                                    infantLogStyles.input,
+                                    styles.amountInput,
+                                    globalStyles.fontRegular,
+                                ]}
+                                accessibilityLabel={t(
+                                    'infant.feeding.solidQuantityTitle',
+                                )}
+                            />
+
+                            <View style={styles.flex}>
+                                {renderChoices(
+                                    SOLID_QUANTITY_UNITS,
+                                    solidUnit,
+                                    setSolidUnit,
+                                )}
+                            </View>
+                        </View>
+
+                        <Text style={[styles.subheading, globalStyles.fontSemiBold]}>
+                            {t('infant.feeding.solidTextureTitle')}
+                        </Text>
+
+                        {renderChoices(SOLID_TEXTURES, solidTexture, setSolidTexture)}
 
                         <Text style={[styles.subheading, globalStyles.fontSemiBold]}>
                             {t('infant.feeding.reactionTitle')}
@@ -914,14 +1190,14 @@ const FeedingLog: React.FC = () => {
                                         accessibilityRole="checkbox"
                                         accessibilityState={{ checked: selected }}
                                         style={[
-                                            styles.reaction,
-                                            selected && styles.reactionSelected,
+                                            styles.chip,
+                                            selected && styles.chipSelected,
                                         ]}
                                     >
                                         <Text
                                             style={[
-                                                styles.reactionLabel,
-                                                selected && styles.reactionLabelSelected,
+                                                styles.chipLabel,
+                                                selected && styles.chipLabelSelected,
                                                 globalStyles.fontRegular,
                                             ]}
                                         >
@@ -1127,6 +1403,16 @@ const FeedingLog: React.FC = () => {
                 maximumDate={new Date()}
             />
 
+            {/* The same contract for a meal: auto-filled, editable, bounded to today. */}
+            <CustomDatePicker
+                show={solidTimePickerOpen}
+                setShow={setSolidTimePickerOpen}
+                selectedDate={solidAt}
+                onSelect={setSolidAt}
+                mode="time"
+                maximumDate={new Date()}
+            />
+
             <KeyboardAvoidingView
                 style={styles.flex}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -1307,23 +1593,6 @@ const styles = StyleSheet.create({
         width: 72,
     },
 
-    sideGroup: {
-        flex: 1,
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        gap: 6,
-    },
-
-    side: {
-        alignItems: 'center',
-        gap: 4,
-    },
-
-    sideLabel: {
-        fontSize: 11,
-        color: colors.darkGray,
-    },
-
     choice: {
         flex: 1,
         borderWidth: 1,
@@ -1363,7 +1632,8 @@ const styles = StyleSheet.create({
         gap: 10,
     },
 
-    reaction: {
+    /** Every chip on the screen: vessels, sides, portions, textures and reactions. */
+    chip: {
         borderWidth: 1,
         borderColor: colors.border,
         borderRadius: 20,
@@ -1371,17 +1641,17 @@ const styles = StyleSheet.create({
         paddingVertical: 9,
     },
 
-    reactionSelected: {
+    chipSelected: {
         borderColor: colors.darkPurple,
         backgroundColor: colors.lightPurple,
     },
 
-    reactionLabel: {
+    chipLabel: {
         fontSize: 13,
         color: colors.darkGray,
     },
 
-    reactionLabelSelected: {
+    chipLabelSelected: {
         color: colors.darkPurple,
     },
 

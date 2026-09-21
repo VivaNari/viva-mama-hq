@@ -7,7 +7,14 @@
  * `vaccinationLog.types`, `feedingLog.types`). All five now persist.
  */
 import { FeedingMethodEnum } from "./user.types";
-import { TFoodReaction } from "./feedingLog.types";
+import {
+  TDeliveryMethod,
+  TFeedSide,
+  TFoodReaction,
+  TMilkSource,
+  TSolidQuantityUnit,
+  TSolidTexture,
+} from "./feedingLog.types";
 
 /**
  * What the dashboard tiles hand to a log screen.
@@ -42,12 +49,33 @@ export interface IGrowthMeasurementField {
 /* --------------------------------- Feeding ---------------------------------- */
 
 /**
- * What a feed row can be attributed to, as the design draws it: two breasts and a bottle.
+ * How a mother exclusively breastfeeding gave the milk.
  *
- * One list here, split into `source` + `side` when it is stored — a bottle has no side, and
- * a column that is sometimes a breast and sometimes a vessel cannot be counted.
+ * The question the design asks before any other under "Exclusively breastfeeding", because
+ * it decides the whole rest of the row: direct takes a side and a duration, expressed takes
+ * a vessel and a volume. Held as a composer mode rather than on the child — she may do both
+ * on the same day, and the last feed does not settle the next one.
  */
-export type TFeedChoice = "left" | "right" | "bottle";
+export type TBreastfeedingMode = "direct" | "expressed";
+
+/**
+ * One selectable option, where the key is all the row needs.
+ *
+ * The four chip groups the feed and solids composers draw — vessels, sides, what was given
+ * on a mixed feed, portion units, textures — differ only in what their key is typed as, so
+ * they share one shape rather than repeating five near-identical interfaces.
+ */
+export interface ILogChoiceOption<TKey extends string> {
+  key: TKey;
+  labelKey: string;
+}
+
+export type IBreastfeedingModeOption = ILogChoiceOption<TBreastfeedingMode>;
+export type IDeliveryMethodOption = ILogChoiceOption<TDeliveryMethod>;
+export type IFeedSideOption = ILogChoiceOption<TFeedSide>;
+export type IMilkSourceOption = ILogChoiceOption<TMilkSource>;
+export type ISolidQuantityUnitOption = ILogChoiceOption<TSolidQuantityUnit>;
+export type ISolidTextureOption = ILogChoiceOption<TSolidTexture>;
 
 export interface IFeedingMethodOption {
   /**
@@ -63,10 +91,7 @@ export interface IFeedingMethodOption {
   descriptionKey: string;
 }
 
-export interface IFoodReactionOption {
-  key: TFoodReaction;
-  labelKey: string;
-}
+export type IFoodReactionOption = ILogChoiceOption<TFoodReaction>;
 
 /* ---------------------------------- Diaper ---------------------------------- */
 
@@ -111,6 +136,13 @@ export interface IVaccineDose {
   key: string;
   /** The vaccine as printed on the card. A proper noun — never translated. */
   name: string;
+  /**
+   * The vaccine without its dose suffix, for `infant.vaccination.descriptions.<vaccine>`.
+   *
+   * Separate from `key`, which names the dose: PCV's three doses share one description,
+   * and keying the copy per dose would be three chances for it to disagree with itself.
+   */
+  vaccine: string;
   doseKind: TVaccineDoseKind;
   /** Which dose, where the card numbers them. Absent for "Single dose" and a bare booster. */
   doseNumber?: number;

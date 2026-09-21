@@ -16,15 +16,57 @@ import { FeedingMethodEnum } from "./user.types";
  * it could count anything.
  */
 
-export type TFeedSource = "breast" | "bottle";
-export const FEED_SOURCES: TFeedSource[] = ["breast", "bottle"];
+/** What the baby was given. Orthogonal to how it reached them — see `TDeliveryMethod`. */
+export type TMilkSource = "breastmilk" | "formula";
+export const MILK_SOURCES: TMilkSource[] = ["breastmilk", "formula"];
 
-export type TFeedSide = "left" | "right";
-export const FEED_SIDES: TFeedSide[] = ["left", "right"];
+/**
+ * How the milk reached the baby.
+ *
+ * `direct` is the breast itself; the rest are vessels, and they are the ones a mother in
+ * India actually uses — a paladai and a katori are not "other".
+ */
+export type TDeliveryMethod = "direct" | "paladai" | "katori" | "cup" | "spoon" | "bottle";
+export const DELIVERY_METHODS: TDeliveryMethod[] = [
+    "direct",
+    "paladai",
+    "katori",
+    "cup",
+    "spoon",
+    "bottle",
+];
+
+export type TFeedSide = "left" | "right" | "both";
+export const FEED_SIDES: TFeedSide[] = ["left", "right", "both"];
 
 /** The reactions the design offers under a new food. Multi-select — see the client's list. */
-export type TFoodReaction = "liked" | "refused" | "rash" | "loose_stool";
-export const FOOD_REACTIONS: TFoodReaction[] = ["liked", "refused", "rash", "loose_stool"];
+export type TFoodReaction = "liked" | "refused" | "rash" | "loose_stool" | "allergy";
+export const FOOD_REACTIONS: TFoodReaction[] = [
+    "liked",
+    "refused",
+    "rash",
+    "loose_stool",
+    "allergy",
+];
+
+/** How a portion of solid food is measured. Household units, not grams. */
+export type TSolidQuantityUnit = "spoon" | "katori" | "piece";
+export const SOLID_QUANTITY_UNITS: TSolidQuantityUnit[] = ["spoon", "katori", "piece"];
+
+/**
+ * How the food was prepared.
+ *
+ * Texture is the part of complementary feeding that changes month by month — a
+ * six-month-old takes a smooth mash and a ten-month-old takes finger food — so it is
+ * recorded rather than left to the food's name.
+ */
+export type TSolidTexture = "smooth_mash" | "mashed_with_lumps" | "finely_chopped" | "finger_food";
+export const SOLID_TEXTURES: TSolidTexture[] = [
+    "smooth_mash",
+    "mashed_with_lumps",
+    "finely_chopped",
+    "finger_food",
+];
 
 /** Which of the three arrays a write addresses. The client sends it; the routes are shared. */
 export type TFeedingEntryKind = "feed" | "solid" | "water";
@@ -33,22 +75,32 @@ export const FEEDING_ENTRY_KINDS: TFeedingEntryKind[] = ["feed", "solid", "water
 /**
  * One milk feed.
  *
- * `minutes` and `ml` are separate fields, never one `amount`. Minutes on the breast and
- * millilitres in a bottle are different quantities, and a single number meaning either
+ * What was given and how it was given are two fields rather than one. Expressed breastmilk
+ * from a katori and formula from a katori are the same act with different milk, and a
+ * single column that is sometimes a milk and sometimes a vessel cannot be counted either way.
+ *
+ * `minutes` and `ml` are likewise separate, never one `amount`. Minutes on the breast and
+ * millilitres in a vessel are different quantities, and a single number meaning either
  * depending on a sibling field is not something anyone should hand a paediatrician.
  *
- * A bottle feed is valid whatever the day's `feedingMethod` says. Expressed breastmilk in
- * a bottle is ordinary, and the method decides which controls the screen offers rather
- * than what the record is allowed to contain.
+ * Any combination is valid whatever the day's `feedingMethod` says. The method decides
+ * which controls the screen offers rather than what the record is allowed to contain.
  */
 export interface IFeedEntry {
     _id: Schema.Types.ObjectId;
-    source: TFeedSource;
-    /** Which breast. Present for `breast` only — a bottle has no side. */
+    milkSource: TMilkSource;
+    /**
+     * How the milk reached the baby.
+     *
+     * Absent on a mixed feed, and meaningfully so: the design asks a mother feeding both
+     * only what was given and how much, so a vessel recorded there would be invented.
+     */
+    deliveryMethod?: TDeliveryMethod;
+    /** Which breast. Present for `direct` only — a vessel has no side. */
     side?: TFeedSide;
-    /** Time at the breast. Present for `breast` only. */
+    /** Time at the breast. Present for `direct` only. */
     minutes?: number;
-    /** Volume taken. Present for `bottle` only. */
+    /** Volume taken. Present for everything except `direct`. */
     ml?: number;
     /**
      * When the feed happened, not when the request arrived — the same contract the diaper
@@ -69,6 +121,16 @@ export interface ISolidEntry {
      * day-level chip row — what the original design drew — cannot answer it.
      */
     reactions: TFoodReaction[];
+    /**
+     * How much was eaten, in `quantityUnit`.
+     *
+     * Optional, with the unit: a mother logging a first taste one-handed should not be
+     * stopped by a field she has not measured, and the food's name is the part that matters.
+     */
+    quantity?: number;
+    quantityUnit?: TSolidQuantityUnit;
+    /** How the food was prepared. Optional for the same reason. */
+    texture?: TSolidTexture;
     feedAt: Date;
 }
 

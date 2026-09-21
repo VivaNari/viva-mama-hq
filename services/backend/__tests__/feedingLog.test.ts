@@ -118,7 +118,8 @@ describe("recording entries", () => {
             kind: "feed",
             entry: {
                 _id: new Types.ObjectId(),
-                source: "breast",
+                milkSource: "breastmilk",
+                deliveryMethod: "direct",
                 side: "left",
                 minutes: 18,
                 feedAt: earlierToday(),
@@ -149,7 +150,8 @@ describe("recording entries", () => {
                 kind: "feed",
                 entry: {
                     _id: new Types.ObjectId(),
-                    source: "bottle",
+                    milkSource: "formula",
+                    deliveryMethod: "bottle",
                     ml: 90,
                     feedAt: earlierToday(minutesAgo),
                 } as never,
@@ -174,7 +176,7 @@ describe("recording entries", () => {
 
         await service.addEntry({
             userId, childId, kind: "feed", at,
-            entry: { _id: new Types.ObjectId(), source: "breast", side: "right", minutes: 10, feedAt: at } as never,
+            entry: { _id: new Types.ObjectId(), milkSource: "breastmilk", deliveryMethod: "direct", side: "right", minutes: 10, feedAt: at } as never,
             feedingMethod: FeedingMethodEnum.ONLY_BREASTMILK,
         });
         await service.addEntry({
@@ -206,12 +208,12 @@ describe("recording entries", () => {
 
         await service.addEntry({
             userId, childId, kind: "feed", at,
-            entry: { _id: new Types.ObjectId(), source: "breast", side: "left", minutes: 12, feedAt: at } as never,
+            entry: { _id: new Types.ObjectId(), milkSource: "breastmilk", deliveryMethod: "direct", side: "left", minutes: 12, feedAt: at } as never,
             feedingMethod: FeedingMethodEnum.ONLY_BREASTMILK,
         });
         await service.addEntry({
             userId, childId, kind: "feed", at,
-            entry: { _id: new Types.ObjectId(), source: "bottle", ml: 60, feedAt: at } as never,
+            entry: { _id: new Types.ObjectId(), milkSource: "formula", deliveryMethod: "bottle", ml: 60, feedAt: at } as never,
             feedingMethod: FeedingMethodEnum.NOT_BREASTFEEDING,
         });
 
@@ -228,7 +230,7 @@ describe("removing entries", () => {
 
         await service.addEntry({
             userId, childId, kind: "feed", at,
-            entry: { _id, source: "breast", side: "left", minutes: 15, feedAt: at } as never,
+            entry: { _id, milkSource: "breastmilk", deliveryMethod: "direct", side: "left", minutes: 15, feedAt: at } as never,
             feedingMethod: FeedingMethodEnum.ONLY_BREASTMILK,
         });
 
@@ -334,18 +336,58 @@ describe("the request validator", () => {
     const childId = new Types.ObjectId().toString();
     const feedAt = new Date().toISOString();
 
-    it("accepts a breast feed with a side and minutes", () => {
+    it("accepts a direct feed with a side and minutes", () => {
         const { error } = feedingLogCreateValidator.validate({
-            childId, kind: "feed", source: "breast", side: "left", minutes: 20, feedAt,
+            childId, kind: "feed", milkSource: "breastmilk", deliveryMethod: "direct", side: "left", minutes: 20, feedAt,
         });
         expect(error).toBeUndefined();
     });
 
-    it("rejects a breast feed with no side", () => {
+    it("accepts both breasts as one feed", () => {
         const { error } = feedingLogCreateValidator.validate({
-            childId, kind: "feed", source: "breast", minutes: 20, feedAt,
+            childId, kind: "feed", milkSource: "breastmilk", deliveryMethod: "direct", side: "both", minutes: 18, feedAt,
+        });
+        expect(error).toBeUndefined();
+    });
+
+    it("rejects a direct feed with no side", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "feed", milkSource: "breastmilk", deliveryMethod: "direct", minutes: 20, feedAt,
         });
         expect(error?.message).toContain("side");
+    });
+
+    /** Expressed breastmilk from a vessel: the volume is the whole record. */
+    it("accepts expressed breastmilk from a paladai", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "feed", milkSource: "breastmilk", deliveryMethod: "paladai", ml: 60, feedAt,
+        });
+        expect(error).toBeUndefined();
+    });
+
+    it("rejects a vessel feed with no volume", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "feed", milkSource: "formula", deliveryMethod: "katori", feedAt,
+        });
+        expect(error?.message).toContain("ml");
+    });
+
+    /**
+     * A mixed feed carries no vessel — the screen asks only what was given and how much —
+     * so an absent delivery method still has to require the volume.
+     */
+    it("accepts a mixed feed with no delivery method", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "feed", milkSource: "formula", ml: 120, feedAt,
+        });
+        expect(error).toBeUndefined();
+    });
+
+    it("rejects a mixed feed with no volume", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "feed", milkSource: "breastmilk", feedAt,
+        });
+        expect(error?.message).toContain("ml");
     });
 
     /**
@@ -354,9 +396,16 @@ describe("the request validator", () => {
      */
     it("rejects minutes on a bottle feed", () => {
         const { error } = feedingLogCreateValidator.validate({
-            childId, kind: "feed", source: "bottle", ml: 90, minutes: 20, feedAt,
+            childId, kind: "feed", milkSource: "formula", deliveryMethod: "bottle", ml: 90, minutes: 20, feedAt,
         });
         expect(error?.message).toContain("minutes");
+    });
+
+    it("rejects a volume on a direct feed", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "feed", milkSource: "breastmilk", deliveryMethod: "direct", side: "left", minutes: 20, ml: 60, feedAt,
+        });
+        expect(error?.message).toContain("ml");
     });
 
     it("rejects an unknown food reaction", () => {
@@ -364,6 +413,36 @@ describe("the request validator", () => {
             childId, kind: "solid", food: "Khichdi", reactions: ["delighted"], feedAt,
         });
         expect(error).toBeDefined();
+    });
+
+    it("accepts allergy as a food reaction", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "solid", food: "Egg", reactions: ["allergy"], feedAt,
+        });
+        expect(error).toBeUndefined();
+    });
+
+    it("accepts a solid with a portion and a texture", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "solid", food: "Mashed banana", quantity: 2,
+            quantityUnit: "spoon", texture: "smooth_mash", feedAt,
+        });
+        expect(error).toBeUndefined();
+    });
+
+    /** A portion and its unit travel together: a bare "2" is not something to read back. */
+    it("rejects a quantity with no unit", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "solid", food: "Khichdi", quantity: 2, feedAt,
+        });
+        expect(error?.message).toContain("quantityUnit");
+    });
+
+    it("accepts a solid with nothing but a food and a time", () => {
+        const { error } = feedingLogCreateValidator.validate({
+            childId, kind: "solid", food: "Khichdi", feedAt,
+        });
+        expect(error).toBeUndefined();
     });
 
     it("rejects a settings patch that changes nothing", () => {
@@ -429,7 +508,8 @@ describe("the HTTP boundary", () => {
         const res = await post(userId, {
             childId,
             kind: "feed",
-            source: "breast",
+            milkSource: "breastmilk",
+            deliveryMethod: "direct",
             side: "right",
             minutes: 14,
             feedAt: earlierToday().toISOString(),
@@ -446,7 +526,8 @@ describe("the HTTP boundary", () => {
         const res = await post(userId, {
             childId,
             kind: "feed",
-            source: "bottle",
+            milkSource: "formula",
+            deliveryMethod: "bottle",
             ml: 60,
             feedAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
         });
@@ -465,7 +546,8 @@ describe("the HTTP boundary", () => {
         const res = await post(userId, {
             childId,
             kind: "feed",
-            source: "bottle",
+            milkSource: "formula",
+            deliveryMethod: "bottle",
             ml: 60,
             feedAt: new Date(Date.now() - 2 * MS_PER_DAY).toISOString(),
         });
@@ -481,7 +563,8 @@ describe("the HTTP boundary", () => {
         const res = await post(mine.userId, {
             childId: theirs.childId,
             kind: "feed",
-            source: "bottle",
+            milkSource: "formula",
+            deliveryMethod: "bottle",
             ml: 60,
             feedAt: earlierToday().toISOString(),
         });
@@ -556,7 +639,8 @@ describe("the HTTP boundary", () => {
             const res = await post(userId, {
                 childId,
                 kind: "feed",
-                source: "breast",
+                milkSource: "breastmilk",
+                deliveryMethod: "direct",
                 side: "left",
                 minutes: 9,
                 feedAt: earlierToday().toISOString(),
@@ -621,7 +705,7 @@ describe("the HTTP boundary", () => {
 
             await service.addEntry({
                 userId, childId, kind: "feed", at,
-                entry: { _id: new Types.ObjectId(), source: "breast", side: "left", minutes: 11, feedAt: at } as never,
+                entry: { _id: new Types.ObjectId(), milkSource: "breastmilk", deliveryMethod: "direct", side: "left", minutes: 11, feedAt: at } as never,
                 feedingMethod: FeedingMethodEnum.ONLY_BREASTMILK,
             });
 
@@ -702,7 +786,7 @@ describe("the HTTP boundary", () => {
 
         await service.addEntry({
             userId, childId, kind: "feed", at,
-            entry: { _id: new Types.ObjectId(), source: "bottle", ml: 80, feedAt: at } as never,
+            entry: { _id: new Types.ObjectId(), milkSource: "formula", deliveryMethod: "bottle", ml: 80, feedAt: at } as never,
             feedingMethod: FeedingMethodEnum.MIXED,
         });
 
@@ -751,7 +835,7 @@ describe("deleting a child", () => {
 
         await service.addEntry({
             userId, childId, kind: "feed", at,
-            entry: { _id: new Types.ObjectId(), source: "breast", side: "left", minutes: 16, feedAt: at } as never,
+            entry: { _id: new Types.ObjectId(), milkSource: "breastmilk", deliveryMethod: "direct", side: "left", minutes: 16, feedAt: at } as never,
             feedingMethod: FeedingMethodEnum.ONLY_BREASTMILK,
         });
 

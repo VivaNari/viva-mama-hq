@@ -3,7 +3,13 @@ import {
     IFeedingEntryCreated,
     IFeedingLogResponse,
     IFeedingSettings,
+    TDeliveryMethod,
+    TFeedSide,
     TFeedingEntryKind,
+    TFoodReaction,
+    TMilkSource,
+    TSolidQuantityUnit,
+    TSolidTexture,
 } from '../types/feedingLog.types';
 import { FeedingMethodEnum } from '../types/user.types';
 import apiClientInterceptor from './apiClientInterceptor';
@@ -58,11 +64,18 @@ export const getFeedingLogs = async (
     return res.data.data ?? EMPTY;
 };
 
-/** One milk feed. `feedAt` is the client's, so an entry keeps the time it happened. */
+/**
+ * One milk feed. `feedAt` is the client's, so an entry keeps the time it happened.
+ *
+ * `side`/`minutes` go with `deliveryMethod: 'direct'` and `ml` with everything else; the
+ * server forbids the wrong pairing rather than dropping it, so the screen must send one
+ * shape or the other and never both.
+ */
 export const addFeed = async (payload: {
     childId: string;
-    source: 'breast' | 'bottle';
-    side?: 'left' | 'right';
+    milkSource: TMilkSource;
+    deliveryMethod?: TDeliveryMethod;
+    side?: TFeedSide;
     minutes?: number;
     ml?: number;
     feedAt: string;
@@ -74,10 +87,14 @@ export const addFeed = async (payload: {
     return res.data.data;
 };
 
+/** One solid food. Everything but the name is optional — see the server's `solidPayload`. */
 export const addSolid = async (payload: {
     childId: string;
     food: string;
-    reactions: string[];
+    reactions: TFoodReaction[];
+    quantity?: number;
+    quantityUnit?: TSolidQuantityUnit;
+    texture?: TSolidTexture;
     feedAt: string;
 }): Promise<IFeedingEntryCreated> => {
     const res = await apiClientInterceptor().post<ApiEnvelope<IFeedingEntryCreated>>(

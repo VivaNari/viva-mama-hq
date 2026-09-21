@@ -2,10 +2,13 @@ import { Schema } from "mongoose";
 
 import { generalSchemaOptions } from "../../constants/model";
 import {
+    DELIVERY_METHODS,
     FEED_SIDES,
-    FEED_SOURCES,
     FOOD_REACTIONS,
     IFeedingLog,
+    MILK_SOURCES,
+    SOLID_QUANTITY_UNITS,
+    SOLID_TEXTURES,
 } from "../../types/feeding-log.types";
 import { FeedingMethodEnum } from "../../types/user.types";
 
@@ -19,7 +22,8 @@ import { FeedingMethodEnum } from "../../types/user.types";
  */
 const feedEntrySchema = new Schema(
     {
-        source: { type: String, enum: FEED_SOURCES, required: true },
+        milkSource: { type: String, enum: MILK_SOURCES, required: true },
+        deliveryMethod: { type: String, enum: DELIVERY_METHODS },
         side: { type: String, enum: FEED_SIDES },
         minutes: { type: Number, min: 1, max: 180 },
         ml: { type: Number, min: 1, max: 500 },
@@ -35,6 +39,11 @@ const solidEntrySchema = new Schema(
             type: [{ type: String, enum: FOOD_REACTIONS }],
             default: [],
         },
+        // A portion, in household units. Twenty spoons is already well past a meal, so the
+        // ceiling is there to catch a typed-in stray digit rather than to judge an appetite.
+        quantity: { type: Number, min: 1, max: 20 },
+        quantityUnit: { type: String, enum: SOLID_QUANTITY_UNITS },
+        texture: { type: String, enum: SOLID_TEXTURES },
         feedAt: { type: Date, required: true },
     },
     { _id: true },

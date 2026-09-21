@@ -64,6 +64,11 @@ jest.mock('react-native-reanimated', () => {
   Animated.ScrollView = createAnimatedComponent(ScrollView);
   Animated.Image = createAnimatedComponent(Image);
   Animated.createAnimatedComponent = createAnimatedComponent;
+  // Called by @gorhom/bottom-sheet at import time. Reanimated 4 dropped it, so the real
+  // module does not have it either — any screen that opens a sheet would otherwise take
+  // its whole suite down on the import alone, before a single test ran.
+  Animated.addWhitelistedUIProps = () => undefined;
+  Animated.addWhitelistedNativeProps = () => undefined;
 
   return {
     __esModule: true,
