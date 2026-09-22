@@ -141,6 +141,15 @@ export const AnalyticsEvent = {
   REFERRAL_CODE_SHARED: 'referral_code_shared',
   SUPPORT_REQUEST_SUBMITTED: 'support_request_submitted',
   PROFILE_UPDATED: 'profile_updated',
+  // One event for the whole "Review Us" tap, with `outcome` saying how far it got.
+  // Play's review flow is quota-limited and resolves successfully even when it
+  // showed nothing, so the tap count alone would read as engagement that did not
+  // happen. Carries no rating: the review itself never comes back to the app.
+  //
+  // Register `outcome` in GA4 (Admin > Custom definitions, event-scoped, parameter
+  // `outcome`) before this ships — as with `screen`, registration is not
+  // retroactive, and unregistered the event is only ever a bare tap count.
+  APP_REVIEW_REQUESTED: 'app_review_requested',
   // Not emitted: a partner joining happens on *their* device. This one can only
   // see the invite code being copied, which is `referral_code_shared`.
   LANGUAGE_CHANGED: 'language_changed',
@@ -157,6 +166,19 @@ export type ConsultationType = 'expert' | 'care_manager';
 
 /** Whether a booking spent a credit or went through Razorpay. */
 export type PaymentMode = 'credit' | 'payment';
+
+/**
+ * How far the in-app review flow got.
+ *
+ * `shown` only means Play reported the flow finished — it cannot tell us whether a
+ * review was actually written, and Google deliberately does not expose that.
+ * `not_shown` is the quota case, which is routine rather than an error.
+ */
+export type ReviewOutcome =
+  | 'shown'
+  | 'not_shown'
+  | 'unavailable'
+  | 'failed';
 
 /** How the app was in the foreground when a push was acted on. */
 export type NotificationSource = 'cold' | 'background' | 'foreground';
@@ -313,6 +335,7 @@ export interface EventParams {
   };
   [AnalyticsEvent.REFERRAL_CODE_SHARED]: { method?: string };
   [AnalyticsEvent.LANGUAGE_CHANGED]: { from: string; to: string };
+  [AnalyticsEvent.APP_REVIEW_REQUESTED]: { outcome: ReviewOutcome };
 }
 
 /**

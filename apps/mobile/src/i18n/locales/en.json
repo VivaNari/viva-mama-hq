@@ -720,6 +720,7 @@
     "disclaimerBody3": "For medical advice or emergencies, consult a qualified healthcare professional or your local emergency services.",
     "reviewUs": "Review Us",
     "reviewUsDesc": "Share your feedback and help us improve.",
+    "reviewUsFailed": "Couldn't open the store. Please try again later.",
     "signOut": "Sign Out",
     "signingOut": "Signing Out...",
     "signOutDesc": "Signout from your current session",

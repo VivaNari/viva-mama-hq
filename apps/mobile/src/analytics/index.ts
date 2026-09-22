@@ -37,6 +37,7 @@ export type {
   EventParams,
   NotificationSource,
   PaymentMode,
+  ReviewOutcome,
   SizeBucket,
 } from './events';
 

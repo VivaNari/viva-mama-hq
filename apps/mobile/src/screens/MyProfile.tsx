@@ -2,7 +2,8 @@ import Lucide from '@react-native-vector-icons/lucide'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { FlatList, Image, Text, TouchableOpacity, View, Linking, Modal } from 'react-native'
+import { FlatList, Image, Text, TouchableOpacity, View, Linking, Modal, Platform } from 'react-native'
+import InAppReview from 'react-native-in-app-review'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import Toast from 'react-native-toast-message'
 import DeleteAccountModal from '../components/profile/DeleteAccountModal'
@@ -14,7 +15,7 @@ import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
 import { IUserAllData } from '../types/dashboard.types'
 import { syncUserData } from '../utils/syncUserData'
-import { recordError, triggerCrash } from '../analytics'
+import { AnalyticsEvent, recordError, track, triggerCrash } from '../analytics'
 
 const MyProfile = () => {
     const navigation = useNavigation<any>();
@@ -53,35 +54,77 @@ const MyProfile = () => {
     // Screen views are logged centrally by the NavigationContainer in
     // RootNavigator — no per-screen listener needed here or anywhere else.
 
-    // const handleInAppReview = () => {
-    //     // NOTE: In-App Review only shows up in Production/Internal Test Track on Play Store.
-    //     // It will NOT show on debug builds or sideloaded APKs.
-    //     if (InAppReview.isAvailable()) {
-    //         InAppReview.RequestInAppReview()
-    //             .then((hasFlowFinishedSuccessfully) => {
-    //                 console.log('In-App Review flow finished successfully:', hasFlowFinishedSuccessfully);
-    //             })
-    //             .catch((error) => {
-    //                 console.log('In-App Review Error:', error);
-    //                 openStoreFallback();
-    //             });
-    //     } else {
-    //         openStoreFallback();
-    //     }
-    // };
+    const GOOGLE_PACKAGE_NAME = 'com.wellnessemporio.vivamama';
+    // TODO(ios): a placeholder until the iOS build ships — these two URLs do not
+    // resolve as written. Android is unaffected; iOS has no Podfile.lock yet.
+    const APPLE_APP_ID = 'YOUR_APPLE_ID';
 
-    // const openStoreFallback = () => {
-    //     const GOOGLE_PACKAGE_NAME = 'com.wellnessemporio.vivamama';
-    //     const url = Platform.OS === 'ios'
-    //         ? `itms-apps://itunes.apple.com/app/viewContentsUserReviews/idYOUR_APPLE_ID?action=write-review`
-    //         : `market://details?id=${GOOGLE_PACKAGE_NAME}`;
+    /** Open the store listing directly, for every case where the native flow can't run. */
+    const openStoreFallback = () => {
+        const url = Platform.OS === 'ios'
+            ? `itms-apps://itunes.apple.com/app/viewContentsUserReviews/id${APPLE_APP_ID}?action=write-review`
+            : `market://details?id=${GOOGLE_PACKAGE_NAME}`;
 
-    //     Linking.openURL(url).catch(() => {
-    //         // If play store app is not available, open in browser
-    //         const browserUrl = `https://play.google.com/store/apps/details?id=${GOOGLE_PACKAGE_NAME}`;
-    //         Linking.openURL(browserUrl);
-    //     });
-    // };
+        Linking.openURL(url).catch(() => {
+            // Store app not installed, or the scheme is unhandled — open the web listing.
+            const browserUrl = Platform.OS === 'ios'
+                ? `https://apps.apple.com/app/id${APPLE_APP_ID}?action=write-review`
+                : `https://play.google.com/store/apps/details?id=${GOOGLE_PACKAGE_NAME}`;
+
+            Linking.openURL(browserUrl).catch((error) => {
+                recordError(error, 'MyProfile.openStoreFallback');
+                Toast.show({
+                    type: 'error',
+                    text1: t('common.error'),
+                    text2: t('profile.reviewUsFailed'),
+                });
+            });
+        });
+    };
+
+    /**
+     * Ask for the Play in-app review, falling back to the store listing.
+     *
+     * Two properties of this API drive the shape below:
+     *
+     * - `isAvailable()` only checks the OS version. It does *not* check that the
+     *   native module is linked, and `RequestInAppReview()` then throws
+     *   **synchronously** when it isn't — a throw a `.then().catch()` chain never
+     *   sees, because it happens before the promise is returned. Hence try/catch
+     *   around the call rather than a `.catch()` alone.
+     * - The flow is quota-limited and does nothing once the quota is spent. Behind a
+     *   "Review Us" row that reads as a dead button, so anything short of a completed
+     *   flow falls through to the store listing and the tap always goes somewhere.
+     *
+     * NOTE: In-App Review only shows up in Production/Internal Test Track on Play
+     * Store. It will NOT show on debug builds or sideloaded APKs — expect the
+     * fallback during development.
+     */
+    const handleInAppReview = async () => {
+        if (!InAppReview.isAvailable()) {
+            track(AnalyticsEvent.APP_REVIEW_REQUESTED, { outcome: 'unavailable' });
+            openStoreFallback();
+            return;
+        }
+
+        try {
+            const hasFlowFinishedSuccessfully = await InAppReview.RequestInAppReview();
+
+            if (hasFlowFinishedSuccessfully) {
+                // Play reports the flow finished; whether a review was actually written
+                // is deliberately never exposed to the app.
+                track(AnalyticsEvent.APP_REVIEW_REQUESTED, { outcome: 'shown' });
+                return;
+            }
+
+            track(AnalyticsEvent.APP_REVIEW_REQUESTED, { outcome: 'not_shown' });
+            openStoreFallback();
+        } catch (error) {
+            recordError(error, 'MyProfile.handleInAppReview');
+            track(AnalyticsEvent.APP_REVIEW_REQUESTED, { outcome: 'failed' });
+            openStoreFallback();
+        }
+    };
 
     useFocusEffect(useCallback(() => {
         (async function () {
@@ -444,7 +487,7 @@ const MyProfile = () => {
                                 <Lucide name={'chevron-right'} size={20} color={colors.darkPurple} />
                             </View>
                         </TouchableOpacity>
-                        {/* <TouchableOpacity
+                        <TouchableOpacity
                             activeOpacity={0.4}
                             onPress={handleInAppReview}
                             style={{
@@ -501,7 +544,7 @@ const MyProfile = () => {
                             >
                                 <Lucide name={'chevron-right'} size={20} color={colors.darkPurple} />
                             </View>
-                        </TouchableOpacity> */}
+                        </TouchableOpacity>
                         <TouchableOpacity
                             activeOpacity={0.4}
                             onPress={() => {

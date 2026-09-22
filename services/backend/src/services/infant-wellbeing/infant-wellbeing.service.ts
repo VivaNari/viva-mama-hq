@@ -108,14 +108,6 @@ export const THRESHOLDS = {
      * clinic appointment is not a same-day thing. Two weeks lets a family get there.
      */
     vaccineGraceDays: 14,
-
-    /**
-     * How new a child is before the card holds its tongue.
-     *
-     * Long enough to cover a hospital stay and the first days home, when a mother has
-     * better things to do than log. See `firstRun` in the return type.
-     */
-    firstRunHours: 72,
 } as const;
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -507,19 +499,26 @@ export const evaluate = (input: IWellbeingInput, now: Date = new Date()): IInfan
     const childId = String(child._id ?? "");
     const ageMonths = getAgeInMonths(child.date_of_birth, now) ?? 0;
 
-    // Before the card can fairly say anything. Two ways in: a child added days ago, or one
-    // with nothing logged at all — a wall of amber is not what either mother should meet.
+    /**
+     * Before the card can fairly say anything: nothing logged at all. A wall of amber is
+     * not what a mother who has not started should meet — there is one action there
+     * ("start logging"), not four.
+     *
+     * Deliberately *not* also gated on how recently the child was added. That gate existed
+     * to spare a mother the card during a hospital stay, but it keyed on `onboarded_at` —
+     * when the profile was created — which says nothing about whether there is anything to
+     * report. A mother who added her baby this morning and logged a weight got the
+     * "start logging" empty state back while her measurement rendered on the chart
+     * directly below it, which reads as the app having lost her data. Having logged is
+     * the signal; the date the row was written is not.
+     */
     const hasAnyLog =
         input.growthLogs.length > 0 ||
         input.hasEverFed ||
         input.givenVaccineKeys.size > 0 ||
         input.achievedMilestoneKeys.size > 0;
 
-    const addedAt = child.onboarded_at ? new Date(child.onboarded_at).getTime() : null;
-    const justAdded =
-        addedAt !== null && now.getTime() - addedAt < THRESHOLDS.firstRunHours * 60 * 60 * 1000;
-
-    if (!hasAnyLog || justAdded) {
+    if (!hasAnyLog) {
         return {
             childId,
             status: "on_track",

@@ -86,8 +86,32 @@ const tile = (result: ReturnType<typeof evaluate>, domain: TWellbeingDomain) => 
 };
 
 describe("the first-run grace", () => {
-    it("says nothing about a child added in the last three days", () => {
-        const result = evaluate(input({ child: child({ onboarded_at: daysAgo(1) }) }), NOW);
+    /**
+     * The card used to also hold its tongue for 72 hours after `onboarded_at`, whatever had
+     * been logged. It suppressed the card for exactly the mother who had already started —
+     * she added her baby, logged a weight, and got "start logging" back with her
+     * measurement on the chart underneath. Having logged is the signal, not the age of the
+     * row.
+     */
+    it("speaks about a child added minutes ago who already has logs", () => {
+        const result = evaluate(input({ child: child({ onboarded_at: NOW }) }), NOW);
+
+        expect(result.firstRun).toBe(false);
+        expect(result.tiles).toHaveLength(4);
+    });
+
+    it("says nothing about a freshly added child with nothing logged yet", () => {
+        const result = evaluate(
+            input({
+                child: child({ onboarded_at: daysAgo(1) }),
+                growthLogs: [],
+                feedsByDay: new Map(),
+                hasEverFed: false,
+                givenVaccineKeys: new Set(),
+                achievedMilestoneKeys: new Set(),
+            }),
+            NOW,
+        );
 
         expect(result.firstRun).toBe(true);
         expect(result.status).toBe("on_track");
