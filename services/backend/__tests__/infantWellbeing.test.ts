@@ -482,6 +482,23 @@ describe("milestones", () => {
         expect(result.valueParams).toBeUndefined();
     });
 
+    /**
+     * The log screen offers the first band before the child reaches it, so these rows are
+     * real. Showing "—" back to a mother who has just ticked them off reads as the app
+     * having dropped her entry — the same complaint the first-run gate produced.
+     */
+    it("shows what a newborn's mother has already logged, early though it is", () => {
+        const newborn = input({
+            child: child({ date_of_birth: daysAgo(5) }),
+            achievedMilestoneKeys: new Set(["makes_eye_contact", "develops_a_social_smile"]),
+        });
+
+        const result = tile(evaluate(newborn, NOW), "milestones");
+        expect(result.status).toBe("on_track");
+        expect(result.valueKey).toBe("infant.wellbeing.milestones.progress");
+        expect(result.valueParams).toEqual({ logged: 2, total: 6 });
+    });
+
     it("raises a band the child has grown past with nothing logged", () => {
         const older = input({
             child: child({ date_of_birth: monthsAgo(5) }),

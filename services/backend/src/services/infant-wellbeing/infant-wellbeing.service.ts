@@ -408,15 +408,38 @@ const vaccineTile = (input: IWellbeingInput, now: Date): IWellbeingTile => {
 const milestoneTile = (input: IWellbeingInput, ageMonths: number): IWellbeingTile => {
     const { achievedMilestoneKeys } = input;
 
+    const byAge = (bands: typeof MILESTONE_BAND_WINDOWS[number][]) =>
+        [...bands].sort((a, b) => a.ageMonths.from - b.ageMonths.from).pop();
+
     // The band the child is in now, for the tile's "2 / 4" — the last one they have reached.
     //
     // No fallback to the first band when none has been reached: the card's earliest bands
     // start at two months, and showing a two-week-old "0 / 6" reads as six things already
     // failed when in fact none of them has come round yet.
-    const current = [...MILESTONE_BAND_WINDOWS]
-        .filter((band) => ageMonths >= band.ageMonths.from)
-        .sort((a, b) => a.ageMonths.from - b.ageMonths.from)
-        .pop();
+    const reached = byAge(
+        MILESTONE_BAND_WINDOWS.filter((band) => ageMonths >= band.ageMonths.from),
+    );
+
+    /**
+     * Unless she has already logged into a band, in which case show it back to her.
+     *
+     * The log screen deliberately offers the first band before the child reaches it —
+     * `currentAgeIndex` falls back to index 0, and `reachedAgeIndices` follows it, on the
+     * grounds that hiding a tab a parent cannot attribute the hiding to is worse than
+     * showing one early. So a mother of a five-day-old can tick off the 2-3m band, and
+     * those rows are real. Answering "—" to her own entry is the same "did the app lose my
+     * data" that the tile is otherwise careful to avoid.
+     *
+     * This does not reopen the "0 / 6" problem above: with nothing logged there is no band
+     * to find here, and the newborn still gets "—".
+     */
+    const loggedInto = byAge(
+        MILESTONE_BAND_WINDOWS.filter((band) =>
+            band.milestoneKeys.some((key) => achievedMilestoneKeys.has(key)),
+        ),
+    );
+
+    const current = reached ?? loggedInto;
 
     const value = current
         ? {
