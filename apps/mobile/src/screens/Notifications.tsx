@@ -32,7 +32,7 @@ const NotificationScreen = () => {
     );
 
     return (
-        <SafeAreaView style={globalStyles.container}>
+        <SafeAreaView style={globalStyles.container} edges={['bottom', 'left', 'right']}>
             <FlatList
                 data={notifications}
                 keyExtractor={(item) => item.id.toString()}

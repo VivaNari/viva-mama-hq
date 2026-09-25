@@ -2,8 +2,11 @@ import admin from "../../config/firebase";
 import { sendPushNotification } from "../../utils/sendPushNotification";
 import { IFlowDefinition, IFlowInstance, IFlowNode } from "../../types/chat.types";
 import { IUser } from "../../types";
-import { WEEKLY_CHECKIN_NOTIFICATIONS, CHECKIN_SSE_EVENTS } from "../../constants/chat";
-import logger from "../../utils/logger";
+import { getCheckinNotification, CHECKIN_SSE_EVENTS } from "../../constants/chat";
+import { resolveLanguage } from "../../utils/i18n/localizeFlowDefinition";
+import logger, { createModuleLogger } from "../../utils/logger";
+
+const log = createModuleLogger(logger, "notification.service");
 
 /**
  * Silent push payload
@@ -35,15 +38,19 @@ class NotificationService {
         flowInstanceId: string,
     ): Promise<boolean> {
         if (!user.FCM_token) {
-            logger.warn({ userId: user._id }, "No FCM token for new check-in notification");
+            log.warn({ userId: user._id }, "No FCM token for new check-in notification");
             return false;
         }
 
         try {
+            const copy = getCheckinNotification(
+                "NEW_CHECKIN",
+                resolveLanguage(user.preferred_language),
+            );
             await sendPushNotification({
                 token: user.FCM_token,
-                title: WEEKLY_CHECKIN_NOTIFICATIONS.NEW_CHECKIN.title,
-                body: WEEKLY_CHECKIN_NOTIFICATIONS.NEW_CHECKIN.body,
+                title: copy.title,
+                body: copy.body,
                 data: {
                     type: "WEEKLY_CHECKIN",
                     week: week.toString(),
@@ -51,14 +58,14 @@ class NotificationService {
                 },
             });
 
-            logger.info(
+            log.info(
                 { userId: user._id, week, flowInstanceId },
                 "New check-in notification sent",
             );
 
             return true;
         } catch (error) {
-            logger.error({ error, userId: user._id }, "Failed to send new check-in notification");
+            log.error({ error, userId: user._id }, "Failed to send new check-in notification");
             return false;
         }
     }
@@ -72,15 +79,19 @@ class NotificationService {
         flowInstanceId: string,
     ): Promise<boolean> {
         if (!user.FCM_token) {
-            logger.warn({ userId: user._id }, "No FCM token for reminder notification");
+            log.warn({ userId: user._id }, "No FCM token for reminder notification");
             return false;
         }
 
         try {
+            const copy = getCheckinNotification(
+                "REMINDER",
+                resolveLanguage(user.preferred_language),
+            );
             await sendPushNotification({
                 token: user.FCM_token,
-                title: WEEKLY_CHECKIN_NOTIFICATIONS.REMINDER.title,
-                body: WEEKLY_CHECKIN_NOTIFICATIONS.REMINDER.body,
+                title: copy.title,
+                body: copy.body,
                 data: {
                     type: "WEEKLY_CHECKIN_REMINDER",
                     week: week.toString(),
@@ -88,11 +99,11 @@ class NotificationService {
                 },
             });
 
-            logger.info({ userId: user._id, week, flowInstanceId }, "Reminder notification sent");
+            log.info({ userId: user._id, week, flowInstanceId }, "Reminder notification sent");
 
             return true;
         } catch (error) {
-            logger.error({ error, userId: user._id }, "Failed to send reminder notification");
+            log.error({ error, userId: user._id }, "Failed to send reminder notification");
             return false;
         }
     }
@@ -106,21 +117,25 @@ class NotificationService {
         }
 
         try {
+            const copy = getCheckinNotification(
+                "COMPLETED",
+                resolveLanguage(user.preferred_language),
+            );
             await sendPushNotification({
                 token: user.FCM_token,
-                title: WEEKLY_CHECKIN_NOTIFICATIONS.COMPLETED.title,
-                body: WEEKLY_CHECKIN_NOTIFICATIONS.COMPLETED.body,
+                title: copy.title,
+                body: copy.body,
                 data: {
                     type: "WEEKLY_CHECKIN_COMPLETED",
                     week: week.toString(),
                 },
             });
 
-            logger.info({ userId: user._id, week }, "Completion notification sent");
+            log.info({ userId: user._id, week }, "Completion notification sent");
 
             return true;
         } catch (error) {
-            logger.error({ error, userId: user._id }, "Failed to send completion notification");
+            log.error({ error, userId: user._id }, "Failed to send completion notification");
             return false;
         }
     }
@@ -166,7 +181,7 @@ class NotificationService {
         week: number,
     ): Promise<boolean> {
         if (!user.FCM_token) {
-            logger.warn({ userId: user._id }, "No FCM token for silent push");
+            log.warn({ userId: user._id }, "No FCM token for silent push");
             return false;
         }
 
@@ -197,11 +212,11 @@ class NotificationService {
 
             await admin!.messaging().send(message);
 
-            logger.info({ userId: user._id, nodeId: currentNode.id, week }, "Silent push sent");
+            log.info({ userId: user._id, nodeId: currentNode.id, week }, "Silent push sent");
 
             return true;
         } catch (error) {
-            logger.error({ error, userId: user._id }, "Failed to send silent push");
+            log.error({ error, userId: user._id }, "Failed to send silent push");
             return false;
         }
     }
@@ -233,7 +248,7 @@ class NotificationService {
             }
         }
 
-        logger.info({ type, sent, failed, total: users.length }, "Batch notifications complete");
+        log.info({ type, sent, failed, total: users.length }, "Batch notifications complete");
 
         return { sent, failed };
     }

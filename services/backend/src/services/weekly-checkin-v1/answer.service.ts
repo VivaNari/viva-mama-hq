@@ -12,13 +12,19 @@ import {
 } from "../../types/chat.types";
 import { IUser } from "../../types";
 import { STOPPED_BREASTFEEDING_SCORE } from "../../constants/chat";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
+import { resolveSelectedOptions } from "../../utils/functions/resolveSelectedOptions";
+
+const log = createModuleLogger(logger, "answer.service");
 
 /**
  * Answer input from user
  */
 interface AnswerInput {
+    /** Legacy identity: option scores. Ambiguous when options share a score. */
     selectedKeys?: number[] | undefined;
+    /** Preferred identity: option `value` tokens, unique within a node. */
+    selectedValues?: string[] | undefined;
     freeText?: string | undefined;
     idempotencyKey?: string;
 }
@@ -70,10 +76,21 @@ class AnswerService {
     buildAnswerData(node: IFlowNode, input: AnswerInput): AnswerData {
         const answerType = this.determineAnswerType(node, input);
 
+        // Resolve the actual options the user picked (by `value` when available),
+        // then derive their scores. Storing scores keeps the scoring engine,
+        // node-elimination and the breastfeeding sentinel working unchanged.
+        const selectedOptions = resolveSelectedOptions(node, {
+            selectedValues: input.selectedValues,
+            selectedKeys: input.selectedKeys,
+        });
+
         return {
             type: answerType,
-            selectedKeys: input.freeText ? [] : [...(input.selectedKeys || [])],
+            selectedKeys: input.freeText ? [] : selectedOptions.map((opt) => opt.score as number),
             freeText: input.freeText || null,
+            // Retained so the transcript and any later reconciliation can identify
+            // the exact options chosen, even when several share a score.
+            selectedValues: input.freeText ? [] : selectedOptions.map((o) => String(o.value)),
         };
     }
 
@@ -85,10 +102,10 @@ class AnswerService {
             return answerData.freeText;
         }
 
-        // Map selected keys to option labels
-        const selectedLabels = node.options
-            .filter((opt) => answerData.selectedKeys?.includes(opt.score!))
-            .map((opt) => opt.label);
+        const selectedLabels = resolveSelectedOptions(node, {
+            selectedValues: answerData.selectedValues,
+            selectedKeys: answerData.selectedKeys,
+        }).map((opt) => opt.label);
 
         return selectedLabels.join(", ") || "No selection";
     }
@@ -115,7 +132,7 @@ class AnswerService {
             idempotencyKey, // Store for idempotency checks
         });
 
-        logger.debug(
+        log.debug(
             { flowInstanceId: flowInstance._id, nodeId, idempotencyKey },
             "Flow response saved",
         );
@@ -140,11 +157,14 @@ class AnswerService {
             guided: {
                 flowInstanceId: flowInstance._id,
                 nodeId,
-                optionKey: answerData.freeText || answerData.selectedKeys?.join(","),
+                optionKey:
+                    answerData.freeText ||
+                    answerData.selectedValues?.join(",") ||
+                    answerData.selectedKeys?.join(","),
             },
         });
 
-        logger.debug({ userId: user._id, nodeId, answerText }, "User message saved");
+        log.debug({ userId: user._id, nodeId, answerText }, "User message saved");
     }
 
     // ============================================
@@ -174,7 +194,7 @@ class AnswerService {
             is_breastfeeding_currently: false,
         });
 
-        logger.info({ userId: user._id }, "User stopped breastfeeding - updated record");
+        log.info({ userId: user._id }, "User stopped breastfeeding - updated record");
 
         return true;
     }
@@ -208,7 +228,7 @@ class AnswerService {
             // 5. Handle special cases
             await this.handleBreastfeedingStatusChange(user, node, answerData);
 
-            logger.info(
+            log.info(
                 {
                     userId: user._id,
                     flowInstanceId: flowInstance._id,
@@ -222,7 +242,7 @@ class AnswerService {
                 answerData,
             };
         } catch (error: any) {
-            logger.error(
+            log.error(
                 {
                     error,
                     userId: user._id,

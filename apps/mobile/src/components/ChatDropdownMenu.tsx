@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Modal,
     StyleSheet,
@@ -8,6 +9,7 @@ import {
     View,
 } from 'react-native';
 import Lucide from '@react-native-vector-icons/lucide';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 
@@ -22,6 +24,13 @@ const ChatDropdownMenu: React.FC<ChatDropdownMenuProps> = ({
     onClose,
     onOptionSelect,
 }) => {
+    const { t } = useTranslation();
+    // Under edge-to-edge (B6) a Modal's window is forced translucent by RN itself —
+    // ReactModalHostView returns `field || isEdgeToEdgeFeatureFlagOn` for both
+    // translucency props — so this dialog now starts at the physical top of the screen
+    // rather than below the status bar. The 60dp offset was measured against the old
+    // inset window, so without adding the inset back the menu rides up under the bar.
+    const insets = useSafeAreaInsets();
     return (
         <Modal
             visible={visible}
@@ -31,7 +40,7 @@ const ChatDropdownMenu: React.FC<ChatDropdownMenuProps> = ({
         >
             <TouchableWithoutFeedback onPress={onClose}>
                 <View style={styles.overlay}>
-                    <View style={styles.menuContainer}>
+                    <View style={[styles.menuContainer, { marginTop: 60 + insets.top }]}>
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={() => {
@@ -40,7 +49,7 @@ const ChatDropdownMenu: React.FC<ChatDropdownMenuProps> = ({
                             }}
                         >
                             <Lucide name="bookmark" size={20} color={colors.black} />
-                            <Text style={[styles.menuText, globalStyles.fontMedium]}>Bookmarks</Text>
+                            <Text style={[styles.menuText, globalStyles.fontMedium]}>{t('chat.bookmarks')}</Text>
                         </TouchableOpacity>
 
                         <View style={styles.separator} />
@@ -53,7 +62,7 @@ const ChatDropdownMenu: React.FC<ChatDropdownMenuProps> = ({
                             }}
                         >
                             <Lucide name="info" size={20} color={colors.black} />
-                            <Text style={[styles.menuText, globalStyles.fontMedium]}>About</Text>
+                            <Text style={[styles.menuText, globalStyles.fontMedium]}>{t('chat.about')}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -73,7 +82,6 @@ const styles = StyleSheet.create({
         backgroundColor: colors.white,
         borderRadius: 12,
         paddingVertical: 8,
-        marginTop: 60,
         marginRight: 20,
         width: 180,
         shadowColor: "#000",

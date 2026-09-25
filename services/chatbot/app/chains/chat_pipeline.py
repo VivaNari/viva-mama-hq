@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 from app.chains.router import route_intent
 from app.escalation.policy import format_escalation_banner, scan_for_red_flags
 from app.guardrails.input_guard import enforce_scope, redact
-from app.llm.groq_client import get_llm
+from app.llm.factory import get_llm
 from app.memory.redis_memory import RedisSessionMemory
 from app.rag.retriever import query_with_fallback
 from mcp import ClientSession, StdioServerParameters
@@ -26,6 +26,7 @@ SYSTEM_PROMPT = (
 # MCP CLIENT
 # =========================================================
 
+
 async def call_mcp(user_text: str) -> Dict[str, Any]:
     """
     Call MCP server via STDIO.
@@ -35,10 +36,11 @@ async def call_mcp(user_text: str) -> Dict[str, Any]:
     # 1️⃣ Define how to start your MCP server
     server_params = StdioServerParameters(
         command="python",
-        args=["/Users/saurabh/Desktop/NN/chatbot/rag_chatbot/app/mcp/server.py"],  # path to your MCP server script
-        env=None                 # inherit current environment
+        args=[
+            "/Users/saurabh/Desktop/NN/chatbot/rag_chatbot/app/mcp/server.py"
+        ],  # path to your MCP server script
+        env=None,  # inherit current environment
     )
-
 
     # 2️⃣ Connect to server using stdio_client
     async with stdio_client(server_params) as (read_stream, write_stream):
@@ -48,7 +50,7 @@ async def call_mcp(user_text: str) -> Dict[str, Any]:
             # 3️⃣ Call your router tool on the MCP server
             result = await session.call_tool(
                 name="router",  # this tool decides which product tool to call
-                arguments={"text": user_text}
+                arguments={"text": user_text},
             )
 
             # 4️⃣ Convert the MCP TextContent result to Python dict
@@ -64,6 +66,7 @@ async def call_mcp(user_text: str) -> Dict[str, Any]:
 # =========================================================
 # HELPERS
 # =========================================================
+
 
 def _format_product_section(products: List[Dict[str, Any]]) -> str:
     if not products:
@@ -97,6 +100,7 @@ def _format_history(last_turns: List[Dict[str, Any]], cap_chars: int = 800) -> s
 # =========================================================
 # MAIN CHAT FUNCTION
 # =========================================================
+
 
 async def chat_once(
     user_text: str,
@@ -147,7 +151,7 @@ async def chat_once(
 
     if intent == "PRODUCT_QUERY":
         mcp_result = await call_mcp(safe_text)
-        print("mcp_result===",mcp_result)
+        print("mcp_result===", mcp_result)
         if mcp_result.get("tool") == "search_products":
             products = mcp_result.get("products", [])
 
@@ -179,7 +183,7 @@ async def chat_once(
 
     if used_rag and docs:
         context_block = "\n\n".join(
-            f"[{i+1}] {d.page_content[:1200]}" for i, d in enumerate(docs)
+            f"[{i + 1}] {d.page_content[:1200]}" for i, d in enumerate(docs)
         )
     else:
         context_block = "None"
@@ -219,8 +223,10 @@ async def chat_once(
     out_level, out_matches = scan_for_red_flags(draft_answer)
 
     severity = (
-        "HIGH" if ("HIGH" in (in_level, out_level))
-        else "MEDIUM" if ("MEDIUM" in (in_level, out_level))
+        "HIGH"
+        if ("HIGH" in (in_level, out_level))
+        else "MEDIUM"
+        if ("MEDIUM" in (in_level, out_level))
         else "NONE"
     )
 
@@ -252,6 +258,7 @@ async def chat_once(
         "memory_turns": memory.get_last_n(session_id, history_window),
     }
 
+
 def chat_once_name_detector(
     user_text: str,
     session_id: Optional[str] = None,
@@ -279,6 +286,4 @@ def chat_once_name_detector(
     llm_response = llm.invoke(prompt)
     draft_answer = llm_response.content if hasattr(llm_response, "content") else str(llm_response)
     print(f"LLM response: {draft_answer}")
-    return {
-        "answer": draft_answer
-    }
+    return {"answer": draft_answer}

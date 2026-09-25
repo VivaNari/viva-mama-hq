@@ -1,0 +1,81 @@
+name: Admin — Deploy to Firebase Hosting
+
+# The admin app had no workflow of its own before the monorepo: it was deployed
+# by running `firebase deploy` by hand. Firebase Hosting is the live target —
+# firebase.json/.firebaserc (project vivamama-app-admin-viewer) are current,
+# while the old repo's vercel.json was untouched scaffolding and was not carried
+# across.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/admin/**'
+      - 'packages/**'
+      - '.github/workflows/admin-deploy.yml'
+  pull_request:
+    paths:
+      - 'apps/admin/**'
+      - 'packages/**'
+  workflow_dispatch:
+
+concurrency:
+  group: admin-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  # Lets the preview deploy post its URL as a PR comment.
+  pull-requests: write
+  checks: write
+
+jobs:
+  # Preview and live are separate jobs, and exactly one runs per event, so the
+  # live job can carry the production environment (and any required reviewer set
+  # on it) without a PR preview having to wait for an approval.
+  preview:
+    name: Deploy preview channel
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build admin
+        run: pnpm --filter @vivamama/admin build
+      # entryPoint must point at apps/admin: that is where firebase.json and
+      # .firebaserc live, and `public: dist` inside it resolves relative to that
+      # directory. Omitting channelId creates a per-PR preview channel.
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ADMIN }}
+          projectId: vivamama-app-admin-viewer
+          entryPoint: apps/admin
+
+  live:
+    name: Deploy to live channel
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: production-admin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Build admin
+        run: pnpm --filter @vivamama/admin build
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_ADMIN }}
+          projectId: vivamama-app-admin-viewer
+          entryPoint: apps/admin
+          channelId: live

@@ -4,6 +4,9 @@ import { messages } from "../../../../constants/messages";
 import { ExpertService } from "../../../../services/expert/expert.service";
 import { IExpert } from "../../../../types/expert.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
+import UserModel from "../../../../models/user.model";
+import { localizeExpert, localizeExperts } from "../../../../utils/i18n/localizeExpert";
+import { resolveLanguage } from "../../../../utils/i18n/localizeFlowDefinition";
 
 export class ExpertController {
     private expertService: ExpertService;
@@ -16,9 +19,16 @@ export class ExpertController {
             throw new Error(messages.USER_FETCH_FAILED);
         }
         try {
-            const experts: IExpert[] = await this.expertService.find({});
+            // Referral scoping lives in the service so the chatbot's expert
+            // suggestions are validated against the exact same list.
+            const filteredExperts: IExpert[] = await this.expertService.getVisibleExperts(
+                String(request.user._id),
+            );
+            const user = await UserModel.findById(request.user._id);
+
+            const lang = resolveLanguage(request.query?.lang as string, user?.preferred_language);
             sendResponse({
-                data: experts,
+                data: localizeExperts(filteredExperts, lang),
                 statusCode: StatusCodes.OK,
                 success: true,
                 message: messages.EXPERT_FETCH_SUCCESS,
@@ -55,11 +65,27 @@ export class ExpertController {
             throw new Error(messages.EXPERT_FETCH_FAILED);
         }
         try {
-            const expert: IExpert = (await this.expertService.findById({
-                _id: request.params.id as string,
-            })) as IExpert;
+            // Scoped, not a raw findById: an expert hidden from this user's list must
+            // not be reachable by id either. See ExpertService.getVisibleExpertById.
+            const expert = await this.expertService.getVisibleExpertById(
+                String(request.user._id),
+                request.params.id as string,
+            );
+            const user = await UserModel.findById(request.user._id);
+            const lang = resolveLanguage(request.query?.lang as string, user?.preferred_language);
+
+            if (!expert) {
+                return sendResponse({
+                    data: {},
+                    statusCode: StatusCodes.NOT_FOUND,
+                    success: false,
+                    message: messages.EXPERT_NOT_FOUND,
+                    response,
+                });
+            }
+
             sendResponse({
-                data: expert,
+                data: localizeExpert(expert, lang),
                 statusCode: StatusCodes.OK,
                 success: true,
                 message: messages.EXPERT_FETCH_SUCCESS,

@@ -1,4 +1,5 @@
 import { StyleSheet } from "react-native";
+import { colors } from "../assets/colors";
 
 export const ContentDetailsStyles = StyleSheet.create({
   center: {
@@ -39,7 +40,11 @@ export const ContentDetailsStyles = StyleSheet.create({
     marginBottom: 15,
   },
   iconButton: {
-    paddingVertical: 2,
+    padding: 6,
+    backgroundColor: colors.lightGray,
+    borderRadius: 5,
+    justifyContent: "center",
+    alignItems: "center",
   },
   heading: {
     marginTop: 8,

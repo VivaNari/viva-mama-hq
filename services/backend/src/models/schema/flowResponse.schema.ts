@@ -17,6 +17,13 @@ const flowResponseSchema: Schema<IFlowResponse> = new Schema<IFlowResponse>(
                 type: [Number],
                 default: null,
             },
+            // Identity of the chosen options. Scores alone are ambiguous whenever
+            // a node has options sharing a score, so this is what makes a stored
+            // answer unambiguously reconstructable.
+            selectedValues: {
+                type: [String],
+                default: null,
+            },
             freeText: {
                 type: String,
                 default: null,

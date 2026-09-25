@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
@@ -6,6 +7,7 @@ import GradientButtonWithSlightRadius from './GradientButtonWithSlightRadius';
 import { useNavigation } from '@react-navigation/native';
 
 const NNWomanPlanningForBaby = () => {
+    const { t } = useTranslation();
     const navigation = useNavigation();
     return (
         <View
@@ -56,7 +58,7 @@ const NNWomanPlanningForBaby = () => {
 
                             }, globalStyles.fontBold]}
                         >
-                            Hey Mama! I am waiting for your womb
+                            {t('dashboard.nnTitle')}
                         </Text>
                     </View>
 
@@ -66,9 +68,7 @@ const NNWomanPlanningForBaby = () => {
                         >
 
                             <Text style={[globalStyles.fontSemiBold, { fontSize: 16, color: colors.darkGray, textAlign: 'center' }]}>
-                                Are you looking to get pregnant? Once pregnancy begins, the journey continues beyond delivery.
-                                VivaMama supports you through postpartum,
-                                tracking recovery and wellbeing every step of the way.
+                                {t('dashboard.nnBody')}
                             </Text>
                         </View>
                     </View>
@@ -81,7 +81,7 @@ const NNWomanPlanningForBaby = () => {
                     >
 
                         <GradientButtonWithSlightRadius
-                            title='Learn More'
+                            title={t('common.learnMore')}
                             fullRounded={true}
                             fullWidth={false}
                             onPress={() => { navigation.navigate('AboutRecoveryScore' as never) }}

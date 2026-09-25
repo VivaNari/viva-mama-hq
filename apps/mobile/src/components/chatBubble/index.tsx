@@ -19,11 +19,16 @@ export const ChatBubble: React.FC<Props> = ({
 	onMultiOptionToggle,
 	selectedMultiOptions,
 	onDatePickerOpen,
+	onLmpDatePickerOpen,
 	onNotPregnantSelect,
+	onConsultExpert,
+	onChatWithViva,
 	onAnimationComplete,
 	shouldAnimate,
 	onBookmarkPress,
 	isBookmarked,
+	onFlagPress,
+	onConnectExpert,
 }) => {
 	if (shouldAnimate && isAiMessage(message) && onAnimationComplete) {
 		return (
@@ -34,7 +39,11 @@ export const ChatBubble: React.FC<Props> = ({
 				onMultiOptionToggle={onMultiOptionToggle}
 				selectedMultiOptions={selectedMultiOptions}
 				onDatePickerOpen={onDatePickerOpen}
+				onLmpDatePickerOpen={onLmpDatePickerOpen}
 				onNotPregnantSelect={onNotPregnantSelect}
+				onConsultExpert={onConsultExpert}
+				onChatWithViva={onChatWithViva}
+				onConnectExpert={onConnectExpert}
 			/>
 		);
 	}
@@ -50,9 +59,14 @@ export const ChatBubble: React.FC<Props> = ({
 			onMultiOptionToggle={onMultiOptionToggle}
 			selectedMultiOptions={selectedMultiOptions}
 			onDatePickerOpen={onDatePickerOpen}
+			onLmpDatePickerOpen={onLmpDatePickerOpen}
 			onNotPregnantSelect={onNotPregnantSelect}
+			onConsultExpert={onConsultExpert}
+			onChatWithViva={onChatWithViva}
 			onBookmarkPress={onBookmarkPress}
 			isBookmarked={isBookmarked}
+			onFlagPress={onFlagPress}
+			onConnectExpert={onConnectExpert}
 		/>
 	);
 };

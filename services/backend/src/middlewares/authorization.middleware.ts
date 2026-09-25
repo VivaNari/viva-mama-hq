@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import env from "../config/env";
-import { IUser, TTokenSource } from "../types";
+import { EAuthDenial, IUser, TTokenSource } from "../types";
 import sendResponse from "../utils/commonFunctions/sendResponse";
 import { messages } from "../constants/messages";
 import { StatusCodes } from "http-status-codes";
@@ -21,7 +21,11 @@ const authMiddleware = (tokenSource: TTokenSource = "header") => {
 
             if (!token) {
                 return sendResponse({
-                    data: null,
+                    // These codes are the whole basis on which the app decides to end a
+                    // session. A 403 carrying one means "we do not know who you are";
+                    // a 403 carrying anything else means "we know, and no" and must
+                    // leave the session alone. See EAuthDenial.
+                    data: { code: EAuthDenial.TOKEN_MISSING },
                     message: messages.TOKEN_MISSING,
                     success: false,
                     statusCode: StatusCodes.UNAUTHORIZED,
@@ -32,7 +36,7 @@ const authMiddleware = (tokenSource: TTokenSource = "header") => {
             jwt.verify(token, env.JWT_SECRET as string, (err, user) => {
                 if (err) {
                     return sendResponse({
-                        data: null,
+                        data: { code: EAuthDenial.TOKEN_INVALID },
                         message: messages.TOKEN_INVALID,
                         success: false,
                         statusCode: StatusCodes.FORBIDDEN,

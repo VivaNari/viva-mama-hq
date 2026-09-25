@@ -5,7 +5,7 @@ export const vivaClubData: IVivaClubPost[] = [
     id: 1,
     user: {
       name: "Disha Patani",
-      avatar: require("../public/assets/images/avatar_ai.jpg"),
+      avatar: require("../public/assets/images/avatar_mom.png"),
     },
     content:
       "No one really prepares us for how much motherhood can shake up our identity. But it doesn't mean you're broken - it means you're adjusting. And that's okay.What helped me a little was: \n\nGiving myself permission to not feel okay some daysDoing even one tiny thing just for me like music, a hot shower, or just journaling how I feel \n\nTalking to other moms (like here!) who totally get itPlease don't hold it all in. You're doing so much already. And this feeling? It will shift-slowly, gently, with support \nHere for you always.",
@@ -17,21 +17,21 @@ export const vivaClubData: IVivaClubPost[] = [
       {
         user: {
           name: "Anjali Mehta",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Yeah same",
       },
       {
         user: {
           name: "Harsha Tomar",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Me too thanks for telling",
       },
       {
         user: {
           name: "Anjali Mehta",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content:
           "Thank you, I have really bad anxiety and it loves to latch <3",
@@ -42,7 +42,7 @@ export const vivaClubData: IVivaClubPost[] = [
     id: 2,
     user: {
       name: "Anjali Mehta",
-      avatar: require("../public/assets/images/avatar_ai.jpg"),
+      avatar: require("../public/assets/images/avatar_mom.png"),
     },
     content:
       "Omg I used to feel like I was just an emotional milk machine \nBut over time, with baby sleeping more and small things like taking a walk alone, I slowly started reconnecting with myself. It's not instant-but you're not lost forever. Promise",
@@ -54,21 +54,21 @@ export const vivaClubData: IVivaClubPost[] = [
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Yeah same",
       },
       {
         user: {
           name: "Harsha Tomar",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Me too thanks for telling",
       },
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content:
           "Thank you, I have really bad anxiety and it loves to latch <3",
@@ -79,7 +79,7 @@ export const vivaClubData: IVivaClubPost[] = [
     id: 3,
     user: {
       name: "Harsha Tomar",
-      avatar: require("../public/assets/images/avatar_ai.jpg"),
+      avatar: require("../public/assets/images/avatar_mom.png"),
     },
     content:
       "Omg I used to feel like I was just an emotional milk machine \nBut over time, with baby sleeping more and small things like taking a walk alone, I slowly started reconnecting with myself. It's not instant-but you're not lost forever. Promise",
@@ -91,21 +91,21 @@ export const vivaClubData: IVivaClubPost[] = [
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Yeah same",
       },
       {
         user: {
           name: "Anjali Mehta",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Me too thanks for telling",
       },
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content:
           "Thank you, I have really bad anxiety and it loves to latch <3",
@@ -113,21 +113,21 @@ export const vivaClubData: IVivaClubPost[] = [
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Yeah same",
       },
       {
         user: {
           name: "Anjali Mehta",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Me too thanks for telling",
       },
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content:
           "Thank you, I have really bad anxiety and it loves to latch <3",
@@ -135,21 +135,21 @@ export const vivaClubData: IVivaClubPost[] = [
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Yeah same",
       },
       {
         user: {
           name: "Anjali Mehta",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Me too thanks for telling",
       },
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content:
           "Thank you, I have really bad anxiety and it loves to latch <3",
@@ -160,7 +160,7 @@ export const vivaClubData: IVivaClubPost[] = [
     id: 4,
     user: {
       name: "Harsha Tomar",
-      avatar: require("../public/assets/images/avatar_ai.jpg"),
+      avatar: require("../public/assets/images/avatar_mom.png"),
     },
     content:
       "Omg I used to feel like I was just an emotional milk machine \nBut over time, with baby sleeping more and small things like taking a walk alone, I slowly started reconnecting with myself. It's not instant-but you're not lost forever. Promise",
@@ -172,21 +172,21 @@ export const vivaClubData: IVivaClubPost[] = [
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Yeah same",
       },
       {
         user: {
           name: "Anjali Mehta",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Me too thanks for telling",
       },
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content:
           "Thank you, I have really bad anxiety and it loves to latch <3",
@@ -194,21 +194,21 @@ export const vivaClubData: IVivaClubPost[] = [
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Yeah same",
       },
       {
         user: {
           name: "Anjali Mehta",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Me too thanks for telling",
       },
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content:
           "Thank you, I have really bad anxiety and it loves to latch <3",
@@ -216,21 +216,21 @@ export const vivaClubData: IVivaClubPost[] = [
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Yeah same",
       },
       {
         user: {
           name: "Anjali Mehta",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content: "Me too thanks for telling",
       },
       {
         user: {
           name: "Disha Patani",
-          avatar: require("../public/assets/images/avatar_ai.jpg"),
+          avatar: require("../public/assets/images/avatar_mom.png"),
         },
         content:
           "Thank you, I have really bad anxiety and it loves to latch <3",

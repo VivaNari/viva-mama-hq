@@ -37,6 +37,23 @@ export const bubbleStyles = StyleSheet.create({
     lineHeight: 22,
   },
 
+  mdGap: {
+    height: 8,
+  },
+
+  mdBulletRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+
+  mdBulletDot: {
+    marginRight: 6,
+  },
+
+  mdBulletText: {
+    flex: 1,
+  },
+
   aiText: {
     color: colors.black,
   },

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text } from "react-native";
 import { IOnboardingStepProps, IPHQQuestion, AnswersMap } from "../../types";
 import { globalStyles } from "../../public/styles";
@@ -18,6 +19,7 @@ const OnboardingStep: React.FC<Props> = ({
     answers,
     stepIndex,
 }) => {
+    const { t } = useTranslation();
     return (
         <View
             style={{
@@ -37,7 +39,7 @@ const OnboardingStep: React.FC<Props> = ({
                                 {singlePhq.question}
                             </Text>
                             {singlePhq.isMultichoice && (
-                                <Text style={[{ textAlign: 'center' }, globalStyles.fontRegular]}>(multiple choice)</Text>
+                                <Text style={[{ textAlign: 'center' }, globalStyles.fontRegular]}>{t('onboarding.multipleChoice')}</Text>
                             )}
                             <PHQInputRenderer
                                 question={{ ...singlePhq, answer: currentAnswer }}

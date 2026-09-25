@@ -1,10 +1,12 @@
 import UserModel from "../models/user.model";
 import contentModel from "../models/content.model";
-import logger from "../utils/logger";
+import logger, { createModuleLogger } from "../utils/logger";
 import { sendPushNotification } from "../utils/sendPushNotification";
 
+const log = createModuleLogger(logger, "weeklyContentNotification");
+
 export const weeklyContentNotification = async (): Promise<void> => {
-    logger.info("Starting weekly content notification job");
+    log.info("Starting weekly content notification job");
 
     try {
         const users = await UserModel.find({
@@ -12,7 +14,7 @@ export const weeklyContentNotification = async (): Promise<void> => {
             user_category: { $ne: null }, // Must have a category
         });
 
-        logger.info({ count: users.length }, "Found users for weekly content notifications");
+        log.info({ count: users.length }, "Found users for weekly content notifications");
 
         for (const user of users) {
             try {
@@ -43,26 +45,26 @@ export const weeklyContentNotification = async (): Promise<void> => {
                         },
                     });
 
-                    logger.info(
+                    log.info(
                         { userId: user._id, contentId: content._id },
                         "Sent weekly content notification for user",
                     );
                 } else {
-                    logger.debug(
+                    log.debug(
                         { userId: user._id, category: user.user_category, week: currentWeek },
                         "No valid content found for user this week",
                     );
                 }
             } catch (error) {
-                logger.error(
+                log.error(
                     { error, userId: user._id },
                     "Failed to send weekly content notification for user",
                 );
             }
         }
 
-        logger.info("Weekly content notification job completed");
+        log.info("Weekly content notification job completed");
     } catch (error) {
-        logger.error({ error }, "Weekly content notification job failed");
+        log.error({ error }, "Weekly content notification job failed");
     }
 };

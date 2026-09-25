@@ -1,6 +1,6 @@
 import jwt from "jsonwebtoken";
 import env from "../../config/env";
-import { IUser } from "../../types"; // Adjust this import path if needed
+import { EUserRole, IUser } from "../../types"; // Adjust this import path if needed
 
 export const generateJWT = (user: IUser): string => {
     const payload = {
@@ -9,6 +9,7 @@ export const generateJWT = (user: IUser): string => {
         mobile_number: user.mobile_number ?? null,
         is_onboarded: user.is_onboarded,
         user_id: user.user_id,
+        role: user.role ?? EUserRole.USER,
     };
 
     const token = jwt.sign(payload, env.JWT_SECRET as string, {

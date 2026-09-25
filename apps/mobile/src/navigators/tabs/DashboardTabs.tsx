@@ -1,6 +1,7 @@
 import { Lucide } from '@react-native-vector-icons/lucide';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import { Image, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../public/assets/colors';
@@ -10,12 +11,17 @@ import ChatWithVivaAI from '../../screens/ChatWithVivaAI';
 import Dashboard from '../../screens/Dashboard';
 import Experts from '../../screens/Experts';
 import Products from '../../screens/Products';
+import { useCapability } from '../../context/SubscriptionContext';
+import { Capability } from '../../types/entitlements.types';
 
 const Tab = createBottomTabNavigator();
 
 export const DashboardTabs = () => {
+    const { t } = useTranslation();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets()
+    // Safe here: RootNavigator is mounted inside SubscriptionProvider.
+    const productsLocked = useCapability(Capability.PRODUCTS_VIEW).locked;
 
     return (
         <Tab.Navigator
@@ -63,13 +69,13 @@ export const DashboardTabs = () => {
                     <View
                         style={{ paddingRight: 15, flexDirection: 'row', gap: 20, alignItems: 'center' }}
                     >
-                        <TouchableOpacity
+                        {/* <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => navigation.navigate("Notifications")}
 
                         >
                             <Lucide name='bell' size={25} color={colors.darkGray} />
-                        </TouchableOpacity>
+                        </TouchableOpacity> */}
                         <TouchableOpacity
                             activeOpacity={0.8}
                             onPress={() => navigation.navigate("MyProfile")}
@@ -84,7 +90,7 @@ export const DashboardTabs = () => {
                         paddingLeft: 15,
                     }}>
                         <Image
-                            source={require("../../public/assets/images/viva_logo_icon.png")}
+                            source={require("../../public/assets/images/avatar_mom.png")}
                             style={{
                                 height: 40,
                                 width: 40,
@@ -107,7 +113,7 @@ export const DashboardTabs = () => {
                             color={color}
                         />
                     ),
-                    title: "Home"
+                    title: t('nav.tabHome')
                 }}
             />
             {/* <Tab.Screen
@@ -129,7 +135,7 @@ export const DashboardTabs = () => {
                 component={ChatWithVivaAI as any}
 
                 options={{
-                    title: "Viva AI",
+                    title: t('nav.tabVivaAi'),
                     tabBarIcon: ({ color }) => (
                         <Lucide
                             name="message-square-dot"
@@ -150,6 +156,7 @@ export const DashboardTabs = () => {
                 name="Experts"
                 component={Experts}
                 options={{
+                    title: t('nav.tabExperts'),
                     tabBarIcon: ({ color }) => (
                         <Lucide
                             name="users"
@@ -159,25 +166,34 @@ export const DashboardTabs = () => {
                     ),
                 }}
             />
-            <Tab.Screen
-                name="Products"
-                component={Products}
-                options={{
-                    title: "Products",
-                    tabBarIcon: ({ color }) => (
-                        <Lucide
-                            name="shopping-cart"
-                            size={25}
-                            color={color}
-                        />
-                    ),
-                }}
-            />
+            {/* Some referral programs suppress products entirely for the mothers they
+                refer. The server is the enforcement — it returns an empty list — but a
+                tab that only ever shows "nothing here" reads as a broken app, so the
+                tab goes too.
+
+                The conditional has to sit directly inside Tab.Navigator: wrapping it in
+                a fragment breaks React Navigation's child inspection. */}
+            {!productsLocked && (
+                <Tab.Screen
+                    name="Products"
+                    component={Products}
+                    options={{
+                        title: t('nav.tabProducts'),
+                        tabBarIcon: ({ color }) => (
+                            <Lucide
+                                name="shopping-cart"
+                                size={25}
+                                color={color}
+                            />
+                        ),
+                    }}
+                />
+            )}
             <Tab.Screen
                 name="Services"
                 component={ArticleContent}
                 options={{
-                    title: "Contents",
+                    title: t('nav.tabContents'),
                     tabBarIcon: ({ color }) => (
                         <Lucide
                             name="book-open-text"

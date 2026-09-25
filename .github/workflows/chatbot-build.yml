@@ -1,0 +1,219 @@
+name: Chatbot — Build Docker Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Docker image tag
+        required: false
+        default: latest
+  push:
+    branches: [main]
+    # Path filter is new for the monorepo: in the standalone repo every push was
+    # by definition a chatbot change. Without this, a backend- or admin-only push
+    # to main would kick off a build that can run for hours.
+    paths:
+      - 'services/chatbot/**'
+      - '.github/workflows/chatbot-build.yml'
+
+concurrency:
+  group: chatbot-build-${{ github.ref }}
+  # false so a new trigger (e.g. pushing workflow edits) QUEUES behind an
+  # in-progress build instead of canceling a long embedding run mid-way.
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  GCP_REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
+  GAR_REPO: ${{ vars.GAR_REPO || 'vivamama-repo' }}
+  IMAGE_NAME: rag-chatbot
+  # Private buckets provisioned in vivamama-devops/shared-artifact-registry.
+  DOCS_BUCKET: vivamama-rag-docs
+  INDEX_BUCKET: vivamama-rag-index
+  # Holds the baked embedding model (flat folder). Cloud Run downloads it on
+  # boot instead of the model being baked into the runtime image.
+  MODEL_BUCKET: vivamama-rag-model
+  MODEL_PREFIX_NAME: bge-m3
+
+jobs:
+  build-and-push:
+    # Runs on the persistent self-hosted VM (shared project). It caches the
+    # embedding model, documents, and Docker layers across builds, and has the
+    # CPU/time to embed without hitting the 30-min hosted-runner cap.
+    #
+    # NOTE: that runner is registered against the OLD rag_chatbot repo by
+    # vivamama-devops (deploy-runner.yaml, `github_repo` input). Until it is
+    # re-registered against this monorepo, this job will queue with no runner.
+    runs-on: [self-hosted, rag-builder]
+    # bge-m3 CPU embedding of the full corpus (~18.8k chunks) is ~15-18h on this
+    # e2 VM. It only needs to succeed ONCE — the result is cached in
+    # gs://vivamama-rag-index/<hash>/ and every later build is a seconds-long
+    # cache hit. So we allow a long one-time grind; 24h leaves margin.
+    timeout-minutes: 1440
+    # Every `run` below is relative to the service directory, so the step bodies
+    # ported from the standalone repo (./data, ./.local_vector_store, the docker
+    # build context) all resolve exactly as they did there.
+    defaults:
+      run:
+        working-directory: services/chatbot
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Authenticate as the shared build service account. If the runner VM's
+      # attached SA already has the required roles, this step could be dropped
+      # and gcloud/gsutil/docker would use the VM's ADC automatically.
+      - uses: ./.github/actions/gcp-auth
+        with:
+          credentials_json: ${{ secrets.SHARED_BUILD_SA_KEY }}
+          project_id: ${{ secrets.SHARED_ARTIFACT_PROJECT_ID }}
+          configure_docker_region: ${{ env.GCP_REGION }}
+
+      - name: Set image tag and URI
+        run: |
+          TAG="${{ github.event.inputs.image_tag || github.sha }}"
+          IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_PROJECT_ID }}/${GAR_REPO}/${IMAGE_NAME}"
+          echo "TAG=${TAG}" >> "$GITHUB_ENV"
+          echo "IMAGE_URI=${IMAGE_URI}" >> "$GITHUB_ENV"
+
+      # Fingerprint the documents WITHOUT downloading them: pair each object's
+      # path with its md5 (from `gsutil ls -L`), sort, and hash. Any add /
+      # remove / edit / rename of a document flips DOCS_HASH.
+      - name: Fingerprint documents
+        run: |
+          DOCS_HASH=$(gsutil ls -L "gs://${DOCS_BUCKET}/**" \
+            | awk '/^gs:\/\//{name=$0} /Hash \(md5\):/{print name" "$3}' \
+            | sort \
+            | sha256sum | awk '{print $1}')
+          if [ -z "${DOCS_HASH}" ]; then
+            echo "::error::Could not compute document fingerprint (is gs://${DOCS_BUCKET} empty?)"
+            exit 1
+          fi
+          echo "DOCS_HASH=${DOCS_HASH}" >> "$GITHUB_ENV"
+          echo "Document fingerprint: ${DOCS_HASH}"
+
+      # Reuse a cached index if one already exists for this exact document set;
+      # otherwise build it in the base image (model already baked -> no download)
+      # and upload it for next time.
+      - name: Build or reuse the vector index
+        run: |
+          INDEX_PREFIX="gs://${INDEX_BUCKET}/${DOCS_HASH}"
+
+          if gsutil -q stat "${INDEX_PREFIX}/metadata.json"; then
+            echo "✅ Cache HIT — downloading prebuilt index (skipping embedding)."
+            rm -rf .local_vector_store && mkdir -p .local_vector_store
+            gsutil -m rsync -d -r "${INDEX_PREFIX}" ./.local_vector_store
+          else
+            echo "ℹ️ Cache MISS — building the index from documents."
+
+            # Sync docs from the private bucket (-d removes locally-stale files
+            # so deletions in the bucket are honored).
+            mkdir -p data
+            gsutil -m rsync -d -r "gs://${DOCS_BUCKET}" ./data
+
+            # Build the base image (deps + baked model). Cached on the VM after
+            # the first run, so this is fast on subsequent builds.
+            docker build --target base -t rag-base:latest .
+
+            # Run ingest inside the base image so it reuses the baked bge-m3
+            # model (HF_HOME=/opt/hf) — no model download. App code is mounted,
+            # not baked into base, to keep the base layer cache-stable.
+            rm -rf .local_vector_store && mkdir -p .local_vector_store
+            # Force torch/BLAS to use every core — by default it uses only the
+            # physical-core count (~half), which is the main reason CPU embedding
+            # crawls. Passing the full nproc as OMP/MKL threads maximizes speed.
+            CORES=$(nproc)
+            echo "Embedding on ${CORES} cores (OMP_NUM_THREADS=${CORES})."
+            # Run as the runner's UID so produced files aren't root-owned (which
+            # would break the next actions/checkout cleanup on the persistent VM).
+            # HOME=/tmp gives any cache writes a writable location; the baked
+            # bge-m3 model at /opt/hf is read from cache (no download). No --cpus
+            # cap — the runner survives full load fine (heartbeat was OK at 100%).
+            docker run --rm \
+              --user "$(id -u):$(id -g)" \
+              -e HOME=/tmp \
+              -e USER=runner \
+              -e OMP_NUM_THREADS="${CORES}" \
+              -e MKL_NUM_THREADS="${CORES}" \
+              -e OPENBLAS_NUM_THREADS="${CORES}" \
+              -e TOKENIZERS_PARALLELISM=false \
+              -e INGEST_PROGRESS=1 \
+              -e PYTHONUNBUFFERED=1 \
+              -e INGEST_DATA_DIR=/app/data \
+              -e GROQ_API_KEY=build-time-placeholder-key \
+              -e API_KEY=build-time-placeholder-api-key \
+              -v "$PWD/app:/app/app" \
+              -v "$PWD/ingest_data.py:/app/ingest_data.py" \
+              -v "$PWD/data:/app/data" \
+              -v "$PWD/.local_vector_store:/app/.local_vector_store" \
+              rag-base:latest python ingest_data.py
+
+            if [ ! -f .local_vector_store/metadata.json ]; then
+              echo "::error::Ingest did not produce an index (no metadata.json)."
+              exit 1
+            fi
+
+            echo "⬆️ Uploading index to ${INDEX_PREFIX}"
+            gsutil -m rsync -d -r ./.local_vector_store "${INDEX_PREFIX}"
+          fi
+
+      # Publish the embedding model to GCS (once). The runtime image no longer
+      # bakes the model; each Cloud Run instance downloads it from here on boot.
+      # We materialize the HF cache's resolved snapshot into a FLAT folder
+      # (cp -L dereferences the cache symlinks) so there are no symlinks to break
+      # in GCS, and the app loads it via a plain local path. Skipped when already
+      # present (marker object). To ship a NEW model, delete the marker (or bump
+      # MODEL_PREFIX_NAME) so this re-uploads.
+      - name: Publish embedding model to GCS
+        run: |
+          MODEL_PREFIX="gs://${MODEL_BUCKET}/${MODEL_PREFIX_NAME}"
+
+          if gsutil -q stat "${MODEL_PREFIX}/.complete"; then
+            echo "✅ Model already in GCS at ${MODEL_PREFIX} — skipping upload."
+          else
+            echo "ℹ️ Uploading embedding model to ${MODEL_PREFIX}"
+
+            # Base image carries the baked, safetensors-only model in /opt/hf.
+            # Cached on the VM, so this is fast after the first build.
+            docker build --target base -t rag-base:latest .
+
+            rm -rf ./model-out && mkdir -p ./model-out
+            # bge-m3's files are split across MULTIPLE HF cache snapshots (one
+            # commit holds the configs+tokenizer, another holds model.safetensors).
+            # Merge ALL snapshots into one flat folder, copying CONTENTS as real
+            # files (-L dereferences the cache symlinks so nothing breaks in GCS).
+            # Run as the runner UID so the files aren't root-owned.
+            docker run --rm \
+              --user "$(id -u):$(id -g)" \
+              -e HOME=/tmp \
+              -v "$PWD/model-out:/out" \
+              rag-base:latest \
+              sh -c 'set -e; for snap in /opt/hf/hub/models--BAAI--bge-m3/snapshots/*/; do echo "Merging snapshot: $snap"; cp -rL "$snap". /out/; done'
+
+            if [ ! -f model-out/model.safetensors ]; then
+              echo "::error::Model export missing model.safetensors — aborting."
+              exit 1
+            fi
+
+            gsutil -m rsync -r ./model-out "${MODEL_PREFIX}/"
+            # Marker written LAST so a partial upload is never treated as complete.
+            echo "$(date -u +%FT%TZ)" | gsutil cp - "${MODEL_PREFIX}/.complete"
+            echo "⬆️ Model published to ${MODEL_PREFIX}"
+          fi
+
+      # Final image = slim runtime (deps + app + index; NO model) + COPY
+      # .local_vector_store. The model is fetched from GCS at container boot.
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t "${IMAGE_URI}:${TAG}" \
+            -t "${IMAGE_URI}:latest" \
+            .
+
+      - name: Push Docker images
+        run: |
+          docker push "${IMAGE_URI}:${TAG}"
+          docker push "${IMAGE_URI}:latest"

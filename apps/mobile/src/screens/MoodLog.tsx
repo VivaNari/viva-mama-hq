@@ -3,6 +3,7 @@ import RNDateTimePicker, {
 } from '@react-native-community/datetimepicker';
 import { Lucide } from '@react-native-vector-icons/lucide';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
   ScrollView,
@@ -23,6 +24,7 @@ import { globalStyles } from '../public/styles';
 import { moodLogStyles as styles } from '../public/styles/moodLogStyles';
 import { EMood } from '../types/moodLog.types';
 import { startOfDay, toISODateKey } from '../utils/dateKey';
+import { AnalyticsEvent, recordError, track } from '../analytics';
 
 // Fallback window if the user's join date can't be resolved locally.
 const FALLBACK_DAYS_BACK = 60;
@@ -39,6 +41,7 @@ const buildDateRange = (from: Date, to: Date): Date[] => {
 };
 
 const MoodLog: React.FC = () => {
+  const { t } = useTranslation();
   const { userId } = useAuth();
 
   const today = useMemo(() => startOfDay(new Date()), []);
@@ -85,13 +88,13 @@ const MoodLog: React.FC = () => {
       console.log('[MoodLog] Failed to load mood logs', e);
       Toast.show({
         type: 'error',
-        text1: 'Could not load your mood logs',
+        text1: t('moodLog.loadFailed'),
         position: 'bottom',
       });
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     loadLogs();
@@ -119,14 +122,18 @@ const MoodLog: React.FC = () => {
       setMoodByDate((prev) => new Map(prev).set(selectedKey, selectedMood));
       Toast.show({
         type: 'success',
-        text1: hasExistingLog ? 'Mood updated' : 'Mood saved',
+        text1: hasExistingLog ? t('moodLog.moodUpdated') : t('moodLog.moodSaved'),
         position: 'bottom',
       });
+      // That a mood was logged — never which one, and never the date it was for.
+      // A mood value tied to an identified user is health data.
+      track(AnalyticsEvent.MOOD_LOG_SUBMITTED);
     } catch (e) {
       console.log('[MoodLog] Save failed', e);
+      recordError(e, 'MoodLog.handleSave');
       Toast.show({
         type: 'error',
-        text1: 'Could not save your mood',
+        text1: t('moodLog.saveFailed'),
         position: 'bottom',
       });
     } finally {
@@ -147,14 +154,15 @@ const MoodLog: React.FC = () => {
       setSelectedMood(null);
       Toast.show({
         type: 'success',
-        text1: 'Mood log removed',
+        text1: t('moodLog.moodRemoved'),
         position: 'bottom',
       });
     } catch (e) {
       console.log('[MoodLog] Delete failed', e);
+      recordError(e, 'MoodLog.handleDelete');
       Toast.show({
         type: 'error',
-        text1: 'Could not remove your mood log',
+        text1: t('moodLog.removeFailed'),
         position: 'bottom',
       });
     } finally {
@@ -171,7 +179,7 @@ const MoodLog: React.FC = () => {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.screen} edges={['bottom']}>
+      <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
         <View style={styles.centerFill}>
           <ActivityIndicator size="large" color={colors.purple} />
         </View>
@@ -180,7 +188,7 @@ const MoodLog: React.FC = () => {
   }
 
   return (
-    <SafeAreaView style={styles.screen} edges={['bottom']}>
+    <SafeAreaView style={styles.screen} edges={['bottom', 'left', 'right']}>
       <MoodDateStrip
         dates={dates}
         selectedDate={selectedDate}
@@ -202,7 +210,7 @@ const MoodLog: React.FC = () => {
           })}
         </Text>
         <Text style={[styles.prompt, globalStyles.fontRegular]}>
-          How are you feeling?
+          {t('moodLog.howFeeling')}
         </Text>
 
         <View style={styles.hero}>
@@ -219,11 +227,11 @@ const MoodLog: React.FC = () => {
             <Text style={styles.heroEmoji}>{heroOption?.emoji ?? '🫥'}</Text>
           </View>
           <Text style={[styles.heroLabel, globalStyles.fontBold]}>
-            {heroOption?.label ?? 'Tap a face below'}
+            {heroOption ? t(heroOption.label) : t('moodLog.tapFace')}
           </Text>
           {heroOption ? (
             <Text style={[styles.heroCaption, globalStyles.fontRegular]}>
-              {heroOption.caption}
+              {t(heroOption.caption)}
             </Text>
           ) : null}
         </View>
@@ -243,7 +251,7 @@ const MoodLog: React.FC = () => {
             <ActivityIndicator color={colors.white} />
           ) : (
             <Text style={[styles.saveButtonText, globalStyles.fontBold]}>
-              {hasExistingLog ? 'Update mood' : 'Save mood'}
+              {hasExistingLog ? t('moodLog.updateMood') : t('moodLog.saveMood')}
             </Text>
           )}
         </TouchableOpacity>
@@ -261,7 +269,7 @@ const MoodLog: React.FC = () => {
               <>
                 <Lucide name="trash-2" size={17} color={colors.redBadgeText} />
                 <Text style={[styles.deleteButtonText, globalStyles.fontSemiBold]}>
-                  Remove this log
+                  {t('moodLog.removeLog')}
                 </Text>
               </>
             )}

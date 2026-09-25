@@ -5,6 +5,8 @@ import messaging from '@react-native-firebase/messaging';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { decodeToken } from './src/utils/decodeJWTToken';
 import { chatDB } from './src/db/sqlite';
+import { FLOW_SLUGS } from './src/constants/chat';
+import { FlowType } from './src/types/chat.types';
 
 const backgroundMessageHandler = async (remoteMessage) => {
     console.log('[backgroundMessageHandler] Silent push received:', remoteMessage);
@@ -43,7 +45,18 @@ const backgroundMessageHandler = async (remoteMessage) => {
             onboardingStatus?.is_questionnaire_completed &&
             onboardingStatus?.is_subscription_completed;
 
-        const FLOW_SLUG = isFullyOnboarded ? 'weekly-check-in-v1' : 'onboarding-flow-v2';
+        // Read from FLOW_SLUGS rather than retyped literals.
+        //
+        // These used to be hardcoded here, and the check-in one was spelled
+        // "weekly-check-in-v1" — an extra hyphen. Chat history in SQLite is keyed by
+        // (user_id, flow_slug), so every question pre-fetched by a background push was
+        // written under a key the chat screen never reads: useChatMessages loads history
+        // with FLOW_SLUGS[FlowType.CHECKIN] ("weekly-checkin-v1"). The rows were saved
+        // correctly and then silently never shown, which defeats the point of
+        // pre-fetching on push. Sharing the constant is what stops the two drifting again.
+        const FLOW_SLUG = isFullyOnboarded
+            ? FLOW_SLUGS[FlowType.CHECKIN]
+            : FLOW_SLUGS[FlowType.ONBOARDING];
 
         // Initialize database
         await chatDB.init();

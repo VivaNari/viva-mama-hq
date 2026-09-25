@@ -57,7 +57,12 @@ jest.mock(require.resolve("../src/services/vivaClub/vivaClub.service"), () => ({
                 message: "Posts fetched successfully",
                 data: {
                     posts: store.posts,
-                    pagination: { currentPage: page, totalPages: 1, totalPosts: store.posts.length, limit },
+                    pagination: {
+                        currentPage: page,
+                        totalPages: 1,
+                        totalPosts: store.posts.length,
+                        limit,
+                    },
                 },
             });
         },
@@ -73,24 +78,32 @@ jest.mock(require.resolve("../src/services/vivaClub/vivaClub.service"), () => ({
                 likes: [],
             };
             store.posts.unshift(post);
-            return res.status(201).json({ success: true, message: "Post created successfully", data: post });
+            return res
+                .status(201)
+                .json({ success: true, message: "Post created successfully", data: post });
         },
         getPostDetails: (req: any, res: any) => {
             const post = store.posts.find((p: any) => p._id === req.params.id);
             if (!post) return res.status(404).json({ success: false, message: "Post not found" });
-            return res
-                .status(200)
-                .json({ success: true, message: "Post details fetched", data: { ...post, comments: [] } });
+            return res.status(200).json({
+                success: true,
+                message: "Post details fetched",
+                data: { ...post, comments: [] },
+            });
         },
         addComment: (req: any, res: any) => {
             if (!req.body?.content) {
-                return res.status(400).json({ success: false, message: "Comment content is required" });
+                return res
+                    .status(400)
+                    .json({ success: false, message: "Comment content is required" });
             }
             const post = store.posts.find((p: any) => p._id === req.params.id);
             if (!post) return res.status(404).json({ success: false, message: "Post not found" });
-            return res
-                .status(201)
-                .json({ success: true, message: "Comment added successfully", data: { _id: "c_new" } });
+            return res.status(201).json({
+                success: true,
+                message: "Comment added successfully",
+                data: { _id: "c_new" },
+            });
         },
         toggleLike: (req: any, res: any) => {
             const post = store.posts.find((p: any) => p._id === req.params.id);

@@ -51,7 +51,23 @@ jest.mock("../src/api/getUserProducts", () => ({
     ),
 }));
 
+// Spread the real module rather than replacing it: Products pulls in
+// useScreenEdges -> @react-navigation/bottom-tabs, which reads createScreenFactory
+// from this module at import time and would get undefined from a bare stub.
+// Each ItemProduct row reads openPaywall() to gate locked products. This suite
+// covers the catalog list, not the paywall, so a bare stub is enough.
+jest.mock("../src/context/SubscriptionContext", () => ({
+    useSubscriptionContext: () => ({ openPaywall: jest.fn() }),
+}));
+
+// Products re-fetches the catalog whenever the active language changes; it only
+// reads `language`, so a fixed stub keeps the effect deterministic.
+jest.mock("../src/context/LanguageContext", () => ({
+    useLanguage: () => ({ language: "en" }),
+}));
+
 jest.mock("@react-navigation/native", () => ({
+    ...jest.requireActual("@react-navigation/native"),
     useNavigation: () => ({ navigate: jest.fn() }),
 }));
 

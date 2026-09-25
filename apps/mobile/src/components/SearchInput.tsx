@@ -1,5 +1,6 @@
 import { MaterialDesignIcons } from "@react-native-vector-icons/material-design-icons";
 import React, { Dispatch } from 'react';
+import { useTranslation } from 'react-i18next';
 import { TextInput, View } from 'react-native';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from "../public/styles";
@@ -11,6 +12,7 @@ interface ISearchInputProps {
 
 
 const SearchInput = ({ setSearchData, marginBottom }: ISearchInputProps) => {
+    const { t } = useTranslation();
     return (
         <View
             style={{
@@ -28,7 +30,7 @@ const SearchInput = ({ setSearchData, marginBottom }: ISearchInputProps) => {
                 inputMode="text"
                 placeholderTextColor={colors.black}
                 cursorColor={colors.black}
-                placeholder={"Search"}
+                placeholder={t('common.search')}
                 selectTextOnFocus={true}
                 style={[{
                     paddingVertical: 15,

@@ -1,4 +1,4 @@
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
 import { BecknRequest } from "../../types/beckn.types";
 import {
     buildOnSelectStub,
@@ -7,6 +7,8 @@ import {
     buildOnStatusStub,
 } from "./beckn.builders";
 import { dispatchToBppCaller } from "./beckn.caller";
+
+const log = createModuleLogger(logger, "beckn.service");
 
 // BPP-side Beckn handlers.
 //
@@ -26,7 +28,7 @@ class BecknService {
     ): Promise<void> => {
         const { context } = payload;
 
-        logger.info(
+        log.info(
             {
                 action: incomingAction,
                 transactionId: context?.transactionId,
@@ -41,7 +43,7 @@ class BecknService {
             const callback = build(payload);
             await dispatchToBppCaller(callbackAction, callback);
         } catch (err) {
-            logger.error(
+            log.error(
                 { err, action: incomingAction, transactionId: context?.transactionId },
                 `Failed to build/dispatch ${callbackAction}`,
             );

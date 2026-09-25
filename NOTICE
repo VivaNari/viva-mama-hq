@@ -10,6 +10,13 @@ Third-party components are distributed under their own licenses; see each
 package's dependency manifest (package.json / pyproject.toml / requirements.txt)
 and the generated license reports in CI for details.
 
+The admin console (apps/admin) is derived from the Minimal UI dashboard template,
+Copyright (c) 2021 Minimal UI (https://minimals.cc/), used under the MIT License.
+The MIT License requires its copyright and permission notice to be retained, so
+the full text is kept alongside the derived code at apps/admin/LICENSE.md. That
+file covers the template-derived portions; VivaMama's own additions to the
+console are Apache-2.0 like the rest of this repository.
+
 The RAG chatbot's knowledge corpus (third-party research articles and clinical
 guidelines) is NOT included in this repository and is NOT covered by this
 license. See services/chatbot/data/SOURCES.md.

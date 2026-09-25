@@ -39,16 +39,46 @@ describe("onboarding flow config (FLOW_SLUGS + flowTypeResolver)", () => {
     expect(shouldClearHistoryOnComplete(FlowType.ONBOARDING)).toBe(false);
   });
 
-  it("redirects onboarding completion to Services", () => {
+  // Was "Services". The referral step moved ahead of the plan catalog, because a code
+  // can attach a subscription and asking for it afterwards would have her pay for what
+  // it would have given her free. ReferralCode forwards to Services itself when no code
+  // is entered or the code grants nothing.
+  it("redirects onboarding completion to ReferralCode", () => {
     expect(getCompletionRedirect(FlowType.ONBOARDING)).toEqual({
-      screen: "Services",
+      screen: "ReferralCode",
       delay: 5000,
+    });
+  });
+
+  /**
+   * resolveFlowConfig honours a route slug, so an already-onboarded user handed the
+   * onboarding slug (an FCM deep link can supply one) runs that flow inside AppStack —
+   * where ReferralCode is not a registered route. Resetting to it there would throw.
+   */
+  it("sends an already-onboarded user home instead, where ReferralCode does not exist", () => {
+    expect(getCompletionRedirect(FlowType.ONBOARDING, true)).toEqual({
+      screen: "DashboardTabNavigator",
+      delay: 3000,
     });
   });
 
   it("uses onboarding completion copy from getCompletionMessage", () => {
     const { title, message } = getCompletionMessage(FlowType.ONBOARDING);
-    expect(title).toBe("Complete");
-    expect(message).toContain("onboarding");
+    expect(title).toBe("chat.completeTitle");
+    expect(message).toBe("chat.onboardingComplete");
+  });
+
+  /**
+   * index.js (the FCM background handler) writes a pre-fetched question into SQLite, and
+   * useChatMessages reads it back. History is keyed by (user_id, flow_slug), so the two
+   * must derive that key from the same place.
+   *
+   * They did not: index.js hardcoded "weekly-check-in-v1" — one hyphen too many — so
+   * every question pre-fetched by a background push was stored under a key the chat
+   * screen never opened, and was silently never shown. Both now read FLOW_SLUGS.
+   */
+  it("uses one spelling of the check-in slug, with no stray hyphen", () => {
+    expect(FLOW_SLUGS[FlowType.CHECKIN]).toBe("weekly-checkin-v1");
+    expect(FLOW_SLUGS[FlowType.CHECKIN]).not.toBe("weekly-check-in-v1");
   });
 });

@@ -12,8 +12,7 @@ const FullReport = () => {
     const navigation = useNavigation<any>();
     return (
         <SafeAreaView
-            style={[globalStyles.container]}
-        >
+            style={[globalStyles.container]} edges={['bottom', 'left', 'right']}>
             <ScrollView>
                 <View>
                     <View>

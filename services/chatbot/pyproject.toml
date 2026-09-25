@@ -15,6 +15,11 @@ dependencies = [
   "langchain-core",
   "langchain-community",
   "langchain-groq",
+  # Vertex AI is selectable at runtime via LLM_PROVIDER (see app/llm/factory.py).
+  "langchain-google-vertexai",
+  # The embedding model is fetched from GCS at container start rather than baked
+  # into the image (see app/rag/model_provisioner.py).
+  "google-cloud-storage",
   "jinja2",
   "sentence-transformers",
   "faiss-cpu",

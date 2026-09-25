@@ -48,14 +48,14 @@ const SubCategoryArticles = () => {
 
     if (!subCategory) {
         return (
-            <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+            <SafeAreaView style={{ flex: 1, justifyContent: "center", alignItems: "center" }} edges={['bottom', 'left', 'right']}>
                 <Text>No articles found.</Text>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView style={[globalStyles.container]}>
+        <SafeAreaView style={[globalStyles.container]} edges={['bottom', 'left', 'right']}>
             <SubCategoryBlock item={subCategory} />
         </SafeAreaView>
     );

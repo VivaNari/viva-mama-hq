@@ -9,6 +9,7 @@ import {
     Linking,
 } from 'react-native';
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { OtpInput } from 'react-native-otp-entry';
 import { globalStyles } from '../public/styles';
 import LinearGradient from 'react-native-linear-gradient';
@@ -21,6 +22,7 @@ import { IRequestOtpResponse } from '../types/auth.types';
 
 const LoginwithPhone = () => {
     const navigation = useNavigation<any>();
+    const { t } = useTranslation();
     const [isSentOtp, setIsSentOtp] = useState(false);
     const [phoneNumber, setPhoneNumber] = useState<string>('');
     const [otp, setOTP] = useState<string>('');
@@ -68,7 +70,7 @@ const LoginwithPhone = () => {
                                     maxLength={10}
                                     selectionColor={colors.darkPurple}
                                     placeholderTextColor={colors.black}
-                                    placeholder={'Enter Phone Number'}
+                                    placeholder={t('auth.enterPhone')}
                                     style={[globalStyles.input, globalStyles.fontSemiBold, { backgroundColor: colors.lightGray, borderWidth: 1, borderColor: colors.darkPurple, color: colors.purple }]}
                                     onChangeText={handlePhoneChange}
                                     value={phoneNumber}
@@ -88,19 +90,19 @@ const LoginwithPhone = () => {
                                     </TouchableOpacity>
                                     <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap' }}>
                                         <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
-                                            I agree to the{' '}
+                                            {t('auth.agreeTo')}
                                         </Text>
                                         <TouchableOpacity onPress={() => Linking.openURL(PRIVACY_POLICY_URL)}>
                                             <Text style={[globalStyles.fontSemiBold, { fontSize: 13, color: colors.darkPurple, textDecorationLine: 'underline' }]}>
-                                                Privacy Policy
+                                                {t('auth.privacyPolicy')}
                                             </Text>
                                         </TouchableOpacity>
                                         <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
-                                            {' '}and{' '}
+                                            {t('auth.and')}
                                         </Text>
                                         <TouchableOpacity onPress={() => Linking.openURL(TERMS_OF_USE_URL)}>
                                             <Text style={[globalStyles.fontSemiBold, { fontSize: 13, color: colors.darkPurple, textDecorationLine: 'underline' }]}>
-                                                Terms of Use
+                                                {t('auth.termsOfUse')}
                                             </Text>
                                         </TouchableOpacity>
                                     </View>
@@ -120,7 +122,7 @@ const LoginwithPhone = () => {
                                     </TouchableOpacity>
                                     <View style={{ flex: 1 }}>
                                         <Text style={[globalStyles.fontRegular, { fontSize: 13, color: colors.black }]}>
-                                            I confirm that I am 18 years of age or older.
+                                            {t('auth.ageConfirm')}
                                         </Text>
                                     </View>
                                 </View>
@@ -182,7 +184,7 @@ const LoginwithPhone = () => {
                                             }, globalStyles.fontSemiBold]}
                                         >
 
-                                            Send OTP
+                                            {t('auth.sendOtp')}
                                         </Text>
                                     </View>
                                 </TouchableOpacity>
@@ -257,7 +259,7 @@ const LoginwithPhone = () => {
                                                 fontSize: 18
                                             }, globalStyles.fontSemiBold]}
                                         >
-                                            Submit
+                                            {t('auth.submit')}
                                         </Text>
                                     </View>
                                 </TouchableOpacity>

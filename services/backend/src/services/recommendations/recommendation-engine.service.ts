@@ -1,6 +1,8 @@
 import RecommendationModel from "../../models/recommendation.model";
 import { CategoryKey, IndividualCategoryScore } from "../../types/score-engine.types";
 import { IRecommendationLean, IRecommendationResponse } from "../../types/recommendation.types";
+import { DEFAULT_FLOW_LANGUAGE, FlowLanguage } from "../../types/chat.types";
+import { localizeRecommendation } from "../../utils/i18n/localizeRecommendation";
 
 export default class RecommendationEngineService {
     public static async getRecommendation(
@@ -11,6 +13,7 @@ export default class RecommendationEngineService {
         physicalIndividual: IndividualCategoryScore,
         lactationIndividual: IndividualCategoryScore,
         emotionalIndividual: IndividualCategoryScore,
+        lang: FlowLanguage = DEFAULT_FLOW_LANGUAGE,
     ): Promise<IRecommendationResponse> {
         const phase = this.getPhaseKey(week);
 
@@ -32,11 +35,11 @@ export default class RecommendationEngineService {
             ]);
 
             return {
-                overall: overallRecommendation,
+                overall: localizeRecommendation(overallRecommendation, lang),
                 individual: {
-                    physical: physicalRec,
-                    lactation: lactationRec,
-                    emotional: emotionalRec,
+                    physical: physicalRec ? localizeRecommendation(physicalRec, lang) : null,
+                    lactation: lactationRec ? localizeRecommendation(lactationRec, lang) : null,
+                    emotional: emotionalRec ? localizeRecommendation(emotionalRec, lang) : null,
                 },
             };
         } catch (error) {
@@ -137,24 +140,49 @@ export default class RecommendationEngineService {
         }
     }
 
-    public static formatRecommendationMessage(recommendation: IRecommendationLean): string {
+    private static readonly MESSAGE_LABELS: Record<
+        FlowLanguage,
+        { goingWell: string; needsHelp: string; celebrate: string; tips: string; next: string }
+    > = {
+        en: {
+            goingWell: "What's Going Well",
+            needsHelp: "Needs Help",
+            celebrate: "Celebrate",
+            tips: "Tips",
+            next: "Next",
+        },
+        hi: {
+            goingWell: "क्या अच्छा चल रहा है",
+            needsHelp: "किसमें मदद चाहिए",
+            celebrate: "जश्न मनाएँ",
+            tips: "सुझाव",
+            next: "आगे क्या",
+        },
+    };
+
+    public static formatRecommendationMessage(
+        recommendation: IRecommendationLean,
+        lang: FlowLanguage = DEFAULT_FLOW_LANGUAGE,
+    ): string {
+        const labels = this.MESSAGE_LABELS[lang] ?? this.MESSAGE_LABELS.en;
+
         let message = `${recommendation.title}\n\n`;
-        message += `What's Going Well:\n${recommendation.goingWell}\n\n`;
+        message += `${labels.goingWell}:\n${recommendation.goingWell}\n\n`;
 
         if (recommendation.needsHelp) {
-            message += `Needs Help:\n${recommendation.needsHelp}\n\n`;
+            message += `${labels.needsHelp}:\n${recommendation.needsHelp}\n\n`;
         }
 
         if (recommendation.celebrate) {
-            message += `Celebrate:\n${recommendation.celebrate}\n\n`;
+            message += `${labels.celebrate}:\n${recommendation.celebrate}\n\n`;
         }
 
         if (recommendation.tips) {
-            message += `Tips:\n${recommendation.tips}`;
+            message += `${labels.tips}:\n${recommendation.tips}`;
         }
 
         if (recommendation.next) {
-            message += `\n\nNext:\n${recommendation.next}`;
+            message += `\n\n${labels.next}:\n${recommendation.next}`;
         }
 
         return message;

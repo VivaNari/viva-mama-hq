@@ -10,20 +10,20 @@ This fixes the WRONGTYPE error that occurred when mixing String and List operati
 
 Usage:
     from app.memory.redis_memory import RedisSessionMemory
-    
+
     # Initialize with window size
     memory = RedisSessionMemory(window_size=6)
-    
+
     # Ensure session ID
     session_id = memory.ensure_session_id(None)  # Generates new UUID
-    
+
     # Append messages
     memory.append(session_id, "user", "Hello!")
     memory.append(session_id, "assistant", "Hi there!")
-    
+
     # Load conversation
     turns = memory.load(session_id)
-    
+
     # Get metrics
     metrics = memory.get_metrics()
 
@@ -38,7 +38,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Set
 
 import redis
 from app.settings import settings
@@ -50,18 +50,20 @@ logger = logging.getLogger(__name__)
 
 # Constants
 MAX_CONTENT_LENGTH = 4000  # Max characters per message
-MAX_ROLE_LENGTH = 20       # Max characters for role
-MAX_RETRIES = 3            # Retry attempts for transient errors
-RETRY_DELAY = 0.1          # Seconds between retries
+MAX_ROLE_LENGTH = 20  # Max characters for role
+MAX_RETRIES = 3  # Retry attempts for transient errors
+RETRY_DELAY = 0.1  # Seconds between retries
 
 
 # ============================================
 # TYPE DEFINITIONS
 # ============================================
 
+
 @dataclass
 class Turn:
     """Represents a single conversation turn"""
+
     role: str
     content: str
     timestamp: Optional[str] = None
@@ -70,6 +72,7 @@ class Turn:
 @dataclass
 class SessionMetadata:
     """Metadata for a conversation session"""
+
     session_id: str
     created_at: datetime
     last_accessed: datetime
@@ -81,9 +84,10 @@ class SessionMetadata:
 # METRICS TRACKING
 # ============================================
 
+
 class _MemoryMetrics:
     """Tracks memory operations for monitoring"""
-    
+
     def __init__(self):
         self.operations = {
             "load": 0,
@@ -91,19 +95,11 @@ class _MemoryMetrics:
             "append": 0,
             "delete": 0,
             "fallback_used": 0,
-            "migrations": 0
+            "migrations": 0,
         }
-        self.errors = {
-            "redis_connection": 0,
-            "parse_error": 0,
-            "retry_exhausted": 0
-        }
-        self.latency = {
-            "load_ms": [],
-            "save_ms": [],
-            "append_ms": []
-        }
-    
+        self.errors = {"redis_connection": 0, "parse_error": 0, "retry_exhausted": 0}
+        self.latency = {"load_ms": [], "save_ms": [], "append_ms": []}
+
     def record_operation(self, op_type: str, latency_ms: float = None):
         """Record an operation"""
         self.operations[op_type] = self.operations.get(op_type, 0) + 1
@@ -112,18 +108,15 @@ class _MemoryMetrics:
             # Keep only last 100 samples
             if len(self.latency[op_type]) > 100:
                 self.latency[op_type] = self.latency[op_type][-100:]
-    
+
     def record_error(self, error_type: str):
         """Record an error"""
         self.errors[error_type] = self.errors.get(error_type, 0) + 1
-    
+
     def get_stats(self) -> Dict[str, Any]:
         """Get current statistics"""
-        stats = {
-            "operations": dict(self.operations),
-            "errors": dict(self.errors)
-        }
-        
+        stats = {"operations": dict(self.operations), "errors": dict(self.errors)}
+
         # Calculate latency percentiles
         for op_type, samples in self.latency.items():
             if samples:
@@ -131,7 +124,7 @@ class _MemoryMetrics:
                 stats[f"{op_type}_p50"] = sorted_samples[len(sorted_samples) // 2]
                 stats[f"{op_type}_p95"] = sorted_samples[int(len(sorted_samples) * 0.95)]
                 stats[f"{op_type}_p99"] = sorted_samples[int(len(sorted_samples) * 0.99)]
-        
+
         return stats
 
 
@@ -143,73 +136,94 @@ _metrics = _MemoryMetrics()
 # IN-PROCESS FALLBACK STORE
 # ============================================
 
+
 class _InProcessStore:
     """
     Minimal in-process fallback store when Redis is unavailable.
     """
+
     def __init__(self, window_size: int):
         self.window_size = window_size
         self._data: Dict[str, List[Dict[str, Any]]] = {}
+        self._sets: Dict[str, Set[str]] = {}
         self._expiry: Dict[str, datetime] = {}
         self._metadata: Dict[str, SessionMetadata] = {}
-    
+
+    def sadd(self, key: str, *values: str) -> int:
+        """Add members to a set (mimics Redis SADD)"""
+        bucket = self._sets.setdefault(key, set())
+        before = len(bucket)
+        bucket.update(values)
+        return len(bucket) - before
+
+    def smembers(self, key: str) -> Set[str]:
+        """Read all members of a set (mimics Redis SMEMBERS)"""
+        self._cleanup_expired()
+
+        if key in self._expiry and datetime.now() > self._expiry[key]:
+            self.delete(key)
+            return set()
+
+        return set(self._sets.get(key, set()))
+
     def lrange(self, key: str, start: int, end: int) -> List[str]:
         """Get range of items from list (mimics Redis LRANGE)"""
         self._cleanup_expired()
-        
+
         if key in self._expiry and datetime.now() > self._expiry[key]:
             self.delete(key)
             return []
-        
+
         turns = self._data.get(key, [])
         return [json.dumps(turn) for turn in turns]
-    
+
     def rpush(self, key: str, *values: str) -> int:
         """Append items to list (mimics Redis RPUSH)"""
         if key not in self._data:
             self._data[key] = []
-        
+
         for value in values:
             turn = json.loads(value)
             self._data[key].append(turn)
-        
+
         return len(self._data[key])
-    
+
     def ltrim(self, key: str, start: int, end: int) -> None:
         """Trim list to specified range (mimics Redis LTRIM)"""
         if key in self._data:
             if start < 0 and end == -1:
                 # Keep last N items
                 self._data[key] = self._data[key][start:]
-    
+
     def expire(self, key: str, seconds: int) -> None:
         """Set expiration time"""
         self._expiry[key] = datetime.now() + timedelta(seconds=seconds)
-    
+
     def delete(self, key: str) -> None:
         """Delete key and metadata"""
         self._data.pop(key, None)
+        self._sets.pop(key, None)
         self._expiry.pop(key, None)
         self._metadata.pop(key, None)
-    
+
     def type(self, key: str) -> str:
         """Get type of key (always returns 'list' for consistency)"""
         if key in self._data:
-            return 'list'
-        return 'none'
-    
+            return "list"
+        return "none"
+
     def _cleanup_expired(self) -> None:
         """Remove expired keys"""
         now = datetime.now()
         expired_keys = [k for k, exp in self._expiry.items() if now > exp]
         for key in expired_keys:
             self.delete(key)
-    
+
     def keys(self, pattern: str = "*") -> List[str]:
         """List all keys"""
         self._cleanup_expired()
         return list(self._data.keys())
-    
+
     def ttl(self, key: str) -> int:
         """Get time to live for key"""
         if key in self._expiry:
@@ -222,10 +236,11 @@ class _InProcessStore:
 # MAIN REDIS SESSION MEMORY CLASS
 # ============================================
 
+
 class RedisSessionMemory:
     """
     Redis-backed conversation memory using Lists for atomic operations.
-    
+
     Storage model:
       Key    : "chat:session:{session_id}"
       Value  : Redis List where each item is a JSON-encoded turn
@@ -238,7 +253,7 @@ class RedisSessionMemory:
     def __init__(self, window_size: int = 8):
         """
         Initialize memory manager.
-        
+
         Args:
             window_size: Maximum number of turns to keep per session
         """
@@ -255,7 +270,7 @@ class RedisSessionMemory:
                 socket_timeout=5,
                 socket_connect_timeout=5,
                 retry_on_timeout=True,
-                health_check_interval=30
+                health_check_interval=30,
             )
             # Quick health check
             self._check_redis_health()
@@ -274,11 +289,20 @@ class RedisSessionMemory:
         """Generate Redis key for session"""
         return f"chat:session:{session_id}"
 
+    def _alerts_key(self, session_id: str) -> str:
+        """
+        Redis key for the escalation phrases already announced this session.
+
+        Deliberately outside the "chat:session:*" namespace — list_sessions()
+        globs that prefix and would otherwise report these flags as sessions.
+        """
+        return f"chat:alerts:{session_id}"
+
     def _check_redis_health(self) -> bool:
         """Check if Redis is healthy"""
         if self._is_fallback:
             return False
-        
+
         try:
             self._r.ping()
             return True
@@ -286,7 +310,7 @@ class RedisSessionMemory:
             logger.error(f"Redis health check failed: {str(e)}")
             _metrics.record_error("redis_connection")
             return False
-    
+
     def _switch_to_fallback(self) -> None:
         """Switch to fallback mode when Redis fails"""
         if not self._is_fallback:
@@ -294,20 +318,20 @@ class RedisSessionMemory:
             self._is_fallback = True
             self._r = _InProcessStore(window_size=self.window_size)
             _metrics.record_operation("fallback_used")
-    
+
     def _retry_operation(self, operation, *args, **kwargs):
         """Retry operation with exponential backoff"""
         last_exception = None
-        
+
         for attempt in range(MAX_RETRIES):
             try:
                 return operation(*args, **kwargs)
             except (RedisConnectionError, RedisError) as e:
                 last_exception = e
                 _metrics.record_error("redis_connection")
-                
+
                 if attempt < MAX_RETRIES - 1:
-                    wait_time = RETRY_DELAY * (2 ** attempt)
+                    wait_time = RETRY_DELAY * (2**attempt)
                     logger.warning(
                         f"Redis operation failed (attempt {attempt + 1}/{MAX_RETRIES}), "
                         f"retrying in {wait_time}s: {str(e)}"
@@ -318,7 +342,7 @@ class RedisSessionMemory:
                     _metrics.record_error("retry_exhausted")
                     self._switch_to_fallback()
                     raise last_exception
-        
+
         raise last_exception
 
     @staticmethod
@@ -339,27 +363,27 @@ class RedisSessionMemory:
     def load(self, session_id: str) -> List[Dict[str, Any]]:
         """
         Load conversation turns for a session using Redis Lists.
-        
+
         This method uses LRANGE to read from a Redis List, which is consistent
         with the atomic append() operation that uses RPUSH.
-        
+
         Includes automatic migration for sessions stored in the old String format.
-        
+
         Args:
             session_id: Unique session identifier
-            
+
         Returns:
             List of turns (may be empty)
         """
         start_time = time.perf_counter()
-        
+
         try:
             key = self._key(session_id)
-            
+
             if self._is_fallback:
                 # Fallback: use list operations
                 raw_list = self._r.lrange(key, 0, -1)
-                
+
                 turns = []
                 for turn_json in raw_list:
                     try:
@@ -371,23 +395,27 @@ class RedisSessionMemory:
             else:
                 # Check what type of data structure exists
                 key_type = self._retry_operation(self._r.type, key)
-                
-                if key_type == b'none' or key_type == 'none':
+
+                if key_type == b"none" or key_type == "none":
                     # Key doesn't exist - return empty list
                     turns = []
-                
-                elif key_type == b'list' or key_type == 'list':
+
+                elif key_type == b"list" or key_type == "list":
                     # CORRECT FORMAT: Redis List
                     # Use LRANGE to get all items
                     raw_list = self._retry_operation(self._r.lrange, key, 0, -1)
-                    
+
                     turns = []
                     for turn_json in raw_list:
                         try:
                             # Decode bytes to string
-                            turn_str = turn_json.decode('utf-8') if isinstance(turn_json, bytes) else turn_json
+                            turn_str = (
+                                turn_json.decode("utf-8")
+                                if isinstance(turn_json, bytes)
+                                else turn_json
+                            )
                             turn = json.loads(turn_str)
-                            
+
                             if isinstance(turn, dict) and "role" in turn and "content" in turn:
                                 turns.append(turn)
                             else:
@@ -395,75 +423,82 @@ class RedisSessionMemory:
                         except (json.JSONDecodeError, UnicodeDecodeError) as e:
                             logger.error(f"Failed to parse turn: {str(e)}")
                             continue
-                
-                elif key_type == b'string' or key_type == 'string':
+
+                elif key_type == b"string" or key_type == "string":
                     # OLD FORMAT: Redis String - migrate automatically
                     logger.info(f"Migrating session {session_id} from String to List format")
                     _metrics.record_operation("migrations")
-                    
+
                     try:
                         # Read old format (compressed JSON string)
                         raw = self._retry_operation(self._r.get, key)
-                        
+
                         # Try to parse old format
                         if raw:
                             # Handle potential compression
                             if raw.startswith(b"GZIP:"):
                                 import gzip
+
                                 compressed = raw[5:]
                                 decompressed = gzip.decompress(compressed)
-                                json_str = decompressed.decode('utf-8')
+                                json_str = decompressed.decode("utf-8")
                             else:
-                                json_str = raw.decode('utf-8')
-                            
+                                json_str = raw.decode("utf-8")
+
                             old_turns = json.loads(json_str)
-                            
+
                             if isinstance(old_turns, list):
-                                turns = [t for t in old_turns if isinstance(t, dict) and "role" in t and "content" in t]
+                                turns = [
+                                    t
+                                    for t in old_turns
+                                    if isinstance(t, dict) and "role" in t and "content" in t
+                                ]
                             else:
                                 turns = []
                         else:
                             turns = []
-                        
+
                         # Delete old format
                         self._retry_operation(self._r.delete, key)
-                        
+
                         # Save in new List format if we have data
                         if turns:
                             pipe = self._r.pipeline()
-                            for turn in turns[-self.window_size:]:  # Only keep window size
+                            for turn in turns[-self.window_size :]:  # Only keep window size
                                 turn_json = json.dumps(turn, ensure_ascii=False)
                                 pipe.rpush(key, turn_json)
                             pipe.expire(key, self.ttl)
                             self._retry_operation(pipe.execute)
-                            
+
                             logger.info(f"Successfully migrated {len(turns)} turns to List format")
-                    
+
                     except Exception as e:
                         logger.error(f"Failed to migrate session {session_id}: {str(e)}")
                         # Delete corrupt data and start fresh
                         self._retry_operation(self._r.delete, key)
                         turns = []
-                
+
                 else:
                     # Unknown type - delete and start fresh
                     logger.error(f"Unknown Redis type '{key_type}' for {session_id}, deleting")
                     self._retry_operation(self._r.delete, key)
                     turns = []
-            
+
             # Enforce window size
             if len(turns) > self.window_size:
-                logger.warning(f"Session {session_id} has {len(turns)} turns, trimming to {self.window_size}")
-                turns = turns[-self.window_size:]
-            
+                logger.warning(
+                    f"Session {session_id} has {len(turns)} turns, trimming to {self.window_size}"
+                )
+                turns = turns[-self.window_size :]
+
             # Record metrics
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             _metrics.record_operation("load", elapsed_ms)
-            
+
             logger.debug(f"Loaded {len(turns)} turns for {session_id} in {elapsed_ms:.2f}ms")
-            
+
             return turns
-            
+
         except Exception as e:
             logger.error(f"Error loading session {session_id}: {str(e)}", exc_info=True)
             return []
@@ -471,23 +506,23 @@ class RedisSessionMemory:
     def save(self, session_id: str, turns: List[Dict[str, Any]]) -> None:
         """
         Save conversation turns using Redis Lists.
-        
+
         This replaces the entire conversation by deleting the old list
         and creating a new one. Used primarily by import_session().
-        
+
         Args:
             session_id: Unique session identifier
             turns: List of turn dictionaries
         """
         start_time = time.perf_counter()
-        
+
         try:
             key = self._key(session_id)
-            
+
             # Enforce window size
             if len(turns) > self.window_size:
-                turns = turns[-self.window_size:]
-            
+                turns = turns[-self.window_size :]
+
             if self._is_fallback:
                 # Fallback: delete and recreate
                 self._r.delete(key)
@@ -500,63 +535,65 @@ class RedisSessionMemory:
                 # Redis: delete old data and create new list
                 pipe = self._r.pipeline()
                 pipe.delete(key)
-                
+
                 if turns:
                     # Add all turns to the list
                     for turn in turns:
                         # Ensure timestamp exists
                         if "timestamp" not in turn:
                             turn["timestamp"] = datetime.now().isoformat()
-                        
+
                         turn_json = json.dumps(turn, ensure_ascii=False)
                         pipe.rpush(key, turn_json)
-                    
+
                     pipe.expire(key, self.ttl)
-                
+
                 self._retry_operation(pipe.execute)
-            
+
             # Record metrics
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             _metrics.record_operation("save", elapsed_ms)
-            
+
             logger.debug(f"Saved {len(turns)} turns for {session_id} in {elapsed_ms:.2f}ms")
-            
+
         except Exception as e:
             logger.error(f"Error saving session {session_id}: {str(e)}", exc_info=True)
 
     def append(self, session_id: str, role: str, content: str) -> List[Dict[str, Any]]:
         """
         Append a turn to the conversation using atomic Redis List operations.
-        
+
         This uses RPUSH + LTRIM + EXPIRE in a pipeline for atomicity,
         preventing race conditions when multiple requests happen simultaneously.
-        
+
         Args:
             session_id: Unique session identifier
             role: Message role ('user' or 'assistant')
             content: Message content
-            
+
         Returns:
             Updated list of turns
         """
         start_time = time.perf_counter()
-        
+
         try:
             key = self._key(session_id)
-            
+
             # Create turn with timestamp
             turn = {
                 "role": role[:MAX_ROLE_LENGTH],
                 "content": content[:MAX_CONTENT_LENGTH],
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
             }
-            
+
             # Log if content was truncated
             if len(content) > MAX_CONTENT_LENGTH:
-                logger.warning(f"Content truncated from {len(content)} to {MAX_CONTENT_LENGTH} chars")
-            
+                logger.warning(
+                    f"Content truncated from {len(content)} to {MAX_CONTENT_LENGTH} chars"
+                )
+
             turn_json = json.dumps(turn, ensure_ascii=False)
-            
+
             if self._is_fallback:
                 # Fallback: not atomic but good enough for single process
                 self._r.rpush(key, turn_json)
@@ -566,23 +603,23 @@ class RedisSessionMemory:
             else:
                 # ATOMIC operation using Redis pipeline
                 pipe = self._r.pipeline()
-                pipe.rpush(key, turn_json)                    # Append to list
-                pipe.ltrim(key, -self.window_size, -1)        # Keep last N items
-                pipe.expire(key, self.ttl)                    # Refresh TTL
-                
+                pipe.rpush(key, turn_json)  # Append to list
+                pipe.ltrim(key, -self.window_size, -1)  # Keep last N items
+                pipe.expire(key, self.ttl)  # Refresh TTL
+
                 self._retry_operation(pipe.execute)
-                
+
                 # Load the updated conversation
                 result = self.load(session_id)
-            
+
             # Record metrics
             elapsed_ms = (time.perf_counter() - start_time) * 1000
             _metrics.record_operation("append", elapsed_ms)
-            
+
             logger.debug(f"Appended turn to {session_id} in {elapsed_ms:.2f}ms")
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Error appending to {session_id}: {str(e)}", exc_info=True)
             # Fallback: load + append + save (less safe but better than crash)
@@ -591,19 +628,75 @@ class RedisSessionMemory:
             self.save(session_id, turns)
             return turns
 
+    # -------------------------------
+    # Escalation alerts already announced (per session)
+    # -------------------------------
+
+    def get_announced_alerts(self, session_id: str) -> Set[str]:
+        """
+        Red-flag phrases already announced to the user in this session.
+
+        Fails OPEN (returns an empty set) on any storage error: repeating a
+        safety warning is acceptable, silently swallowing one is not.
+        """
+        try:
+            key = self._alerts_key(session_id)
+
+            if self._is_fallback:
+                members = self._r.smembers(key)
+            else:
+                members = self._retry_operation(self._r.smembers, key)
+
+            return {m.decode("utf-8") if isinstance(m, bytes) else str(m) for m in (members or [])}
+
+        except Exception as e:
+            logger.error(f"Error reading announced alerts for {session_id}: {str(e)}")
+            return set()
+
+    def mark_alerts_announced(self, session_id: str, phrases: Iterable[str]) -> None:
+        """
+        Record that these red-flag phrases have now been surfaced, so a
+        context-derived warning is not repeated on every turn of the session.
+        Shares the conversation TTL, so it dies with the conversation.
+        """
+        values = [str(p) for p in phrases if p]
+        if not values:
+            return
+
+        try:
+            key = self._alerts_key(session_id)
+
+            if self._is_fallback:
+                self._r.sadd(key, *values)
+                self._r.expire(key, self.ttl)
+            else:
+                pipe = self._r.pipeline()
+                pipe.sadd(key, *values)
+                pipe.expire(key, self.ttl)
+                self._retry_operation(pipe.execute)
+
+            logger.debug(f"Marked {len(values)} alert(s) announced for {session_id}")
+
+        except Exception as e:
+            # A bookkeeping failure must never cost the user her answer.
+            logger.error(f"Error marking alerts for {session_id}: {str(e)}")
+
     def reset(self, session_id: str) -> None:
         """Delete all turns for a session"""
         try:
             key = self._key(session_id)
-            
+            alerts_key = self._alerts_key(session_id)
+
             if self._is_fallback:
                 self._r.delete(key)
+                self._r.delete(alerts_key)
             else:
                 self._retry_operation(self._r.delete, key)
-            
+                self._retry_operation(self._r.delete, alerts_key)
+
             _metrics.record_operation("delete")
             logger.info(f"Reset session {session_id}")
-            
+
         except Exception as e:
             logger.error(f"Error resetting {session_id}: {str(e)}", exc_info=True)
 
@@ -624,11 +717,13 @@ class RedisSessionMemory:
         for t in new_turns:
             role = str(t.get("role", ""))[:MAX_ROLE_LENGTH]
             content = str(t.get("content", ""))[:MAX_CONTENT_LENGTH]
-            turns.append({
-                "role": role,
-                "content": content,
-                "timestamp": t.get("timestamp", datetime.now().isoformat())
-            })
+            turns.append(
+                {
+                    "role": role,
+                    "content": content,
+                    "timestamp": t.get("timestamp", datetime.now().isoformat()),
+                }
+            )
         self.save(session_id, turns)
         return turns
 
@@ -644,7 +739,7 @@ class RedisSessionMemory:
                 return [k.replace("chat:session:", "") for k in keys]
             else:
                 keys = self._retry_operation(self._r.keys, pattern)
-                return [k.decode('utf-8').replace("chat:session:", "") for k in keys]
+                return [k.decode("utf-8").replace("chat:session:", "") for k in keys]
         except Exception as e:
             logger.error(f"Error listing sessions: {str(e)}")
             return []
@@ -653,21 +748,23 @@ class RedisSessionMemory:
         """Export session data for backup"""
         try:
             turns = self.load(session_id)
-            
+
             return {
                 "session_id": session_id,
                 "turns": turns,
                 "metadata": {
                     "turn_count": len(turns),
                     "window_size": self.window_size,
-                    "exported_at": datetime.now().isoformat()
-                }
+                    "exported_at": datetime.now().isoformat(),
+                },
             }
         except Exception as e:
             logger.error(f"Error exporting {session_id}: {str(e)}")
             return None
 
-    def import_session(self, session_id: str, data: Dict[str, Any], overwrite: bool = False) -> bool:
+    def import_session(
+        self, session_id: str, data: Dict[str, Any], overwrite: bool = False
+    ) -> bool:
         """Import session data from backup"""
         try:
             # Check if session exists
@@ -675,17 +772,17 @@ class RedisSessionMemory:
             if existing and not overwrite:
                 logger.warning(f"Session {session_id} exists, use overwrite=True")
                 return False
-            
+
             # Validate data
             if "turns" not in data:
                 logger.error("Invalid import data: missing 'turns'")
                 return False
-            
+
             # Import turns
             self.save(session_id, data["turns"])
             logger.info(f"Imported {len(data['turns'])} turns for {session_id}")
             return True
-            
+
         except Exception as e:
             logger.error(f"Error importing {session_id}: {str(e)}")
             return False
@@ -718,13 +815,13 @@ class RedisSessionMemory:
             "status": "healthy",
             "redis_available": not self._is_fallback,
             "using_fallback": self._is_fallback,
-            "metrics": self.get_metrics()
+            "metrics": self.get_metrics(),
         }
-        
+
         if not self._is_fallback:
             redis_healthy = self._check_redis_health()
             if not redis_healthy:
                 health["status"] = "degraded"
                 health["redis_available"] = False
-        
+
         return health

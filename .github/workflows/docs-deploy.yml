@@ -1,0 +1,84 @@
+name: Docs — Deploy to GitHub Pages
+
+# Publishes docs/site to GitHub Pages.
+#
+# One-time repo setup: Settings → Pages → Source: "GitHub Actions". Without it the
+# deploy step fails with "Pages site not found" even though the build succeeds.
+#
+# docs/site is intentionally NOT a pnpm workspace package (see docs/site/README.md),
+# so it installs on its own with --ignore-workspace rather than via a root install.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/site/**'
+      - '.github/workflows/docs-deploy.yml'
+  pull_request:
+    paths:
+      - 'docs/site/**'
+      - '.github/workflows/docs-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-pages
+  # Let an in-flight deploy finish rather than cancelling it — a cancelled
+  # deploy-pages run can leave the Pages deployment in a stuck state.
+  cancel-in-progress: false
+
+jobs:
+  # PRs build only. They must never publish, and forked PRs get no token that
+  # could, so this job is the review gate and the deploy job below is gated on
+  # push/dispatch.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: docs/site/pnpm-lock.yaml
+
+      - name: Install
+        working-directory: docs/site
+        run: pnpm install --frozen-lockfile --ignore-workspace
+
+      - name: Build
+        working-directory: docs/site
+        env:
+          # Project sites are served from https://<org>.github.io/<repo>/, so the
+          # bundle needs that prefix. github.event.repository.name keeps this
+          # correct if the repo is ever renamed.
+          DOCS_BASE: /${{ github.event.repository.name }}/
+        run: pnpm build
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site/dist
+
+  deploy:
+    name: Deploy
+    # Never deploy from a pull request — build-only above is the PR gate.
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      # Scoped to this job alone: the build job above stays contents:read.
+      pages: write
+      id-token: write
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

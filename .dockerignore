@@ -8,6 +8,11 @@
 **/.pytest_cache/
 **/.ruff_cache/
 **/.local_vector_store/
+# Python virtualenvs (matches the patterns in .gitignore) — chatbot's local
+# .venv alone is several GB and has nothing to do with the Node backend image.
+**/.venv/
+**/venv*/
+**/app_venv/
 
 # React Native native projects are never needed in a server image.
 apps/mobile/android/

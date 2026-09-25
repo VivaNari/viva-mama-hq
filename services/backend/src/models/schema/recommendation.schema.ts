@@ -27,6 +27,10 @@ export const RecommendationSchema = new Schema<IRecommendation>(
         celebrate: { type: [String], default: [] },
         tips: { type: [String], default: [] },
         next: { type: [String], default: [] },
+        // i18n bundles keyed by language code (e.g. "hi"). Holds only
+        // translatable display strings; fields/keys missing here fall back to
+        // the base (English) values. See utils/i18n/localizeRecommendation.
+        translations: { type: Schema.Types.Mixed, default: {} },
     },
     { timestamps: true },
 );

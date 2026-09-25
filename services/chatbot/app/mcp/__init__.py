@@ -22,15 +22,15 @@ from app.mcp.db_connection import (
 )
 
 __all__ = [
-    'get_mongo_client',
-    'get_database',
-    'get_users_collection',
-    'get_recommendation_history_collection',
-    'get_recommendations_collection',
-    'get_flow_instances_collection',
-    'get_flow_responses_collection',
-    'get_conversations_collection',
-    'get_messages_collection',
-    'check_database_health',
-    'close_connection',
+    "get_mongo_client",
+    "get_database",
+    "get_users_collection",
+    "get_recommendation_history_collection",
+    "get_recommendations_collection",
+    "get_flow_instances_collection",
+    "get_flow_responses_collection",
+    "get_conversations_collection",
+    "get_messages_collection",
+    "check_database_health",
+    "close_connection",
 ]

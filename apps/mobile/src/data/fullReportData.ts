@@ -3,7 +3,7 @@ import { IWeekReport } from '../types/report.types';
 export const fullReportData: IWeekReport = {
   weekNumber: 1,
   description:
-    "Great start to your postpartum journey! You're recovering well. Continue weekly check-ins and self-care. Reach out if anything specific arises.",
+    "Great start to your perinatal journey! You're recovering well. Continue weekly check-ins and self-care. Reach out if anything specific arises.",
   vivaRecoveryScroreInPercentage: 50,
   bmi: {
     value: 24,

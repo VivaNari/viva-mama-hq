@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 
 import { globalStyles } from '../../public/styles/globalStyles';
@@ -12,8 +13,11 @@ import {
     isTextInputMessage,
     isMultiSelectMessage,
     isDeliveryDateNode,
+    isStillBirthNode,
 } from '../../utils/messageHelpers';
 import { bubbleStyles } from './styles';
+import { ConnectExpertButton } from './ConnectExpertButton';
+import { MarkdownText } from './MarkdownText';
 
 interface AnimatedBubbleProps {
     message: IChatMessage;
@@ -22,7 +26,11 @@ interface AnimatedBubbleProps {
     onMultiOptionToggle: (option: IOption, allOptions: IOption[]) => void;
     selectedMultiOptions: Set<string>;
     onDatePickerOpen: () => void;
+    onLmpDatePickerOpen: () => void;
     onNotPregnantSelect: () => void;
+    onConsultExpert: () => void;
+    onChatWithViva: () => void;
+    onConnectExpert?: (expertId: string) => void;
 }
 
 export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
@@ -32,8 +40,13 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
     onMultiOptionToggle,
     selectedMultiOptions,
     onDatePickerOpen,
-    onNotPregnantSelect,
+    onLmpDatePickerOpen,
+    // onNotPregnantSelect,
+    onConsultExpert,
+    onChatWithViva,
+    onConnectExpert,
 }) => {
+    const { t } = useTranslation();
     const [displayedText, setDisplayedText] = useState('');
     const [showOptions, setShowOptions] = useState(false);
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -42,6 +55,7 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
     const isTextInput = isAi && isTextInputMessage(message);
     const isMultiSelect = isAi && isMultiSelectMessage(message);
     const isDeliveryDate = isAi && isDeliveryDateNode(message);
+    const isStillBirth = isAi && isStillBirthNode(message);
 
     useEffect(() => {
         if (!isAi) {
@@ -82,18 +96,55 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
                 accessibilityLabel="Select delivery date"
             >
                 <Text style={[bubbleStyles.optionButtonText, bubbleStyles.specialOptionText, globalStyles.fontSemiBold]}>
-                    Select Delivery Date
+                    {t('chat.selectDeliveryDate')}
                 </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
+                style={bubbleStyles.optionButton}
+                onPress={onLmpDatePickerOpen}
+                accessibilityRole="button"
+                accessibilityLabel="Enter last menstrual period date"
+            >
+                <Text style={[bubbleStyles.optionButtonText, globalStyles.fontSemiBold]}>
+                    {t('chat.enterLmpDate')}
+                </Text>
+            </TouchableOpacity>
+
+            {/* <TouchableOpacity
                 style={bubbleStyles.optionButton}
                 onPress={onNotPregnantSelect}
                 accessibilityRole="button"
                 accessibilityLabel="I'm not pregnant yet"
             >
                 <Text style={[bubbleStyles.optionButtonText, globalStyles.fontSemiBold]}>
-                    I'm Not Pregnant Yet
+                    {t('chat.notPregnantYet')}
+                </Text>
+            </TouchableOpacity> */}
+        </View>
+    );
+
+    const renderStillBirthOptions = () => (
+        <View style={bubbleStyles.optionsContainer}>
+            <TouchableOpacity
+                style={[bubbleStyles.optionButton, bubbleStyles.specialOptionButton]}
+                onPress={onConsultExpert}
+                accessibilityRole="button"
+                accessibilityLabel="Consult with an expert"
+            >
+                <Text style={[bubbleStyles.optionButtonText, bubbleStyles.specialOptionText, globalStyles.fontSemiBold]}>
+                    {t('chat.consultExpert')}
+                </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                style={bubbleStyles.optionButton}
+                onPress={onChatWithViva}
+                accessibilityRole="button"
+                accessibilityLabel="Chat with Viva AI"
+            >
+                <Text style={[bubbleStyles.optionButtonText, globalStyles.fontSemiBold]}>
+                    {t('chat.chatWithViva')}
                 </Text>
             </TouchableOpacity>
         </View>
@@ -166,20 +217,40 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
                     ]}
                     accessibilityRole="text"
                 >
-                    <Text
-                        style={[
-                            bubbleStyles.messageText,
-                            globalStyles.fontSemiBold,
-                            isAi ? bubbleStyles.aiText : bubbleStyles.userText,
-                        ]}
-                    >
-                        {displayedText}
-                    </Text>
+                    {isAi ? (
+                        <MarkdownText
+                            text={displayedText}
+                            baseStyle={[
+                                bubbleStyles.messageText,
+                                globalStyles.fontSemiBold,
+                                bubbleStyles.aiText,
+                            ]}
+                        />
+                    ) : (
+                        <Text
+                            style={[
+                                bubbleStyles.messageText,
+                                globalStyles.fontSemiBold,
+                                bubbleStyles.userText,
+                            ]}
+                        >
+                            {displayedText}
+                        </Text>
+                    )}
 
                 </View>
+                {showOptions && isAi && (
+                    <ConnectExpertButton
+                        suggestedExperts={message.suggestedExperts}
+                        onConnectExpert={onConnectExpert}
+                    />
+                )}
+
                 {showOptions && isDeliveryDate && renderDeliveryDateOptions()}
 
-                {showOptions && !isTextInput && !isDeliveryDate && renderOptions()}
+                {showOptions && isStillBirth && renderStillBirthOptions()}
+
+                {showOptions && !isTextInput && !isDeliveryDate && !isStillBirth && renderOptions()}
             </View>
         </View>
     );

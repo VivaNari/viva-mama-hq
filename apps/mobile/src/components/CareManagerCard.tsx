@@ -1,86 +1,40 @@
-import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import Toast from 'react-native-toast-message';
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, Text, View } from 'react-native';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import GradientButtonWithSlightRadius from './GradientButtonWithSlightRadius';
-import { requestCallback } from '../api/requestCallback';
-import { chatDB } from '../db/sqlite';
-import { IRequestCallbackResponse } from '../types/careManager.types';
-import { useAuth } from '../context/AuthContext';
-import CustomDatePicker from './CustomDatePicker';
+import { PreferredSlot } from '../constants/consultationSlots';
+import { useCareManagerBooking } from '../hooks/useCareManagerBooking';
+import ConsultationBookingSheet from './consultation/ConsultationBookingSheet';
+import BookingConfirmedModal from './consultation/BookingConfirmedModal';
 
 const CareManagerCard = () => {
-    const [careManagerId, setCareManagerId] = useState<string>();
-    const { userId } = useAuth();
+    const { t } = useTranslation();
 
-    const [loading, setLoading] = useState<boolean>(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    useEffect(() => {
-        if (!userId) return;
-        (async () => {
-            try {
-                const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
-                if (getUserDataFromSQLite && getUserDataFromSQLite.data.caremanager) {
-                    setCareManagerId(getUserDataFromSQLite.data.caremanager.id);
-                }
-            } catch (error) {
-                console.error("Error loading care manager data:", error);
-            }
-        })()
-    }, [userId])
+    const [showBookingSheet, setShowBookingSheet] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
 
-    const handleDateSelected = async (date: Date) => {
-        setSelectedDate(date);
-        setShowDatePicker(false);
+    // Credit first, payment when the bucket is empty — the branch itself lives in the
+    // hook, shared with the chat-side entry point.
+    const {
+        careManagerId,
+        credits: careManagerCredits,
+        hasCredit: hasCareManagerCredit,
+        fee,
+        loading,
+        book,
+    } = useCareManagerBooking(() => setShowConfirmation(true));
 
-        // Call the API after date is selected
-        if (careManagerId) {
-            try {
-                setLoading(true);
-                const requestcallbackResponse = await requestCallback(
-                    careManagerId,
-                    date.toISOString()
-                ) as IRequestCallbackResponse;
-                if (requestcallbackResponse.success) {
-                    // Toast.show({
-                    //     type: 'success',
-                    //     text1: 'Success!',
-                    //     text2: 'Your request has been registered and you will receive a call back within 24 hours!',
-                    //     position: 'bottom',
-                    // });
-                    Alert.alert(
-                        'Success!',
-                        `Your request has been registered and you will receive a call back on ${date.toDateString()}!`,
-                        [{ text: 'OK', onPress: () => setSelectedDate(null) }]
-                    );
-                } else {
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Error!',
-                        text2: 'Something went wrong!',
-                        position: 'bottom',
-                    });
-                }
-            } catch (error) {
-                console.log(error);
-                Toast.show({
-                    type: 'error',
-                    text1: 'Error!',
-                    text2: 'Something went wrong! ' + error,
-                    position: 'bottom',
-                });
-            } finally {
-                setLoading(false);
-            }
-        }
+    const handleBookingConfirmed = async (date: Date, slot: PreferredSlot) => {
+        setShowBookingSheet(false);
+        await book(date, slot);
     };
 
     return (
         <View
             style={{
-                marginVertical: 15,
+                marginTop: 15,
             }}
         >
             <View
@@ -113,7 +67,7 @@ const CareManagerCard = () => {
 
                             }, globalStyles.fontBold]}
                         >
-                            Hey Mama! I am your care manager!
+                            {t('careManager.title')}
                         </Text>
                     </View>
 
@@ -123,7 +77,7 @@ const CareManagerCard = () => {
                         >
 
                             <Text style={[globalStyles.fontRegular, { fontSize: 16, color: colors.darkGray, textAlign: 'center' }]}>
-                                Hey mama! I'm your dedicated care manager whenever you need support or want to talk to someone who understands, you can request a call anytime. I'm here to help.
+                                {t('careManager.intro')}
                             </Text>
                         </View>
                     </View>
@@ -135,7 +89,15 @@ const CareManagerCard = () => {
                         }}
                     >
                         <GradientButtonWithSlightRadius
-                            title='Request a Call back'
+                            // Without a credit the next tap opens a payment sheet, so the
+                            // button says so rather than letting the price be a surprise.
+                            title={
+                                hasCareManagerCredit
+                                    ? t('careManager.requestWithCredit', { count: careManagerCredits })
+                                    : fee
+                                        ? t('careManager.requestWithFee', { amount: fee })
+                                        : t('careManager.requestCallback')
+                            }
                             fullWidth={true}
                             fullRounded={true}
                             style={{
@@ -145,19 +107,34 @@ const CareManagerCard = () => {
                             disabled={loading}
                             onPress={() => {
                                 if (careManagerId) {
-                                    setShowDatePicker(true);
+                                    setShowBookingSheet(true);
                                 }
                             }}
                         />
                     </View>
                 </View>
             </View>
-            <CustomDatePicker
-                show={showDatePicker}
-                setShow={setShowDatePicker}
-                selectedDate={selectedDate}
-                onSelect={handleDateSelected}
-                minimumDate={true}
+
+            <ConsultationBookingSheet
+                visible={showBookingSheet}
+                onClose={() => setShowBookingSheet(false)}
+                onConfirm={handleBookingConfirmed}
+                title={t('careManager.requestCallTitle')}
+                credits={careManagerCredits}
+                feeAmount={fee}
+                confirmLabel={
+                    hasCareManagerCredit
+                        ? t('careManager.requestWithCredit', { count: careManagerCredits })
+                        : fee
+                            ? t('careManager.requestWithFee', { amount: fee })
+                            : t('careManager.requestCallback')
+                }
+                submitting={loading}
+            />
+
+            <BookingConfirmedModal
+                visible={showConfirmation}
+                onDismiss={() => setShowConfirmation(false)}
             />
         </View>
     );

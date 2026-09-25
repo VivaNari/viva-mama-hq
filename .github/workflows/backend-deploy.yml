@@ -1,0 +1,67 @@
+name: Backend — Deploy to Cloud Run (UAT)
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        default: latest
+
+concurrency:
+  group: backend-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GCP_REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
+  GAR_REPO: ${{ vars.GAR_REPO || 'vivamama-repo' }}
+  IMAGE_NAME: vivamama-backend
+  CLOUD_RUN_SERVICE: nodejs-api
+
+jobs:
+  deploy:
+    name: Deploy backend to Cloud Run
+    runs-on: ubuntu-latest
+    # Scopes secrets to this environment and lets you add a required reviewer in
+    # repo settings without touching this file.
+    environment: uat-backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/gcp-auth
+        with:
+          credentials_json: ${{ secrets.UAT_GCP_SA_KEY }}
+          project_id: ${{ secrets.UAT_GCP_PROJECT_ID }}
+
+      # --set-secrets is passed on every deploy rather than being set once by
+      # hand: FIREBASE_SA_KEY_JSON is new since the monorepo move (it replaces
+      # the service-account key file the old image baked in), and a console-only
+      # setting would silently vanish the next time the service is recreated.
+      # OpenTelemetry config is passed with --update-env-vars, deliberately NOT
+      # --set-env-vars: the latter replaces the service's entire env-var set, which would
+      # wipe anything configured in the console or by another deploy path. --update-env-vars
+      # merges, leaving unrelated variables alone.
+      #
+      # OTEL_COLLECTOR_URL is a repo/environment *variable* (not a secret) holding the
+      # collector's Cloud Run URL, e.g. https://otel-collector-abc123-el.a.run.app. Leave it
+      # unset and the backend simply runs without telemetry — src/telemetry.ts no-ops on an
+      # empty endpoint rather than failing to boot.
+      #
+      # The collector is deployed --no-allow-unauthenticated, so the runtime service account
+      # of THIS service needs roles/run.invoker on it. Without that grant every export gets a
+      # 403 that is invisible unless OTEL_DIAG_LOG_LEVEL=debug is set.
+      - name: Deploy to Cloud Run
+        run: |
+          IMAGE_URI="${GCP_REGION}-docker.pkg.dev/${{ secrets.SHARED_ARTIFACT_PROJECT_ID }}/${GAR_REPO}/${IMAGE_NAME}:${{ inputs.image_tag }}"
+          echo "Deploying image: ${IMAGE_URI}"
+
+          gcloud run deploy "${CLOUD_RUN_SERVICE}" \
+            --image="${IMAGE_URI}" \
+            --region="${GCP_REGION}" \
+            --platform=managed \
+            --project="${{ secrets.UAT_GCP_PROJECT_ID }}" \
+            --set-secrets="FIREBASE_SA_KEY_JSON=FIREBASE_SA_KEY_JSON:latest" \
+            --update-env-vars="^@^OTEL_ENABLED=true@OTEL_EXPORTER_OTLP_ENDPOINT=${{ vars.OTEL_COLLECTOR_URL }}@OTEL_AUTH_MODE=oidc@OTEL_TRACES_ENABLED=${{ vars.OTEL_TRACES_ENABLED || 'false' }}@DEPLOYMENT_ENV=uat@SERVICE_NAME=vivamama-backend"

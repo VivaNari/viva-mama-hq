@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+
 import flowDefinitionModel from "../../models/flowDefinition.model";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
@@ -16,8 +18,11 @@ import {
     WEEKLY_CHECKIN_MESSAGES,
     CHECKIN_EXPIRY_DAYS,
 } from "../../constants/chat";
-import logger from "../../utils/logger";
-import conversationModel from "../../models/conversation.model";
+import logger, { createModuleLogger } from "../../utils/logger";
+import { getOrCreateFlowConversation } from "../chat-system/flow-conversation.service";
+import { calculatePostpartumState } from "../../utils/functions/postpartumWeek";
+
+const log = createModuleLogger(logger, "validation.service");
 
 interface IdempotencyCheckResult {
     isDuplicate: boolean;
@@ -35,7 +40,6 @@ interface IdempotencyCheckResult {
  */
 class ValidationService {
     // Configuration
-    private readonly MAX_RETROACTIVE_WEEKS = 4; // Can complete check-ins up to 4 weeks old
     private readonly MIN_WEEK = 1;
     private readonly MAX_WEEK = 52;
 
@@ -62,12 +66,38 @@ class ValidationService {
     }
 
     /**
+     * The user's week right now, computed from her delivery date rather than read from
+     * `current_weekdays.weeks`.
+     *
+     * The stored value is only written by the nightly job, so trusting it made every
+     * check-in request depend on that job having run. A failed or delayed run left the
+     * stored week behind the real one and the start endpoint then rejected the current
+     * week as "not triggered yet". Deriving it here keeps the request path correct on its
+     * own; the stored copy exists for the app to render, not for the server to gate on.
+     */
+    private currentWeekOf(user: IUser): number {
+        const deliveryDate = user.onboarding_data?.delivery_date;
+        if (!deliveryDate) return user.current_weekdays?.weeks || 0;
+
+        const state = calculatePostpartumState(deliveryDate as Date);
+        return state.mode === "postpartum" ? state.weeks : 0;
+    }
+
+    /**
      * Validate week against user's current week
      */
     validateWeekForUser(week: number, user: IUser): { isValid: boolean; error?: string } {
-        const userCurrentWeek = user.current_weekdays?.weeks || 0;
+        const userCurrentWeek = this.currentWeekOf(user);
 
-        // Cannot do check-in for future weeks
+        // Exactly the current week — a check-in is open for the whole of its week and
+        // closes when that week ends.
+        //
+        // There used to be a MAX_RETROACTIVE_WEEKS = 4 allowance here, but it never did
+        // anything: the week job marks past weeks EXPIRED and the state check below
+        // rejects EXPIRED, so a retroactive week was refused a few lines later anyway.
+        // Config that claims a capability the system does not have is worse than no
+        // config. Supporting a real backfill window needs the score engine to take the
+        // week from the flow instance rather than from `user.current_weekdays`.
         if (week > userCurrentWeek) {
             return {
                 isValid: false,
@@ -75,11 +105,10 @@ class ValidationService {
             };
         }
 
-        // Cannot do check-in for weeks too far in the past
-        if (week < userCurrentWeek - this.MAX_RETROACTIVE_WEEKS) {
+        if (week < userCurrentWeek) {
             return {
                 isValid: false,
-                error: `Cannot complete check-in for weeks more than ${this.MAX_RETROACTIVE_WEEKS} weeks old`,
+                error: WEEKLY_CHECKIN_MESSAGES.EXPIRED,
             };
         }
 
@@ -113,7 +142,7 @@ class ValidationService {
             state: WeeklyCheckinState.EXPIRED,
         });
 
-        logger.info(
+        log.info(
             { flowInstanceId: flowInstance._id, week: flowInstance.postpartumWeek },
             "Flow instance marked as expired",
         );
@@ -156,7 +185,7 @@ class ValidationService {
             });
 
             if (existingResponse) {
-                logger.info(
+                log.info(
                     { flowInstanceId, nodeId, idempotencyKey },
                     "Duplicate request detected via idempotency key",
                 );
@@ -172,7 +201,7 @@ class ValidationService {
         });
 
         if (existingAnswer) {
-            logger.info({ flowInstanceId, nodeId }, "Answer already exists for this node");
+            log.info({ flowInstanceId, nodeId }, "Answer already exists for this node");
             return { isDuplicate: true, existingResponse: existingAnswer };
         }
 
@@ -245,6 +274,7 @@ class ValidationService {
         user: IUser,
         week: number,
         flowSlug: string = WEEKLY_CHECKIN_SLUG,
+        subjectChildId: Types.ObjectId | null = null,
     ): Promise<WeeklyCheckinValidation> {
         // 1. Validate week parameter
         const weekParamValidation = this.validateWeekParam(week);
@@ -258,16 +288,23 @@ class ValidationService {
             };
         }
 
-        // 2. Validate week for user
-        const weekUserValidation = this.validateWeekForUser(week, user);
-        if (!weekUserValidation.isValid) {
-            return {
-                isValid: false,
-                error: {
-                    type: WeeklyCheckinErrorType.WEEK_MISMATCH,
-                    message: weekUserValidation.error!,
-                },
-            };
+        // 2. Validate week for user — check-in only.
+        //
+        // Onboarding runs through this same method but is not week-scoped: it sends
+        // whatever is in current_weekdays, which for a pregnant user is her GESTATIONAL
+        // week. Gating that against a postpartum week is meaningless, and rejects her
+        // outright once she has entered a delivery date.
+        if (flowSlug === WEEKLY_CHECKIN_SLUG) {
+            const weekUserValidation = this.validateWeekForUser(week, user);
+            if (!weekUserValidation.isValid) {
+                return {
+                    isValid: false,
+                    error: {
+                        type: WeeklyCheckinErrorType.WEEK_MISMATCH,
+                        message: weekUserValidation.error!,
+                    },
+                };
+            }
         }
 
         // 3. Get flow definition
@@ -275,9 +312,6 @@ class ValidationService {
             slug: flowSlug,
             status: "PUBLISHED",
         });
-        console.log("🚀 ~ validation.service.ts:278 ~ VivaCheckinValidationService ~ validateSSERequest ~ flowDefinition:", flowSlug)
-
-
         if (!flowDefinition) {
             return {
                 isValid: false,
@@ -288,11 +322,16 @@ class ValidationService {
             };
         }
 
-        // 4. Check for existing flow instance
+        // 4. Check for existing flow instance.
+        //
+        // subjectChildId is part of the lookup, not just the write: without it a mother
+        // adding a second child would match the first child's completed instance and be
+        // told her onboarding was already done.
         const existingInstance = await flowInstanceModel.findOne({
             userId: user._id,
             flowDefId: flowDefinition._id,
             postpartumWeek: week,
+            subjectChildId,
         });
 
         // 5. Handle different states
@@ -340,31 +379,31 @@ class ValidationService {
             };
         }
 
-        // 6. No existing instance - this is only valid if cron hasn't triggered yet
-        // but user's week matches (edge case: manual check-in start)
+        // 6. No existing instance. Normal, not exceptional: the week job may not have run
+        // yet, or she upgraded from FREE mid-week — FREE users get no instance created,
+        // so the first one she is entitled to has to be made here.
 
-        const userCurrentWeek = user.current_weekdays?.weeks || 0;
-        if (week > userCurrentWeek) {
-            return {
-                isValid: false,
-                error: {
-                    type: WeeklyCheckinErrorType.WEEK_MISMATCH,
-                    message: WEEKLY_CHECKIN_MESSAGES.NOT_TRIGGERED,
-                },
-            };
+        // Only create on demand for the check-in flow; onboarding reaches this method
+        // with a gestational week that means nothing here.
+        if (flowSlug === WEEKLY_CHECKIN_SLUG) {
+            const weekCheck = this.validateWeekForUser(week, user);
+            if (!weekCheck.isValid) {
+                return {
+                    isValid: false,
+                    error: {
+                        type: WeeklyCheckinErrorType.WEEK_MISMATCH,
+                        message: weekCheck.error!,
+                    },
+                };
+            }
         }
 
-        if (week < userCurrentWeek - this.MAX_RETROACTIVE_WEEKS) {
-            return {
-                isValid: false,
-                error: {
-                    type: WeeklyCheckinErrorType.WEEK_MISMATCH,
-                    message: `Cannot complete check-in for weeks more than ${this.MAX_RETROACTIVE_WEEKS} weeks old`,
-                },
-            };
-        }
-
-        const newInstance = await this.createFlowInstance(user, week, flowDefinition);
+        const newInstance = await this.createFlowInstance(
+            user,
+            week,
+            flowDefinition,
+            subjectChildId,
+        );
 
         return {
             isValid: true,
@@ -376,26 +415,13 @@ class ValidationService {
         user: IUser,
         week: number,
         flowDefinition: IFlowDefinition,
+        subjectChildId: Types.ObjectId | null = null,
     ): Promise<IFlowInstance> {
-        // Get or create conversation
-        let conversation = await conversationModel.findOne({
-            userId: user._id,
-            chatMode: "GUIDED_ONLY",
-            "meta.tags": "check-in",
-        });
-
-        if (!conversation) {
-            conversation = await conversationModel.create({
-                userId: user._id,
-                title: "Weekly Check-in",
-                chatMode: "GUIDED_ONLY",
-                lastMessageAt: new Date(),
-                meta: {
-                    channel: "App",
-                    tags: ["check-in"],
-                },
-            });
-        }
+        // Keyed on the flow being started, NOT hardcoded to the check-in. This method
+        // serves onboarding too, and asking for the "check-in" conversation regardless
+        // meant onboarding created one titled "Weekly Check-in" — which the first real
+        // check-in then found and reused, merging both flows into one thread.
+        const conversation = await getOrCreateFlowConversation(user, flowDefinition.slug);
 
         // Create flow instance (ACTIVE since user is starting it now)
         const newInstance = await flowInstanceModel.create({
@@ -405,13 +431,14 @@ class ValidationService {
             flowSlug: flowDefinition.slug,
             version: flowDefinition.version,
             postpartumWeek: week,
+            subjectChildId,
             state: FlowInstanceStateEnum.ACTIVE, // ACTIVE, not PENDING
             cursorNodeId: flowDefinition.startNodeId,
             variables: {},
             outcome: null,
         });
 
-        logger.info(
+        log.info(
             { userId: user._id, week, flowInstanceId: newInstance._id },
             "Created flow instance on-demand",
         );
@@ -472,7 +499,7 @@ class ValidationService {
         );
 
         if (idempotencyCheck.isDuplicate) {
-            logger.info(
+            log.info(
                 { flowInstanceId, nodeId, idempotencyKey, userId },
                 "Duplicate answer detected - returning success for retry safety",
             );

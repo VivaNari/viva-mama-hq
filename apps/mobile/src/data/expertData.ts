@@ -11,7 +11,7 @@ export const expertData: IExpertCategory[] = [
         description:
           "Senior consultant with 10+ years of experience in obstetrics and gynecology. Specializes in high-risk pregnancies and women's health.",
         remuneration: "1000 INR",
-        avatar: require("../public/assets/images/avatar_ai.jpg"),
+        avatar: require("../public/assets/images/avatar_mom.png"),
         whatsappNumber: "+919083457878",
       },
       {
@@ -20,7 +20,7 @@ export const expertData: IExpertCategory[] = [
         description:
           "Expert in reproductive medicine and fertility treatments. Known for her patient-centric approach and comprehensive care.",
         remuneration: "1000 INR",
-        avatar: require("../public/assets/images/avatar_ai.jpg"),
+        avatar: require("../public/assets/images/avatar_mom.png"),
         whatsappNumber: "+919330724843",
       },
     ],
@@ -35,7 +35,7 @@ export const expertData: IExpertCategory[] = [
         description:
           "Experienced general physician specializing in women's health and preventive medicine.",
         remuneration: "750 INR",
-        avatar: require("../public/assets/images/avatar_ai.jpg"),
+        avatar: require("../public/assets/images/avatar_mom.png"),
         whatsappNumber: "+919083457878",
       },
     ],
@@ -50,7 +50,7 @@ export const expertData: IExpertCategory[] = [
         description:
           "Clinical nutritionist expert in pregnancy and postpartum nutrition. Helps mothers maintain optimal health through diet.",
         remuneration: "750 INR",
-        avatar: require("../public/assets/images/avatar_ai.jpg"),
+        avatar: require("../public/assets/images/avatar_mom.png"),
         whatsappNumber: "+919330724843",
       },
     ],
@@ -65,7 +65,7 @@ export const expertData: IExpertCategory[] = [
         description:
           "Specialized in postpartum care and emotional support. Guides new mothers through their transition to parenthood.",
         remuneration: "750 INR",
-        avatar: require("../public/assets/images/avatar_ai.jpg"),
+        avatar: require("../public/assets/images/avatar_mom.png"),
         whatsappNumber: "+919083457878",
       },
     ],

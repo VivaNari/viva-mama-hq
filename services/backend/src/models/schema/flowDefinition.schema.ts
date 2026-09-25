@@ -70,6 +70,15 @@ const flowDefinitionSchema: Schema<IFlowDefinition> = new Schema<IFlowDefinition
                 },
             },
         ],
+        // i18n translation bundles keyed by language code (e.g. "hi").
+        // Holds ONLY translatable display strings; structural/logic fields
+        // (ids, option values, scores, branch, calc, next) live in the base
+        // document and are never duplicated here. Missing keys fall back to
+        // the base (English) content. See utils/i18n/localizeFlowDefinition.
+        translations: {
+            type: Schema.Types.Mixed,
+            default: {},
+        },
     },
     generalSchemaOptions,
 );

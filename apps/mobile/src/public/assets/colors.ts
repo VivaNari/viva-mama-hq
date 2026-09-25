@@ -1,7 +1,7 @@
 export const colors = {
   lightPurple: "#E3E2F4",
   purple: "#6F6AC4",
-  darkPurple: "#4B1EAA",
+  darkPurple: "#6814db",
   pageBG: "#f5f5f5",
   // pageBG: '#fffafa',
   primary: "#0A2463",
@@ -25,6 +25,20 @@ export const colors = {
   SubscriptionOptionsBG: "rgba(232, 215, 255, 1)",
   profileOptionsBG: "rgba(224, 200, 255, 1)",
   notoficatioBorder: "rgba(139, 127, 252, 1)",
+  // Infant tab. The check-in tiles were carrying this value inline; named here so the
+  // Infant surface draws from the palette like everything else.
+  infantTile: "rgba(139, 128, 252, 1)",
+  // Infant log screens. The blue pill that names every section, the input ground, and the
+  // three diaper kinds — each kind is colour-coded in the design so a parent can hit the
+  // right tile without reading it.
+  logSectionPill: "rgba(126, 164, 255, 1)",
+  logFieldBG: "#F4F5F8",
+  diaperWetBG: "#E1F0FB",
+  diaperWetText: "#1E88E5",
+  diaperDirtyBG: "#EFE7E0",
+  diaperDirtyText: "#8D6E63",
+  diaperBothBG: "#EDE7F6",
+  diaperBothText: "#6814DB",
   redBadgeText: "rgba(211, 47, 47, 0.9)",
   redBadgeBG: "rgba(211, 47, 47, 0.2)",
   yellowBadgeText: "rgba(245, 124, 0, 0.9)",

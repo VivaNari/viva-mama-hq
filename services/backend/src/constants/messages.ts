@@ -5,6 +5,10 @@ export const messages = {
     ANSWER_SAVE_FAILED: "Failed to save answer",
     FLOW_DEFINITION_SAVED_SUCCESS: "Flow definition created successfully",
     FLOW_DEFINITION_RETRIEVED_SUCCESS: "Flow definition created successfully",
+    FLOW_DEFINITION_NOT_FOUND: "Flow definition not found",
+    CONTACT_ALREADY_SET: "This field has already been set and cannot be changed",
+    CONTACT_ALREADY_IN_USE: "This email or mobile number is already in use",
+    DELIVERY_DATE_LOCKED: "Delivery date cannot be edited for postpartum users",
     FLOW_NODE_CATEGORY_SAVED_SUCCESS: "Flow definition created successfully",
     FLOW_NODE_CATEGORY_RETRIEVED_SUCCESS: "Flow definition created successfully",
     TOKEN_MISSING: "Unauthorized: access denied. token missing.",
@@ -30,10 +34,18 @@ export const messages = {
     USER_FETCHED_SUCCESSFULLY: "User fetched successfully!",
     USER_FETCH_FAILED: "Failed to fetch user!",
     EXPERT_FETCH_FAILED: "Failed to fetch expert!",
+    EXPERT_NOT_EMPANELLED:
+        "This expert sets their own consultation fee, so plan credits cannot be used. Book them pay-per-session instead.",
+    EXPERT_IN_PERSON_ONLY:
+        "This doctor consults in person and does not take bookings through the app. Please meet them at their clinic.",
+    CONSULTANT_NOT_FOUND: "Consultant not found!",
+    CONSULTANT_FEE_UNAVAILABLE:
+        "This consultant's fee is not set up yet. Please try another, or contact support.",
     INTERNAL_SERVER_ERROR: "Internal server error",
     CONTENT_SAVED_SUCCESS: "Content saved successfully",
     CONSULTATION_SAVED_SUCCESS: "Consultation saved successfully",
     CONSULTATION_REVIEW_SAVED_SUCCESS: "Consultation review saved successfully",
+    CONSULTATION_ALREADY_REVIEWED: "You have already reviewed this consultation",
     CONTENT_FETCH_SUCCESS: "Content fetched successfully",
     PRODUCT_FETCH_SUCCESS: "Product fetched successfully",
     PRODUCT_SAVED_SUCCESS: "Product saved successfully",
@@ -44,28 +56,134 @@ export const messages = {
     EXPERT_SAVED_SUCCESS: "Expert saved successfully",
     EXPERT_FETCH_SUCCESS: "Expert fetched successfully",
     CONSULTATION_COMPLETED_SUCCESS: "Consultation completed successfully",
+    CONSULTATION_UNHANDLED_SUCCESS: "Consultation marked unhandled successfully",
     CONSULTATION_FETCHED_SUCCESS: "Consultation fetched successfully",
     FCM_TOKEN_UPDATED_SUCCESS: "FCM token updated successfully",
     CONSULTATION_ID_NOT_PROVIDED: "Consultation id not provided",
     CONSULTATION_NOT_FOUND: "Consultation not found",
+    CONSULTATION_TIME_CONFIRMED_SUCCESS: "Consultation time confirmed successfully",
+    CONFIRMED_TIME_OUTSIDE_SLOT:
+        "This time falls outside the slot the patient requested. Confirm anyway?",
+    SLOT_NO_LONGER_BOOKABLE:
+        "That time slot is no longer available. Please pick a later slot or another date.",
     BOOKMARK_CREATED_SUCCESS: "Bookmark created successfully",
     BOOKMARK_DELETED_SUCCESS: "Bookmark deleted successfully",
     BOOKMARK_FETCH_SUCCESS: "Bookmark fetched successfully",
     USER_UPDATED_SUCCESS: "User updated successfully",
+    ACCOUNT_DELETED_SUCCESS: "Your account and associated data have been deleted",
+    ACCOUNT_DELETE_FAILED: "Failed to delete the account. Please try again.",
     SUPPORT_CREATED_SUCCESS: "Support created successfully",
     SUPPORT_RESOLVED_SUCCESS: "Support resolved successfully",
     SUPPORT_ID_NOT_PROVIDED: "Support id not provided",
     SUPPORT_NOT_FOUND: "Support not found",
+    EMERGENCY_ALERT_DISMISSED_SUCCESS: "Emergency alert dismissed successfully",
+    EMERGENCY_ALERT_NOT_FOUND: "Emergency alert not found",
     MOOD_LOG_SAVED_SUCCESS: "Mood log saved successfully",
     MOOD_LOG_FETCH_SUCCESS: "Mood logs fetched successfully",
     MOOD_LOG_DELETED_SUCCESS: "Mood log deleted successfully",
     MOOD_LOG_NOT_FOUND: "Mood log not found",
+    MESSAGE_NOT_FOUND: "Message not found",
     MOOD_LOG_INVALID_DATE: "logDate must be a valid date in YYYY-MM-DD format",
     MOOD_LOG_FUTURE_NOT_ALLOWED: "Cannot log a mood for a future date",
     MOOD_LOG_BEFORE_JOIN: "Cannot log a mood for a date before you joined the platform",
+    GROWTH_LOG_SAVED_SUCCESS: "Growth log saved successfully",
+    GROWTH_LOG_FETCH_SUCCESS: "Growth logs fetched successfully",
+    GROWTH_LOG_DELETED_SUCCESS: "Growth log deleted successfully",
+    GROWTH_LOG_NOT_FOUND: "Growth log not found",
+    GROWTH_LOG_INVALID_DATE: "measuredOn must be a valid date in YYYY-MM-DD format",
+    GROWTH_LOG_FUTURE_NOT_ALLOWED: "Cannot log a measurement for a future date",
+    GROWTH_LOG_BEFORE_BIRTH: "Cannot log a measurement for a date before the child was born",
+    GROWTH_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+    GROWTH_LOG_DAY_CLOSED:
+        "Only today's measurement can be added or changed. Earlier days are read-only.",
+    DIAPER_LOG_SAVED_SUCCESS: "Diaper logged successfully",
+    DIAPER_LOG_FETCH_SUCCESS: "Diaper logs fetched successfully",
+    DIAPER_LOG_DELETED_SUCCESS: "Diaper log entry removed successfully",
+    DIAPER_LOG_NOT_FOUND: "Diaper log entry not found",
+    DIAPER_LOG_INVALID_DATE: "loggedAt must be a valid date",
+    DIAPER_LOG_FUTURE_NOT_ALLOWED: "Cannot log a diaper change in the future",
+    DIAPER_LOG_BEFORE_BIRTH: "Cannot log a diaper change for a time before the child was born",
+    DIAPER_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+    DIAPER_LOG_DAY_CLOSED:
+        "Only today's diapers can be added or removed. Earlier days are read-only.",
+    MILESTONE_LOG_SAVED_SUCCESS: "Milestone logged successfully",
+    MILESTONE_LOG_FETCH_SUCCESS: "Milestones fetched successfully",
+    MILESTONE_LOG_DELETED_SUCCESS: "Milestone removed successfully",
+    MILESTONE_LOG_NOT_FOUND: "Milestone not logged for this child",
+    MILESTONE_LOG_INVALID_DATE: "achievedOn must be a valid date in YYYY-MM-DD format",
+    MILESTONE_LOG_FUTURE_NOT_ALLOWED: "Cannot log a milestone for a future date",
+    MILESTONE_LOG_BEFORE_BIRTH: "Cannot log a milestone for a date before the child was born",
+    MILESTONE_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+
+    VACCINATION_LOG_SAVED_SUCCESS: "Vaccination recorded successfully",
+    VACCINATION_LOG_FETCH_SUCCESS: "Vaccinations fetched successfully",
+    VACCINATION_LOG_DELETED_SUCCESS: "Vaccination removed successfully",
+    VACCINATION_LOG_NOT_FOUND: "Vaccination not recorded for this child",
+    VACCINATION_LOG_INVALID_DATE: "givenOn must be a valid date in YYYY-MM-DD format",
+    VACCINATION_LOG_FUTURE_NOT_ALLOWED: "Cannot record a vaccination for a future date",
+    VACCINATION_LOG_BEFORE_BIRTH: "Cannot record a vaccination for a date before the child was born",
+    VACCINATION_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+    // The schedule is chosen at baby onboarding and is fixed for that child, so a dose
+    // that only exists on the other schedule is not a dose this child can be given.
+    VACCINATION_LOG_WRONG_SECTOR:
+        "That vaccine is not on this child's immunisation schedule",
+
+    FEEDING_LOG_SAVED_SUCCESS: "Feeding logged successfully",
+    FEEDING_LOG_FETCH_SUCCESS: "Feeding logs fetched successfully",
+    FEEDING_LOG_DELETED_SUCCESS: "Feeding log entry removed successfully",
+    FEEDING_LOG_SETTINGS_SUCCESS: "Feeding settings updated successfully",
+    FEEDING_LOG_NOT_FOUND: "Feeding log entry not found",
+    FEEDING_LOG_INVALID_DATE: "The entry time must be a valid date",
+    FEEDING_LOG_FUTURE_NOT_ALLOWED: "Cannot log a feed in the future",
+    FEEDING_LOG_BEFORE_BIRTH: "Cannot log a feed for a time before the child was born",
+    FEEDING_LOG_CHILD_NOT_FOUND: "Child not found for this user",
+    FEEDING_LOG_DAY_CLOSED:
+        "Only today's feeds can be added or removed. Earlier days are read-only.",
+    // Solids and water are refused below six months on clinical guidance, not preference:
+    // WHO and IAP both advise exclusive milk feeding to six completed months.
+    FEEDING_LOG_SOLIDS_TOO_EARLY:
+        "Solids and water can only be logged once the baby is six months old",
+    FEEDING_LOG_SOLIDS_NOT_STARTED:
+        "Record that solids have started before logging solids or water",
+
+    WELLBEING_FETCH_SUCCESS: "Wellbeing summary fetched successfully",
+    WELLBEING_CHILD_REQUIRED: "A child is required to read a wellbeing summary",
+    WELLBEING_CHILD_NOT_FOUND: "Child not found for this user",
+    SUBSCRIPTION_FETCH_SUCCESS: "Subscription fetched successfully",
+    SUBSCRIPTION_PLANS_FETCH_SUCCESS: "Subscription plans fetched successfully",
+    TRIAL_STARTED_SUCCESS: "Free trial started successfully",
+    FREE_PLAN_SELECTED_SUCCESS: "Free plan selected successfully",
+    SUBSCRIPTION_CANCELLED_SUCCESS: "Subscription cancelled successfully",
+    CONTENT_FETCH_FAILED: "Content not found",
+    PRODUCT_FETCH_FAILED: "Product not found",
+    ANALYTICS_EVENT_RECORDED: "Event recorded",
+    ANALYTICS_FUNNEL_FETCHED: "Funnel fetched successfully",
+    // Deliberately identical for "no such account" and "wrong password" — a distinct
+    // message would let anyone enumerate staff accounts.
+    INVALID_CREDENTIALS: "Invalid email or password",
+    ADMIN_ACCESS_DENIED: "Forbidden: administrator access required.",
+    ADMIN_LOGIN_SUCCESS: "Logged in successfully",
+    ADMIN_PROFILE_FETCHED: "Profile fetched successfully",
+    ADMIN_NOT_FOUND: "Administrator not found",
+    CONSULTATIONS_FETCHED_SUCCESS: "Consultations fetched successfully",
 };
 
 export const notificationMessages = {
-    NOTIFICATION_COMPLETE_NOTIFICATION_BODY: "Please help us to improve our service",
+    NOTIFICATION_COMPLETE_NOTIFICATION_BODY:
+        "We hope you felt cared for today. Tap to rate your consultation",
     NOTIFICATION_COMPLETE_NOTIFICATION_TITLE: "Your consultation has been completed successfully.",
+    CONSULTATION_TIME_CONFIRMED_TITLE: "Your consultation time is confirmed",
+    CONSULTATION_TIME_CONFIRMED_BODY: (time: string) =>
+        `Your call is confirmed for ${time}. Join from the app 5 minutes before.`,
+    /**
+     * Pre-call reminders. The copy names the consultant and the clock time rather than
+     * the offset — "in 15 minutes" is useless on a notification read 20 minutes later,
+     * whereas "at 4:45 pm" stays true however long it sits on the lock screen.
+     */
+    CONSULTATION_REMINDER_TITLE: (minutesBefore: number) =>
+        minutesBefore >= 60
+            ? "Your consultation is in an hour"
+            : `Your consultation is in ${minutesBefore} minutes`,
+    CONSULTATION_REMINDER_BODY: (name: string, time: string) =>
+        `Your call with ${name} starts at ${time}. Join from the app.`,
 };

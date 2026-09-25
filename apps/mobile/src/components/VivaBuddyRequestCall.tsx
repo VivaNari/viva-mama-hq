@@ -1,86 +1,37 @@
 import Lucide from '@react-native-vector-icons/lucide'
-import React, { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native'
-import Toast from 'react-native-toast-message'
-import { requestCallback } from '../api/requestCallback'
-import { useAuth } from '../context/AuthContext'
-import { chatDB } from '../db/sqlite'
+import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ActivityIndicator, Text, TouchableOpacity, View } from 'react-native'
 import { colors } from '../public/assets/colors'
 import { globalStyles } from '../public/styles'
-import { IRequestCallbackResponse } from '../types/careManager.types'
-import CustomDatePicker from './CustomDatePicker'
+import { PreferredSlot } from '../constants/consultationSlots'
+import { useCareManagerBooking } from '../hooks/useCareManagerBooking'
+import ConsultationBookingSheet from './consultation/ConsultationBookingSheet'
+import BookingConfirmedModal from './consultation/BookingConfirmedModal'
 
 const VivaBuddyRequestCall = () => {
-    const [careManagerId, setCareManagerId] = useState<string>();
-    const [loading, setLoading] = useState<boolean>(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-    const { userId } = useAuth();
+    const { t } = useTranslation();
+    const [showBookingSheet, setShowBookingSheet] = useState(false);
+    const [showConfirmation, setShowConfirmation] = useState(false);
 
-    useEffect(() => {
-        if (!userId) return;
-        (async () => {
-            try {
-                const getUserDataFromSQLite = await chatDB.getUserData(userId as string);
-                if (getUserDataFromSQLite && getUserDataFromSQLite.data.caremanager) {
-                    setCareManagerId(getUserDataFromSQLite.data.caremanager.id);
-                }
-            } catch (error) {
-                console.error("Error loading care manager data:", error);
-            }
-        })()
-    }, [userId])
+    // Credit first, payment when the bucket is empty — shared with the dashboard card.
+    const {
+        careManagerId,
+        credits: careManagerCredits,
+        hasCredit: hasCareManagerCredit,
+        fee,
+        loading,
+        book,
+    } = useCareManagerBooking(() => setShowConfirmation(true));
 
-    const handleDateSelected = async (date: Date) => {
-        setSelectedDate(date);
-        setShowDatePicker(false);
-
-        // Call the API after date is selected
-        if (careManagerId) {
-            try {
-                setLoading(true);
-                const requestcallbackResponse = await requestCallback(
-                    careManagerId,
-                    date.toISOString()
-                ) as IRequestCallbackResponse;
-                if (requestcallbackResponse.success) {
-                    // Toast.show({
-                    //     type: 'success',
-                    //     text1: 'Success!',
-                    //     text2: 'Your request has been registered and you will receive a call back within 24 hours!',
-                    //     position: 'bottom',
-                    // });
-                    Alert.alert(
-                        'Success!',
-                        `Your request has been registered and you will receive a call back on ${date.toDateString()}!`,
-                        [{ text: 'OK', onPress: () => setSelectedDate(null) }]
-                    );
-                } else {
-                    Toast.show({
-                        type: 'error',
-                        text1: 'Error!',
-                        text2: 'Something went wrong!',
-                        position: 'bottom',
-                    });
-                }
-            } catch (error) {
-                console.log(error);
-                Toast.show({
-                    type: 'error',
-                    text1: 'Error!',
-                    text2: 'Something went wrong!' + error,
-                    position: 'bottom',
-                });
-            } finally {
-                setLoading(false);
-            }
-        }
+    const handleBookingConfirmed = async (date: Date, slot: PreferredSlot) => {
+        setShowBookingSheet(false);
+        await book(date, slot);
     };
 
     return (
         <View
             style={{
-                flexDirection: "row",
                 backgroundColor: colors.white,
                 padding: 20,
                 gap: 15,
@@ -91,7 +42,6 @@ const VivaBuddyRequestCall = () => {
             }}
         >
             <View
-                style={{ width: '60%' }}
             >
                 <Text
                     style={[{
@@ -99,7 +49,7 @@ const VivaBuddyRequestCall = () => {
                         textAlign: 'center'
                     }, globalStyles.fontSemiBold]}
                 >
-                    Request a call with your Care Manager
+                    {t('careManager.requestCallTitle')}
                 </Text>
                 <Text
                     style={[{
@@ -108,17 +58,17 @@ const VivaBuddyRequestCall = () => {
                         fontSize: 12
                     }, globalStyles.fontLight]}
                 >
-                    Mon - Fri - 10AM - 5PM
+                    {t('careManager.intro')}
                 </Text>
             </View>
             <View
-                style={{ width: '35%' }}
             >
                 <TouchableOpacity
                     style={{
                         marginVertical: 0,
                         opacity: loading ? 0.5 : 1, borderRadius: 10,
-                        paddingVertical: 10,
+                        paddingVertical: 13,
+                        paddingHorizontal: 5,
                         backgroundColor: colors.darkPurple,
                         flex: 1,
                         justifyContent: 'center'
@@ -127,7 +77,7 @@ const VivaBuddyRequestCall = () => {
                     activeOpacity={1}
                     onPress={() => {
                         if (careManagerId) {
-                            setShowDatePicker(true);
+                            setShowBookingSheet(true);
                         }
                     }}
                 >
@@ -137,7 +87,10 @@ const VivaBuddyRequestCall = () => {
                         ) : (
                             <View
                                 style={{
-                                    alignItems: 'center'
+                                    alignItems: 'center',
+                                    flexDirection: 'row',
+                                    gap: 10,
+                                    justifyContent: 'center',
                                 }}
                             >
 
@@ -148,7 +101,11 @@ const VivaBuddyRequestCall = () => {
                                         fontSize: 14
                                     }, globalStyles.fontSemiBold]}
                                 >
-                                    Request
+                                    {hasCareManagerCredit
+                                        ? t('careManager.requestShortWithCredit', { count: careManagerCredits })
+                                        : fee
+                                            ? t('careManager.requestShortWithFee', { amount: fee })
+                                            : t('careManager.requestShort')}
                                 </Text>
                             </View>
                         )
@@ -156,12 +113,26 @@ const VivaBuddyRequestCall = () => {
                 </TouchableOpacity>
             </View>
 
-            <CustomDatePicker
-                show={showDatePicker}
-                setShow={setShowDatePicker}
-                selectedDate={selectedDate}
-                onSelect={handleDateSelected}
-                minimumDate={true}
+            <ConsultationBookingSheet
+                visible={showBookingSheet}
+                onClose={() => setShowBookingSheet(false)}
+                onConfirm={handleBookingConfirmed}
+                title={t('careManager.requestCallTitle')}
+                credits={careManagerCredits}
+                feeAmount={fee}
+                confirmLabel={
+                    hasCareManagerCredit
+                        ? t('careManager.requestWithCredit', { count: careManagerCredits })
+                        : fee
+                            ? t('careManager.requestWithFee', { amount: fee })
+                            : t('careManager.requestCallback')
+                }
+                submitting={loading}
+            />
+
+            <BookingConfirmedModal
+                visible={showConfirmation}
+                onDismiss={() => setShowConfirmation(false)}
             />
         </View >
     )

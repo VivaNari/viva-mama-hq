@@ -42,10 +42,10 @@ async function exportData() {
 
         console.log("Fetching users...");
         const users = await UserModel.find().lean();
-        
+
         console.log(`Found ${users.length} users. Fetching recommendations...`);
         const exportsData: any[] = [];
-        
+
         for (const user of users) {
             const latestRec = await recommendationHistoryModel
                 .findOne({ userId: user._id })
@@ -100,18 +100,18 @@ async function exportData() {
         if (exportsData.length > 0) {
             // Get all unique keys for header
             const keysSet = new Set<string>();
-            exportsData.forEach(row => {
-                Object.keys(row).forEach(k => keysSet.add(k));
+            exportsData.forEach((row) => {
+                Object.keys(row).forEach((k) => keysSet.add(k));
             });
             const headers = Array.from(keysSet);
 
             const csvRows = [];
             // Header row
-            csvRows.push(headers.map(h => `"${String(h).replace(/"/g, '""')}"`).join(","));
+            csvRows.push(headers.map((h) => `"${String(h).replace(/"/g, '""')}"`).join(","));
 
             // Data rows
             for (const row of exportsData) {
-                const values = headers.map(header => {
+                const values = headers.map((header) => {
                     let val = row[header];
                     if (val === null || val === undefined) {
                         val = "";

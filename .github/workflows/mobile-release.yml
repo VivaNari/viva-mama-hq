@@ -1,0 +1,200 @@
+name: Mobile — Android Release Build
+
+on:
+  push:
+    branches: [uat]
+    # Path filter is new for the monorepo: in the standalone repo every push to
+    # uat was a mobile change. Without this, a backend- or admin-only push would
+    # start a signed Android build for nothing.
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - '.github/workflows/mobile-release.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: mobile-release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Android Release
+    runs-on: ubuntu-latest
+    environment: release-mobile
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      # The app is a pnpm workspace member now, so dependencies are installed
+      # once from the repo root (hoisted into the root node_modules, which is
+      # where android/settings.gradle and app/build.gradle look for them).
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Fail before spending Gradle minutes on a broken app. Pushes to uat do not
+      # always arrive via a PR, so CI may not have run these yet.
+      - name: Run mobile tests
+        run: pnpm --filter @vivamama/mobile test
+
+      - name: Cache Gradle Wrapper
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-wrapper-${{ hashFiles('apps/mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('apps/mobile/android/**/*.gradle*', 'apps/mobile/android/**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Make gradlew executable
+        run: chmod +x apps/mobile/android/gradlew
+
+      # Both files are gitignored and must be reconstituted from secrets. They
+      # are removed again in the cleanup step below, which runs even on failure.
+      - name: Decode Keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > apps/mobile/android/app/viva_nari.keystore
+
+      - name: Decode google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" | base64 -d > apps/mobile/android/app/google-services.json
+
+      - name: Build Release APK
+        working-directory: apps/mobile/android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Build Release AAB
+        working-directory: apps/mobile/android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --no-daemon --stacktrace
+
+      - name: List build outputs
+        run: |
+          echo "APK outputs:"
+          ls -lah apps/mobile/android/app/build/outputs/apk/release/
+          echo "AAB outputs:"
+          ls -lah apps/mobile/android/app/build/outputs/bundle/release/
+
+      - name: Rename artifacts
+        run: |
+          VERSION_NAME=$(grep "versionName" apps/mobile/android/app/build.gradle | awk '{print $2}' | tr -d '"')
+          VERSION_CODE=$(grep "versionCode" apps/mobile/android/app/build.gradle | awk '{print $2}')
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+          cd apps/mobile/android/app/build/outputs/apk/release/
+          for file in *.apk; do
+            newname="viva_nari_v${VERSION_NAME}_${VERSION_CODE}_${TIMESTAMP}_${file}"
+            mv "$file" "$newname"
+          done
+
+          cd ../../bundle/release/
+          for file in *.aab; do
+            newname="viva_nari_v${VERSION_NAME}_${VERSION_CODE}_${TIMESTAMP}_${file}"
+            mv "$file" "$newname"
+          done
+
+      - name: Notify Slack (Artifacts Ready)
+        if: success()
+        run: |
+          APK_LIST=$(ls apps/mobile/android/app/build/outputs/apk/release/*.apk 2>/dev/null)
+          AAB_LIST=$(ls apps/mobile/android/app/build/outputs/bundle/release/*.aab 2>/dev/null)
+
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"📦 *Artifacts Generated!*\n\n*APK Files:*\n$APK_LIST\n\n*AAB Files:*\n$AAB_LIST\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Upload APK Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-release
+          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          retention-days: 45
+
+      - name: Upload AAB Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab-release
+          path: apps/mobile/android/app/build/outputs/bundle/release/*.aab
+          retention-days: 45
+
+      - name: Upload ProGuard mapping files
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mapping-files
+          path: apps/mobile/android/app/build/outputs/mapping/release/
+          retention-days: 90
+
+      - name: Generate Build Summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "**Date:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify Slack (Success)
+        if: success()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"🎉 *Android Release Build Succeeded!* 🚀\nBranch: *${{ github.ref_name }}*\nCommit: *${{ github.sha }}*\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack (Failure)
+        if: failure()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"❌ *Android Release Build Failed!* \nBranch: *${{ github.ref_name }}*\nCommit: *${{ github.sha }}*\nCheck GitHub Actions logs for details.\"}" \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Cleanup Keystore and Google Services File
+        if: always()
+        run: |
+          rm -f apps/mobile/android/app/viva_nari.keystore
+          rm -f apps/mobile/android/app/google-services.json
+
+      - name: Upload build logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            apps/mobile/android/app/build/reports/
+            apps/mobile/android/app/build/outputs/logs/
+          retention-days: 7

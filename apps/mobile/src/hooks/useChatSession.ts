@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect } from "react";
 import EventSource from "react-native-sse";
 import Toast from "react-native-toast-message";
 
-import { CHAT_SESSION_URL, CHECKIN_SESSION_URL } from "../constants/endpoints";
+import { CHAT_SESSION_URL } from "../constants/endpoints";
 import {
   FlowType,
   IAiMessage,
@@ -12,6 +12,12 @@ import {
 } from "../types/chat.types";
 import { SSE_RECONNECT_DELAY_MS, MAX_SSE_RETRIES } from "../constants/chat";
 import { chatLogger } from "../utils/logger";
+import {
+  AnalyticsEvent,
+  latencyBucket,
+  recordError,
+  track,
+} from "../analytics";
 
 interface UseChatSessionProps {
   flowType: FlowType | null;
@@ -41,6 +47,12 @@ export const useChatSession = ({
   const eventSourceRef = useRef<EventSource | null>(null);
   const retryCountRef = useRef(0);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  /**
+   * When the stream was opened, used to bucket how long the first AI message
+   * took to arrive. Perceived slowness in the assistant is the kind of thing
+   * users abandon over but never report.
+   */
+  const connectedAtRef = useRef<number | null>(null);
 
 
   const clearReconnectTimeout = useCallback(() => {
@@ -119,7 +131,18 @@ export const useChatSession = ({
             uuid: data.uuid || "",
             sessionId: data.sessionId || "",
             conversationId: data.conversationId || "",
+            suggestedExperts: data.suggestedExperts || [],
           };
+
+          // Measured from the last outbound moment we know about (stream open or
+          // the previous reply), then reset so each turn is timed independently.
+          if (connectedAtRef.current !== null) {
+            track(AnalyticsEvent.CHAT_RESPONSE_RECEIVED, {
+              flow_type: flowType ?? undefined,
+              latency_bucket: latencyBucket(Date.now() - connectedAtRef.current),
+            });
+          }
+          connectedAtRef.current = Date.now();
 
           await onMessageReceived(aiMessage);
           break;
@@ -134,7 +157,7 @@ export const useChatSession = ({
           });
       }
     },
-    [dispatch, disconnect, onFlowComplete, onMessageReceived],
+    [dispatch, disconnect, onFlowComplete, onMessageReceived, flowType],
   );
 
   const connect = useCallback(() => {
@@ -152,10 +175,10 @@ export const useChatSession = ({
       dispatch({ type: "SET_LOADING", payload: true });
     }
 
-    let url = CHAT_SESSION_URL(flowSlug, userToken, flowType);
-    if (flowType === FlowType.CHECKIN) {
-      url = CHECKIN_SESSION_URL(userToken, 1, flowSlug);
-    }
+    // Chatbot only. Guided flows (onboarding + check-in) go through useGuidedFlow
+    // against /chat/checkin/*, and this hook is passed a null flowType for them — so
+    // the old CHECKIN branch here was unreachable and pointed at a retired endpoint.
+    const url = CHAT_SESSION_URL(flowSlug, userToken, flowType);
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
@@ -163,6 +186,7 @@ export const useChatSession = ({
       chatLogger.debug("SSE connected");
       dispatch({ type: "SET_CONNECTION_STATUS", payload: "connected" });
       retryCountRef.current = 0;
+      connectedAtRef.current = Date.now();
     });
 
     eventSource.addEventListener("message", async event => {
@@ -175,6 +199,9 @@ export const useChatSession = ({
         await handleMessage(data);
       } catch (error) {
         chatLogger.error("Failed to parse SSE message", error);
+        // A malformed frame silently drops one AI reply — the user just sees the
+        // assistant not answering, so this never surfaces without a report.
+        recordError(error, "useChatSession: failed to parse SSE message");
       }
     });
 
@@ -191,6 +218,18 @@ export const useChatSession = ({
           text2: "Please check your internet connection and try again",
           position: "bottom",
         });
+        // Only the terminal give-up is logged, not each retry — the SSE stream
+        // does not go through the axios interceptor, so this is the one place a
+        // dead chat connection becomes visible.
+        track(AnalyticsEvent.CHAT_STREAM_FAILED, {
+          reason: "max_retries",
+          flow_type: flowType ?? undefined,
+        });
+        recordError(
+          new Error("SSE connection failed after max retries"),
+          "useChatSession: giving up on stream",
+          { flow_slug: flowSlug ?? "unknown", retries: MAX_SSE_RETRIES },
+        );
         retryCountRef.current = 0;
         return;
       }

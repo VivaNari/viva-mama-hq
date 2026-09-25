@@ -28,14 +28,14 @@ print(f"Python path: {sys.path[:3]}...")  # Show first 3 entries
 print()
 
 # Verify the app directory exists
-app_dir = os.path.join(project_root, 'app')
+app_dir = os.path.join(project_root, "app")
 if not os.path.exists(app_dir):
     print(f"❌ ERROR: Cannot find 'app' directory at {app_dir}")
     print("Make sure you're running this from your project root directory.")
     sys.exit(1)
 
 # Verify settings.py exists
-settings_file = os.path.join(app_dir, 'settings.py')
+settings_file = os.path.join(app_dir, "settings.py")
 if not os.path.exists(settings_file):
     print(f"❌ ERROR: Cannot find 'settings.py' at {settings_file}")
     sys.exit(1)
@@ -47,7 +47,8 @@ print()
 try:
     print("Loading environment variables...")
     from dotenv import load_dotenv
-    env_path = os.path.join(project_root, '.env')
+
+    env_path = os.path.join(project_root, ".env")
     if os.path.exists(env_path):
         load_dotenv(env_path)
         print(f"✅ Loaded .env from {env_path}")
@@ -55,22 +56,24 @@ try:
         print(f"⚠️  No .env file found at {env_path}")
         print("   Make sure MONGODB_URI is set in your environment")
     print()
-    
+
     print("Importing settings...")
     from app.settings import settings
+
     print("✅ Successfully imported settings")
     print(f"   MongoDB URI: {settings.mongodb_uri[:30]}...")  # Show first 30 chars
     print(f"   Database: {settings.mongodb_database}")
     print()
-    
+
     print("Importing database connection...")
     from app.mcp.db_connection import check_database_health
+
     print("✅ Successfully imported db_connection")
     print()
-    
+
     print("Testing database connection...")
     health = check_database_health()
-    
+
     if health.get("connected"):
         print("✅ Successfully connected to MongoDB!")
         print(f"   Database: {health['database']}")
@@ -86,7 +89,7 @@ try:
         print("1. MongoDB is not running")
         print("2. MONGODB_URI in .env is incorrect")
         print("3. Database permissions")
-        
+
 except ImportError as e:
     print(f"❌ Import Error: {e}")
     print()
@@ -99,9 +102,10 @@ except ImportError as e:
     print("  cd /path/to/your/project/root")
     print("  python3 run_test.py")
     sys.exit(1)
-    
+
 except Exception as e:
     print(f"❌ Error: {e}")
     import traceback
+
     traceback.print_exc()
     sys.exit(1)

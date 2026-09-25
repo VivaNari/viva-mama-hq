@@ -1,0 +1,14 @@
+{
+  // Covers the two things the shipped build deliberately excludes: the generator (a
+  // build-time Node tool needing @types/node and CommonJS interop for exceljs) and the
+  // tests (needing jest globals). Neither belongs in the published package, which is why
+  // tsconfig.json carries `types: []` and excludes *.test.ts.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "noEmit": true,
+    "types": ["node", "jest"]
+  },
+  "include": ["scripts", "src"]
+}

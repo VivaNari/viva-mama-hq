@@ -4,6 +4,13 @@
     <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
         <!-- Customize your theme here. -->
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+
+        <!-- Under enforced edge-to-edge (targetSdk 36) the system bars are
+             transparent and draw over app content. Every screen in this app has a
+             white background, so the bar icons must be dark or they are invisible.
+             DayNight would otherwise flip them to white in system dark mode. -->
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
     </style>
 
 </resources>
