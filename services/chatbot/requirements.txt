@@ -1,41 +1,44 @@
 # VivaMama RAG chatbot — runtime dependencies (used by pip / the Docker image).
 # The canonical dev manifest is pyproject.toml (managed with uv); keep this file
 # in sync via:  uv export --no-dev --format requirements-txt > requirements.txt
+# Every package is pinned to the uv.lock version: the image installs from this
+# file, so an unpinned line silently pulls whatever is newest at build time.
 
-python-dotenv
-pydantic
-pydantic-settings
-structlog
-redis
+python-dotenv==1.2.2
+pydantic==2.13.4
+pydantic-settings==2.14.1
+structlog==26.1.0
+redis==8.0.0
 
 # LangChain core + community integrations + Groq
 langchain==1.0.3
-langchain-core
-langchain-community
-langchain-groq
+langchain-core==1.4.6
+langchain-community==0.4.2
+langchain-groq==1.1.3
 # Vertex AI (Gemini) — default LLM provider; Groq kept as an env-flag fallback.
-langchain-google-vertexai
-jinja2
+langchain-google-vertexai==3.2.4
+jinja2==3.1.6
 
 # Embeddings + local vector store
-sentence-transformers
-faiss-cpu
+sentence-transformers==5.5.1
+faiss-cpu==1.14.2
 
 # Downloads the embedding model from GCS at container boot (model is no longer
 # baked into the runtime image; see app/rag/model_provisioner.py).
-google-cloud-storage
+google-cloud-storage==3.13.1
 
 # (Optional) If you later use FastAPI service:
 # fastapi
 # uvicorn[standard]
 
-# MCP SDK (adapter is optional; included for future)
-mcp
+# MCP SDK. Pinned: a newer release pulled into the image had no low-level Server decorator API
+# (@server.list_tools) that app/mcp/context_server.py is built on.
+mcp==1.27.2
 
 # API + data access
 pymongo==4.6.1
-fastapi
-uvicorn[standard]
-slowapi
-chardet
-pypdf
+fastapi==0.136.3
+uvicorn[standard]==0.49.0
+slowapi==0.1.9
+chardet==7.4.3
+pypdf==6.13.2
