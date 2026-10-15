@@ -29,23 +29,11 @@ import { currentAgeIndex, reachedAgeIndices } from '../utils/infantLogHelpers';
  * Milestone Log (PRD 4.2) — the India MCP card's age-wise development milestones.
  *
  * Content is the card's own, generated into `infantMilestoneData.ts` from the workbook in
- * content/mcp-card. The illustrations are drawn from the rig in components/milestone; every
- * milestone that ships has an authored scene.
+ * content/mcp-card. Each milestone is illustrated by a looping GIF served from
+ * assets.vivamama.in (`data/milestoneGifs.ts`).
  *
  * A milestone can always be un-logged. A parent who taps the wrong card at 3am needs a way
  * back, and this screen offers no other undo.
- *
- * ## The grid does not animate
- *
- * The scenes here are drawn still, each frozen at the frame its author chose as the clearest.
- * The performances play in `MilestoneDetail`, which is the only place they are big enough to
- * read.
- *
- * That is a cost decision as much as a design one. Changing band swaps every card at once, and
- * the illustrations are built from a few hundred plain Views each — several hundred native
- * views created in one commit before the tab can paint. Six looping scenes on top of that
- * bought motion nobody could follow in a 150px box. The clock, and with it the Reduce Motion
- * check that used to live here, moved to the detail view.
  */
 
 const MilestoneLog: React.FC = () => {

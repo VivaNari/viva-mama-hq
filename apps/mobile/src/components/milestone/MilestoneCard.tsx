@@ -5,14 +5,13 @@ import MaterialDesignIcons from '@react-native-vector-icons/material-design-icon
 
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
-import MilestoneScene from './MilestoneScene';
-import { SkinTone } from './rig/palette';
+import { MILESTONE_GIFS } from '../../data/milestoneGifs';
+import MilestoneGif from './MilestoneGif';
 
 interface MilestoneCardProps {
     milestoneKey: string;
     width: number;
     logged: boolean;
-    skinTone?: SkinTone;
     /**
      * Both take the key rather than closing over it, so the screen can hand the same two
      * functions to every card. A handler built per card inside the map would be a new
@@ -23,26 +22,18 @@ interface MilestoneCardProps {
 }
 
 /**
- * One milestone in the grid: a still illustration, its name, and the log toggle.
+ * One milestone in the grid: its animation, its name, and the log toggle.
  *
- * ## Why this is memoised, and why the thumbnail no longer moves
+ * ## Why this is memoised
  *
  * Logging a milestone replaces the screen's `logs`, which re-renders the grid. Without the
- * memo that re-rendered all six cards, and a card is not a cheap thing to re-render — each one
- * rebuilds a whole illustration, a few hundred elements of rounded rectangles. Five of those
- * six had nothing change about them. The memo holds because every prop here is a primitive or
- * one of the two stable handlers above.
- *
- * The thumbnail is deliberately still. A scene given no clock freezes at the frame its author
- * picked as the most legible one, so the card keeps the pose that explains the milestone and
- * loses only the motion — and the motion was never really readable at this size anyway. It
- * lives in the detail view, which is where a parent actually watches it.
+ * memo that re-rendered all six cards, and each one is decoding a looping GIF. The memo holds
+ * because every prop here is a primitive or one of the two stable handlers above.
  */
 const MilestoneCard: React.FC<MilestoneCardProps> = ({
     milestoneKey,
     width,
     logged,
-    skinTone,
     onOpen,
     onToggle,
 }) => {
@@ -57,11 +48,7 @@ const MilestoneCard: React.FC<MilestoneCardProps> = ({
                 accessibilityLabel={t(`infant.milestone.items.${milestoneKey}`)}
                 style={styles.thumb}
             >
-                <MilestoneScene
-                    milestoneKey={milestoneKey}
-                    width={width}
-                    skinTone={skinTone}
-                />
+                <MilestoneGif source={MILESTONE_GIFS[milestoneKey]} width={width} />
 
                 {logged && (
                     <View style={styles.badge}>

@@ -14,10 +14,8 @@ import MaterialDesignIcons from '@react-native-vector-icons/material-design-icon
 
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
-import MilestoneScene, { sceneFor } from './MilestoneScene';
-import { SkinTone } from './rig/palette';
-import { useReduceMotion } from './rig/useReduceMotion';
-import { useSceneClock } from './rig/useSceneClock';
+import { MILESTONE_GIFS } from '../../data/milestoneGifs';
+import MilestoneGif from './MilestoneGif';
 
 interface MilestoneDetailProps {
     milestoneKey: string | null;
@@ -25,7 +23,6 @@ interface MilestoneDetailProps {
     bandMilestones: string[];
     bandLabelKey: string;
     logged: boolean;
-    skinTone?: SkinTone;
     onToggle: () => void;
     onClose: () => void;
 }
@@ -33,42 +30,22 @@ interface MilestoneDetailProps {
 /**
  * One milestone, large.
  *
- * The animation lives here rather than in the grid. A card thumbnail is 150px wide and read
- * in passing; this is where a parent actually watches what the milestone looks like, and
- * where the step chips are worth having.
- *
- * Which makes this the only place on the feature that moves, so it is also the only place that
- * has to answer Reduce Motion. The answer is to withhold the clock: a scene with no clock draws
- * the still frame its author already chose as its most legible, so the screen loses its
- * movement and none of its meaning. The step chips go with it — they seek a clock that is not
- * running — but each one's moment is still the frame the scene is holding.
+ * The same animation as its card, at the full width of the screen.
  */
 const MilestoneDetail: React.FC<MilestoneDetailProps> = ({
     milestoneKey,
     bandMilestones,
     bandLabelKey,
     logged,
-    skinTone,
     onToggle,
     onClose,
 }) => {
     const { t } = useTranslation();
     const { width } = useWindowDimensions();
 
-    const scene = milestoneKey ? sceneFor(milestoneKey) : undefined;
-
-    // Hooks cannot be conditional, so the clock is always created; it simply drives nothing
-    // when the milestone on screen has no authored animation, or when the viewer has asked
-    // the system for less of it.
-    const reduceMotion = useReduceMotion();
-    const clock = useSceneClock(
-        scene?.duration ?? 1,
-        !!scene && !!milestoneKey && !reduceMotion,
-    );
-
-    const moving = !!scene && !reduceMotion;
-
-    const stageWidth = Math.min(width - 48, 520);
+    // The content's full width (16 padding a side), so on a phone the animation runs edge to
+    // edge of the rounded stage rather than sitting in a letterbox inside it.
+    const stageWidth = Math.min(width - 32, 520);
 
     return (
         <Modal
@@ -103,16 +80,12 @@ const MilestoneDetail: React.FC<MilestoneDetailProps> = ({
                         showsVerticalScrollIndicator={false}
                     >
                         <View style={styles.stage}>
-                            <MilestoneScene
-                                milestoneKey={milestoneKey}
+                            <MilestoneGif
+                                // A new milestone starts fresh, so the last one's size and
+                                // error state do not carry over.
+                                key={milestoneKey}
+                                source={MILESTONE_GIFS[milestoneKey]}
                                 width={stageWidth}
-                                skinTone={skinTone}
-                                clock={moving ? clock : undefined}
-                                // The whole performance. This is the one place a scene is
-                                // big enough for a blink, an eye creasing with a smile or a
-                                // far limb moving on its own to be visible at all — a card
-                                // thumbnail drops them because nobody can see them there.
-                                detail="full"
                             />
                         </View>
 
@@ -122,27 +95,6 @@ const MilestoneDetail: React.FC<MilestoneDetailProps> = ({
                         <Text style={[styles.age, globalStyles.fontRegular]}>
                             {t(bandLabelKey)}
                         </Text>
-
-                        {/* Step chips seek the clock, so they need one that is running. */}
-                        {moving && (
-                            <View style={styles.steps}>
-                                {scene.steps.map((step, index) => (
-                                    <TouchableOpacity
-                                        key={step.labelKey}
-                                        activeOpacity={0.8}
-                                        onPress={() => clock.seek(step.at)}
-                                        accessibilityRole="button"
-                                        style={styles.step}
-                                    >
-                                        <Text
-                                            style={[styles.stepLabel, globalStyles.fontSemiBold]}
-                                        >
-                                            {index + 1} · {t(step.labelKey)}
-                                        </Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
 
                         <TouchableOpacity
                             activeOpacity={0.8}
@@ -239,25 +191,6 @@ const styles = StyleSheet.create({
     age: {
         fontSize: 13,
         color: colors.gray,
-    },
-
-    steps: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginTop: 4,
-    },
-
-    step: {
-        paddingHorizontal: 14,
-        paddingVertical: 9,
-        borderRadius: 10,
-        backgroundColor: colors.lightPurple,
-    },
-
-    stepLabel: {
-        fontSize: 12,
-        color: colors.purple,
     },
 
     action: {

@@ -14,6 +14,7 @@
  */
 
 import React from 'react';
+import { Image } from 'react-native';
 import { act, fireEvent, render, waitFor } from '@testing-library/react-native';
 
 import DiaperLog from '../src/screens/DiaperLog';
@@ -76,6 +77,15 @@ jest.mock('../src/api/infantMilestone.api', () => ({
     getMilestoneLogs: jest.fn().mockResolvedValue([]),
     achieveMilestone: jest.fn(),
     forgetMilestone: jest.fn().mockResolvedValue(undefined),
+}));
+
+// Which milestones have a hosted GIF, set per test, so a test can also cover a milestone
+// that has none. A getter, because the factory runs before this file's declarations do.
+const mockMilestoneGifs: Record<string, { uri: string }> = {};
+jest.mock('../src/data/milestoneGifs', () => ({
+    get MILESTONE_GIFS() {
+        return mockMilestoneGifs;
+    },
 }));
 
 const {
@@ -1847,6 +1857,37 @@ describe('MilestoneLog', () => {
             updatedAt: '',
         }));
         forgetMilestone.mockResolvedValue(undefined);
+        for (const key of Object.keys(mockMilestoneGifs)) delete mockMilestoneGifs[key];
+    });
+
+    const gifUris = (tree: ReturnType<typeof render>) =>
+        tree
+            .UNSAFE_queryAllByType(Image)
+            .map((node) => (node.props.source as { uri?: string } | undefined)?.uri)
+            .filter(Boolean);
+
+    it('shows each milestone its own GIF', async () => {
+        mockMilestoneGifs.develops_a_social_smile = { uri: 'https://example.test/smile.gif' };
+        mockMilestoneGifs.makes_eye_contact = { uri: 'https://example.test/eyes.gif' };
+
+        const tree = render(<MilestoneLog />);
+        await waitFor(() => expect(getMilestoneLogs).toHaveBeenCalled());
+
+        expect(gifUris(tree)).toEqual(
+            expect.arrayContaining([
+                'https://example.test/smile.gif',
+                'https://example.test/eyes.gif',
+            ]),
+        );
+    });
+
+    it('shows a placeholder, not an empty frame, for a milestone with no GIF', async () => {
+        const tree = render(<MilestoneLog />);
+        await waitFor(() => expect(getMilestoneLogs).toHaveBeenCalled());
+
+        expect(gifUris(tree)).toEqual([]);
+        // The cards still render and can still be logged.
+        expect(tree.getAllByText('Log this').length).toBe(6);
     });
 
     /**

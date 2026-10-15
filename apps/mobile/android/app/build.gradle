@@ -137,6 +137,10 @@ dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
 
+    // Animated GIFs in <Image>. Android's image pipeline (Fresco) decodes only the first
+    // frame without it. Version matches the Fresco React Native 0.81 ships with.
+    implementation("com.facebook.fresco:animated-gif:3.6.0")
+
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")
     } else {
