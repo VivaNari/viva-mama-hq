@@ -146,6 +146,7 @@ class _InProcessStore:
         self.window_size = window_size
         self._data: Dict[str, List[Dict[str, Any]]] = {}
         self._sets: Dict[str, Set[str]] = {}
+        self._strings: Dict[str, str] = {}
         self._expiry: Dict[str, datetime] = {}
         self._metadata: Dict[str, SessionMetadata] = {}
 
@@ -165,6 +166,17 @@ class _InProcessStore:
             return set()
 
         return set(self._sets.get(key, set()))
+
+    def set(self, key: str, value: str, ex: Optional[int] = None) -> None:
+        """Set a string value (mimics Redis SET with optional EX)"""
+        self._strings[key] = value
+        if ex:
+            self.expire(key, ex)
+
+    def get(self, key: str) -> Optional[str]:
+        """Read a string value (mimics Redis GET)"""
+        self._cleanup_expired()
+        return self._strings.get(key)
 
     def lrange(self, key: str, start: int, end: int) -> List[str]:
         """Get range of items from list (mimics Redis LRANGE)"""
@@ -203,6 +215,7 @@ class _InProcessStore:
         """Delete key and metadata"""
         self._data.pop(key, None)
         self._sets.pop(key, None)
+        self._strings.pop(key, None)
         self._expiry.pop(key, None)
         self._metadata.pop(key, None)
 
@@ -297,6 +310,14 @@ class RedisSessionMemory:
         globs that prefix and would otherwise report these flags as sessions.
         """
         return f"chat:alerts:{session_id}"
+
+    def _followup_key(self, session_id: str) -> str:
+        """
+        Redis key for the topic offered in the last answer's follow-up question
+        ("Would you like to know more about X?"). Outside "chat:session:*" for
+        the same reason as _alerts_key.
+        """
+        return f"chat:followup:{session_id}"
 
     def _check_redis_health(self) -> bool:
         """Check if Redis is healthy"""
@@ -681,18 +702,71 @@ class RedisSessionMemory:
             # A bookkeeping failure must never cost the user her answer.
             logger.error(f"Error marking alerts for {session_id}: {str(e)}")
 
+    # -------------------------------
+    # Follow-up topic offered in the last answer (per session)
+    # -------------------------------
+
+    def get_followup_topic(self, session_id: str) -> Optional[str]:
+        """Topic the last answer offered to explain, or None."""
+        try:
+            key = self._followup_key(session_id)
+
+            if self._is_fallback:
+                value = self._r.get(key)
+            else:
+                value = self._retry_operation(self._r.get, key)
+
+            if not value:
+                return None
+            return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+
+        except Exception as e:
+            logger.error(f"Error reading follow-up topic for {session_id}: {str(e)}")
+            return None
+
+    def set_followup_topic(self, session_id: str, topic: Optional[str]) -> None:
+        """
+        Remember the topic offered in this answer; None clears it so a later
+        "yes" is never resolved against a stale offer.
+        """
+        try:
+            key = self._followup_key(session_id)
+
+            if not topic:
+                if self._is_fallback:
+                    self._r.delete(key)
+                else:
+                    self._retry_operation(self._r.delete, key)
+                return
+
+            if self._is_fallback:
+                self._r.set(key, topic, ex=self.ttl)
+            else:
+                self._retry_operation(self._r.set, key, topic, ex=self.ttl)
+
+        except Exception as e:
+            # A bookkeeping failure must never cost the user her answer.
+            logger.error(f"Error storing follow-up topic for {session_id}: {str(e)}")
+
+    def clear_followup_topic(self, session_id: str) -> None:
+        """Forget any pending follow-up offer."""
+        self.set_followup_topic(session_id, None)
+
     def reset(self, session_id: str) -> None:
         """Delete all turns for a session"""
         try:
             key = self._key(session_id)
             alerts_key = self._alerts_key(session_id)
+            followup_key = self._followup_key(session_id)
 
             if self._is_fallback:
                 self._r.delete(key)
                 self._r.delete(alerts_key)
+                self._r.delete(followup_key)
             else:
                 self._retry_operation(self._r.delete, key)
                 self._retry_operation(self._r.delete, alerts_key)
+                self._retry_operation(self._r.delete, followup_key)
 
             _metrics.record_operation("delete")
             logger.info(f"Reset session {session_id}")

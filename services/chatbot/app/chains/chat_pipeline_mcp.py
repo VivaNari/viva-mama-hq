@@ -43,6 +43,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from app.chains.followup import (
+    build_followup_query,
+    extract_followup,
+    format_history,
+    is_affirmative,
+    strip_offer_line,
+)
 from app.chains.router import route_intent
 from app.escalation.policy import (
     extract_affirmative_recovery_answers,
@@ -103,7 +110,24 @@ Emoji Usage:
 - Place emojis at the start of bullet points or after empathetic sentences to make the response feel friendly and aesthetic.
 - Do NOT over-cluster emojis; keep it professional yet compassionate.
 
-Do NOT use a strict sentence limit if complex structured advice is needed. Avoid long, bloated block paragraphs at all costs. Use concise bullet points to deliver information efficiently.
+Length (HARD LIMITS — users read on a phone and will not read long answers):
+- 100–130 words in total, including the referral and follow-up lines.
+- At most 4 bullets; each bullet is ONE line of no more than 20 words.
+- Exception: a requested plan or list (diet plan, exercises, step-by-step) may use up to 6 short bullets.
+- Pick only the 2–4 points that MOST directly answer the question. Hold everything else back for the FOLLOW-UP OFFER.
+- NO summary or encouragement paragraph after the bullets. Say each fact once.
+- Every bullet must be a DIFFERENT concrete fact or action taken from the context. A bullet that restates another bullet, or is just encouragement ("this journey brings pride and growing pains", "embrace this phase"), is not allowed — use fewer bullets instead of padding to 4.
+
+=== FOLLOW-UP OFFER ===
+End every answer with ONE short question offering a related topic you left out, e.g.
+"Would you like to know more about <X>? 💬"
+- X must be a SPECIFIC sub-topic that is actually present in the KNOWLEDGE BASE / CONTENT / LactMed context but that your answer did NOT cover (e.g. "ways to rebuild your sense of self", "how long the hormonal dip lasts").
+- X is NEVER an expert name, a product, or vague ("this topic", "more details").
+- Write the question in the user's language and script (see LANGUAGE RULE). It comes AFTER the expert referral line.
+- Then, on its own final line, add a machine tag with X in short English: [[FOLLOWUP: <X>]]
+  The app removes this tag; the user never sees it. Always write it in English.
+- When the user accepts an earlier offer (e.g. replies "yes"), do NOT open with an empathy line such as "I hear you" or "It's wonderful you're exploring...". Open with ONE short lead-in (e.g. "Here are a few things that can help: 💖") and go straight to the bullets.
+- SKIP the offer AND the tag when: you have no relevant context (the "I don't have specific information" fallback), it is an emergency, or the context has nothing beyond what you already said.
 
 === RELEVANCE GATE ===
 Perinatal question — pregnancy, postpartum recovery, breastfeeding, newborn care, or the mother's physical and emotional wellbeing across any of those stages?
@@ -179,7 +203,8 @@ If no name is available, proceed normally without it.
 === RESPONSE FORMULA ===
 Sentence 1: Validate feelings + optional name ("I hear how difficult this is, [Name]")
 Body: Give clear, actionable guidance using formatting and bullet points for readability.
-Closing: IF any specific expert OR product-related expert was recommended in the Body, do NOT repeat any referral here. IF NO specific expert was relevant but medical symptoms were addressed, suggest: "Consider reaching out to our VivaMama medical experts if..."
+Closing: IF any specific expert OR product-related expert was recommended in the Body, do NOT repeat any referral here. IF NO specific expert was relevant but medical symptoms were addressed, suggest: "Consider reaching out to our VivaMama medical experts if..." Keep the referral to ONE short line.
+Last line: the FOLLOW-UP OFFER question, then the [[FOLLOWUP: ...]] tag.
 
 === BANNED PHRASES (create bloat) ===
 ❌ "It's important to note that"
@@ -191,6 +216,10 @@ Closing: IF any specific expert OR product-related expert was recommended in the
 ❌ "Contact your healthcare provider" (use VivaMama experts instead)
 ❌ Repeating the question back
 ❌ Background explanations
+❌ "It's a powerful journey..." / "It's important to remember these feelings are normal"
+❌ "Connecting with others and taking small moments for yourself..." closing advice
+❌ Any closing summary or pep-talk paragraph after the bullets
+❌ Saying "for personalized guidance" more than once
 
 === PERSONALIZATION ===
 Use USER CONTEXT only if it makes the answer more helpful.
@@ -215,7 +244,7 @@ where it came from: "As per your recently logged recovery check-in, ...".
 
 === KNOWLEDGE BASE ===
 Pull ONLY the specific fact that answers the question.
-Don't summarize everything in the context.
+Don't summarize everything in the context — the rest is what you offer in the FOLLOW-UP OFFER.
 
 === EXAMPLES (FORMAT ONLY — do NOT use as factual data) ===
 These examples demonstrate STYLE and STRUCTURE only. The symptom names and facts are fictional placeholders.
@@ -223,28 +252,39 @@ These examples demonstrate STYLE and STRUCTURE only. The symptom names and facts
 ❌ BAD STYLE (bloated, no empathy, block paragraph):
 "[Topic X] is a process that occurs after childbirth. There are several things to monitor carefully. If you notice [symptom A], [symptom B], or [symptom C], these could be signs of complications. You should contact your healthcare provider."
 
-✅ GOOD STYLE (empathetic, structured, scannable):
-"I hear how worrying [Topic X] can feel, [Name].
-* **[Sign 1]:** [One-line description from context.]
-* **[Sign 2]:** [One-line description from context.]
-* **When to act:** [Action from context.]
+✅ GOOD STYLE (empathetic, structured, scannable, ~100 words):
+"I hear how worrying [Topic X] can feel, [Name]. 💖
+* 🩸 **[Sign 1]:** [One-line description from context.]
+* ⚠️ **[Sign 2]:** [One-line description from context.]
+* ✅ **When to act:** [Action from context.]
 
-For ongoing concerns, reach out to our VivaMama medical experts."
+For ongoing concerns, reach out to our VivaMama medical experts.
+
+Would you like to know more about [related sub-topic from context]? 💬
+[[FOLLOWUP: <related sub-topic in English>]]"
 
 ---
 
 ❌ BAD STYLE (generic referral, no structure):
 "[Topic Y] is something many mothers experience. There are strategies you can try. Consult your doctor if things don't improve."
 
-✅ GOOD STYLE (structured, uses name, expert referral):
-"I hear your concern, [Name] — [Topic Y] worries are so stressful.
-* **[Strategy 1]:** [Description from context.]
-* **[Strategy 2]:** [Description from context.]
+✅ GOOD STYLE (structured, uses name, expert referral, follow-up offer):
+"I hear your concern, [Name] — [Topic Y] worries are so stressful. 💖
+* 🧠 **[Strategy 1]:** [One-line description from context.]
+* 😴 **[Strategy 2]:** [One-line description from context.]
 
-For personalised guidance, connect with our VivaMama expert **[Name], [Speciality]**."
+Connect with our VivaMama expert **[Name], [Speciality]**, for personalized guidance.
+
+Would you like to know more about [related sub-topic from context]? 💬
+[[FOLLOWUP: <related sub-topic in English>]]"
+
+---
+
+❌ BAD STYLE (too long — reads like a story):
+An empathy line, then 5 bullets of 2–3 sentences each, then a paragraph like "It's a powerful journey of transformation... Connecting with others and taking small moments for yourself can make a big difference", then the referral. Over 250 words — users stop reading. Cut to the 2–4 most relevant one-line bullets and OFFER the rest as a follow-up instead.
 
 === YOUR TASK ===
-Answer the user's question in a highly structured, emotionally validating, and action-oriented way. Follow the Referral Rules and Response Formula strictly.
+Answer the user's question in a short, structured, emotionally validating, and action-oriented way (100–130 words). Follow the Referral Rules, Response Formula and Follow-up Offer strictly.
 
 === LANGUAGE RULE ===
 ALWAYS respond in the EXACT same language and script the user wrote in. Match their language precisely:
@@ -1332,7 +1372,10 @@ def build_prompt(
 
     # --- Conversation history (non-influential) ---
     if history_block:
-        prompt_parts.append("Recent context (for reference only, do not repeat):\n")
+        prompt_parts.append(
+            "Recent conversation (use it to understand short replies such as 'yes' or "
+            "'tell me more' that answer your previous question; do not repeat earlier answers):\n"
+        )
         prompt_parts.append(history_block)
         prompt_parts.append("\n")
 
@@ -1406,7 +1449,14 @@ def build_prompt(
         "  ✗ NEVER use the EXAMPLES section as factual data — it is format guidance only.\n"
         "  ✓ Stay strictly on the user's ACTUAL question. Do not drift onto a loosely-related "
         "topic just because a retrieved document happens to mention it.\n"
-        "  ✓ Default output: concise, scannable answers using bullet points and bold text.\n\n"
+        "  ✓ LENGTH: 100–130 words, at most 4 one-line bullets (up to 6 only for a requested "
+        "plan/list). No closing summary paragraph. Every bullet is a distinct concrete fact or action "
+        "from the context — no restating another bullet, no encouragement-only bullets; use fewer "
+        "bullets rather than pad.\n"
+        "  ✓ END with ONE follow-up offer about a related sub-topic from the context that you did "
+        "NOT cover (\"Would you like to know more about <X>?\"), in the user's language, followed "
+        "by a final line [[FOLLOWUP: <X in short English>]]. Skip both in the STEP 4 fallback and "
+        "in emergencies.\n\n"
         "⚠️ LANGUAGE & SCRIPT — THIS IS MANDATORY, DO THIS BEFORE WRITING ANYTHING:\n"
         + build_script_directive(user_query)
         + "  • Mirror this script in your ENTIRE response — bullet points, "
@@ -1552,18 +1602,32 @@ async def chat_once(
     # Issue #17: Run in executor to avoid blocking
     loop = asyncio.get_event_loop()
     prior_turns = await loop.run_in_executor(None, memory.get_last_n, session_id, history_window)
+    pending_topic = await loop.run_in_executor(None, memory.get_followup_topic, session_id)
 
     # ---------------- Guardrails ----------------
     guardrails_start = time.time()
 
     redacted_text, redaction_report = redact(user_text)
 
+    # Follow-up acceptance: a bare "yes" / "haan" / "tell me more" after an answer
+    # that ended with "Would you like to know more about X?" means "explain X".
+    # X is retrieved on and answered instead of the literal reply.
+    accepted_topic = (
+        pending_topic if pending_topic and is_affirmative(redacted_text) else None
+    )
+
     # LactMed carve-out: breastfeeding drug-safety questions are answered from the
     # curated LactMed dataset, so they must bypass the medical-scope refusal in
     # enforce_scope (which blocks words like "antibiotic" or "medicine for ...").
     # We still guard this path against prompt injection.
-    lactmed_drug = is_lactation_query(redacted_text)
-    if lactmed_drug is not None:
+    lactmed_drug = is_lactation_query(accepted_topic or redacted_text)
+    if accepted_topic:
+        # The topic came from our own previous answer and the reply itself is a
+        # short affirmative, so there is nothing to scope-check or inject.
+        safe_text = redacted_text
+        scope_notes = {"blocked": False, "offtopic": False, "matched": []}
+        logger.info(f"[{request_id}] Follow-up accepted: '{accepted_topic}'")
+    elif lactmed_drug is not None:
         safe_text = redacted_text
         scope_notes = {"blocked": False, "offtopic": False, "matched": []}
         is_injection, injection_patterns = check_prompt_injection(redacted_text)
@@ -1578,8 +1642,13 @@ async def chat_once(
 
     timings["guardrails"] = (time.time() - guardrails_start) * 1000
 
+    # What retrieval and routing run on: the accepted follow-up topic, or the
+    # user's own (guarded) message.
+    query_text = accepted_topic or safe_text
+
     if scope_notes["offtopic"]:
         logger.info(f"[{request_id}] Request rejected: out of scope")
+        await loop.run_in_executor(None, memory.clear_followup_topic, session_id)
         timings["total"] = (time.time() - request_start_time) * 1000
 
         _metrics.record_request(
@@ -1614,7 +1683,7 @@ async def chat_once(
     # ---------------- Intent Routing ----------------
     # Issue #16: Determine service level based on component availability
     service_level = ServiceLevel.FULL
-    intent = route_intent(safe_text)
+    intent = route_intent(query_text)
 
     # SELF_QUERY short-circuit — return Viva AI description instantly,
     # before any MCP/RAG/LLM calls (zero compute cost).
@@ -1624,6 +1693,7 @@ async def chat_once(
         await loop.run_in_executor(
             None, memory.append, session_id, "assistant", VIVA_SELF_DESCRIPTION
         )
+        await loop.run_in_executor(None, memory.clear_followup_topic, session_id)
         timings["total"] = (time.time() - request_start_time) * 1000
         _metrics.record_request(
             success=True, service_level=ServiceLevel.FULL.value, timings=timings
@@ -1704,7 +1774,7 @@ async def chat_once(
         # Answer from the curated LactMed dataset instead of the vector index.
         rag_context_block = format_lactmed_context(lactmed_drug)
         docs, used_rag, best_score = [], True, 1.0  # >=0.75 auto-passes grounding gate
-        grounding_query = safe_text
+        grounding_query = query_text
         timings["rag"] = (time.time() - rag_start) * 1000
         logger.info(
             f"[{request_id}] LactMed context for '{lactmed_drug['name']}' "
@@ -1722,10 +1792,10 @@ async def chat_once(
         # is still what goes into the LLM prompt so the user is answered in their
         # own language.
         loop = asyncio.get_event_loop()
-        grounding_query = safe_text  # query handed to the grounding classifier
+        grounding_query = query_text  # query handed to the grounding classifier
         try:
             # Issue #9: Async RAG call
-            docs, used_rag, best_score = await fetch_rag_context(safe_text, request_id, retriever)
+            docs, used_rag, best_score = await fetch_rag_context(query_text, request_id, retriever)
 
             # Lazy translation fallback (safety net): only if the raw query retrieved
             # weakly do we pay for a translation LLM call and retrieve again, keeping
@@ -1734,9 +1804,9 @@ async def chat_once(
             # embedder already handles well never touches the translator at all.
             if best_score < settings.rag_translation_fallback_threshold:
                 translated = await loop.run_in_executor(
-                    None, translate_query_for_rag, safe_text, request_id
+                    None, translate_query_for_rag, query_text, request_id
                 )
-                if translated and translated.strip().lower() != safe_text.strip().lower():
+                if translated and translated.strip().lower() != query_text.strip().lower():
                     # English form is the most reliable input for the grounding classifier.
                     grounding_query = translated
                     t_docs, t_used, t_score = await fetch_rag_context(
@@ -1837,6 +1907,7 @@ async def chat_once(
             await loop.run_in_executor(
                 None, memory.append, session_id, "assistant", fallback_answer
             )
+            await loop.run_in_executor(None, memory.clear_followup_topic, session_id)
 
             timings["total"] = (time.time() - request_start_time) * 1000
             _metrics.record_request(
@@ -1868,12 +1939,13 @@ async def chat_once(
     # BUILD ENRICHED PROMPT
     # ============================================================
 
-    # Format conversation history — capped to fit within qwen3-32b's 6000 TPM limit
-    history_block = ""
-    for t in prior_turns[-3:]:
-        role = str(t.get("role", "")).upper()[:12]
-        content = str(t.get("content", ""))[:300]
-        history_block += f"- {role}: {content}\n"
+    # Format conversation history — capped to fit within qwen3-32b's 6000 TPM limit.
+    # Assistant turns keep their last line so a pending follow-up offer stays visible.
+    history_block = format_history(prior_turns)
+
+    prompt_query = (
+        build_followup_query(safe_text, accepted_topic) if accepted_topic else safe_text
+    )
 
     # Issue #15: Build prompt with size validation
     final_prompt = build_prompt(
@@ -1886,7 +1958,7 @@ async def chat_once(
         user_context.has_recovery,
         history_block,
         rag_context_block,
-        safe_text,
+        prompt_query,
         request_id,
         content_context,
     )
@@ -1937,6 +2009,20 @@ async def chat_once(
         )
         service_level = ServiceLevel.MINIMAL
 
+    # ---------------- Follow-up Offer ----------------
+    # The model ends with "Would you like to know more about X?" plus a machine
+    # tag [[FOLLOWUP: X]]. Strip the tag before anything else sees the answer.
+    draft_answer, offered_topic = extract_followup(draft_answer)
+
+    word_count = len(draft_answer.split())
+    bullet_count = sum(
+        1 for ln in draft_answer.split("\n") if ln.lstrip().startswith(("*", "-", "•", "✅"))
+    )
+    if word_count > 170 or bullet_count > 6:
+        logger.warning(
+            f"[{request_id}] Long answer: {word_count} words, {bullet_count} bullets"
+        )
+
     # ---------------- Escalation Check ----------------
     # Scan ONLY user-generated content for red flags:
     #   1. safe_text          — user's current message
@@ -1979,6 +2065,11 @@ async def chat_once(
         else ""
     )
 
+    # An emergency answer must not end by offering more reading.
+    if severity == "HIGH" and offered_topic:
+        draft_answer = strip_offer_line(draft_answer)
+        offered_topic = None
+
     final_answer = (banner + "\n\n" if banner else "") + draft_answer
 
     # ---------------- Expert Suggestion ----------------
@@ -2001,6 +2092,8 @@ async def chat_once(
     # Issue #17: Async memory operations
     await loop.run_in_executor(None, memory.append, session_id, "user", safe_text)
     await loop.run_in_executor(None, memory.append, session_id, "assistant", final_answer)
+    # Overwritten every turn (None clears it) so "yes" never resolves to a stale offer.
+    await loop.run_in_executor(None, memory.set_followup_topic, session_id, offered_topic)
 
     # Only what the banner actually named is marked as announced — a red flag
     # sitting in her check-in that this turn's banner did not mention must
