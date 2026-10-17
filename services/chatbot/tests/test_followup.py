@@ -67,6 +67,15 @@ class TestStripOfferLine(unittest.TestCase):
         self.assertNotIn("Would you like", stripped)
         self.assertIn("Kavya Rao", stripped)
 
+    def test_one_paragraph_keeps_body(self) -> None:
+        self.assertEqual(
+            strip_offer_line("Here is the answer. It has two sentences. Want to know more?"),
+            "Here is the answer. It has two sentences.",
+        )
+
+    def test_never_returns_empty(self) -> None:
+        self.assertEqual(strip_offer_line("Only a question?"), "Only a question?")
+
     def test_non_question_kept(self) -> None:
         self.assertEqual(strip_offer_line("Line one\nGo to hospital."), "Line one\nGo to hospital.")
 

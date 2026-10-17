@@ -145,3 +145,43 @@ def detect_suggested_experts(
         )
 
     return suggested
+
+
+# "Dr. Reeta Mahey", "Ms Kavya Rao", "डॉ. ..." — a titled person named in an answer.
+_TITLED_NAME = re.compile(
+    r"\b(?:Dr|Doctor|Ms|Mrs|Mr|Prof)\.?\s+((?:[A-Z][a-zA-Z'\-]+)(?:\s+[A-Z][a-zA-Z'\-]+){0,2})"
+    r"|(?:डॉ\.?|डॉक्टर)\s*([ऀ-ॿ]+(?:\s+[ऀ-ॿ]+){0,2})"
+)
+
+
+def find_unlisted_expert_names(answer: str, experts: List[Dict[str, Any]]) -> List[str]:
+    """
+    Titled names in the answer ("Dr. Reeta Mahey") that are NOT in the user's
+    expert directory.
+
+    The knowledge base quotes clinicians and researchers by name; with the
+    directory empty the model once listed three of them as "gynaecologists in this
+    app". Anything returned here must never be presented as a VivaMama expert.
+    """
+    if not answer:
+        return []
+
+    known = []
+    for expert in experts or []:
+        for variant in expert.get("name_variants") or [expert.get("name") or ""]:
+            norm = _normalise(variant)
+            if norm:
+                known.append(norm)
+
+    unlisted = []
+    for match in _TITLED_NAME.finditer(_MARKDOWN_NOISE.sub("", answer)):
+        name = (match.group(1) or match.group(2) or "").strip()
+        norm = _normalise(name)
+        if not norm:
+            continue
+        # Either spelling may carry extra words ("Harsha Tomar" vs "Dr Harsha Tomar").
+        if any(norm in k or k in norm for k in known):
+            continue
+        if name not in unlisted:
+            unlisted.append(name)
+    return unlisted

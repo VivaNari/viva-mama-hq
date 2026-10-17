@@ -68,12 +68,32 @@ def extract_followup(answer: str) -> Tuple[str, Optional[str]]:
     return clean, topic
 
 
+# Last sentence of a line: everything after the final sentence terminator.
+_LAST_SENTENCE = re.compile(r"^(.*[.!।…])\s+[^.!।…]+$", re.DOTALL)
+
+
 def strip_offer_line(answer: str) -> str:
-    """Drop the trailing follow-up question (last line ending in '?')."""
-    lines = answer.rstrip().split("\n")
-    if lines and _ends_with_question(lines[-1]):
+    """
+    Drop the trailing follow-up question.
+
+    Only the final question SENTENCE is removed: when the model writes the whole
+    reply as one paragraph ending in "…?", deleting the last line deleted the
+    entire answer. Never returns an empty string — if nothing would be left, the
+    answer is returned unchanged.
+    """
+    original = answer.rstrip()
+    lines = original.split("\n")
+    if not lines or not _ends_with_question(lines[-1]):
+        return original
+
+    match = _LAST_SENTENCE.match(lines[-1].strip())
+    if match and match.group(1).strip():
+        lines[-1] = match.group(1)
+    else:
         lines.pop()
-    return "\n".join(lines).rstrip()
+
+    stripped = "\n".join(lines).rstrip()
+    return stripped or original
 
 
 def _ends_with_question(line: str) -> bool:
@@ -101,6 +121,57 @@ def is_affirmative(text: str) -> bool:
     if not norm or len(norm.split()) > _MAX_AFFIRMATIVE_WORDS:
         return False
     return norm in _AFFIRMATIVE_PHRASES
+
+
+# Opening words that decline the previous offer ("No, I want to speak to an
+# expert"). Matched as the first one or two normalised words, so the rest of the
+# message is still answered as a fresh question.
+_NEGATIVE_OPENERS = {
+    "no", "nope", "nah", "no thanks", "no thank", "not now", "not really", "dont", "don t",
+    "nahi", "nahin", "nhi", "na", "mat", "rehne do",
+    "नहीं", "नही", "ना", "मत",
+}
+
+# Words that carry no topic meaning when comparing two offers.
+_TOPIC_STOPWORDS = {
+    "a", "an", "the", "of", "to", "for", "and", "or", "in", "on", "with", "about",
+    "how", "what", "why", "when", "your", "you", "can", "more", "know", "help",
+}
+
+
+def is_negative(text: str) -> bool:
+    """True when the message opens by declining ("no", "not now", "nahi", "नहीं" …)."""
+    words = _normalise(text or "").split()
+    if not words:
+        return False
+    return words[0] in _NEGATIVE_OPENERS or " ".join(words[:2]) in _NEGATIVE_OPENERS
+
+
+def same_topic(a: Optional[str], b: Optional[str]) -> bool:
+    """
+    Whether two follow-up topics are effectively the same offer, so the bot does
+    not ask "would you like to know more about X?" twice in a row.
+    """
+    if not a or not b:
+        return False
+
+    def tokens(t: str) -> set:
+        # Crude singularisation so "consultants" ~ "consultant".
+        return {w.rstrip("s") for w in _normalise(t).split() if w not in _TOPIC_STOPWORDS}
+
+    ta, tb = tokens(a), tokens(b)
+    if not ta or not tb:
+        return _normalise(a) == _normalise(b)
+    overlap = len(ta & tb) / min(len(ta), len(tb))
+    return overlap >= 0.8
+
+
+def build_declined_note(topic: str) -> str:
+    """Appended to the prompt question when the user turned the last offer down."""
+    return (
+        f"\n(The user declined your previous offer to explain: {topic}. "
+        "Do not offer that topic again; answer what they are asking now.)"
+    )
 
 
 def build_followup_query(user_text: str, topic: str) -> str:

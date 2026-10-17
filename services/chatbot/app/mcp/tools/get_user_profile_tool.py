@@ -27,7 +27,7 @@ Mirrors `calculatePostpartumState` in the core server
 
 import logging
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from app.mcp.db_connection import get_users_collection
 from bson import ObjectId
@@ -275,6 +275,16 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
 
         date_str = _format_date(delivery_date) if delivery_date else None
 
+        children = summarize_children(user_doc.get("childs"))
+
+        # Prefer the server's derived flag; otherwise derive it the way the server
+        # does (FeedingMethodEnum: anything but not_breastfeeding counts, mixed too).
+        is_breastfeeding = user_doc.get("is_breastfeeding_currently", None)
+        if is_breastfeeding is None:
+            methods = [c["feeding_method"] for c in children if c["feeding_method"]]
+            if methods:
+                is_breastfeeding = any(m != "not_breastfeeding" for m in methods)
+
         profile = {
             "user_id": str(user_doc.get("_id")),
             "found": True,
@@ -294,7 +304,9 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
             "delivery_type": _text(onboarding.get("delivery_type")),
             "delivery_outcome": _text(onboarding.get("delivery_outcome")),
             # Current status
-            "is_breastfeeding": user_doc.get("is_breastfeeding_currently", None),
+            "is_breastfeeding": is_breastfeeding,
+            # Babies she has added in the app (name, sex, age, feeding)
+            "children": children,
             # Demographics and support
             "location": _text(onboarding.get("location")),
             "social_support": _text(onboarding.get("social_support")),
@@ -315,6 +327,73 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
     except Exception as e:
         logger.error("Failed to fetch user profile for user_id=%s: %s", user_id, e)
         return {"user_id": user_id, "found": False, "error": f"Error fetching profile: {str(e)}"}
+
+
+_FEEDING_LABELS = {
+    "only_breastmilk": "exclusively breastfed",
+    "mixed": "on breastmilk and formula",
+    "not_breastfeeding": "formula-fed (not breastfed)",
+}
+
+
+def summarize_children(childs: Any, now: Optional[datetime] = None) -> List[Dict[str, Any]]:
+    """
+    The babies she has added in the app (`users.childs[]`), reduced to what the
+    model needs to frame an answer: name, sex, age and how the baby is fed.
+
+    Age is measured in IST calendar days like the rest of this module; under 12
+    weeks it is reported in weeks (what parents and guidance use for newborns),
+    after that in months.
+    """
+    now = now or datetime.now(timezone.utc)
+    out: List[Dict[str, Any]] = []
+    for child in childs or []:
+        if not isinstance(child, dict):
+            continue
+        dob = child.get("date_of_birth")
+        age_days = _ist_calendar_days_between(dob, now) if isinstance(dob, datetime) else None
+        if age_days is not None and age_days < 0:
+            age_days = None  # a future DOB is bad data, not an age
+        if age_days is None:
+            age_text = ""
+        elif age_days < 7:
+            age_text = f"{age_days} day{'s' if age_days != 1 else ''} old"
+        elif age_days < 84:
+            weeks = age_days // DAYS_PER_WEEK
+            age_text = f"{weeks} week{'s' if weeks != 1 else ''} old"
+        else:
+            months = age_days // 30
+            age_text = f"{months} month{'s' if months != 1 else ''} old"
+        out.append(
+            {
+                "name": _text(child.get("name")),
+                "sex": _text(child.get("sex")).lower(),
+                "age_days": age_days,
+                "age_text": age_text,
+                "feeding_method": _text(child.get("feeding_method")),
+            }
+        )
+    return out
+
+
+def _format_children_sentence(children: List[Dict[str, Any]]) -> str:
+    """e.g. "Her baby: Asha (girl), 6 weeks old, exclusively breastfed." """
+    descriptions = []
+    for c in children:
+        bits = []
+        name = c.get("name") or "unnamed baby"
+        sex = {"female": "girl", "male": "boy"}.get(c.get("sex") or "")
+        bits.append(f"{name} ({sex})" if sex else name)
+        if c.get("age_text"):
+            bits.append(c["age_text"])
+        feeding = _FEEDING_LABELS.get(c.get("feeding_method") or "")
+        if feeding:
+            bits.append(feeding)
+        descriptions.append(", ".join(bits))
+    if not descriptions:
+        return ""
+    label = "Her baby" if len(descriptions) == 1 else "Her babies"
+    return f"{label}: " + "; ".join(descriptions) + "."
 
 
 def _format_stage_sentence(profile: Dict[str, Any], name: str) -> str:
@@ -402,6 +481,11 @@ def format_profile_for_prompt(profile: Dict[str, Any]) -> str:
         parts.append("The delivery resulted in a stillbirth.")
     elif delivery_outcome == "live_birth":
         parts.append("The delivery resulted in a live birth.")
+
+    # Her baby / babies — the single most useful fact for postpartum questions.
+    children_sentence = _format_children_sentence(profile.get("children") or [])
+    if children_sentence:
+        parts.append(children_sentence)
 
     # Breastfeeding status
     is_bf = profile.get("is_breastfeeding")

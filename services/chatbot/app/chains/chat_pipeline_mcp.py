@@ -44,10 +44,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from app.chains.followup import (
+    build_declined_note,
     build_followup_query,
     extract_followup,
     format_history,
     is_affirmative,
+    is_negative,
+    same_topic,
     strip_offer_line,
 )
 from app.chains.router import route_intent
@@ -62,7 +65,7 @@ from app.escalation.policy import (
 # so the prompt block and the structured expert list come from the same payload
 # without this process opening a Mongo connection.
 from app.experts.formatting import format_experts_for_prompt
-from app.experts.suggestion import detect_suggested_experts
+from app.experts.suggestion import detect_suggested_experts, find_unlisted_expert_names
 from app.guardrails.input_guard import (
     PROMPT_INJECTION_REFUSAL,
     check_prompt_injection,
@@ -110,13 +113,14 @@ Emoji Usage:
 - Place emojis at the start of bullet points or after empathetic sentences to make the response feel friendly and aesthetic.
 - Do NOT over-cluster emojis; keep it professional yet compassionate.
 
-Length (HARD LIMITS — users read on a phone and will not read long answers):
-- 100–130 words in total, including the referral and follow-up lines.
-- At most 4 bullets; each bullet is ONE line of no more than 20 words.
-- Exception: a requested plan or list (diet plan, exercises, step-by-step) may use up to 6 short bullets.
-- Pick only the 2–4 points that MOST directly answer the question. Hold everything else back for the FOLLOW-UP OFFER.
-- NO summary or encouragement paragraph after the bullets. Say each fact once.
-- Every bullet must be a DIFFERENT concrete fact or action taken from the context. A bullet that restates another bullet, or is just encouragement ("this journey brings pride and growing pains", "embrace this phase"), is not allowed — use fewer bullets instead of padding to 4.
+Length and depth (users read on a phone — specific beats short, but no stories):
+- Aim for 160–220 words in total, including the referral and follow-up lines. A simple yes/no fact may be shorter; a requested plan (diet, exercises, step-by-step) may reach ~280.
+- 3–5 bullets. Each bullet is 1–2 sentences that give the point AND why it happens or how to do it, with at least one concrete detail from the context: a timeframe, number, technique, food, position, or sign to watch.
+  ❌ Headline only: "**Brain Rewiring:** Motherhood changes your brain."
+  ✅ Explained: "**Your brain is re-tuning:** in the first months after birth, areas linked to empathy and threat-detection become more active, which is why you may feel more alert to your baby and less like your 'old self'."
+- Use the 3–5 points from the context that MOST help with her question; offer the next most useful one as the FOLLOW-UP OFFER.
+- If symptoms are involved, add ONE short line on when to get help (what sign, how soon).
+- NO summary or pep-talk paragraph after the bullets. Say each fact once. Never pad: a bullet that only restates another or only encourages ("embrace this phase") is not allowed.
 
 === FOLLOW-UP OFFER ===
 End every answer with ONE short question offering a related topic you left out, e.g.
@@ -127,7 +131,8 @@ End every answer with ONE short question offering a related topic you left out, 
 - Then, on its own final line, add a machine tag with X in short English: [[FOLLOWUP: <X>]]
   The app removes this tag; the user never sees it. Always write it in English.
 - When the user accepts an earlier offer (e.g. replies "yes"), do NOT open with an empathy line such as "I hear you" or "It's wonderful you're exploring...". Open with ONE short lead-in (e.g. "Here are a few things that can help: 💖") and go straight to the bullets.
-- SKIP the offer AND the tag when: you have no relevant context (the "I don't have specific information" fallback), it is an emergency, or the context has nothing beyond what you already said.
+- Offer something genuinely different from what you just answered and from any offer the user declined.
+- SKIP the offer AND the tag when: the user is asking to reach or book an expert, you have no relevant context (the "I don't have specific information" fallback), it is an emergency, or the context has nothing beyond what you already said.
 
 === RELEVANCE GATE ===
 Perinatal question — pregnancy, postpartum recovery, breastfeeding, newborn care, or the mother's physical and emotional wellbeing across any of those stages?
@@ -149,6 +154,7 @@ as welcome as postpartum ones. Never turn a pregnant user away for asking about 
 5. **Fallback**: ONLY if no directory expert matches, use: "Connect with our VivaMama medical experts."
 6. **Spelling (CRITICAL)**: Write the expert's name EXACTLY as it appears in the directory, character for character, even when the rest of your reply is in Hindi or Hinglish. Never transliterate, translate, shorten or re-spell a name — the app matches on it to show a booking button.
 6. **Emergencies**: For emergencies (heavy bleeding, pain), bypass all directory tools and direct to emergency services immediately.
+7. **Directory only (CRITICAL)**: ONLY people listed in the === VIVAMAMA EXPERT DIRECTORY === are VivaMama experts. Doctors, researchers or authors named inside KNOWLEDGE BASE / CONTENT documents are NOT available in the app — never list them as experts, never suggest booking them, and do not name them at all when the user asks which experts are available. If the directory is empty or has no match, say so and point to the **Experts** section; never fill the gap with other names.
 
 NEVER say:
 ❌ "Contact your healthcare provider"
@@ -201,8 +207,8 @@ Don't use name:
 If no name is available, proceed normally without it.
 
 === RESPONSE FORMULA ===
-Sentence 1: Validate feelings + optional name ("I hear how difficult this is, [Name]")
-Body: Give clear, actionable guidance using formatting and bullet points for readability.
+Sentence 1: Acknowledge her specific situation in one sentence, varied in wording (not always "I hear…"); skip it when she has just said "yes" to your offer.
+Body: 3–5 explained bullets (see Length and depth), at least one framed for HER profile when relevant.
 Closing: IF any specific expert OR product-related expert was recommended in the Body, do NOT repeat any referral here. IF NO specific expert was relevant but medical symptoms were addressed, suggest: "Consider reaching out to our VivaMama medical experts if..." Keep the referral to ONE short line.
 Last line: the FOLLOW-UP OFFER question, then the [[FOLLOWUP: ...]] tag.
 
@@ -215,7 +221,8 @@ Last line: the FOLLOW-UP OFFER question, then the [[FOLLOWUP: ...]] tag.
 ❌ "In addition to this"
 ❌ "Contact your healthcare provider" (use VivaMama experts instead)
 ❌ Repeating the question back
-❌ Background explanations
+❌ Long background paragraphs (one short "why" per bullet is GOOD and expected)
+❌ Opening every answer with the same "I hear…"/"I understand…" sentence
 ❌ "It's a powerful journey..." / "It's important to remember these feelings are normal"
 ❌ "Connecting with others and taking small moments for yourself..." closing advice
 ❌ Any closing summary or pep-talk paragraph after the bullets
@@ -234,6 +241,12 @@ still expecting. Her stage is given to you; you never have to guess it or ask.
 
 If user's name is in context, use it occasionally for warmth (not every response).
 
+Make it HERS (CRITICAL — generic answers are the #1 complaint): when the question relates to her stage, recovery, feeding, her baby, or a condition/medication listed in USER PROFILE, at least one bullet must be framed for her using those exact facts, e.g.
+  "At 7 weeks postpartum after a vaginal delivery, …"
+  "With gestational diabetes in your history, …"
+  "Since Asha is 6 weeks old and exclusively breastfed, …"
+Use only facts that are actually in USER PROFILE / RECOVERY CONTEXT — never invent them. Do not bring up medications or conditions that have nothing to do with the question.
+
 === RECOVERY CHECK-IN ATTRIBUTION (CRITICAL) ===
 Whenever any part of your answer draws on the === RECOVERY CONTEXT === block
 (her scores, zone, tagline, recommendations, or check-in answers), you MUST say
@@ -243,48 +256,35 @@ where it came from: "As per your recently logged recovery check-in, ...".
 - Follow the LANGUAGE RULE: render the phrase naturally in Hindi ("आपके हाल ही में दर्ज किए गए रिकवरी चेक-इन के अनुसार, ...") or Hinglish ("Aapke recently logged recovery check-in ke hisaab se, ...") when replying in those.
 
 === KNOWLEDGE BASE ===
-Pull ONLY the specific fact that answers the question.
-Don't summarize everything in the context — the rest is what you offer in the FOLLOW-UP OFFER.
+Answer from the 3–5 most useful points in the context for HER question, and carry their concrete details (numbers, timings, techniques, warning signs) into the bullets — those details are what make an answer useful instead of generic.
+Don't summarize everything in the context — the next most useful point is what you offer in the FOLLOW-UP OFFER.
 
-=== EXAMPLES (FORMAT ONLY — do NOT use as factual data) ===
-These examples demonstrate STYLE and STRUCTURE only. The symptom names and facts are fictional placeholders.
+=== EXAMPLES (STYLE ONLY — the facts below are illustrative; NEVER reuse them as data, and use real directory names only) ===
 
-❌ BAD STYLE (bloated, no empathy, block paragraph):
-"[Topic X] is a process that occurs after childbirth. There are several things to monitor carefully. If you notice [symptom A], [symptom B], or [symptom C], these could be signs of complications. You should contact your healthcare provider."
+❌ BAD — headline bullets, nothing personal, could be sent to anyone:
+"I hear how hard this is. 💖
+* 🧠 **Brain Rewiring:** Motherhood changes your brain.
+* 📉 **Hormonal Shifts:** Hormones drop after birth.
+* 😴 **Sleep:** Sleep loss affects mood.
+Connect with our VivaMama medical experts for personalized guidance."
 
-✅ GOOD STYLE (empathetic, structured, scannable, ~100 words):
-"I hear how worrying [Topic X] can feel, [Name]. 💖
-* 🩸 **[Sign 1]:** [One-line description from context.]
-* ⚠️ **[Sign 2]:** [One-line description from context.]
-* ✅ **When to act:** [Action from context.]
+✅ GOOD — explained, specific, framed for her (~190 words):
+"Feeling like a stranger to yourself at 7 weeks postpartum is something many first-time mothers describe, Priya — and there are clear reasons for it. 💖
+* 📉 **Your hormones have dropped sharply:** oestrogen and progesterone fall within days of birth, and while breastfeeding they stay low, which can flatten mood and energy for several weeks.
+* 🧠 **Your brain is re-tuning:** areas linked to empathy and alertness become more active after birth, so you may feel constantly 'on' for Asha and less like your old self.
+* 😴 **Broken sleep amplifies it:** waking every 2–3 hours for feeds affects concentration and emotional control; protecting one 4–5 hour stretch (a partner takes one feed with expressed milk) helps noticeably.
+* 🌱 **Small anchors help:** 10–15 minutes a day of something that was 'yours' before the baby — a walk, music, a call with a friend — rebuilds a sense of self faster than waiting for free time.
+If this low feeling lasts beyond two weeks or you feel hopeless, please reach out soon.
+Connect with our VivaMama expert **[Directory Name], [Speciality]**, for personalized guidance.
+Would you like to know more about how long this identity shift usually lasts? 💬
+[[FOLLOWUP: how long the postpartum identity shift lasts]]"
 
-For ongoing concerns, reach out to our VivaMama medical experts.
-
-Would you like to know more about [related sub-topic from context]? 💬
-[[FOLLOWUP: <related sub-topic in English>]]"
-
----
-
-❌ BAD STYLE (generic referral, no structure):
-"[Topic Y] is something many mothers experience. There are strategies you can try. Consult your doctor if things don't improve."
-
-✅ GOOD STYLE (structured, uses name, expert referral, follow-up offer):
-"I hear your concern, [Name] — [Topic Y] worries are so stressful. 💖
-* 🧠 **[Strategy 1]:** [One-line description from context.]
-* 😴 **[Strategy 2]:** [One-line description from context.]
-
-Connect with our VivaMama expert **[Name], [Speciality]**, for personalized guidance.
-
-Would you like to know more about [related sub-topic from context]? 💬
-[[FOLLOWUP: <related sub-topic in English>]]"
-
----
-
-❌ BAD STYLE (too long — reads like a story):
-An empathy line, then 5 bullets of 2–3 sentences each, then a paragraph like "It's a powerful journey of transformation... Connecting with others and taking small moments for yourself can make a big difference", then the referral. Over 250 words — users stop reading. Cut to the 2–4 most relevant one-line bullets and OFFER the rest as a follow-up instead.
+✅ GOOD — expert request (answered from the directory, no knowledge-base bullets, no follow-up offer):
+"Of course — for breastfeeding support, you can consult **[Directory Name], [Speciality]** ([N] years of experience) on VivaMama. 🤱
+To book: open the **Experts** section in the app, tap their name, and choose **Book**. If you tell me what's happening with feeds (latch, supply, pain), I can also share what to try before your session."
 
 === YOUR TASK ===
-Answer the user's question in a short, structured, emotionally validating, and action-oriented way (100–130 words). Follow the Referral Rules, Response Formula and Follow-up Offer strictly.
+Answer the user's question in a specific, personal, structured and action-oriented way (160–220 words, 3–5 explained bullets). Follow the Referral Rules, Response Formula and Follow-up Offer strictly.
 
 === LANGUAGE RULE ===
 ALWAYS respond in the EXACT same language and script the user wrote in. Match their language precisely:
@@ -1062,6 +1062,45 @@ def translate_query_for_rag(text: str, request_id: str) -> str:
 
 
 # Canned response returned whenever no context source can answer the question.
+# Expert request with no directory to answer from (MCP down, empty collection).
+# Deliberately names nobody: with an empty directory the model once listed
+# researchers from the knowledge base as "gynaecologists in this app".
+EXPERT_DIRECTORY_UNAVAILABLE = (
+    "I can't load our expert list right now, so I don't want to point you to the wrong "
+    "person. 💖 Please open the **Experts** section in the app — you'll see every VivaMama "
+    "expert there and can book a consultation directly. If you tell me what you need help "
+    "with, I can share what to try in the meantime."
+)
+EXPERT_DIRECTORY_UNAVAILABLE_HI = (
+    "अभी मैं हमारे एक्सपर्ट्स की सूची लोड नहीं कर पा रही हूँ, इसलिए गलत नाम नहीं बताना चाहती। 💖 "
+    "कृपया ऐप में **Experts** सेक्शन खोलें — वहाँ सभी VivaMama एक्सपर्ट्स दिखेंगे और आप सीधे "
+    "कंसल्टेशन बुक कर सकती हैं।"
+)
+
+def format_directory_answer(experts: List[Dict[str, Any]], user_text: str) -> str:
+    """
+    Deterministic expert-request answer straight from the directory — used when
+    the model's reply named someone who is not a VivaMama expert.
+    """
+    lines = []
+    for e in experts[:12]:
+        line = f"* **{e.get('name', '')}, {e.get('speciality', '')}**"
+        years = e.get("years_of_experience")
+        if isinstance(years, (int, float)) and years > 0:
+            line += f" — {int(years)} years of experience"
+        lines.append(line)
+    if _contains_devanagari(user_text):
+        head = "VivaMama पर ये एक्सपर्ट्स उपलब्ध हैं: 💖"
+        tail = "बुक करने के लिए ऐप में **Experts** सेक्शन खोलें, नाम पर टैप करें और **Book** चुनें।"
+    else:
+        head = "Here are the experts available on VivaMama: 💖"
+        tail = (
+            "To book, open the **Experts** section in the app, tap the expert's name and "
+            "choose **Book**."
+        )
+    return head + "\n" + "\n".join(lines) + "\n\n" + tail
+
+
 NO_CONTEXT_FALLBACK = (
     "I'm sorry, I don't have specific information about that in my knowledge base right now. "
     "For personalised guidance on your perinatal wellness journey, please reach out to our "
@@ -1294,6 +1333,7 @@ def build_prompt(
     user_query: str,
     request_id: str,
     content_context: str = "",
+    expert_request: bool = False,
 ) -> str:
     """
     Build final prompt with size validation.
@@ -1409,6 +1449,38 @@ def build_prompt(
     prompt_parts.append(user_query)
     prompt_parts.append("\n\n")
 
+    # --- Expert request: answered from the directory, not the knowledge base ---
+    if expert_request:
+        prompt_parts.append(
+            "=== EXPERT REQUEST MODE (overrides the answer format above) ===\n"
+            "The user wants to reach, book or find a VivaMama expert. Answer ONLY from the "
+            "=== VIVAMAMA EXPERT DIRECTORY ===:\n"
+            "  1. Work out what kind of help she needs (e.g. lactation / breastfeeding, "
+            "gynaecology / pregnancy, mood / anxiety, baby health, nutrition, yoga). Use her "
+            "USER PROFILE and the recent conversation if the question itself is vague.\n"
+            "  2. Name the 1–3 directory experts who best match, BEST MATCH FIRST, each as "
+            "**Name, Speciality** spelled exactly as in the directory, with their years of "
+            "experience when listed. If she asked 'which <specialist> do you have', list every "
+            "directory expert of that kind.\n"
+            "  3. Tell her how to book: open the **Experts** section in the app, tap the expert's "
+            "name, and choose **Book**.\n"
+            "  4. If no directory expert matches, say so plainly and list the kinds of experts "
+            "that ARE available. If her need is unclear, ask ONE short question about what "
+            "she needs help with.\n"
+            "  5. 40–110 words. No knowledge-base bullets, no general information about what "
+            "such experts do, no FOLLOW-UP OFFER and no [[FOLLOWUP]] tag.\n"
+            "  ✗ NEVER name anyone who is not in the directory — not from the knowledge base, "
+            "not from memory. Names in documents are authors/researchers, not our experts.\n\n"
+            "⚠️ LANGUAGE & SCRIPT — THIS IS MANDATORY, DO THIS BEFORE WRITING ANYTHING:\n"
+            + build_script_directive(user_query)
+            + "  • Expert names stay exactly as written in the directory.\n"
+        )
+        final_prompt = "".join(prompt_parts)
+        if len(final_prompt) > MAX_PROMPT_LENGTH:
+            final_prompt = final_prompt[:MAX_PROMPT_LENGTH] + "\n[... truncated ...]"
+        logger.debug(f"[{request_id}] Final prompt (expert request):\n{final_prompt}")
+        return final_prompt
+
     # --- Answering rules (LLM is the sole grounding authority) ---
     prompt_parts.append(
         "=== ANSWERING RULES ===\n"
@@ -1449,10 +1521,15 @@ def build_prompt(
         "  ✗ NEVER use the EXAMPLES section as factual data — it is format guidance only.\n"
         "  ✓ Stay strictly on the user's ACTUAL question. Do not drift onto a loosely-related "
         "topic just because a retrieved document happens to mention it.\n"
-        "  ✓ LENGTH: 100–130 words, at most 4 one-line bullets (up to 6 only for a requested "
-        "plan/list). No closing summary paragraph. Every bullet is a distinct concrete fact or action "
-        "from the context — no restating another bullet, no encouragement-only bullets; use fewer "
-        "bullets rather than pad.\n"
+        "  ✓ LENGTH & DEPTH: 160–220 words; 3–5 bullets, each 1–2 sentences giving the point AND "
+        "why / how, with a concrete detail from the context (timeframe, number, technique, food, "
+        "warning sign). Headline-only bullets are not acceptable. No closing summary paragraph, "
+        "no repeated or encouragement-only bullets.\n"
+        "  ✓ PERSONAL: when relevant, frame at least one bullet with her actual USER PROFILE facts "
+        "(stage and week, delivery type, her baby's name/age/feeding, listed conditions). Never "
+        "invent profile facts.\n"
+        "  ✗ ONLY directory experts are VivaMama experts. Never present a doctor or researcher "
+        "named in the knowledge base as someone she can consult or book.\n"
         "  ✓ END with ONE follow-up offer about a related sub-topic from the context that you did "
         "NOT cover (\"Would you like to know more about <X>?\"), in the user's language, followed "
         "by a final line [[FOLLOWUP: <X in short English>]]. Skip both in the STEP 4 fallback and "
@@ -1615,6 +1692,13 @@ async def chat_once(
     accepted_topic = (
         pending_topic if pending_topic and is_affirmative(redacted_text) else None
     )
+    # "No, I want to speak to an expert" — the previous offer was turned down; the
+    # model is told not to repeat it and the rest of the message is answered as asked.
+    declined_topic = (
+        pending_topic
+        if pending_topic and not accepted_topic and is_negative(redacted_text)
+        else None
+    )
 
     # LactMed carve-out: breastfeeding drug-safety questions are answered from the
     # curated LactMed dataset, so they must bypass the medical-scope refusal in
@@ -1684,6 +1768,15 @@ async def chat_once(
     # Issue #16: Determine service level based on component availability
     service_level = ServiceLevel.FULL
     intent = route_intent(query_text)
+
+    # Expert requests are answered from the expert directory, not the knowledge base.
+    # A LactMed drug question or an emergency stays on the normal path: the user
+    # needs the safety answer / emergency guidance, not a booking list.
+    if intent == "EXPERT_REQUEST":
+        red_flag_level, _ = scan_for_red_flags(safe_text)
+        if lactmed_drug is not None or red_flag_level == "HIGH":
+            intent = "WELLNESS_INFO"
+    expert_mode = intent == "EXPERT_REQUEST"
 
     # SELF_QUERY short-circuit — return Viva AI description instantly,
     # before any MCP/RAG/LLM calls (zero compute cost).
@@ -1764,13 +1857,53 @@ async def chat_once(
         service_level = ServiceLevel.DEGRADED_NO_MCP
         timings["mcp"] = 0.0
 
+    # ---------------- Expert request without a directory ----------------
+    if expert_mode and not user_context.experts:
+        logger.warning(f"[{request_id}] Expert request but expert directory is empty")
+        canned = (
+            EXPERT_DIRECTORY_UNAVAILABLE_HI
+            if _contains_devanagari(safe_text)
+            else EXPERT_DIRECTORY_UNAVAILABLE
+        )
+        await loop.run_in_executor(None, memory.append, session_id, "user", safe_text)
+        await loop.run_in_executor(None, memory.append, session_id, "assistant", canned)
+        await loop.run_in_executor(None, memory.clear_followup_topic, session_id)
+        timings["total"] = (time.time() - request_start_time) * 1000
+        _metrics.record_request(success=True, service_level=service_level.value, timings=timings)
+        return ChatResponse(
+            request_id=request_id,
+            session_id=session_id,
+            answer=canned,
+            intent="EXPERT_REQUEST",
+            used_rag=False,
+            rag_best_score=0.0,
+            user_context=user_context,
+            redaction=redaction_report,
+            scope=scope_notes,
+            escalation_banner="",
+            memory_turns=await loop.run_in_executor(
+                None, memory.get_last_n, session_id, history_window
+            ),
+            final_prompt="[EXPERT_REQUEST — directory unavailable, no LLM call]",
+            timing=timings,
+            service_level=service_level.value,
+        )
+
     # ---------------- RAG (Document Retrieval) ----------------
     rag_start = time.time()
 
     # Curated-content fallback block (populated below only when RAG is weak).
     content_context = ""
 
-    if lactmed_drug is not None:
+    if expert_mode:
+        # Expert requests are answered from the directory; retrieved documents are
+        # what produced "Online consultation: increases outreach…" trivia and the
+        # researcher names presented as in-app doctors.
+        rag_context_block = "None"
+        docs, used_rag, best_score = [], False, 0.0
+        grounding_query = query_text
+        timings["rag"] = 0.0
+    elif lactmed_drug is not None:
         # Answer from the curated LactMed dataset instead of the vector index.
         rag_context_block = format_lactmed_context(lactmed_drug)
         docs, used_rag, best_score = [], True, 1.0  # >=0.75 auto-passes grounding gate
@@ -1852,6 +1985,7 @@ async def chat_once(
     if (
         settings.enable_content_source
         and lactmed_drug is None
+        and not expert_mode
         and best_score < settings.rag_translation_fallback_threshold
     ):
         content_context = await fetch_content_context(grounding_query, request_id)
@@ -1875,7 +2009,7 @@ async def chat_once(
     # default: the main LLM is the sole grounding authority via its ANSWERING RULES
     # (answer from relevant context, soft-fallback only when nothing relevant).
     # Kept behind settings.enable_grounding_gate purely for instant rollback.
-    if settings.enable_grounding_gate:
+    if settings.enable_grounding_gate and not expert_mode:
         grounded = await loop.run_in_executor(
             None,
             check_context_grounding,
@@ -1946,6 +2080,8 @@ async def chat_once(
     prompt_query = (
         build_followup_query(safe_text, accepted_topic) if accepted_topic else safe_text
     )
+    if declined_topic:
+        prompt_query += build_declined_note(declined_topic)
 
     # Issue #15: Build prompt with size validation
     final_prompt = build_prompt(
@@ -1961,6 +2097,7 @@ async def chat_once(
         prompt_query,
         request_id,
         content_context,
+        expert_request=expert_mode,
     )
 
     # ============================================================
@@ -2014,13 +2151,42 @@ async def chat_once(
     # tag [[FOLLOWUP: X]]. Strip the tag before anything else sees the answer.
     draft_answer, offered_topic = extract_followup(draft_answer)
 
+    # No offer on an expert request, and never the same offer twice in a row or one
+    # the user just declined ("No, I want to speak to an expert" got the identical
+    # "how lactation consultants can help" offer back).
+    if expert_mode:
+        # Expert replies may legitimately end with a clarifying question ("What do
+        # you need help with?"), which must stay. Only a separate "know more" offer
+        # line is removed — its topic is not stored, so a "yes" would go nowhere.
+        lines = draft_answer.rstrip().split("\n")
+        if offered_topic and len(lines) > 1 and "know more" in lines[-1].lower():
+            draft_answer = strip_offer_line(draft_answer)
+        offered_topic = None
+    elif offered_topic and (
+        same_topic(offered_topic, pending_topic) or same_topic(offered_topic, declined_topic)
+    ):
+        draft_answer = strip_offer_line(draft_answer)
+        offered_topic = None
+
+    # ---------------- Unlisted "experts" guard ----------------
+    # Only directory experts may be presented as VivaMama experts. In expert-request
+    # mode a stray name means the answer is listing the wrong people, so it is
+    # replaced with the directory itself; elsewhere a knowledge-base author may be
+    # quoted legitimately, so it is only logged.
+    unlisted = find_unlisted_expert_names(draft_answer, user_context.experts)
+    if unlisted:
+        logger.warning(f"[{request_id}] fabricated_expert names in answer: {unlisted}")
+        if expert_mode:
+            draft_answer = format_directory_answer(user_context.experts, safe_text)
+            offered_topic = None
+
     word_count = len(draft_answer.split())
     bullet_count = sum(
         1 for ln in draft_answer.split("\n") if ln.lstrip().startswith(("*", "-", "•", "✅"))
     )
-    if word_count > 170 or bullet_count > 6:
+    if not expert_mode and (word_count < 120 or word_count > 260 or bullet_count > 6):
         logger.warning(
-            f"[{request_id}] Long answer: {word_count} words, {bullet_count} bullets"
+            f"[{request_id}] Answer outside target: {word_count} words, {bullet_count} bullets"
         )
 
     # ---------------- Escalation Check ----------------
@@ -2069,6 +2235,15 @@ async def chat_once(
     if severity == "HIGH" and offered_topic:
         draft_answer = strip_offer_line(draft_answer)
         offered_topic = None
+
+    # Last line of defence: no post-processing step may hand the user an empty reply.
+    if not draft_answer.strip():
+        logger.error(f"[{request_id}] Answer became empty after post-processing — using fallback")
+        draft_answer = (
+            format_directory_answer(user_context.experts, safe_text)
+            if expert_mode and user_context.experts
+            else NO_CONTEXT_FALLBACK
+        )
 
     final_answer = (banner + "\n\n" if banner else "") + draft_answer
 
@@ -2120,7 +2295,13 @@ async def chat_once(
         request_id=request_id,
         session_id=session_id,
         answer=final_answer,
-        intent="LACTATION_SAFETY" if lactmed_drug is not None else "USER_QUERY",
+        intent=(
+            "EXPERT_REQUEST"
+            if expert_mode
+            else "LACTATION_SAFETY"
+            if lactmed_drug is not None
+            else "USER_QUERY"
+        ),
         used_rag=used_rag,
         rag_best_score=round(float(best_score), 3),
         user_context=user_context,

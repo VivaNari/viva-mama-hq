@@ -178,7 +178,8 @@ def get_all_experts(user_id: Optional[str] = None) -> Dict[str, Any]:
     Returns:
         Dict with:
             found: bool
-            experts: list of {id, name, speciality, category_name, name_variants}
+            experts: list of {id, name, speciality, qualification,
+                years_of_experience, category_name, name_variants}
             count: int
             filtered_by_referral: bool — whether the referral rule narrowed the list
     """
@@ -192,6 +193,8 @@ def get_all_experts(user_id: Optional[str] = None) -> Dict[str, Any]:
                 "_id": 1,
                 "name": 1,
                 "speciality": 1,
+                "qualification": 1,
+                "yearsOfExperience": 1,
                 "category": 1,
                 "translations": 1,
                 # Not shown to the model; read only to decide visibility.
@@ -218,6 +221,8 @@ def get_all_experts(user_id: Optional[str] = None) -> Dict[str, Any]:
                 "id": str(e["_id"]),
                 "name": e.get("name", ""),
                 "speciality": e.get("speciality", ""),
+                "qualification": e.get("qualification") or "",
+                "years_of_experience": e.get("yearsOfExperience"),
                 "category_name": category_names.get(str(e.get("category")), ""),
                 "name_variants": _name_variants(e),
             }

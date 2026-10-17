@@ -38,6 +38,12 @@ def format_experts_for_prompt(experts_data: Dict[str, Any]) -> str:
         line = f"- {name}, {speciality}"
         if category:
             line += f" ({category})"
+        qualification = str(expert.get("qualification") or "").strip()
+        if qualification and qualification.lower() not in speciality.lower():
+            line += f"; {qualification}"
+        years = expert.get("years_of_experience")
+        if isinstance(years, (int, float)) and years > 0:
+            line += f" — {int(years)} yrs experience"
         prompt_lines.append(line)
 
     return "\n".join(prompt_lines)
