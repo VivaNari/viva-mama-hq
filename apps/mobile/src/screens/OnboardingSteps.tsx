@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View, ScrollView, TouchableOpacity, Text } from "react-native";
 import { phqdata } from "../data/phqData";
 import OnboardingStep from "../components/onboarding/OnboardingStep";
@@ -10,6 +11,7 @@ import { globalStyles, onboardingStyles } from "../public/styles";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
+    const { t } = useTranslation();
     const [currentStep, setCurrentStep] = useState<number>(1);
 
     // 👇 Only answers are stored
@@ -55,8 +57,8 @@ const OnboardingSteps = ({ navigation }: { navigation: { navigate: any } }) => {
                 {
                     currentStep == 1 && (
                         <View>
-                            <Text style={[onboardingStyles.welcomeText, globalStyles.fontRegular]}>Welcome</Text>
-                            <Text style={[onboardingStyles.welcomeTextCaption, globalStyles.fontRegular]}>to Viva Nari</Text>
+                            <Text style={[onboardingStyles.welcomeText, globalStyles.fontRegular]}>{t('onboarding.welcome')}</Text>
+                            <Text style={[onboardingStyles.welcomeTextCaption, globalStyles.fontRegular]}>{t('onboarding.brandTagline')}</Text>
                         </View>
                     )
                 }

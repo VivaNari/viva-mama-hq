@@ -1,5 +1,22 @@
 import mongoose, { Schema } from "mongoose";
-import { ESex, EUserCategory, IChild, IUser, TUsercategory } from "../../types";
+import {
+    EChildOnboardingStatus,
+    ESex,
+    EUserCategory,
+    EUserRole,
+    EVaccinationSector,
+    FeedingMethodEnum,
+    IChild,
+    IUser,
+    TUsercategory,
+} from "../../types";
+import { FlowLanguageEnum } from "../../types/chat.types";
+import {
+    EBillingMode,
+    EPlanCode,
+    ESubscriptionStatus,
+    ESubscriptionTier,
+} from "../../types/subscription.types";
 const AutoIncrement = require("mongoose-sequence")(mongoose);
 
 const childSchema = new Schema<IChild>(
@@ -7,17 +24,79 @@ const childSchema = new Schema<IChild>(
         child_id: {
             type: Number,
         },
+        // name and date_of_birth are deliberately NOT required.
+        //
+        // The baby-onboarding flow pushes a DRAFT child at flow start, before the first
+        // question has been answered, so it has something stable to project answers into
+        // and to resume against. `required: true` here made that push fail under
+        // runValidators. The direct POST /api/v1/child path still enforces both through
+        // child.validator.ts, so that contract is unchanged.
         name: {
             type: String,
-            required: true,
         },
         date_of_birth: {
             type: Date,
-            required: true,
         },
         sex: {
             type: String,
             enum: [ESex.MALE, ESex.FEMALE, ESex.OTHER],
+        },
+        vaccination_sector: {
+            type: String,
+            enum: Object.values(EVaccinationSector),
+        },
+        // Set from the feeding log, not from onboarding — the baby flow has no feeding
+        // question. Shares the mother's vocabulary so her answer can seed this one.
+        feeding_method: {
+            type: String,
+            enum: Object.values(FeedingMethodEnum),
+        },
+        // Absent until complementary feeding starts, and settable back to null if it turns
+        // out it had not. Guarded at six months in the controller, not here: a schema
+        // cannot see the date of birth sitting next to it.
+        solids_started_on: {
+            type: Date,
+            default: null,
+        },
+        birth_measurements: {
+            head_circumference_cm: { type: Number },
+            length_cm: { type: Number },
+            weight_grams: { type: Number },
+        },
+        onboarding_status: {
+            type: String,
+            enum: Object.values(EChildOnboardingStatus),
+            default: EChildOnboardingStatus.DRAFT,
+        },
+        onboarded_at: {
+            type: Date,
+        },
+        // Tracking rows for the daily age-reminder job, not user-facing data — `_id: false`
+        // because nothing ever addresses one on its own. `default: []` covers every child
+        // created from here on; children that predate this field are backfilled by
+        // backfill-baby-reminder-fields.step.ts, since Mongoose does not retroactively
+        // apply a schema default to a document that is only read, never re-saved.
+        pending_vaccination_reminders: {
+            type: [
+                {
+                    _id: false,
+                    visitKey: { type: String, required: true },
+                    firstDueOn: { type: Date, required: true },
+                    lastRemindedOn: { type: Date, default: null },
+                },
+            ],
+            default: [],
+        },
+        pending_milestone_reminders: {
+            type: [
+                {
+                    _id: false,
+                    bandKey: { type: String, required: true },
+                    firstDueOn: { type: Date, required: true },
+                    lastRemindedOn: { type: Date, default: null },
+                },
+            ],
+            default: [],
         },
     },
     {
@@ -34,6 +113,20 @@ const userSchema = new Schema<IUser>(
             type: String,
             default: null,
             enum: Object.values(EUserCategory),
+        },
+        role: {
+            type: String,
+            enum: Object.values(EUserRole),
+            default: EUserRole.USER,
+            index: true,
+        },
+        // bcrypt hash, staff accounts only — administrators sign in with their email.
+        // `select: false` keeps it out of every read that doesn't ask for it by name,
+        // including BaseService.find and the admin listing endpoint.
+        password: {
+            type: String,
+            default: null,
+            select: false,
         },
         email: {
             type: String,
@@ -85,8 +178,49 @@ const userSchema = new Schema<IUser>(
             ref: "users",
             default: null,
         },
+        expert_referral_code: {
+            type: String,
+            default: null,
+        },
+        referred_by_expert_id: {
+            type: Schema.Types.ObjectId,
+            ref: "experts",
+            default: null,
+        },
+        referred_by_organization_id: {
+            type: Schema.Types.ObjectId,
+            ref: "organizations",
+            default: null,
+        },
+        referral_program_id: {
+            type: Schema.Types.ObjectId,
+            ref: "referral_programs",
+            default: null,
+        },
+        // Per-user narrowings of the tier matrix, copied here from the referral program
+        // at redemption. Denormalized so the entitlement hot path stays one user read —
+        // resolveFor already loads this document, and joining a program on every
+        // capability check would put a second query in front of every gated request.
+        //
+        // Narrowing only: see resolveRule in entitlement.config.ts for why an override
+        // can never widen access.
+        entitlement_overrides: {
+            type: [
+                {
+                    _id: false,
+                    capability: { type: String, required: true },
+                    access: { type: String, required: true },
+                },
+            ],
+            default: [],
+        },
         FCM_token: {
             type: String,
+        },
+        preferred_language: {
+            type: String,
+            enum: Object.values(FlowLanguageEnum),
+            default: FlowLanguageEnum.EN,
         },
         current_weekdays: {
             weeks: {
@@ -144,6 +278,12 @@ const userSchema = new Schema<IUser>(
                 type: String,
                 default: null,
             },
+            // Asked of postpartum mothers only, so null is a normal value here — it
+            // means "never asked", not "no answer". See IUser.onboarding_data.
+            feeding_method: {
+                type: String,
+                default: null,
+            },
             past_medications: {
                 type: [String],
                 default: [],
@@ -173,30 +313,72 @@ const userSchema = new Schema<IUser>(
                 default: null,
             },
         },
+        // Denormalized read snapshot of the user's current `subscriptions` row, so the
+        // hot path never joins. SubscriptionService is the only writer. Not the source
+        // of truth — EntitlementService.resolveTier re-derives the tier from the dates,
+        // so a stale snapshot can never grant access the user no longer has.
         subscription: {
-            plan: {
+            tier: {
                 type: String,
-                default: null,
+                enum: Object.values(ESubscriptionTier),
+                default: ESubscriptionTier.FREE,
             },
             status: {
                 type: String,
+                enum: [...Object.values(ESubscriptionStatus), null],
                 default: null,
             },
-            billingCycle: {
+            planCode: {
                 type: String,
+                enum: [...Object.values(EPlanCode), null],
                 default: null,
             },
-            expiryDate: {
+            subscription_id: {
+                type: Schema.Types.ObjectId,
+                ref: "subscriptions",
+                default: null,
+            },
+            billingMode: {
+                type: String,
+                enum: [...Object.values(EBillingMode), null],
+                default: null,
+            },
+            trialEndAt: {
                 type: Date,
                 default: null,
             },
+            currentPeriodEnd: {
+                type: Date,
+                default: null,
+            },
+            // A trial is once per user, forever. Never reset — not on expiry, not on
+            // cancellation, not on re-subscribe.
+            hasUsedTrial: {
+                type: Boolean,
+                default: false,
+            },
+        },
+        // Who this user has blocked in Viva Club. Filtering is one-directional in intent
+        // but applied both ways on read: a blocked user must also stop seeing the
+        // blocker, or blocking someone who is harassing you just hides the evidence
+        // from you while leaving them a clear view.
+        blockedUsers: {
+            type: [{ type: Schema.Types.ObjectId, ref: "users" }],
+            default: [],
+        },
+        // Set by a reviewer from the moderation queue. Bars posting and commenting and
+        // nothing else — a banned user keeps their check-ins, consultations and chat,
+        // because those are health services, not a community privilege.
+        communityBanned: {
+            type: Boolean,
+            default: false,
         },
         consents: {
             type: [
                 {
                     type: {
                         type: String,
-                        enum: ["privacy_policy", "terms_of_use"],
+                        enum: ["privacy_policy", "terms_of_use", "community_guidelines"],
                     },
                     version: String,
                     acceptedAt: {
@@ -211,6 +393,14 @@ const userSchema = new Schema<IUser>(
     {
         timestamps: true,
     },
+);
+
+// One administrator per email address. Partial rather than plain-unique, and scoped to
+// the SUPER_ADMIN role: patients share the `email` field, many of them sit on null, and
+// a unique index across all of them would reject the second such signup outright.
+userSchema.index(
+    { email: 1 },
+    { unique: true, partialFilterExpression: { role: EUserRole.SUPER_ADMIN } },
 );
 
 userSchema.plugin(AutoIncrement, { inc_field: "user_id" });

@@ -20,9 +20,12 @@ from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
+
+# Set DEBUG level only for the chat pipeline so build_prompt() output is visible
+# without flooding the console with httpx / HuggingFace noise.
+logging.getLogger("app.chains.chat_pipeline_mcp").setLevel(logging.DEBUG)
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -31,7 +34,7 @@ API_KEY = settings.api_key
 app = FastAPI(
     title="Postpartum Wellness Assistant (RAG + MCP)",
     version="0.1.0",
-    description="AI-powered postpartum wellness chatbot with personalized recommendations"  # (12)
+    description="AI-powered postpartum wellness chatbot with personalized recommendations",  # (12)
 )
 
 # Add CORS middleware
@@ -46,40 +49,52 @@ app.add_middleware(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+
 # Request Models
 class ChatRequest(BaseModel):
     """Chat request with user context"""
+
     query: str = Field(..., min_length=1, max_length=2000, description="User's message")
     user_id: Optional[str] = Field(None, description="User's MongoDB ObjectId for personalization")
     session_id: Optional[str] = Field(None, description="Conversation session ID")
     model: Optional[str] = Field(None, description="Model to use for chat")
 
+
 class ChatResponse(BaseModel):
     """Chat response with metadata"""
+
     session_id: str
     answer: str
     intent: str
     used_rag: bool
     rag_best_score: float
     products: List[Dict[str, Any]] = []
+    # Experts this answer recommended, as {id, name, speciality}. The core server
+    # re-validates these against the user's visible expert list before the app
+    # renders a "Connect" button from them.
+    suggested_experts: List[Dict[str, Any]] = []
     escalation_banner: Optional[str] = None
     latency_seconds: Optional[float] = None
     request_id: Optional[str] = None
     final_prompt: Optional[str] = None
 
+
 class ChatNameDetectorRequest(BaseModel):
     """Name detection request"""
+
     response: str = Field(..., min_length=1, max_length=500)
+
 
 class ChatNameDetectorResponse(BaseModel):
     detected_name: Optional[str] = None
     has_name: bool
     ask_back: Optional[str] = None
 
+
 def require_api_key(x_api_key: Optional[str] = Header(None)):
     """
     API key authentication with timing-attack protection.
-    
+
     Security improvements:
     - Uses secrets.compare_digest() to prevent timing attacks (2)
     - Clear error messages
@@ -89,16 +104,14 @@ def require_api_key(x_api_key: Optional[str] = Header(None)):
         if not x_api_key:
             logger.warning("Authentication failed: Missing X-API-Key header")  # (6)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing X-API-Key header"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing X-API-Key header"
             )
-        
+
         # Use constant-time comparison to prevent timing attacks (2)
         if not secrets.compare_digest(x_api_key, API_KEY):
             logger.warning("Authentication failed: Invalid API key")  # (6)
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid X-API-Key"
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid X-API-Key"
             )
 
     return True
@@ -107,9 +120,39 @@ def require_api_key(x_api_key: Optional[str] = Header(None)):
 def get_memory() -> RedisSessionMemory:
     return RedisSessionMemory(window_size=6)
 
+
+# Readiness flag: True only once the embedding model (downloaded from GCS on
+# boot) and the FAISS index are loaded. The Cloud Run startup probe polls
+# /readyz and withholds traffic until this is True — so a freshly scaled-up
+# instance never receives requests before its model is ready.
+_MODEL_READY = False
+_WARMUP_ERROR: Optional[str] = None
+
+
+async def _warmup_model() -> None:
+    """Download + load the model and index once, then flip readiness on."""
+    global _MODEL_READY, _WARMUP_ERROR
+    import asyncio
+
+    from app.rag.retriever import get_shared_retriever
+
+    loop = asyncio.get_event_loop()
+    start = time.time()
+    try:
+        logger.info("Warmup: provisioning embedding model + loading index ...")
+        await loop.run_in_executor(None, get_shared_retriever)
+        _MODEL_READY = True
+        logger.info(f"Warmup complete in {time.time() - start:.1f}s — ready to serve.")
+    except Exception as e:
+        _WARMUP_ERROR = str(e)
+        logger.error(f"Warmup FAILED: {e}", exc_info=True)
+
+
 @app.on_event("startup")  # 60 requests per minute per IP
 async def startup_event():
-    """Log application startup""" 
+    """Log startup and kick off model/index warmup (non-blocking)."""
+    import asyncio
+
     logger.info("=" * 60)
     logger.info("🏥 Viva Mama API Starting")
     logger.info("=" * 60)
@@ -117,76 +160,97 @@ async def startup_event():
     logger.info(f"LLM Model: {settings.llm_model}")
     logger.info(f"Products Source: {settings.products_source}")
     logger.info("=" * 60)
+    # Warm up in the background so uvicorn binds the port immediately and the
+    # startup probe can reach /readyz while the model downloads/loads.
+    asyncio.create_task(_warmup_model())
+
+
+@app.get("/readyz", tags=["admin"])
+async def readyz():
+    """Readiness probe for Cloud Run startup/traffic gating.
+
+    Returns 200 only after the embedding model and FAISS index are loaded.
+    Returns 503 while still warming up, or 500 if warmup failed (so the
+    orchestrator restarts the instance rather than serving broken).
+    """
+    if _MODEL_READY:
+        return {"status": "ready"}
+    if _WARMUP_ERROR:
+        return JSONResponse(
+            {"status": "error", "detail": _WARMUP_ERROR},
+            status_code=500,
+        )
+    return JSONResponse({"status": "loading"}, status_code=503)
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Log application shutdown"""  
+    """Log application shutdown"""
     logger.info("=" * 60)
     logger.info("🏥 Viva Mama API Shutting Down")
     logger.info("=" * 60)
+
 
 @app.get("/admin/health", tags=["admin"])
 @limiter.limit("120/minute")
 async def health(request: Request):
     """
     Enhanced health check endpoint.
-    
+
     Checks:
     - Application status
     - Redis connection (fallback mode)
     - MongoDB connection
-    """ 
+    """
     mem = get_memory()
-    
+
     mongodb_status = "ok"
     try:
         from app.mcp.db_connection import check_database_health
+
         db_health = check_database_health()
         mongodb_status = "ok" if db_health.get("connected") else "error"
     except Exception as e:
         logger.error(f"MongoDB health check failed: {str(e)}")
         mongodb_status = "error"
-    
+
     checks = {
         "app": "ok",
         "redis_fallback": mem.using_fallback,
         "redis_status": "fallback" if mem.using_fallback else "connected",
         "ttl_seconds": mem.ttl_seconds,
-        "mongodb_status": mongodb_status
+        "mongodb_status": mongodb_status,
     }
-    
+
     # Return 503 if critical services are down
     status_code = 200 if mongodb_status == "ok" else 503
-    
+
     return JSONResponse(
         {"status": "ok" if status_code == 200 else "degraded", "checks": checks},
-        status_code=status_code
+        status_code=status_code,
     )
+
 
 @app.post("/v1/chat", response_model=ChatResponse, tags=["chat"])
 @limiter.limit("60/minute")
-async def chat_endpoint(
-    req: ChatRequest,
-    request: Request,
-    ok: bool = Depends(require_api_key)
-):
+async def chat_endpoint(req: ChatRequest, request: Request, ok: bool = Depends(require_api_key)):
     """
     Main chat endpoint with personalization support.
-    
+
     - Accepts a query and optional user_id for personalization
     - Returns structured chat response with metadata
     - Includes request tracking and error handling
-    
+
     Args:
         req: Chat request with query, user_id, and session_id
         request: FastAPI request object for metadata
         ok: Authentication dependency
-        
+
     Returns:
         ChatResponse with answer, intent, and metadata
-    """ 
+    """
     request_id = str(uuid.uuid4())
-    
+
     logger.info(
         f"[{request_id}] Chat request: "
         f"user_id={req.user_id}, "
@@ -197,12 +261,9 @@ async def chat_endpoint(
     start = time.time()
     try:
         result = await chat_once(
-            req.query,
-            user_id=req.user_id, 
-            session_id=req.session_id,
-            model=req.model if req.model else settings.llm_model
+            req.query, user_id=req.user_id, session_id=req.session_id, model=settings.llm_model
         )
-        
+
         elapsed = time.time() - start
         # print(result)
         logger.info(
@@ -211,7 +272,7 @@ async def chat_endpoint(
             f"used_rag={result.used_rag}, "
             f"latency={elapsed:.3f}s"
         )
-        
+
         resp = ChatResponse(
             session_id=result.session_id,
             answer=result.answer,
@@ -219,6 +280,7 @@ async def chat_endpoint(
             used_rag=result.used_rag,
             rag_best_score=result.rag_best_score,
             products=getattr(result, "products", []),
+            suggested_experts=getattr(result, "suggested_experts", []),
             escalation_banner=result.escalation_banner or None,
             latency_seconds=round(elapsed, 3),
             request_id=request_id,
@@ -226,51 +288,46 @@ async def chat_endpoint(
         )
 
         return resp
-    
+
     except Exception as e:
         elapsed = time.time() - start
-        
-        logger.error(
-            f"[{request_id}] Error: {str(e)}, "
-            f"latency={elapsed:.3f}s",
-            exc_info=True
-        )
-        
+
+        logger.error(f"[{request_id}] Error: {str(e)}, latency={elapsed:.3f}s", exc_info=True)
+
         raise HTTPException(
             status_code=500,
-            detail="An error occurred processing your request. Please try again or contact support."
+            detail="An error occurred processing your request. Please try again or contact support.",
         )
+
 
 @app.post("/v1/chat/username", response_model=ChatNameDetectorResponse, tags=["chat"])
 @limiter.limit("30/minute")
 async def chat_once_name_detector_endpoint(
-    req: ChatNameDetectorRequest,
-    request: Request,
-    ok: bool = Depends(require_api_key)
+    req: ChatNameDetectorRequest, request: Request, ok: bool = Depends(require_api_key)
 ):
     """
     Name detection endpoint.
-    
+
     Detects if user's message contains their name for personalization.
-    
+
     Args:
         req: Name detector request with user's response
         request: FastAPI request object
         ok: Authentication dependency
-        
+
     Returns:
         ChatNameDetectorResponse with detected name info
-    """ 
+    """
     request_id = str(uuid.uuid4())
-    
+
     logger.info(f"[{request_id}] Name detection request")
 
     start = time.time()
     try:
         result = chat_once_name_detector(req.response)
-        
+
         elapsed = time.time() - start
-        
+
         raw = result.get("answer", "")
         logger.debug(f"[{request_id}] Raw LLM response: {raw[:100]}")  # (6)
 
@@ -280,31 +337,26 @@ async def chat_once_name_detector_endpoint(
             clean = clean.strip("`").strip()
 
         parsed = json.loads(clean)
-        
+
         logger.info(
             f"[{request_id}] Name detection result: "
             f"has_name={parsed.get('has_name')}, "
             f"latency={elapsed:.3f}s"
         )
-        
+
         resp = ChatNameDetectorResponse(
             detected_name=parsed.get("name"),
             has_name=parsed.get("has_name"),
-            ask_back=parsed.get("ask_back"),   
+            ask_back=parsed.get("ask_back"),
         )
 
         return resp
-    
+
     except Exception as e:
         elapsed = time.time() - start
-        
+
         logger.error(
-            f"[{request_id}] Name detection error: {str(e)}, "
-            f"latency={elapsed:.3f}s",
-            exc_info=True
+            f"[{request_id}] Name detection error: {str(e)}, latency={elapsed:.3f}s", exc_info=True
         )
-        
-        raise HTTPException(
-            status_code=500,
-            detail="An error occurred processing your request."
-        )
+
+        raise HTTPException(status_code=500, detail="An error occurred processing your request.")

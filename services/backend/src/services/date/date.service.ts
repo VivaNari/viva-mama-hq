@@ -58,3 +58,16 @@ export const getISTCalendarDate = (instant: Date = new Date()): Date => {
         ),
     );
 };
+
+/**
+ * The real instant at which the current IST day ends (= start of tomorrow, IST).
+ *
+ * Use this as an exclusive upper bound when querying stored timestamps for "on or before
+ * today". `getISTCalendarDate` returns a normalized UTC-midnight *marker* for a calendar
+ * day, not a real boundary, so comparing a stored `Date` against it silently excludes
+ * anything with a time-of-day past 00:00 UTC.
+ */
+export const getEndOfISTDay = (instant: Date = new Date()): Date => {
+    const todayMarker = getISTCalendarDate(instant);
+    return new Date(todayMarker.getTime() + 86_400_000 - IST_OFFSET_MINUTES * 60000);
+};

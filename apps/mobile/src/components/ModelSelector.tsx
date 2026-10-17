@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     Modal,
     StyleSheet,
@@ -32,6 +33,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
     onSelect,
     selectedModelId,
 }) => {
+    const { t } = useTranslation();
     return (
         <Modal
             visible={visible}
@@ -44,7 +46,7 @@ const ModelSelector: React.FC<ModelSelectorProps> = ({
                     <TouchableWithoutFeedback>
                         <View style={styles.modalContainer}>
                             <View style={styles.header}>
-                                <Text style={[styles.headerText, globalStyles.fontBold]}>Select AI Model</Text>
+                                <Text style={[styles.headerText, globalStyles.fontBold]}>{t('chat.selectAiModel')}</Text>
                                 <TouchableOpacity onPress={onClose}>
                                     <Lucide name="x" size={20} color={colors.black} />
                                 </TouchableOpacity>

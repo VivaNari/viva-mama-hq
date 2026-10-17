@@ -1,6 +1,12 @@
 import React from "react";
 import { render, fireEvent, waitFor } from "@testing-library/react-native";
+import { NavigationContainer } from "@react-navigation/native";
 import LoginwithPhone from "../src/screens/LoginwithPhone";
+
+// LoginwithPhone calls useNavigation() directly (unlike Landing, which takes
+// navigation as a prop), so it needs a real NavigationContainer ancestor.
+const renderWithNavigation = (ui: React.ReactElement) =>
+  render(<NavigationContainer>{ui}</NavigationContainer>);
 
 jest.mock("react-native-otp-entry", () => {
   const React = require("react");
@@ -28,7 +34,18 @@ jest.mock("../src/context/AuthContext", () => ({
     requestPhoneOTP: mockRequestPhoneOTP,
     verifyPhoneOTP: mockVerifyPhoneOTP,
   }),
+  CURRENT_VERSIONS: { PRIVACY_POLICY: "1.0.0", TERMS_OF_USE: "1.0.0" },
 }));
+
+// Send OTP stays disabled until both the privacy and age consent checkboxes are
+// checked (on top of a valid phone number) — re-query since checking one drops
+// it out of this "still unchecked" query.
+const checkBothConsents = (
+  UNSAFE_getAllByProps: (props: Record<string, unknown>) => any[],
+) => {
+  fireEvent.press(UNSAFE_getAllByProps({ name: "checkbox-blank-outline" })[0]);
+  fireEvent.press(UNSAFE_getAllByProps({ name: "checkbox-blank-outline" })[0]);
+};
 
 describe("LoginwithPhone", () => {
   beforeEach(() => {
@@ -36,7 +53,7 @@ describe("LoginwithPhone", () => {
   });
 
   it("renders phone field and Send OTP", () => {
-    const { getByPlaceholderText, getByText } = render(<LoginwithPhone />);
+    const { getByPlaceholderText, getByText } = renderWithNavigation(<LoginwithPhone />);
 
     expect(getByPlaceholderText("Enter Phone Number")).toBeTruthy();
     expect(getByText("Send OTP")).toBeTruthy();
@@ -48,11 +65,11 @@ describe("LoginwithPhone", () => {
       verification_key: "vk-123",
     });
 
-    const { getByPlaceholderText, getByText, getByTestId } = render(
-      <LoginwithPhone />
-    );
+    const { getByPlaceholderText, getByText, getByTestId, UNSAFE_getAllByProps } =
+      renderWithNavigation(<LoginwithPhone />);
 
     fireEvent.changeText(getByPlaceholderText("Enter Phone Number"), "9876543210");
+    checkBothConsents(UNSAFE_getAllByProps);
     fireEvent.press(getByText("Send OTP"));
 
     await waitFor(() => {
@@ -63,18 +80,18 @@ describe("LoginwithPhone", () => {
     expect(getByText("Submit")).toBeTruthy();
   });
 
-  it("calls verifyPhoneOTP on Submit with phone, otp, and verification key", async () => {
+  it("calls verifyPhoneOTP on Submit with phone, otp, verification key, and consents", async () => {
     mockRequestPhoneOTP.mockResolvedValue({
       success: true,
       verification_key: "vk-abc",
     });
     mockVerifyPhoneOTP.mockResolvedValue(undefined);
 
-    const { getByPlaceholderText, getByText, getByTestId } = render(
-      <LoginwithPhone />
-    );
+    const { getByPlaceholderText, getByText, getByTestId, UNSAFE_getAllByProps } =
+      renderWithNavigation(<LoginwithPhone />);
 
     fireEvent.changeText(getByPlaceholderText("Enter Phone Number"), "9000000000");
+    checkBothConsents(UNSAFE_getAllByProps);
     fireEvent.press(getByText("Send OTP"));
 
     await waitFor(() => {
@@ -88,7 +105,11 @@ describe("LoginwithPhone", () => {
       expect(mockVerifyPhoneOTP).toHaveBeenCalledWith(
         "9000000000",
         "123456",
-        "vk-abc"
+        "vk-abc",
+        [
+          { type: "privacy_policy", version: "1.0.0" },
+          { type: "terms_of_use", version: "1.0.0" },
+        ]
       );
     });
   });
@@ -99,11 +120,11 @@ describe("LoginwithPhone", () => {
       verification_key: null,
     });
 
-    const { getByPlaceholderText, getByText, queryByTestId } = render(
-      <LoginwithPhone />
-    );
+    const { getByPlaceholderText, getByText, queryByTestId, UNSAFE_getAllByProps } =
+      renderWithNavigation(<LoginwithPhone />);
 
     fireEvent.changeText(getByPlaceholderText("Enter Phone Number"), "9000000000");
+    checkBothConsents(UNSAFE_getAllByProps);
     fireEvent.press(getByText("Send OTP"));
 
     await waitFor(() => {

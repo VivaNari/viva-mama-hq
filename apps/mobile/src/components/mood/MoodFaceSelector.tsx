@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Text, TouchableOpacity, View } from 'react-native';
 import { MOOD_OPTIONS } from '../../data/moodData';
 import { globalStyles } from '../../public/styles';
@@ -12,6 +13,7 @@ interface MoodBubbleProps {
 }
 
 const MoodBubble: React.FC<MoodBubbleProps> = ({ option, selected, onPress }) => {
+  const { t } = useTranslation();
   return (
     <View style={styles.bubble}>
       <TouchableOpacity activeOpacity={0.8} onPress={() => onPress(option.value)}>
@@ -47,7 +49,7 @@ const MoodBubble: React.FC<MoodBubbleProps> = ({ option, selected, onPress }) =>
               { transform: [{ rotate: `${-option.rotate}deg` }] },
             ]}
           >
-            {option.label}
+            {t(option.label)}
           </Text>
         </View>
       </TouchableOpacity>

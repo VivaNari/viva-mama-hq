@@ -1,11 +1,37 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Required for react-native-share -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />        
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- Required when the Play Console advertising-ID declaration is set to "uses Advertising ID".
+         Firebase Analytics pulls in the AD_ID dependency transitively; without this explicit
+         declaration the merged manifest is missing it and Play blocks the release. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
+    <!-- Storage permissions are removed, not merely undeclared. We used to declare
+         WRITE_EXTERNAL_STORAGE labelled "required for react-native-share", which was never
+         true: that library declares no permissions of its own, and the one call site
+         (ArticleDetails) shares plain text with no url or filename, so nothing is ever
+         written to disk.
 
+         Deleting our line is not sufficient. @react-native-vector-icons/lucide ships a
+         manifest with no <uses-sdk> and sets no targetSdkVersion in its build.gradle, so the
+         merger reads its targetSdk as 1 and applies Android's legacy pre-Donut rule, which
+         implicitly grants WRITE_EXTERNAL_STORAGE (and that in turn implies READ_). The
+         permissions therefore reappear in the merged manifest from a dependency that only
+         ships font files. tools:node="remove" is the only thing that keeps them out.
+
+         Play's Health Content policy requires unused permissions be removed, and these two
+         would otherwise have to be justified on the Data Safety form. Verify with
+         `grep EXTERNAL_STORAGE app/build/intermediates/merged_manifest/release/*/AndroidManifest.xml`
+         after a dependency bump; the source manifest is not evidence of what ships. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" tools:node="remove" />
+
+    <!-- enableOnBackInvokedCallback defaults to TRUE at targetSdk 36. Pinned false so
+         the SDK bump does not silently swap back-navigation for the predictive-back
+         animation, which the JS `BackHandler` in ChatWithVivaAI does not drive. Opting
+         in is a one-line change once that screen is verified on a device. -->
     <application
       android:name=".MainApplication"
       android:label="@string/app_name"
@@ -13,7 +39,8 @@
       android:roundIcon="@mipmap/ic_launcher_round"
       android:allowBackup="false"
       android:theme="@style/AppTheme"
-      android:supportsRtl="true">
+      android:supportsRtl="true"
+      android:enableOnBackInvokedCallback="false">
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

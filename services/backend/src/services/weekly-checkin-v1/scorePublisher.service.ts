@@ -1,7 +1,8 @@
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
-import logger from "../../utils/logger";
-import redisSubscriberService from "../redis/redis-subscriber.service";
+import logger, { createModuleLogger } from "../../utils/logger";
+
+const log = createModuleLogger(logger, "scorePublisher.service");
 
 /**
  * Dead letter entry for failed jobs
@@ -88,7 +89,15 @@ class ScorePublisherService {
                 // Transform responses to indicators
                 const indicators = await this.transformToIndicators(flowInstanceId);
 
-                // Publish to Redis
+                // Publish and return. The subscriber — initialized at boot in index.ts —
+                // picks the job up and runs it off the request path.
+                //
+                // This used to publish AND then `await handleScoreProcess(...)` directly,
+                // which ran the whole pipeline twice for every check-in: once through
+                // pub/sub and once inline. That produced two recommendation_history rows
+                // and two "your score is ready" pushes per completion, and the awaited
+                // inline call is what made the final chat message hang while scoring,
+                // fetching a recommendation per language, and writing history.
                 await redisPublisherService.publishScoreJob(
                     userId,
                     indicators,
@@ -96,17 +105,7 @@ class ScorePublisherService {
                     flowInstanceId,
                 );
 
-                const message = JSON.stringify({
-                    userId,
-                    indicators,
-                    FCM_token: fcmToken,
-                    flowInstanceId,
-                    timestamp: new Date().toISOString(),
-                });
-
-                await redisSubscriberService.handleScoreProcess(message);
-
-                logger.info(
+                log.info(
                     { userId, flowInstanceId, attempt: attempt + 1 },
                     "Score job published successfully",
                 );
@@ -115,7 +114,7 @@ class ScorePublisherService {
             } catch (error: any) {
                 lastError = error;
 
-                logger.warn(
+                log.warn(
                     {
                         error: error.message,
                         userId,
@@ -169,7 +168,7 @@ class ScorePublisherService {
 
         this.deadLetterQueue.push(entry);
 
-        logger.error(
+        log.error(
             { userId, flowInstanceId, error: error.message },
             "Score job added to dead letter queue",
         );
@@ -213,7 +212,7 @@ class ScorePublisherService {
         if (result.success) {
             // Remove from dead letter queue
             this.deadLetterQueue.splice(index, 1);
-            logger.info({ entry }, "Dead letter entry processed successfully");
+            log.info({ entry }, "Dead letter entry processed successfully");
         }
 
         return result;
@@ -225,7 +224,7 @@ class ScorePublisherService {
     clearDeadLetterQueue(): void {
         const count = this.deadLetterQueue.length;
         this.deadLetterQueue = [];
-        logger.info({ count }, "Dead letter queue cleared");
+        log.info({ count }, "Dead letter queue cleared");
     }
 
     // ============================================
@@ -251,7 +250,7 @@ class ScorePublisherService {
             }
         }
 
-        logger.info({ successful, failed, total: jobs.length }, "Batch processing complete");
+        log.info({ successful, failed, total: jobs.length }, "Batch processing complete");
 
         return { successful, failed };
     }

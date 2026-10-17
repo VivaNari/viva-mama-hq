@@ -25,7 +25,7 @@ import {
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
 // import { v4 as uuidv4 } from "uuid";
-import { NAME_QUERY } from "../../constants/chat";
+import { NAME_QUERY, getFlowCompletionMessage } from "../../constants/chat";
 import { ONBOARDING_SLUG } from "../../constants/conversationSlugs";
 import UserModel from "../../models/user.model";
 import {
@@ -35,6 +35,7 @@ import {
     DeliveryOutcomeEnum,
     DeliveryTypeEnum,
     EUserCategory,
+    FeedingMethodEnum,
     IUser,
     ParityEnum,
     PastMedicationEnum,
@@ -43,7 +44,16 @@ import {
     TobaccoUseEnum,
 } from "../../types";
 import { getUuid } from "../../utils/commonFunctions/uuid";
+import { localizeFlowDefinition, resolveLanguage } from "../../utils/i18n/localizeFlowDefinition";
 import { calculateUserCurrentWeek } from "../../utils/functions/calculateUserCurrentWeek";
+import {
+    calculatePostpartumState,
+    toCurrentWeekdaysUpdate,
+} from "../../utils/functions/postpartumWeek";
+import {
+    resolveSelectedOptions,
+    resolveSelectedValues,
+} from "../../utils/functions/resolveSelectedOptions";
 import BaseService from "../base.service";
 import { FlowInstanceService } from "../flow/flow-instance.service";
 import LLMService from "../llm/llm.service";
@@ -140,13 +150,17 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         res: Response,
         slug: string,
         flowType: FlowType,
+        lang?: string,
     ): Promise<boolean> => {
-        const flowDefinition = await this.findOne({
+        const rawFlowDefinition = await this.findOne({
             filter: { slug: slug, status: "PUBLISHED" },
         });
-        if (!flowDefinition) {
+        if (!rawFlowDefinition) {
             throw new Error("Flow not found");
         }
+
+        const resolvedLang = resolveLanguage(lang, userInstance.preferred_language);
+        const flowDefinition = localizeFlowDefinition(rawFlowDefinition, resolvedLang);
 
         const pendingQuestion = this.getPendingQuestion(userInstance);
         if (pendingQuestion) {
@@ -181,10 +195,15 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                 throw new Error("No active flow instance found for silent push");
             }
 
-            const flowDefinition = await this.findById({ filter: { _id: flowInstance.flowDefId } });
-            if (!flowDefinition) {
+            const rawFlowDefinition = await this.findById({
+                filter: { _id: flowInstance.flowDefId },
+            });
+            if (!rawFlowDefinition) {
                 throw new Error("Flow definition not found for silent push");
             }
+
+            const resolvedLang = resolveLanguage(undefined, userInstance.preferred_language);
+            const flowDefinition = localizeFlowDefinition(rawFlowDefinition, resolvedLang);
 
             await this.sendSilentPush(
                 userInstance._id as unknown as string,
@@ -223,6 +242,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         slug: string,
         flowType: FlowType,
         res: Response,
+        lang?: string,
     ): Promise<void> => {
         try {
             await this.initInstanceVariables({ res });
@@ -238,11 +258,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             switch (flowType) {
                 // Guided Flows
                 case FlowTypeEnum.CHECK_IN: {
-                    this.processGuidedFlowConnection(userInstance, res, slug, flowType);
+                    this.processGuidedFlowConnection(userInstance, res, slug, flowType, lang);
                     break;
                 }
                 case FlowTypeEnum.ONBOARDING: {
-                    this.processGuidedFlowConnection(userInstance, res, slug, flowType);
+                    this.processGuidedFlowConnection(userInstance, res, slug, flowType, lang);
                     break;
                 }
             }
@@ -279,6 +299,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         userInstance: IUser,
         flowInstanceId: string,
         nodeId: string,
+        lang?: string,
     ): Promise<{
         currentNode: IFlowNode;
         flowDefinition: IFlowDefinition;
@@ -301,13 +322,16 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             );
         }
 
-        const flowDefinition = await this.findById({
+        const rawFlowDefinition = await this.findById({
             _id: flowInstance.flowDefId as unknown as string,
         });
 
-        if (!flowDefinition) {
+        if (!rawFlowDefinition) {
             throw new Error("FlowDefinition not found");
         }
+
+        const resolvedLang = resolveLanguage(lang, userInstance.preferred_language);
+        const flowDefinition = localizeFlowDefinition(rawFlowDefinition, resolvedLang);
 
         const currentNode = this.getCurrentNodeId(flowDefinition, nodeId);
         if (!currentNode) {
@@ -369,8 +393,10 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
 
         const userAnswerText =
             answerData.freeText ||
-            currentNode.options
-                .filter((opt) => answerData.selectedKeys?.includes(opt.score!))
+            resolveSelectedOptions(currentNode, {
+                selectedValues: answerData.selectedValues ?? undefined,
+                selectedKeys: answerData.selectedKeys ?? undefined,
+            })
                 .map((o) => o.label)
                 .join(", ");
 
@@ -457,12 +483,14 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         flowType: FlowType,
         selectedKeys: number[],
         freeText?: string,
+        lang?: string,
     ) => {
         this.validateResponseArgs(selectedKeys, freeText);
         const { currentNode, flowDefinition, flowInstance } = await this.getFlowDetails(
             userInstance,
             flowInstanceId,
             nodeId,
+            lang,
         );
 
         const { answerData } = this.getAnswerDetails(currentNode, selectedKeys, freeText);
@@ -530,6 +558,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     flowInstance,
                     userConnection,
                     flowType,
+                    lang,
                 );
             }
             switch (flowType) {
@@ -656,6 +685,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         flowType: FlowType,
         selectedKeys: number[],
         freeText?: string,
+        lang?: string,
     ) => {
         try {
             const userInstance: IUser | null = await this.userService.findById({ _id: userId });
@@ -671,6 +701,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                         flowType,
                         selectedKeys,
                         freeText,
+                        lang,
                     );
                     return;
                 }
@@ -682,6 +713,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                         flowType,
                         selectedKeys,
                         freeText,
+                        lang,
                     );
                     return;
                 }
@@ -908,8 +940,13 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     const user = (await UserModel.findById(userId)) as IUser;
                     this.flowInstanceService.createNewFlowForUser(user, flowDeninition);
 
+                    // `is_breastfeeding_currently: true` used to be set here. It ran after
+                    // the last question, so it overwrote whatever the "feeding" node had
+                    // just derived — and for everyone else it asserted breastfeeding on no
+                    // evidence at all. Removed rather than defaulted: every reader already
+                    // falls back with `?? true`, so NP and NN users, who are never asked
+                    // the question, behave exactly as before.
                     await UserModel.findByIdAndUpdate(userId, {
-                        is_breastfeeding_currently: true,
                         is_onboarded: {
                             is_questionnaire_completed: true,
                             is_subscription_completed: user?.is_onboarded.is_subscription_completed,
@@ -963,6 +1000,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         nodeId: string,
         selectedKeys?: number[],
         freeText?: string,
+        selectedValues?: string[],
     ): Promise<void> {
         try {
             const user = await UserModel.findById(userId);
@@ -993,7 +1031,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     break;
 
                 case "conception":
-                    const conception = this.getOptionValuesByScores(node, selectedKeys);
+                    const conception = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     if (conception[0]) {
                         user.onboarding_data.conception_method = conception[0] as ConceptionMethod;
                         console.log(`Saved conception_method: ${conception[0]}`);
@@ -1001,7 +1043,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     break;
 
                 case "pregnancy_conditions":
-                    const conditions = this.getOptionValuesByScores(node, selectedKeys);
+                    const conditions = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     user.onboarding_data.pregnancy_conditions =
                         conditions as PregnancyConditionEnum[];
                     console.log(`Saved pregnancy_conditions: ${conditions.join(", ")}`);
@@ -1013,28 +1059,56 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                         user.user_category = EUserCategory.NN;
                         break;
                     }
+
+                    // Last Menstrual Period (LMP): the user gives their LMP date and we
+                    // derive the expected delivery date via Naegele's rule (LMP + 280 days).
+                    if (typeof freeText === "string" && freeText.startsWith("lmp:")) {
+                        const lmpDate = new Date(freeText.slice(4));
+                        const expectedDeliveryDate = new Date(lmpDate);
+                        expectedDeliveryDate.setDate(expectedDeliveryDate.getDate() + 280);
+
+                        user.onboarding_data.delivery_date = expectedDeliveryDate;
+                        user.onboarding_data.is_not_pragnant_yet = false;
+
+                        const lmpState = calculatePostpartumState(expectedDeliveryDate);
+                        user.user_category =
+                            lmpState.mode === "pregnancy" ? EUserCategory.NP : EUserCategory.PP;
+
+                        await UserModel.findOneAndUpdate(
+                            { _id: user._id },
+                            { $set: toCurrentWeekdaysUpdate(lmpState) },
+                            { new: true },
+                        );
+                        console.log(
+                            `Saved LMP-derived delivery_date: ${expectedDeliveryDate}, week: ${lmpState.weeks}`,
+                        );
+                        break;
+                    }
+
                     const deliveryDate = new Date(freeText!);
                     user.onboarding_data.delivery_date = deliveryDate;
-                    const user_current_week_and_days = calculateUserCurrentWeek(deliveryDate);
+                    const deliveryState = calculatePostpartumState(deliveryDate);
 
                     user.user_category =
-                        user_current_week_and_days.mode === "pregnancy"
-                            ? EUserCategory.NP
-                            : EUserCategory.PP;
+                        deliveryState.mode === "pregnancy" ? EUserCategory.NP : EUserCategory.PP;
 
                     await UserModel.findOneAndUpdate(
                         { _id: user._id },
-                        { $set: { current_weekdays: user_current_week_and_days } },
+                        { $set: toCurrentWeekdaysUpdate(deliveryState) },
                         { new: true },
                     );
                     user.onboarding_data.is_not_pragnant_yet = false;
                     console.log(
-                        `Saved delivery_date: ${deliveryDate}, week: ${user_current_week_and_days.weeks}`,
+                        `Saved delivery_date: ${deliveryDate}, week: ${deliveryState.weeks}`,
                     );
                     break;
 
                 case "delivery_type":
-                    const deliveryType = this.getOptionValuesByScores(node, selectedKeys);
+                    const deliveryType = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     if (deliveryType[0]) {
                         user.onboarding_data.delivery_type = deliveryType[0] as DeliveryTypeEnum;
                         console.log(`Saved delivery_type: ${deliveryType[0]}`);
@@ -1042,28 +1116,68 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     break;
 
                 case "delivery_outcome":
-                    const outcome = this.getOptionValuesByScores(node, selectedKeys);
+                    const outcome = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     if (outcome[0]) {
                         user.onboarding_data.delivery_outcome = outcome[0] as DeliveryOutcomeEnum;
                         console.log(`Saved delivery_outcome: ${outcome[0]}`);
                     }
                     break;
 
+                case "feeding":
+                    const feeding = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
+                    if (feeding[0]) {
+                        user.onboarding_data.feeding_method = feeding[0] as FeedingMethodEnum;
+
+                        // The single reason this question exists. Until now the flag was
+                        // hardcoded true at onboarding completion and only ever corrected
+                        // weeks later by a check-in, so a mother who was not breastfeeding
+                        // was asked lactation questions until she said so twice.
+                        //
+                        // Mixed feeding counts as breastfeeding: those questions still
+                        // apply to her.
+                        user.is_breastfeeding_currently =
+                            feeding[0] !== FeedingMethodEnum.NOT_BREASTFEEDING;
+                        console.log(
+                            `Saved feeding_method: ${feeding[0]} (breastfeeding: ${user.is_breastfeeding_currently})`,
+                        );
+                    }
+                    break;
+
                 case "meds_history":
-                    const historyMeds = this.getOptionValuesByScores(node, selectedKeys);
+                    const historyMeds = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     user.onboarding_data.past_medications = historyMeds as PastMedicationEnum[];
                     console.log(`Saved past_medications: ${historyMeds.join(", ")}`);
                     break;
 
                 case "current_meds":
-                    const currentMeds = this.getOptionValuesByScores(node, selectedKeys);
+                    const currentMeds = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     user.onboarding_data.current_medications =
                         currentMeds as CurrentMedicationEnum[];
                     console.log(`Saved current_medications: ${currentMeds.join(", ")}`);
                     break;
 
                 case "smoking":
-                    const smoking = this.getOptionValuesByScores(node, selectedKeys);
+                    const smoking = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     if (smoking[0]) {
                         user.onboarding_data.tobacco_use = smoking[0] as TobaccoUseEnum;
                         console.log(`Saved tobacco_use: ${smoking[0]}`);
@@ -1071,7 +1185,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     break;
 
                 case "alcohol":
-                    const alcohol = this.getOptionValuesByScores(node, selectedKeys);
+                    const alcohol = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     if (alcohol[0]) {
                         user.onboarding_data.alcohol_use = alcohol[0] as AlcoholUseEnum;
                         console.log(`Saved alcohol_use: ${alcohol[0]}`);
@@ -1079,7 +1197,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     break;
 
                 case "support":
-                    const support = this.getOptionValuesByScores(node, selectedKeys);
+                    const support = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
                     if (support[0]) {
                         user.onboarding_data.social_support = support[0] as SocialSupportEnum;
                         console.log(`Saved social_support: ${support[0]}`);
@@ -1087,7 +1209,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     break;
 
                 case "parity":
-                    const parity = this.getOptionValuesByScores(node, selectedKeys);
+                    const parity = this.getSelectedOptionValues(node, selectedKeys, selectedValues);
                     if (parity[0]) {
                         user.onboarding_data.parity = parity[0] as ParityEnum;
                         console.log(`Saved parity: ${parity[0]}`);
@@ -1108,14 +1230,20 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         }
     }
 
-    private getOptionValuesByScores(node: IFlowNode, selectedKeys?: number[]): string[] {
-        if (!selectedKeys || selectedKeys.length === 0) {
-            return [];
-        }
-
-        return node.options
-            .filter((opt) => selectedKeys.includes(opt.score!))
-            .map((opt) => opt.value);
+    /**
+     * Values of the options the user actually selected.
+     *
+     * Resolves on `value` (unique per node) when the client sends it, falling
+     * back to the legacy score match for older app builds. Matching on `score`
+     * alone is ambiguous — options routinely share a score (every pregnancy
+     * condition scores 0), which previously caused one tap to save every option.
+     */
+    private getSelectedOptionValues(
+        node: IFlowNode,
+        selectedKeys?: number[],
+        selectedValues?: string[],
+    ): string[] {
+        return resolveSelectedValues(node, { selectedValues, selectedKeys });
     }
 
     private async findNextValidNode(
@@ -1215,12 +1343,25 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         return null;
     }
 
+    /**
+     * NOTE: this engine is NOT the one the app's onboarding runs through. The app starts
+     * and answers both onboarding and the weekly check-in via POST /chat/checkin/*, which
+     * is weekly-checkin-v1/flow.service.ts — and that one gates on node `indicator`
+     * against NP_WOMEN_INDICATORS / NN_WOMEN_INDICATORS in constants/chat.ts.
+     *
+     * The two express the same rules in different currencies (id here, indicator there).
+     * Adding a category-scoped question means editing BOTH; editing only this one has no
+     * effect on what a user actually sees.
+     */
     private isPregnancyRelatedNode(nodeId: string): boolean {
         const pregnancyRelatedNodes = [
             "conception",
             "pregnancy_conditions",
             "delivery_type",
             "delivery_outcome",
+            // Listed here AND in isFutureDeliveryRalatedNode: together the two lists are
+            // what make "feeding" postpartum-only. This one hides it from NN.
+            "feeding",
             "parity",
         ];
 
@@ -1228,7 +1369,9 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
     }
 
     private isFutureDeliveryRalatedNode = (nodeId: string) => {
-        const futureDeliveryRelatedNodes = ["delivery_type", "delivery_outcome"];
+        // "feeding" is here for NP — there is no baby to feed yet. See
+        // isPregnancyRelatedNode for the other half of the rule.
+        const futureDeliveryRelatedNodes = ["delivery_type", "delivery_outcome", "feeding"];
 
         return futureDeliveryRelatedNodes.includes(nodeId);
     };
@@ -1444,15 +1587,14 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         flowInstance: any,
         res: Response,
         flowType: FlowType,
+        lang?: string,
     ): Promise<void> {
-        let text = "";
-        if (flowType === "ONBOARDING") {
-            text =
-                "Thank you! That gives me a clear picture of your health, support, and daily life. I will now build your personalised recovery plan and connect you with the right support.";
-        } else {
-            text =
-                "Thank you for completing your check-in! Your score is being generated. Please check the dashboard.";
-        }
+        const user = await UserModel.findById(userId);
+        const resolvedLang = resolveLanguage(lang, user?.preferred_language);
+        const text = getFlowCompletionMessage(
+            flowType === "ONBOARDING" ? "ONBOARDING" : "CHECK_IN",
+            resolvedLang,
+        );
 
         const thankYouMessage = {
             type: "end_flow",

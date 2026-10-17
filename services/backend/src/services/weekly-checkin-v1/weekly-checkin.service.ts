@@ -1,9 +1,8 @@
-import { Schema } from "mongoose";
+import { Schema, Types } from "mongoose";
 
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import messageModel from "../../models/message.model";
-import conversationModel from "../../models/conversation.model";
 import UserModel from "../../models/user.model";
 
 import {
@@ -22,9 +21,26 @@ import {
     FlowInstanceStateEnum,
     MessageRoleEnum,
     MessageTypeEnum,
+    FlowLanguage,
+    DEFAULT_FLOW_LANGUAGE,
 } from "../../types/chat.types";
-import { IUser } from "../../types/user.types";
-import { WEEKLY_CHECKIN_SLUG, WEEKLY_CHECKIN_MESSAGES } from "../../constants/chat";
+import { resolveLanguage } from "../../utils/i18n/localizeFlowDefinition";
+import { IUser, DeliveryOutcomeEnum } from "../../types/user.types";
+import { ESubscriptionTier } from "../../types/subscription.types";
+import {
+    WEEKLY_CHECKIN_SLUG,
+    BABY_ONBOARDING_SLUG,
+    WEEKLY_CHECKIN_MESSAGES,
+    getFlowCompletionMessage,
+    getStillBirthAckMessage,
+} from "../../constants/chat";
+import {
+    updateChildOnboardingData,
+    markChildOnboardingComplete,
+} from "../chat-system/child-onboarding.projection";
+import { interpolateFlowText } from "../../utils/functions/interpolateFlowText";
+import { resolveSubjectChild } from "../childs/child-subject.service";
+import GrowthLogService from "../growth-log/growth-log.service";
 
 // Import SRP services
 import { validationService } from "./validation.service";
@@ -34,8 +50,11 @@ import ScorePublisherService from "./scorePublisher.service";
 import NotificationService from "./notification.service";
 
 import { getUuid } from "../../utils/commonFunctions/uuid";
-import logger from "../../utils/logger";
+import logger, { createModuleLogger } from "../../utils/logger";
 import ChatFlowService from "../chat-system/chat-flow.service";
+import { getOrCreateFlowConversation } from "../chat-system/flow-conversation.service";
+
+const log = createModuleLogger(logger, "weekly-checkin.service");
 
 /**
  * Question response format
@@ -135,10 +154,39 @@ class WeeklyCheckinService {
                 };
             }
 
-            logger.info({ userId, week, flowSlug }, "Starting weekly check-in");
+            const lang = resolveLanguage(params.lang, user.preferred_language);
+
+            log.info({ userId, week, flowSlug, lang }, "Starting weekly check-in");
+
+            // 1b. Per-child flows need their subject resolved before the instance lookup,
+            // since the child is part of the instance's identity. Creates a DRAFT child
+            // when this is a brand new add — the name question has not been asked yet, so
+            // there is nothing to name it with.
+            let subjectChildId: Types.ObjectId | null = null;
+            if (flowSlug === BABY_ONBOARDING_SLUG) {
+                try {
+                    const subject = await resolveSubjectChild(user, params.childId);
+                    subjectChildId = subject.childId;
+                } catch (error: any) {
+                    log.warn(
+                        { userId, childId: params.childId, error: error?.message },
+                        "Could not resolve baby onboarding subject",
+                    );
+                    return {
+                        success: false,
+                        message: error?.message || "Could not resolve the child for this flow",
+                        errorType: WeeklyCheckinErrorTypeEnum.INSTANCE_NOT_FOUND,
+                    };
+                }
+            }
 
             // 2. Validate and get/create flow instance
-            const validation = await validationService.validateSSERequest(user, week, flowSlug);
+            const validation = await validationService.validateSSERequest(
+                user,
+                week,
+                flowSlug,
+                subjectChildId,
+            );
 
             if (!validation.isValid || !validation.flowInstance) {
                 return {
@@ -150,9 +198,10 @@ class WeeklyCheckinService {
 
             const flowInstance = validation.flowInstance;
 
-            // 3. Get flow definition
+            // 3. Get flow definition (localized for the user's language)
             const flowDefinition = await this.flowService.getFlowDefinitionById(
                 flowInstance.flowDefId.toString(),
+                lang,
             );
 
             if (!flowDefinition) {
@@ -179,6 +228,7 @@ class WeeklyCheckinService {
                     data: {
                         flowInstanceId: flowInstance._id.toString(),
                         week,
+                        ...(subjectChildId ? { childId: subjectChildId.toString() } : {}),
                         isCompleted: true,
                         nextQuestion: null,
                         progress: await this.getProgress(
@@ -192,7 +242,7 @@ class WeeklyCheckinService {
             // 5. Save AI message for the question
             await this.saveQuestionMessage(user, flowInstance, questionResult.question);
 
-            logger.info(
+            log.info(
                 {
                     userId,
                     week,
@@ -208,6 +258,7 @@ class WeeklyCheckinService {
                 data: {
                     flowInstanceId: flowInstance._id.toString(),
                     week,
+                    ...(subjectChildId ? { childId: subjectChildId.toString() } : {}),
                     isCompleted: false,
                     nextQuestion: questionResult.question,
                     progress: await this.getProgress(flowInstance._id.toString(), flowDefinition),
@@ -215,7 +266,7 @@ class WeeklyCheckinService {
             };
         } catch (error: any) {
             console.error("errr", error);
-            logger.error({ error, userId, week }, "Error starting check-in");
+            log.error({ error, userId, week }, "Error starting check-in");
             return {
                 success: false,
                 message: "Failed to start check-in",
@@ -231,15 +282,23 @@ class WeeklyCheckinService {
      * Process user's answer and return next question
      */
     async processAnswer(params: WeeklyCheckinAnswerParams): Promise<WeeklyCheckinResponse> {
-        const { userId, flowInstanceId, nodeId, week, selectedKeys, idempotencyKey } = params;
+        const {
+            userId,
+            flowInstanceId,
+            nodeId,
+            week,
+            selectedKeys,
+            selectedValues,
+            idempotencyKey,
+        } = params;
         let { freeText } = params;
 
         try {
             // 1. Validate inputs
-            if (!selectedKeys?.length && !freeText) {
+            if (!selectedValues?.length && !selectedKeys?.length && !freeText) {
                 return {
                     success: false,
-                    message: "Either selectedKeys or freeText must be provided",
+                    message: "Either selectedValues, selectedKeys or freeText must be provided",
                 };
             }
 
@@ -248,6 +307,8 @@ class WeeklyCheckinService {
             if (!user) {
                 return { success: false, message: "User not found" };
             }
+
+            const lang = resolveLanguage(params.lang, user.preferred_language);
 
             // 3. Validate request (includes idempotency check)
             const validation = await validationService.validateAnswerRequest(
@@ -266,10 +327,11 @@ class WeeklyCheckinService {
                 };
             }
 
-            // 4. Get flow definition
+            // 4. Get flow definition (localized for the user's language)
             const flowInstance = validation.flowInstance!;
             const flowDefinition = await this.flowService.getFlowDefinitionById(
                 flowInstance.flowDefId.toString(),
+                lang,
             );
 
             if (!flowDefinition) {
@@ -278,7 +340,7 @@ class WeeklyCheckinService {
 
             // 5. Handle duplicate (idempotent response)
             if (validation.isDuplicate) {
-                logger.info(
+                log.info(
                     { userId, nodeId, idempotencyKey },
                     "Duplicate request - returning current state",
                 );
@@ -340,6 +402,7 @@ class WeeklyCheckinService {
                 currentNode,
                 {
                     selectedKeys,
+                    selectedValues,
                     freeText,
                     idempotencyKey,
                 },
@@ -381,13 +444,38 @@ class WeeklyCheckinService {
             //     freeText = detected_name;
             // }
 
-            await this.chatFlowService.updateOnboardingData(
-                userId,
-                flowDefinition,
-                currentNode.id,
-                selectedKeys,
-                freeText,
-            );
+            // Project the answer onto the right subject. The mother flows write into
+            // user.onboarding_data; baby onboarding writes into the one child this
+            // instance is about. Routing on slug rather than letting both run matters:
+            // updateOnboardingData's switch is keyed on nodeId, and a future mother node
+            // sharing a name with a child node would otherwise write to both.
+            if (flowInstance.flowSlug === BABY_ONBOARDING_SLUG) {
+                if (!flowInstance.subjectChildId) {
+                    log.error(
+                        { userId, flowInstanceId },
+                        "Baby onboarding instance has no subjectChildId",
+                    );
+                    return { success: false, message: "Flow instance is missing its child" };
+                }
+
+                await updateChildOnboardingData(
+                    userId,
+                    flowInstance.subjectChildId.toString(),
+                    currentNode,
+                    selectedKeys,
+                    freeText,
+                    selectedValues,
+                );
+            } else {
+                await this.chatFlowService.updateOnboardingData(
+                    userId,
+                    flowDefinition,
+                    currentNode.id,
+                    selectedKeys,
+                    freeText,
+                    selectedValues,
+                );
+            }
 
             if (!saveResult.success) {
                 return { success: false, message: saveResult.error || "Failed to save answer" };
@@ -397,6 +485,22 @@ class WeeklyCheckinService {
             const updatedUser = await UserModel.findById(userId);
             if (!updatedUser) {
                 return { success: false, message: "User not found after update" };
+            }
+
+            // 7b. Grief-sensitive early exit: if the user reported a stillbirth on the
+            // delivery-outcome question, stop the questionnaire and offer support instead
+            // of asking the remaining questions.
+            if (
+                nodeId === "delivery_outcome" &&
+                updatedUser.onboarding_data?.delivery_outcome === DeliveryOutcomeEnum.STILL_BIRTH
+            ) {
+                return await this.terminateOnStillBirth(
+                    updatedUser,
+                    flowInstance,
+                    flowDefinition,
+                    week,
+                    lang,
+                );
             }
 
             // 8. Move to next node
@@ -410,7 +514,13 @@ class WeeklyCheckinService {
 
             // 9. Handle flow completion or next question
             if (!nextNodeId) {
-                return await this.completeCheckin(updatedUser, flowInstance, flowDefinition, week);
+                return await this.completeCheckin(
+                    updatedUser,
+                    flowInstance,
+                    flowDefinition,
+                    week,
+                    lang,
+                );
             }
 
             // 10. Get next question
@@ -434,13 +544,14 @@ class WeeklyCheckinService {
                     updatedInstance,
                     flowDefinition,
                     week,
+                    lang,
                 );
             }
 
             // 11. Save AI message for the next question
             await this.saveQuestionMessage(updatedUser, updatedInstance, questionResult.question);
 
-            logger.info(
+            log.info(
                 {
                     userId,
                     flowInstanceId,
@@ -462,7 +573,7 @@ class WeeklyCheckinService {
                 },
             };
         } catch (error: any) {
-            logger.error({ error, userId, flowInstanceId, nodeId }, "Error processing answer");
+            log.error({ error, userId, flowInstanceId, nodeId }, "Error processing answer");
             return { success: false, message: "Failed to process answer" };
         }
     }
@@ -530,18 +641,24 @@ class WeeklyCheckinService {
 
         const currentNode = this.flowService.getNode(flowDefinition, validNodeId);
         if (!currentNode) {
-            logger.error({ nodeId: validNodeId }, "Node not found in definition");
+            log.error({ nodeId: validNodeId }, "Node not found in definition");
             return { question: null };
         }
 
-        // Build question payload
+        // Build question payload.
+        //
+        // Copy is interpolated against the instance's variables bag so per-run facts can
+        // appear in stored question text — baby onboarding addresses the child by name
+        // ({{child_name}}), which the flow definition cannot know. Nodes without tokens
+        // pass through untouched, so the mother flows are unaffected.
+        const vars = flowInstance.variables as Record<string, unknown> | undefined;
         const question: QuestionPayload = {
             id: currentNode.id,
             flowInstanceId: flowInstance._id.toString(),
             week,
-            text: currentNode.text || "",
-            educationalMessage: currentNode.educationalMessage || "",
-            whyThisMatters: currentNode.whyThisMatters || "",
+            text: interpolateFlowText(currentNode.text, vars),
+            educationalMessage: interpolateFlowText(currentNode.educationalMessage, vars),
+            whyThisMatters: interpolateFlowText(currentNode.whyThisMatters, vars),
             options: currentNode.options.map((opt) => ({
                 id: opt.value,
                 label: opt.label,
@@ -588,8 +705,20 @@ class WeeklyCheckinService {
         flowInstance: IFlowInstance,
         flowDefinition: IFlowDefinition,
         week: number,
+        lang: FlowLanguage,
     ): Promise<WeeklyCheckinResponse> {
         const userId = user._id.toString();
+
+        // Three flows share this completion path; pick the right localized "thank you"
+        // by slug. This must stay an exhaustive mapping rather than a binary check —
+        // see the completion branch below for why.
+        const completionKey =
+            flowInstance.flowSlug === WEEKLY_CHECKIN_SLUG
+                ? "CHECK_IN"
+                : flowInstance.flowSlug === BABY_ONBOARDING_SLUG
+                  ? "BABY_ONBOARDING"
+                  : "ONBOARDING";
+        const thankYouText = getFlowCompletionMessage(completionKey, lang);
 
         // 1. Update flow instance state
         flowInstance.cursorNodeId = null;
@@ -602,25 +731,64 @@ class WeeklyCheckinService {
             userId: user._id,
             role: MessageRoleEnum.ASSITANT,
             type: MessageTypeEnum.GUIDED,
-            text: WEEKLY_CHECKIN_MESSAGES.THANK_YOU,
+            text: thankYouText,
             guided: null,
         });
         if (flowInstance.flowSlug === "weekly-checkin-v1") {
-            // 3. Update user's upcoming checkin due days
-            await UserModel.findByIdAndUpdate(userId, {
-                $set: {
-                    "current_weekdays.upcoming_checkin_due_days": 7,
-                },
-            });
+            // Deliberately does NOT touch current_weekdays. The due-day counters are pure
+            // functions of the delivery date now, so completing a check-in cannot change
+            // them. This used to force upcoming_checkin_due_days to 7, which was simply
+            // the wrong number — finishing on day 3 left the dashboard claiming the next
+            // check-in was 7 days away when it was 4 — until the next nightly run
+            // recomputed it. Whether a check-in is outstanding is carried by the
+            // instance's own state, which the line above has just set to COMPLETED.
 
-            // 4. Publish score job with retry
+            // 3. Publish score job with retry
             await this.scorePublisherService.publishScoreJob(
                 userId,
                 flowInstance._id.toString(),
                 user.FCM_token,
             );
 
-            logger.info({ userId, week, flowInstanceId: flowInstance._id }, "Check-in completed");
+            log.info({ userId, week, flowInstanceId: flowInstance._id }, "Check-in completed");
+        } else if (flowInstance.flowSlug === BABY_ONBOARDING_SLUG) {
+            // Completing a child's onboarding says nothing about the MOTHER's
+            // questionnaire. This branch exists because the else below used to catch
+            // every non-check-in slug, so finishing a baby flow would have flipped
+            // is_questionnaire_completed and pushed her past her own onboarding.
+            if (flowInstance.subjectChildId) {
+                const childId = flowInstance.subjectChildId.toString();
+                await markChildOnboardingComplete(userId, childId);
+
+                // The birth measurements just captured become the child's day-0 growth
+                // point, so the growth chart has something to plot the moment onboarding
+                // ends rather than staying empty until the first manual log.
+                //
+                // Deliberately non-fatal: a missing point on a chart must never be the
+                // reason a mother cannot finish onboarding.
+                try {
+                    await new GrowthLogService().recordBirthMeasurements(userId, childId);
+                } catch (error) {
+                    log.error(
+                        { userId, childId, error },
+                        "Failed to record day-0 growth log from birth measurements",
+                    );
+                }
+            } else {
+                log.error(
+                    { userId, flowInstanceId: flowInstance._id },
+                    "Baby onboarding completed without a subjectChildId",
+                );
+            }
+
+            log.info(
+                {
+                    userId,
+                    flowInstanceId: flowInstance._id,
+                    childId: flowInstance.subjectChildId,
+                },
+                "Baby onboarding completed",
+            );
         } else {
             await UserModel.findByIdAndUpdate(userId, {
                 $set: {
@@ -632,10 +800,7 @@ class WeeklyCheckinService {
 
         return {
             success: true,
-            message:
-                flowInstance.flowSlug === "weekly-checkin-v1"
-                    ? WEEKLY_CHECKIN_MESSAGES.THANK_YOU
-                    : "Thank you! That gives me a clear picture of your health, support, and daily life. I will now build your personalised recovery plan",
+            message: thankYouText,
             data: {
                 flowInstanceId: flowInstance._id.toString(),
                 week,
@@ -643,6 +808,74 @@ class WeeklyCheckinService {
                 nextQuestion: null,
                 progress: await this.getProgress(flowInstance._id.toString(), flowDefinition),
                 state: WeeklyCheckinStateEnum.COMPLETED,
+            },
+        };
+    }
+
+    /**
+     * Terminate onboarding early after a reported stillbirth.
+     *
+     * Stops the questionnaire, marks onboarding complete, and auto-enrolls the
+     * user in the free plan (skipping the subscription step) so the client can
+     * route them straight to expert/AI support. Returns a tailored terminal
+     * response flagged with terminationReason = "still_birth".
+     */
+    private async terminateOnStillBirth(
+        user: IUser,
+        flowInstance: IFlowInstance,
+        flowDefinition: IFlowDefinition,
+        week: number,
+        lang: FlowLanguage,
+    ): Promise<WeeklyCheckinResponse> {
+        const userId = user._id.toString();
+        const ackText = getStillBirthAckMessage(lang);
+
+        // 1. Terminate the flow instance.
+        flowInstance.cursorNodeId = null;
+        flowInstance.state = FlowInstanceStateEnum.COMPLETED;
+        await (flowInstance as any).save();
+
+        // 2. Save the acknowledgement message.
+        await messageModel.create({
+            conversationId: flowInstance.conversationId,
+            userId: user._id,
+            role: MessageRoleEnum.ASSITANT,
+            type: MessageTypeEnum.GUIDED,
+            text: ackText,
+            guided: null,
+        });
+
+        // 3. Complete onboarding + drop the user on the free tier (skip the subscription
+        //    step). Mirrors PaymentService.selectFreePlan's snapshot shape. Dotted paths
+        //    so `hasUsedTrial` survives.
+        await UserModel.findByIdAndUpdate(userId, {
+            $set: {
+                "is_onboarded.is_questionnaire_completed": true,
+                "is_onboarded.is_subscription_completed": true,
+                "onboarding_data.onboarded_at": new Date(),
+                "subscription.tier": ESubscriptionTier.FREE,
+                "subscription.status": null,
+                "subscription.planCode": null,
+                "subscription.currentPeriodEnd": null,
+            },
+        });
+
+        log.info(
+            { userId, week, flowInstanceId: flowInstance._id },
+            "Onboarding terminated on stillbirth",
+        );
+
+        return {
+            success: true,
+            message: ackText,
+            data: {
+                flowInstanceId: flowInstance._id.toString(),
+                week,
+                isCompleted: true,
+                nextQuestion: null,
+                progress: await this.getProgress(flowInstance._id.toString(), flowDefinition),
+                state: WeeklyCheckinStateEnum.COMPLETED,
+                terminationReason: "still_birth",
             },
         };
     }
@@ -725,7 +958,11 @@ class WeeklyCheckinService {
     /**
      * Get current state for resuming a check-in
      */
-    async getCurrentState(userId: string, week: number): Promise<CurrentStateResponse> {
+    async getCurrentState(
+        userId: string,
+        week: number,
+        lang?: string,
+    ): Promise<CurrentStateResponse> {
         const user = await UserModel.findById(userId);
         if (!user) {
             return {
@@ -738,7 +975,11 @@ class WeeklyCheckinService {
             };
         }
 
-        const flowDefinition = await this.flowService.getFlowDefinition();
+        const resolvedLang = resolveLanguage(lang, user.preferred_language);
+        const flowDefinition = await this.flowService.getFlowDefinition(
+            WEEKLY_CHECKIN_SLUG,
+            resolvedLang,
+        );
         if (!flowDefinition) {
             return {
                 hasActiveCheckin: false,
@@ -813,14 +1054,14 @@ class WeeklyCheckinService {
             // Check if already exists
             const exists = await this.hasCheckinForWeek(user._id.toString(), week);
             if (exists) {
-                logger.info({ userId: user._id, week }, "Check-in already exists for week");
+                log.info({ userId: user._id, week }, "Check-in already exists for week");
                 return null;
             }
 
             // Get flow definition
             const flowDefinition = await this.flowService.getFlowDefinition();
             if (!flowDefinition) {
-                logger.error("Weekly check-in flow definition not found");
+                log.error("Weekly check-in flow definition not found");
                 return null;
             }
 
@@ -848,42 +1089,28 @@ class WeeklyCheckinService {
                 flowInstance._id.toString(),
             );
 
-            logger.info(
+            log.info(
                 { userId: user._id, week, flowInstanceId: flowInstance._id },
                 "Created pending check-in",
             );
 
             return flowInstance;
         } catch (error) {
-            logger.error({ error, userId: user._id, week }, "Failed to create pending check-in");
+            log.error({ error, userId: user._id, week }, "Failed to create pending check-in");
             return null;
         }
     }
 
     /**
-     * Get or create check-in conversation
+     * Get or create the check-in conversation.
+     *
+     * Delegates so the tag and title match every other creation path — this copy used to
+     * title it "Check-in" while the on-demand path used "Weekly Check-in", so which name
+     * a user ended up with depended on which code created her row first.
      */
     private async getOrCreateConversation(user: IUser): Promise<Schema.Types.ObjectId> {
-        let conversation = await conversationModel.findOne({
-            userId: user._id,
-            chatMode: "GUIDED_ONLY",
-            "meta.tags": "check-in",
-        });
-
-        if (!conversation) {
-            conversation = await conversationModel.create({
-                userId: user._id,
-                title: "Check-in",
-                chatMode: "GUIDED_ONLY",
-                lastMessageAt: new Date(),
-                meta: {
-                    channel: "App",
-                    tags: ["check-in"],
-                },
-            });
-        }
-
-        return conversation._id;
+        const conversation = await getOrCreateFlowConversation(user, WEEKLY_CHECKIN_SLUG);
+        return conversation._id as Schema.Types.ObjectId;
     }
 
     // ============================================

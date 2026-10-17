@@ -1,5 +1,6 @@
 import { Schema } from "mongoose";
 import { IVivaClubComment } from "../../types/vivaClub.types";
+import { moderationStateSchema } from "./vivaClubPost.schema";
 
 const vivaClubCommentSchema = new Schema<IVivaClubComment>(
     {
@@ -18,10 +19,11 @@ const vivaClubCommentSchema = new Schema<IVivaClubComment>(
             required: true,
             trim: true,
         },
+        moderation: moderationStateSchema,
     },
     {
         timestamps: true,
-    }
+    },
 );
 
 export default vivaClubCommentSchema;

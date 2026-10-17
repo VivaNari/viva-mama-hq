@@ -75,3 +75,6 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+PLAY_STORE_COMPLIANCE_AUDIT.md
+FIREBASE_CONSOLE_SETUP.md

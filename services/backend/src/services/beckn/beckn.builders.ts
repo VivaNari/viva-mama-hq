@@ -24,10 +24,15 @@ const HEALTH_CONSIDERATION_CTX = "https://schema.beckn.io/HealthConsideration/v2
 const HEALTH_CONTRACT_CTX = "https://schema.beckn.io/HealthContract/v2.1/context.jsonld";
 
 interface ContractOptions {
-    contractStatus: string;
+    // Two DIFFERENT status fields with DIFFERENT base-schema enums (confirmed via the
+    // adapter's validation errors):
+    //   contract.status.code               -> [DRAFT, ACTIVE, CANCELLED, COMPLETE]
+    //   commitment.status.descriptor.code  -> [DRAFT, ACTIVE, CLOSED]
+    // commitmentStatus defaults to contractStatus (fine while both are DRAFT/ACTIVE).
+    contractStatus: "DRAFT" | "ACTIVE" | "CANCELLED" | "COMPLETE";
+    commitmentStatus?: "DRAFT" | "ACTIVE" | "CLOSED";
     considerationStatus: string;
     considerationExtra?: Record<string, unknown>;
-    descriptor?: Record<string, unknown>;
 }
 
 const onContext = (select: BecknRequest, action: string): BecknRequest["context"] => ({
@@ -49,21 +54,24 @@ const buildContract = (select: BecknRequest, opts: ContractOptions) => {
     // Participants already passed schema validation inbound — echo them back as-is.
     const participants: any[] = inbound.participants ?? [];
 
+    // commitment.status.descriptor.code has its own enum (see ContractOptions).
+    const commitmentStatus = opts.commitmentStatus ?? opts.contractStatus;
+
     return {
         id: inbound.id ?? `contract-${ctx.transactionId ?? "stub"}`,
         status: { code: opts.contractStatus },
-        ...(opts.descriptor ? { descriptor: opts.descriptor } : {}),
         commitments: [
             {
                 id: commitmentId,
-                status: { descriptor: { code: opts.contractStatus } },
+                status: { descriptor: { code: commitmentStatus } },
                 resources: [
                     {
                         id: resourceId,
                         descriptor: {
                             name: "Stub Health Service",
                             shortDesc: "Placeholder service returned by the BPP stub.",
-                            longDesc: "Returned by buildContract. Replace with a real catalog lookup.",
+                            longDesc:
+                                "Returned by buildContract. Replace with a real catalog lookup.",
                         },
                         resourceAttributes: {
                             "@context": HEALTH_RESOURCE_CTX,
@@ -187,13 +195,11 @@ export const buildOnConfirmStub = (select: BecknRequest): BecknRequest => ({
 export const buildOnStatusStub = (select: BecknRequest): BecknRequest => ({
     context: onContext(select, "on_status"),
     message: {
+        // contract.status -> COMPLETE; commitment.status -> CLOSED (each is its enum's terminal).
         contract: buildContract(select, {
             contractStatus: "COMPLETE",
+            commitmentStatus: "CLOSED",
             considerationStatus: "ACTIVE",
-            descriptor: {
-                name: "Stub Service — Complete",
-                shortDesc: "Placeholder status: engagement complete.",
-            },
             considerationExtra: stubPaymentAuthorisation(quantityOf(select)),
         }),
     },

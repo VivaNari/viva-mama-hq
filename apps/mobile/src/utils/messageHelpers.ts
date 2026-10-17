@@ -1,3 +1,4 @@
+import { TFunction } from "i18next";
 import {
   IChatMessage,
   IAiMessage,
@@ -6,10 +7,14 @@ import {
   InputMode,
 } from "../types/chat.types";
 import {
+  CHILD_DOB_NODE_ID,
   DELIVERY_DATE_NODE_ID,
   DOB_NODE_ID,
+  MAX_CHILD_AGE_YEARS,
+  MEASUREMENT_NODE_BOUNDS,
   MIN_AGE_YEARS,
   NONE_OPTION_VALUES,
+  STILL_BIRTH_NODE_ID,
 } from "../constants/chat";
 
 /**
@@ -65,6 +70,88 @@ export const isDobNode = (message: IChatMessage): boolean => {
 };
 
 /**
+ * Check if message is the CHILD's date-of-birth node.
+ *
+ * Distinct from isDobNode: that one is the mother's, and the two need opposite date
+ * bounds. Sharing them capped the child picker at 18 years ago, which made it impossible
+ * to enter a real birth date for a newborn.
+ */
+export const isChildDobNode = (message: IChatMessage): boolean => {
+  return isAiMessage(message) && message.id === CHILD_DOB_NODE_ID;
+};
+
+/**
+ * Check if message is one of the baby birth-measurement nodes.
+ */
+export const isMeasurementNode = (message: IChatMessage): boolean => {
+  return isAiMessage(message) && !!MEASUREMENT_NODE_BOUNDS[message.id];
+};
+
+/**
+ * Date bounds for whichever date question is on screen.
+ *
+ * The mother must be at least MIN_AGE_YEARS old; a child must have been born already and
+ * be under MAX_CHILD_AGE_YEARS, since growth tracking stops at five.
+ */
+export const getDateBoundsForNode = (
+  message: IChatMessage | undefined,
+): { minimumDate?: Date; maximumDate: Date } => {
+  if (message && isChildDobNode(message)) {
+    const earliest = new Date();
+    earliest.setFullYear(earliest.getFullYear() - MAX_CHILD_AGE_YEARS);
+    return { minimumDate: earliest, maximumDate: new Date() };
+  }
+
+  return { maximumDate: getMaxDateOfBirth() };
+};
+
+/**
+ * Validate a typed birth measurement against the node's range.
+ *
+ * Returns null when the value is acceptable, otherwise a message to show the user. The
+ * server drops out-of-range values silently, so catching them here is what turns a lost
+ * answer into a correctable one.
+ *
+ * Takes `t` rather than returning a key, matching `getChildAgeLabel` and `formatChipDate`:
+ * the caller renders this straight into the chat input, so handing it a key would only move
+ * the same lookup one line away. The strings used to be English literals, which meant a
+ * Hindi mother was asked the question in Hindi and corrected in English.
+ */
+export const validateMeasurement = (
+  message: IChatMessage | undefined,
+  raw: string,
+  t: TFunction,
+): string | null => {
+  if (!message || !isAiMessage(message)) return null;
+
+  const bounds = MEASUREMENT_NODE_BOUNDS[message.id];
+  if (!bounds) return null;
+
+  const value = Number.parseFloat(raw.trim());
+  if (!Number.isFinite(value)) {
+    return t("infant.editChild.notANumber");
+  }
+
+  if (value < bounds.min || value > bounds.max) {
+    return t("chat.measurementOutOfRange", {
+      min: bounds.min,
+      max: bounds.max,
+      unit: bounds.unit,
+    });
+  }
+
+  return null;
+};
+
+/**
+ * Check if message is the special stillbirth support node (grief-sensitive
+ * terminal message that offers expert/AI support buttons).
+ */
+export const isStillBirthNode = (message: IChatMessage): boolean => {
+  return isAiMessage(message) && message.id === STILL_BIRTH_NODE_ID;
+};
+
+/**
  * Latest date of birth allowed for a user to be at least MIN_AGE_YEARS old today.
  */
 export const getMaxDateOfBirth = (minAgeYears = MIN_AGE_YEARS): Date => {
@@ -91,6 +178,12 @@ export const determineInputMode = (
 
   if (isDeliveryDateNode(lastMessage)) {
     return "deliveryDate";
+  }
+
+  // Before the generic text branch: measurements are free-text nodes, so the plain
+  // handler would claim them and hand the user an alphabetic keyboard.
+  if (isMeasurementNode(lastMessage)) {
+    return "number";
   }
 
   if (
@@ -192,11 +285,26 @@ export const getSelectedLabels = (
 };
 
 /**
- * Extract scores from selected options
+ * Extract scores from selected options.
+ *
+ * NOTE: a score is a clinical weight, NOT an identifier — several options in a
+ * node routinely share one. Never use scores to tell the server which option was
+ * picked; use `getSelectedValues` for that.
  */
 export const getSelectedScores = (
   selectedIds: Set<string>,
   options: IOption[],
 ): number[] => {
   return getSelectedOptions(selectedIds, options).map(opt => opt.score);
+};
+
+/**
+ * Extract the `value` tokens of the selected options — the identity the server
+ * resolves answers by. Unique within a node, unlike `score`.
+ */
+export const getSelectedValues = (
+  selectedIds: Set<string>,
+  options: IOption[],
+): string[] => {
+  return getSelectedOptions(selectedIds, options).map(opt => opt.value);
 };

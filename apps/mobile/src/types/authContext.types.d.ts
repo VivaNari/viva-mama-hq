@@ -23,6 +23,12 @@ export interface AuthContextType {
   onboardingStatus: OnboardingStatus;
   isFullyOnboarded: () => boolean;
   signInWithGoogle: (consents?: any[]) => Promise<void>;
+  /**
+   * Permanently deletes the account server-side, then tears down all local state.
+   * Irreversible — callers must confirm with the user first. Throws if the server
+   * call fails, leaving the session intact so the failure is recoverable.
+   */
+  deleteAccount: () => Promise<void>;
   requestPhoneOTP: (phoneNumber: string) => Promise<any>;
   verifyPhoneOTP: (
     phone: string,
@@ -34,7 +40,13 @@ export interface AuthContextType {
   completeQuestionnaire: () => Promise<void>;
   completeSubscription: () => Promise<void>;
   completeOnboarding: () => Promise<void>;
+  pendingRedirect: PendingRedirect;
+  setPendingRedirect: (redirect: PendingRedirect) => void;
 }
+
+// One-shot navigation intent consumed after a stack switch (e.g. routing a
+// bereaved user to expert/AI support once they enter the main app).
+export type PendingRedirect = 'experts' | 'aiChat' | null;
 
 export interface AuthProviderProps {
   children: ReactNode;

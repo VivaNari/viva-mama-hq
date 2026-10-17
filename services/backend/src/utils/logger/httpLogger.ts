@@ -50,12 +50,23 @@ export function createHttpLogger(logger: Logger): HttpLogger {
             responseTime: "duration",
         },
 
+        // NOTE: deliberately no `correlationId` here.
+        //
+        // The root logger's mixin (utils/logger/pino.config.ts) already emits one on every
+        // record. Setting it here too put the SAME KEY twice into one JSON object, and
+        // Cloud Logging's parser concatenates duplicate keys rather than picking one — so
+        // every HTTP request log carried a 72-character mash of two UUIDs and the field
+        // was unsearchable:
+        //   correlationId: '77f01daf-...-230c967784dd269963a6-...-a0783d37f107'
+        //
+        // The mixin's value is also the correct one: it comes from AsyncLocalStorage and
+        // matches the X-Correlation-ID response header the caller was given, whereas this
+        // one used pino-http's own `req.id`, which is a different uuid entirely.
         customProps: (req: IncomingMessage, res: ServerResponse) => {
             return {
                 userAgent: req.headers["user-agent"],
                 ip: req.socket.remoteAddress,
                 protocol: (req as any).protocol || "http",
-                correlationId: req.headers["x-correlation-id"] || (req as any).id,
             };
         },
 

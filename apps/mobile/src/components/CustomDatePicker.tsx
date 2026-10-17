@@ -6,9 +6,28 @@ interface ICustomDatePickerProps {
     setShow: Dispatch<SetStateAction<boolean>>;
     selectedDate: Date | null;
     onSelect: (date: Date) => void;
-    minimumDate?: boolean;
+    /**
+     * Earliest selectable date.
+     *
+     * `true` means "not before today" and `false`/omitted means no floor — the original
+     * boolean contract, kept because the consultation booking sheet relies on it. A Date
+     * sets an explicit floor, which is what a bounded range like a child's date of birth
+     * (born already, but under five) needs.
+     */
+    minimumDate?: boolean | Date;
     maximumDate?: Date;
+    /**
+     * What the picker asks for. Defaults to a date, which is what every existing caller
+     * wants; the feeding log asks for a time, because a feed is an instant within today
+     * rather than a day.
+     */
+    mode?: 'date' | 'time';
 }
+
+const resolveMinimumDate = (minimumDate: boolean | Date | undefined): Date | undefined => {
+    if (minimumDate instanceof Date) return minimumDate;
+    return minimumDate ? new Date() : undefined;
+};
 
 const CustomDatePicker = ({
     show,
@@ -16,7 +35,8 @@ const CustomDatePicker = ({
     selectedDate,
     onSelect,
     minimumDate = false,
-    maximumDate
+    maximumDate,
+    mode = 'date'
 }: ICustomDatePickerProps) => {
 
     const handleChange = (event: DateTimePickerEvent, date?: Date) => {
@@ -32,10 +52,10 @@ const CustomDatePicker = ({
             {show && (
                 <RNDateTimePicker
                     value={selectedDate || new Date()}
-                    mode="date"
+                    mode={mode}
                     display="default"
                     onChange={handleChange}
-                    minimumDate={minimumDate ? new Date() : undefined}
+                    minimumDate={resolveMinimumDate(minimumDate)}
                     maximumDate={maximumDate}
                 />
             )}

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { FlatList, Text, ActivityIndicator, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
@@ -10,8 +11,10 @@ import apiClientInterceptor from '../api/apiClientInterceptor'
 import { API_VIVA_CLUB_POSTS } from '../constants/endpoints'
 import { IVivaClubPost } from '../types/vivaClub.types'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { AnalyticsEvent, recordError, track } from '../analytics'
 
 const VivaClubPost = () => {
+    const { t } = useTranslation();
     const navigation = useNavigation<any>();
     const [posts, setPosts] = useState<IVivaClubPost[]>([]);
     const [loading, setLoading] = useState(false);
@@ -33,8 +36,13 @@ const VivaClubPost = () => {
             }
 
             setHasMore(pageNum < data.data.pagination.totalPages);
+            // First page only — paging through the feed is not a new feed view.
+            if (isRefresh) {
+                track(AnalyticsEvent.COMMUNITY_FEED_VIEWED);
+            }
         } catch (error) {
             console.error("Failed to fetch posts", error);
+            recordError(error, 'VivaClubPost.fetchPosts', { page: pageNum });
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -74,11 +82,21 @@ const VivaClubPost = () => {
     return (
         <SafeAreaView
             style={[globalStyles.container, { position: 'relative', paddingVertical: 5 }]}
+            // Registered as the "VivaClub" stack screen with `headerShown: true`.
+            edges={['bottom', 'left', 'right']}
         >
             <FlatList
                 keyExtractor={(item) => item._id}
                 data={posts}
-                renderItem={({ item }) => <FLVivaClubPostItem item={item} navigation={navigation} />}
+                renderItem={({ item }) => (
+                    <FLVivaClubPostItem
+                        item={item}
+                        navigation={navigation}
+                        // Reporting, blocking or deleting changes what the server will
+                        // return, so the feed is refetched rather than patched locally.
+                        onModerated={() => fetchPosts(1, true)}
+                    />
+                )}
                 onRefresh={handleRefresh}
                 refreshing={refreshing}
                 onEndReached={handleLoadMore}
@@ -88,7 +106,7 @@ const VivaClubPost = () => {
                 ListHeaderComponent={
                     <View style={{ backgroundColor: colors.pageBG, padding: 10, paddingVertical: 8, marginBottom: 10, borderRadius: 8, borderWidth: 1, borderColor: '#eee' }}>
                         <Text style={[globalStyles.fontRegular, { fontSize: 11, color: colors.darkGray, textAlign: 'center' }]}>
-                            Posts share personal experiences only. They are not medical advice. For any health concern, please consult a qualified healthcare professional.
+                            {t('vivaClub.postsDisclaimer')}
                         </Text>
                     </View>
                 }
@@ -120,7 +138,7 @@ const VivaClubPost = () => {
                         color: colors.white,
                     }, globalStyles.fontRegular]}
                 >
-                    Create
+                    {t('vivaClub.create')}
                 </Text>
             </LinearGradient>
         </SafeAreaView>

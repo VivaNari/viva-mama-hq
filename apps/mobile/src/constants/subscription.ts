@@ -65,32 +65,34 @@ export const RAZORPAY_CONFIG = {
 // Error Messages
 // ============================================
 
+// Values are i18n keys (resolved with t()/i18n.t() at the display site), not text.
 export const ERROR_MESSAGES = {
-	NETWORK_ERROR: 'Network error. Please check your connection and try again.',
-	ORDER_CREATION_FAILED: 'Failed to create payment order. Please try again.',
-	PAYMENT_FAILED: 'Payment failed. Please try again.',
-	PAYMENT_CANCELLED: 'Payment was cancelled.',
-	VERIFICATION_FAILED: 'Payment successful but verification failed. Please contact support.',
-	FREE_PLAN_FAILED: 'Failed to activate free plan. Please try again.',
-	UNKNOWN: 'Something went wrong. Please try again.',
+	NETWORK_ERROR: 'subscription.errorMessages.networkError',
+	ORDER_CREATION_FAILED: 'subscription.errorMessages.orderCreationFailed',
+	PAYMENT_FAILED: 'subscription.errorMessages.paymentFailed',
+	PAYMENT_CANCELLED: 'subscription.errorMessages.paymentCancelled',
+	VERIFICATION_FAILED: 'subscription.errorMessages.verificationFailed',
+	FREE_PLAN_FAILED: 'subscription.errorMessages.freePlanFailed',
+	UNKNOWN: 'subscription.errorMessages.unknown',
 } as const;
 
 // ============================================
 // Toast Messages
 // ============================================
 
+// Values are i18n keys (resolved with i18n.t() at the display site), not text.
 export const TOAST_MESSAGES = {
 	PAYMENT_SUCCESS: {
-		title: 'Success',
-		message: 'Subscription activated successfully!',
+		title: 'common.success',
+		message: 'subscription.activatedSuccess',
 	},
 	FREE_PLAN_SUCCESS: {
-		title: 'Welcome!',
-		message: 'Your free plan is activated',
+		title: 'subscription.freePlanWelcome',
+		message: 'subscription.freePlanActivated',
 	},
 	VERIFICATION_FAILED: {
-		title: 'Verification Failed',
-		message: 'Payment successful but verification failed. Contact support.',
+		title: 'subscription.verificationFailedTitle',
+		message: 'subscription.verificationFailedToast',
 	},
 } as const;
 

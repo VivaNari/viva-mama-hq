@@ -10,7 +10,11 @@ interface ICounterContext {
 
 const CounterContext = createContext<ICounterContext | undefined>(undefined)
 
-const STORAGE_KEY = 'chatCounter';
+// Exported so account deletion can clear it by name rather than duplicating the
+// literal — a stale counter would otherwise carry over to the next signup on this
+// device. See AuthContext.deleteAccount.
+export const CHAT_COUNTER_STORAGE_KEY = 'chatCounter';
+const STORAGE_KEY = CHAT_COUNTER_STORAGE_KEY;
 
 const CounterProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState<boolean>(true);

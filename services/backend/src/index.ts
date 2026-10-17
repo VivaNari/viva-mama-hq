@@ -1,3 +1,9 @@
+// MUST stay the first import. The OpenTelemetry SDK patches modules as they are required,
+// and `./app` below transitively loads express, mongoose, ioredis, axios and
+// firebase-admin, while the logger calls pino() at import time. Anything ordered above
+// this line is invisible to telemetry. It loads dotenv itself, so it is safe here.
+import "./telemetry";
+
 import dotenv from "dotenv";
 dotenv.config();
 

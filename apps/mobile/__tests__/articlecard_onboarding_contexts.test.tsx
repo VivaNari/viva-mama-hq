@@ -18,6 +18,12 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({ navigate: mockNavigate }),
 }));
 
+// ArticleCard reads openPaywall() from SubscriptionContext to gate locked content;
+// this suite never exercises the locked/paywall path, so a bare stub is enough.
+jest.mock('../src/context/SubscriptionContext', () => ({
+  useSubscriptionContext: () => ({ openPaywall: jest.fn() }),
+}));
+
 // ----------------------
 // ARTICLE CARD TESTS
 // ----------------------
@@ -25,18 +31,19 @@ jest.mock('@react-navigation/native', () => ({
 describe('ArticleCard component', () => {
   afterEach(() => mockNavigate.mockClear());
 
-  test('renders title & content and navigates on press', () => {
+  test('renders title and navigates on press', () => {
+    // Matches the current IUserContent shape the card actually reads.
     const item = {
-      id: 'art1',
-      title: 'Test Article',
-      content: 'This is content',
-      thumbnailImage: { uri: 'https://sample.com/img.png' }
+      _id: 'art1',
+      featuredTitle: 'Test Article',
+      featuredImage: 'https://sample.com/img.png',
+      contentBody: []
     } as any;
 
     const { getByText } = render(<ArticleCard item={item} />);
 
+    // The card is a thumbnail: it renders the title only, never the body.
     expect(getByText('Test Article')).toBeTruthy();
-    expect(getByText('This is content')).toBeTruthy();
 
     fireEvent.press(getByText('Test Article'));
 

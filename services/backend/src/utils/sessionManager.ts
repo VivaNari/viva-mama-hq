@@ -1,5 +1,7 @@
 import { Response } from "express";
-import logger from "./logger";
+import logger, { createModuleLogger } from "./logger";
+
+const log = createModuleLogger(logger, "sessionManager");
 
 /**
  * Pending question data with timestamp for TTL cleanup
@@ -59,7 +61,7 @@ class SessionManager {
             week,
         });
 
-        logger.debug({ userId, week }, "Session registered");
+        log.debug({ userId, week }, "Session registered");
     }
 
     /**
@@ -96,10 +98,10 @@ class SessionManager {
                 }
             } catch (error) {
                 // Response might already be closed
-                logger.debug({ userId, error }, "Error closing session response");
+                log.debug({ userId, error }, "Error closing session response");
             }
             this.activeSessions.delete(userId);
-            logger.debug({ userId }, "Session closed");
+            log.debug({ userId }, "Session closed");
         }
     }
 
@@ -116,7 +118,7 @@ class SessionManager {
             week,
             timestamp: Date.now(),
         });
-        logger.debug({ userId, questionId, week }, "Pending question set");
+        log.debug({ userId, questionId, week }, "Pending question set");
     }
 
     /**
@@ -139,7 +141,7 @@ class SessionManager {
      */
     clearPendingQuestion(userId: string): void {
         this.pendingQuestions.delete(userId);
-        logger.debug({ userId }, "Pending question cleared");
+        log.debug({ userId }, "Pending question cleared");
     }
 
     // ============================================
@@ -159,7 +161,7 @@ class SessionManager {
             session.response.write(`data: ${JSON.stringify(payload)}\n\n`);
             return true;
         } catch (error) {
-            logger.error({ userId, error }, "Failed to write to SSE");
+            log.error({ userId, error }, "Failed to write to SSE");
             this.closeSession(userId);
             return false;
         }
@@ -190,7 +192,7 @@ class SessionManager {
             response.write(`data: ${JSON.stringify(errorPayload)}\n\n`);
             response.end();
         } catch (error) {
-            logger.debug({ error }, "Error sending error response");
+            log.debug({ error }, "Error sending error response");
         }
     }
 
@@ -214,7 +216,7 @@ class SessionManager {
         // Don't prevent process exit
         this.cleanupInterval.unref();
 
-        logger.info("Session cleanup job started");
+        log.info("Session cleanup job started");
     }
 
     /**
@@ -224,7 +226,7 @@ class SessionManager {
         if (this.cleanupInterval) {
             clearInterval(this.cleanupInterval);
             this.cleanupInterval = null;
-            logger.info("Session cleanup job stopped");
+            log.info("Session cleanup job stopped");
         }
     }
 
@@ -246,7 +248,7 @@ class SessionManager {
         }
 
         if (cleanedCount > 0) {
-            logger.info({ cleanedCount }, "Cleaned up stale sessions");
+            log.info({ cleanedCount }, "Cleaned up stale sessions");
         }
     }
 
@@ -265,7 +267,7 @@ class SessionManager {
         }
 
         if (cleanedCount > 0) {
-            logger.info({ cleanedCount }, "Cleaned up stale pending questions");
+            log.info({ cleanedCount }, "Cleaned up stale pending questions");
         }
     }
 
@@ -277,7 +279,7 @@ class SessionManager {
      * Gracefully shutdown all connections
      */
     async shutdown(): Promise<void> {
-        logger.info("Shutting down session manager");
+        log.info("Shutting down session manager");
 
         this.stopCleanupJob();
 
@@ -290,14 +292,14 @@ class SessionManager {
                 });
                 this.closeSession(userId);
             } catch (error) {
-                logger.debug({ userId, error }, "Error during shutdown notification");
+                log.debug({ userId, error }, "Error during shutdown notification");
             }
         }
 
         this.activeSessions.clear();
         this.pendingQuestions.clear();
 
-        logger.info("Session manager shutdown complete");
+        log.info("Session manager shutdown complete");
     }
 
     // ============================================

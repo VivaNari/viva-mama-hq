@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ActivityIndicator, FlatList, Text, TouchableOpacity, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { getUserContents } from '../api/getUserContents'
+import { useLanguage } from '../context/LanguageContext'
 import { ArticleCard } from '../components/ArticleCard'
 import SearchInput from '../components/SearchInput'
 import { useAuth } from '../context/AuthContext'
@@ -14,8 +16,12 @@ import { API_VIVA_CLUB_POSTS } from '../constants/endpoints'
 import { IVivaClubPost } from '../types/vivaClub.types'
 import FLVivaClubPostItem from '../components/vivaClub/FLVivaClubPostItem'
 import LinearGradient from 'react-native-linear-gradient'
+import { useScreenEdges } from '../hooks/useScreenEdges';
 
 const ArticleContent = () => {
+    const { t } = useTranslation();
+    // Registered as the "Content" stack screen and as the "Services" tab.
+    const edges = useScreenEdges(true);
     const [searchData, setSearchData] = useState<string>("");
     const [userContentsData, setUserContentsData] = useState<IUserContent[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
@@ -24,11 +30,13 @@ const ArticleContent = () => {
 
     const navigation = useNavigation<any>();
     const { userId } = useAuth();
+    const { language } = useLanguage();
 
     const fetchLastPost = async () => {
         try {
             setLoadingPost(true);
             const { data } = await apiClientInterceptor().get(`${API_VIVA_CLUB_POSTS}?page=1&limit=1`);
+
             if (data.data.posts && data.data.posts.length > 0) {
                 setLastPost(data.data.posts[0]);
             } else {
@@ -61,11 +69,7 @@ const ArticleContent = () => {
         };
 
         fetchData();
-    }, [userId])
-
-    useEffect(() => {
-        console.log("searchData", searchData);
-    }, [searchData])
+    }, [userId, language])
 
     const filteredData = useMemo(() => {
         if (!searchData.trim()) return userContentsData;
@@ -74,7 +78,7 @@ const ArticleContent = () => {
     }, [searchData, userContentsData]);
 
     return (
-        <SafeAreaView style={[globalStyles.container]}>
+        <SafeAreaView style={[globalStyles.container]} edges={edges}>
             <FlatList
                 data={filteredData.slice(1)}
                 keyExtractor={(item) => item._id.toString()}
@@ -89,8 +93,10 @@ const ArticleContent = () => {
                 nestedScrollEnabled={false}
                 columnWrapperStyle={{
                     justifyContent: 'space-between',
-                    alignItems: 'flex-end',
-                    paddingBottom: 20
+                    // Stretch, not flex-end: a one-line title next to a three-line one
+                    // used to hang off the bottom of the row with its top out of line.
+                    // Both cards now take the row's height and start at the same y.
+                    alignItems: 'stretch',
                 }}
                 numColumns={2}
                 ListEmptyComponent={() => (
@@ -107,7 +113,7 @@ const ArticleContent = () => {
                                 <ActivityIndicator size="large" color={colors.purple} />
                             ) : (
                                 <Text style={[{ color: colors.black }, globalStyles.fontRegular]}>
-                                    No Contents Found!
+                                    {t('content.noContentsFound')}
                                 </Text>
                             )}
                         </View>
@@ -118,28 +124,33 @@ const ArticleContent = () => {
                         {/* Disclaimer */}
                         <View style={{ backgroundColor: colors.pageBG, padding: 10, paddingVertical: 8, marginBottom: 10, borderRadius: 8, borderWidth: 1, borderColor: '#eee' }}>
                             <Text style={[globalStyles.fontRegular, { fontSize: 11, color: colors.darkGray, textAlign: 'center' }]}>
-                                This article is for educational purposes only. It is not medical advice. Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.
+                                {t('content.articleDisclaimer')}
                             </Text>
                         </View>
 
                         {/* Community Section */}
                         <View style={{ marginBottom: 20 }}>
-                            <Text style={[globalStyles.fontBold, { fontSize: 18, color: colors.darkPurple, marginBottom: 10 }]}>Community Feed</Text>
+                            <Text style={[globalStyles.fontBold, { fontSize: 18, color: colors.darkPurple, marginBottom: 10 }]}>{t('content.communityFeed')}</Text>
                             {loadingPost ? (
                                 <ActivityIndicator size="small" color={colors.purple} />
                             ) : lastPost ? (
                                 <View>
-                                    <FLVivaClubPostItem item={lastPost} navigation={navigation} isFromCommunityScreen={true} />
+                                    <FLVivaClubPostItem
+                                        item={lastPost}
+                                        navigation={navigation}
+                                        isFromCommunityScreen={true}
+                                        onModerated={fetchLastPost}
+                                    />
                                     <TouchableOpacity
                                         onPress={() => navigation.navigate("VivaClub")}
                                         style={{ marginTop: 5, alignSelf: 'flex-end' }}
                                     >
-                                        <Text style={[globalStyles.fontSemiBold, { color: colors.darkPurple, textDecorationLine: 'underline' }]}>View All Community Posts</Text>
+                                        <Text style={[globalStyles.fontSemiBold, { color: colors.darkPurple, textDecorationLine: 'underline' }]}>{t('content.viewAllPosts')}</Text>
                                     </TouchableOpacity>
                                 </View>
                             ) : (
                                 <View style={{ padding: 15, backgroundColor: colors.lightGray, borderRadius: 10, alignItems: 'center' }}>
-                                    <Text style={[globalStyles.fontRegular, { color: colors.black, marginBottom: 10 }]}>No community post is available for you</Text>
+                                    <Text style={[globalStyles.fontRegular, { color: colors.black, marginBottom: 10 }]}>{t('content.noCommunityPost')}</Text>
                                     <LinearGradient
                                         colors={[colors.darkPurple, colors.purple]}
                                         start={{ x: 0, y: 0 }}
@@ -150,7 +161,7 @@ const ArticleContent = () => {
                                             onPress={() => navigation.navigate("CreatePost")}
                                             style={{ paddingHorizontal: 20, paddingVertical: 10 }}
                                         >
-                                            <Text style={[globalStyles.fontSemiBold, { color: colors.white }]}>Create a Community Post</Text>
+                                            <Text style={[globalStyles.fontSemiBold, { color: colors.white }]}>{t('content.createCommunityPost')}</Text>
                                         </TouchableOpacity>
                                     </LinearGradient>
                                 </View>
@@ -179,7 +190,7 @@ const ArticleContent = () => {
                 ListFooterComponent={
                     <View style={{ backgroundColor: colors.pageBG, padding: 10, paddingVertical: 8, marginTop: 0, marginBottom: 5, borderRadius: 8, borderWidth: 1, borderColor: '#eee' }}>
                         <Text style={[globalStyles.fontRegular, { fontSize: 11, color: colors.darkGray, textAlign: 'center' }]}>
-                            If you have any concerns about your health or your baby's health, please consult a qualified healthcare professional. In an emergency, contact your doctor or local emergency services.
+                            {t('content.healthConcernsDisclaimer')}
                         </Text>
                     </View>
                 }

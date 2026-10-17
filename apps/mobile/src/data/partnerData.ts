@@ -1,28 +1,24 @@
 import { IPartnerData } from "../types/addPartner.types";
 
+// NOTE: text fields below hold i18n keys (resolved with t() at render). `code` is literal.
 export const partnerData: IPartnerData = {
-  title: "VivaMama for partners",
+  title: "addPartner.title",
   benefits: [
-    { id: 1, text: "Expand your reach and connect with more clients" },
-    { id: 2, text: "Access professional tools to manage your partnerships" },
-    {
-      id: 3,
-      text: "Earn competitive commissions on every successful referral",
-    },
+    { id: 1, text: "addPartner.benefit1" },
+    { id: 2, text: "addPartner.benefit2" },
+    { id: 3, text: "addPartner.benefit3" },
   ],
   code: "738H645",
   steps: [
     {
       id: 1,
-      title: "Step 1 - Invite",
-      description:
-        "Share your unique partner code with your network via email, social media, or direct messaging.",
+      title: "addPartner.step1Title",
+      description: "addPartner.step1Desc",
     },
     {
       id: 2,
-      title: "Step 2 - Pair",
-      description:
-        "When your referrals sign up using your code, they are automatically linked to your partner account.",
+      title: "addPartner.step2Title",
+      description: "addPartner.step2Desc",
     },
   ],
 };

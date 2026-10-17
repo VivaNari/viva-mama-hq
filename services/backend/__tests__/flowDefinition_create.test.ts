@@ -14,6 +14,7 @@ jest.mock(
                 }
                 return res.status(201).json({ created: true });
             },
+            findBySlug: (_req: any, res: any) => res.status(200).json({ data: null }),
             list: () => {},
             update: () => {},
         })),

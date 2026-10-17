@@ -32,6 +32,8 @@ jest.mock("../src/models/user.model", () => ({
     __esModule: true,
     default: {
         findById: jest.fn(),
+        findOne: jest.fn(),
+        updateMany: jest.fn(),
     },
 }));
 
@@ -42,8 +44,14 @@ jest.mock("../src/utils/commonFunctions/sendResponse", () => ({
 
 import UserController from "../src/api/v1/controllers/users/user.controller";
 import sendResponse from "../src/utils/commonFunctions/sendResponse";
+import UserModel from "../src/models/user.model";
 
 const mockedSendResponse = jest.mocked(sendResponse);
+const mockedUserModel = jest.mocked(UserModel) as unknown as {
+    findById: jest.Mock;
+    findOne: jest.Mock;
+    updateMany: jest.Mock;
+};
 
 describe("UserController", () => {
     let controller: UserController;
@@ -105,6 +113,7 @@ describe("UserController", () => {
         it("updates FCM token and sends success response", async () => {
             const updatedUser = { _id: "u1", FCM_token: "new-token" };
             userServiceMocks.findByIdAndUpdate.mockResolvedValue(updatedUser);
+            mockedUserModel.updateMany.mockResolvedValue({ modifiedCount: 1 });
             const req = {
                 user: { _id: "u1" },
                 body: { FCM_token: "new-token" },
@@ -130,6 +139,7 @@ describe("UserController", () => {
 
         it("calls next when findByIdAndUpdate throws", async () => {
             const err = new Error("db error");
+            mockedUserModel.updateMany.mockResolvedValue({ modifiedCount: 1 });
             userServiceMocks.findByIdAndUpdate.mockRejectedValue(err);
             const req = {
                 user: { _id: "u1" },
@@ -196,9 +206,10 @@ describe("UserController", () => {
         });
 
         it("partially updates user and sends success response", async () => {
-            const updatedUser = { _id: "u1", name: "Updated" };
+            const updatedUser = { _id: "u1", onboarding_data: { preferred_name: "Updated" } };
+            mockedUserModel.findById.mockResolvedValue({ _id: "u1", email: null });
             userServiceMocks.findByIdAndPartialUpdate.mockResolvedValue(updatedUser);
-            const payload = { name: "Updated" };
+            const payload = { onboarding_data: { preferred_name: "Updated" } };
             const req = {
                 user: { _id: "u1" },
                 body: payload,
@@ -222,8 +233,49 @@ describe("UserController", () => {
             expect(next).not.toHaveBeenCalled();
         });
 
+        it("drops fields outside the updatable whitelist", async () => {
+            mockedUserModel.findById.mockResolvedValue({ _id: "u1", email: null });
+            userServiceMocks.findByIdAndPartialUpdate.mockResolvedValue({ _id: "u1" });
+            const req = {
+                user: { _id: "u1" },
+                body: { user_category: "PP", user_id: 999, onboarding_data: { location: "Delhi" } },
+            } as unknown as Request;
+            const res = {} as Response;
+            const next = jest.fn() as NextFunction;
+
+            await controller.updateUserData(req, res, next);
+
+            expect(userServiceMocks.findByIdAndPartialUpdate).toHaveBeenCalledWith({
+                _id: "u1",
+                payload: { onboarding_data: { location: "Delhi" } },
+            });
+        });
+
+        it("rejects an email already taken by another user", async () => {
+            mockedUserModel.findById.mockResolvedValue({ _id: "u1", email: null });
+            mockedUserModel.findOne.mockResolvedValue({ _id: "someone-else" });
+            const req = {
+                user: { _id: "u1" },
+                body: { email: "taken@example.com" },
+            } as unknown as Request;
+            const res = {} as Response;
+            const next = jest.fn() as NextFunction;
+
+            await controller.updateUserData(req, res, next);
+
+            expect(userServiceMocks.findByIdAndPartialUpdate).not.toHaveBeenCalled();
+            expect(mockedSendResponse).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    statusCode: StatusCodes.CONFLICT,
+                    success: false,
+                    message: messages.CONTACT_ALREADY_IN_USE,
+                }),
+            );
+        });
+
         it("calls next when findByIdAndPartialUpdate throws", async () => {
             const err = new Error("update failed");
+            mockedUserModel.findById.mockResolvedValue({ _id: "u1", email: null });
             userServiceMocks.findByIdAndPartialUpdate.mockRejectedValue(err);
             const req = {
                 user: { _id: "u1" },

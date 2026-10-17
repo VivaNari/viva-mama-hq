@@ -77,7 +77,9 @@ jest.mock(require.resolve("../src/api/v1/controllers/products/product.controller
             ];
             const missing = required.filter((k) => req.body?.[k] === undefined);
             if (missing.length) {
-                return res.status(400).json({ success: false, message: `Missing: ${missing.join(",")}` });
+                return res
+                    .status(400)
+                    .json({ success: false, message: `Missing: ${missing.join(",")}` });
             }
             return res.status(201).json({
                 success: true,
@@ -132,20 +134,18 @@ describe("Affiliate Products API", () => {
 
     describe("POST /api/v1/admin/products", () => {
         it("creates a product (201) when the payload is complete", async () => {
-            const res = await request(app)
-                .post("/api/v1/admin/products")
-                .send({
-                    productName: "Postpartum Belt",
-                    productAffiliateLink: "https://www.amazon.in/dp/B0BELT",
-                    productImageURL: "https://cdn.vivamama.app/belt.jpg",
-                    userCategory: "PP",
-                    validWeekStart: 1,
-                    validWeekEnd: 6,
-                    productCategory: "Recovery",
-                    productDescription: "Abdominal support belt.",
-                    productPriceRange: "₹799 - ₹1299",
-                    safetyFlag: "Avoid if you had a C-section without doctor approval.",
-                });
+            const res = await request(app).post("/api/v1/admin/products").send({
+                productName: "Postpartum Belt",
+                productAffiliateLink: "https://www.amazon.in/dp/B0BELT",
+                productImageURL: "https://cdn.vivamama.app/belt.jpg",
+                userCategory: "PP",
+                validWeekStart: 1,
+                validWeekEnd: 6,
+                productCategory: "Recovery",
+                productDescription: "Abdominal support belt.",
+                productPriceRange: "₹799 - ₹1299",
+                safetyFlag: "Avoid if you had a C-section without doctor approval.",
+            });
             expect(res.status).toBe(201);
             expect(res.body.data._id).toBe("p_new");
         });

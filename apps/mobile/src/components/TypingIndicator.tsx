@@ -1,10 +1,12 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { View, Text, StyleSheet } from 'react-native';
 
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 
 export const TypingIndicator: React.FC = () => {
+    const { t } = useTranslation();
     return (
         <View
             style={styles.container}
@@ -12,7 +14,7 @@ export const TypingIndicator: React.FC = () => {
             accessibilityRole="text"
         >
             <Text style={[styles.text, globalStyles.fontSemiBold]}>
-                Viva is thinking...
+                {t('chat.vivaThinking')}
             </Text>
         </View>
     );

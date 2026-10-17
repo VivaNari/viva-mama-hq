@@ -4,6 +4,8 @@ import { messages } from "../../../../constants/messages";
 import BookConsultationPaymentService from "../../../../services/book-consultation/book-consultation-payment.service";
 import { AuthenticatedRequest } from "../../../../types/chat.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
+import { EPreferredSlot } from "../../../../constants/consultation-slots";
+import { ConsultationTypeEnum } from "../../../../types/consultation.types";
 
 export default class BookConsultationController {
     private bookConsultationService: BookConsultationPaymentService;
@@ -15,10 +17,30 @@ export default class BookConsultationController {
             const req = request as AuthenticatedRequest;
             const userId = req.user._id;
 
-            const { amount, expertId, date } = req.body;
+            // `expertId` is still accepted so an app build that predates counsellor
+            // payments keeps working; it means the same thing as consultantId.
+            //
+            // `amount` is deliberately not read. The service resolves the fee from the
+            // consultant's document, so a client that sends one is ignored rather than
+            // trusted — and one that sends none is no longer refused.
+            const {
+                consultantId,
+                expertId,
+                consultationType = ConsultationTypeEnum.EXPERT,
+                date,
+                preferredSlot,
+            } = req.body;
 
-            if (!amount || !expertId || !date) {
-                sendResponse({
+            const resolvedConsultantId = consultantId || expertId;
+
+            if (
+                !resolvedConsultantId ||
+                !date ||
+                !preferredSlot ||
+                !Object.values(EPreferredSlot).includes(preferredSlot) ||
+                !Object.values(ConsultationTypeEnum).includes(consultationType)
+            ) {
+                return sendResponse({
                     data: {},
                     statusCode: StatusCodes.BAD_REQUEST,
                     success: false,
@@ -28,9 +50,10 @@ export default class BookConsultationController {
             }
 
             await this.bookConsultationService.createOrder({
-                amount,
-                expertId,
+                consultantId: resolvedConsultantId,
+                consultationType,
                 date,
+                preferredSlot,
                 userId,
                 response,
             });

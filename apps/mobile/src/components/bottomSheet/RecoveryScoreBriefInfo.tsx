@@ -1,5 +1,6 @@
 import { View, Text } from 'react-native'
 import React from 'react'
+import { useTranslation } from 'react-i18next'
 import { globalStyles } from '../../public/styles'
 import GradientButtonWithSlightRadius from '../GradientButtonWithSlightRadius'
 import { colors } from '../../public/assets/colors'
@@ -15,6 +16,7 @@ const RecoveryScoreBriefInfo = ({
     navigation: any
     onClose?: () => void
 }) => {
+    const { t } = useTranslation();
     return (
         <View>
             <Text
@@ -24,7 +26,7 @@ const RecoveryScoreBriefInfo = ({
 
                 }, globalStyles.fontBold]}
             >
-                About your Viva Recovery Score
+                {t('vivaScore.aboutTitle')}
 
             </Text>
 
@@ -37,7 +39,7 @@ const RecoveryScoreBriefInfo = ({
 
                 }, globalStyles.fontRegular, { marginTop: 10 }]}
             >
-                Significance: {significance}
+                {t('vivaScore.significanceLabel')}{significance}
             </Text>
             <Text
                 style={[{
@@ -52,16 +54,16 @@ const RecoveryScoreBriefInfo = ({
 
             <View style={{ marginTop: 20 }}>
                 <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray }]}>
-                    Disclaimer: Your Viva Recovery Score reflects how you are feeling this week based on your self check-in responses. It is a personal wellness reflection tool, not a medical assessment.
+                    {t('vivaScore.disclaimer1')}
                 </Text>
                 <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, marginTop: 5 }]}>
-                    VivaMama is not a medical device. The Recovery Score does not diagnose, treat, cure, or prevent any medical condition. It does not replace advice from a qualified healthcare professional.
+                    {t('vivaScore.disclaimer2')}
                 </Text>
                 <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, marginTop: 5 }]}>
-                    Any suggestions you receive based on your check-in are educational and general in nature, not personalised medical advice.
+                    {t('vivaScore.disclaimer3')}
                 </Text>
                 <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, marginTop: 5 }]}>
-                    If you have any health concern, please speak with your doctor or a qualified healthcare professional. In an emergency, contact emergency services immediately.
+                    {t('vivaScore.disclaimer4')}
                 </Text>
             </View>
 
@@ -72,7 +74,7 @@ const RecoveryScoreBriefInfo = ({
                 }}
             >
                 <GradientButtonWithSlightRadius
-                    title='Learn More'
+                    title={t('common.learnMore')}
                     fullRounded={true}
                     onPress={() => {
                         if (onClose) onClose();

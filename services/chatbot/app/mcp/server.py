@@ -21,21 +21,16 @@ PRODUCT_API_URL = "http://localhost:8000/api/products"
 # API HELPERS
 # =========================================================
 
+
 async def search_products_api(name: str, limit: int = 3) -> List[Dict[str, Any]]:
     async with httpx.AsyncClient(timeout=20.0) as client:
-        res = await client.get(
-            f"{PRODUCT_API_URL}/search",
-            params={"name": name, "limit": limit}
-        )
+        res = await client.get(f"{PRODUCT_API_URL}/search", params={"name": name, "limit": limit})
         return res.json() if res.status_code == 200 else []
 
 
 async def delete_product_api(name: str) -> Dict[str, Any]:
     async with httpx.AsyncClient(timeout=20.0) as client:
-        res = await client.delete(
-            f"{PRODUCT_API_URL}/delete",
-            params={"name": name}
-        )
+        res = await client.delete(f"{PRODUCT_API_URL}/delete", params={"name": name})
         if res.status_code == 200:
             return {"success": True, "message": f"Product '{name}' deleted"}
         return {"success": False, "message": "Delete failed"}
@@ -43,10 +38,7 @@ async def delete_product_api(name: str) -> Dict[str, Any]:
 
 async def add_product_api(product: Dict[str, Any]) -> Dict[str, Any]:
     async with httpx.AsyncClient(timeout=20.0) as client:
-        res = await client.post(
-            f"{PRODUCT_API_URL}/add",
-            json=product
-        )
+        res = await client.post(f"{PRODUCT_API_URL}/add", json=product)
         if res.status_code == 200:
             return {"success": True, "message": "Product added", "data": res.json()}
         return {"success": False, "message": "Add failed"}
@@ -55,6 +47,7 @@ async def add_product_api(product: Dict[str, Any]) -> Dict[str, Any]:
 # =========================================================
 # MCP TOOL REGISTRATION
 # =========================================================
+
 
 @server.list_tools()
 async def list_tools() -> list[types.Tool]:
@@ -72,10 +65,10 @@ async def list_tools() -> list[types.Tool]:
                 "type": "object",
                 "properties": {
                     "name": {"type": "string"},
-                    "limit": {"type": "integer", "default": 3}
+                    "limit": {"type": "integer", "default": 3},
                 },
-                "required": ["name"]
-            }
+                "required": ["name"],
+            },
         ),
         types.Tool(
             name="delete_product",
@@ -85,11 +78,9 @@ async def list_tools() -> list[types.Tool]:
             ),
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "name": {"type": "string"}
-                },
-                "required": ["name"]
-            }
+                "properties": {"name": {"type": "string"}},
+                "required": ["name"],
+            },
         ),
         types.Tool(
             name="add_product",
@@ -99,11 +90,9 @@ async def list_tools() -> list[types.Tool]:
             ),
             inputSchema={
                 "type": "object",
-                "properties": {
-                    "product": {"type": "object"}
-                },
-                "required": ["product"]
-            }
+                "properties": {"product": {"type": "object"}},
+                "required": ["product"],
+            },
         ),
     ]
 
@@ -112,42 +101,29 @@ async def list_tools() -> list[types.Tool]:
 # MCP TOOL EXECUTION (NO LOGIC HERE)
 # =========================================================
 
+
 @server.call_tool()
-async def call_tool(
-    name: str,
-    arguments: Dict[str, Any]
-) -> list[types.TextContent]:
+async def call_tool(name: str, arguments: Dict[str, Any]) -> list[types.TextContent]:
     """
     MCP calls this AFTER the LLM has already selected the tool.
     """
 
     if name == "search_products":
-        products = await search_products_api(
-            arguments["name"],
-            arguments.get("limit", 3)
-        )
+        products = await search_products_api(arguments["name"], arguments.get("limit", 3))
         return [
             types.TextContent(
                 type="text",
-                text=str({
-                    "tool": "search_products",
-                    "products": products,
-                    "count": len(products)
-                })
+                text=str({"tool": "search_products", "products": products, "count": len(products)}),
             )
         ]
 
     if name == "delete_product":
         result = await delete_product_api(arguments["name"])
-        return [
-            types.TextContent(type="text", text=str(result))
-        ]
+        return [types.TextContent(type="text", text=str(result))]
 
     if name == "add_product":
         result = await add_product_api(arguments["product"])
-        return [
-            types.TextContent(type="text", text=str(result))
-        ]
+        return [types.TextContent(type="text", text=str(result))]
 
     raise ValueError(f"Unknown tool: {name}")
 
@@ -156,6 +132,7 @@ async def call_tool(
 # SERVER ENTRYPOINT
 # =========================================================
 
+
 async def main():
     async with stdio_server(server):
         await server.wait_closed()
@@ -163,4 +140,5 @@ async def main():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(main())

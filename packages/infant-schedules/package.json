@@ -1,0 +1,29 @@
+{
+  "name": "@vivamama/infant-schedules",
+  "version": "0.1.0",
+  "description": "Vaccination and milestone due-date schedules from the India MCP card, shared by the VivaMama backend and mobile app so a due date is computed from one source everywhere.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "echo \"(no unit tests yet for @vivamama/infant-schedules — this is generated data, validated by the generator scripts and by the backend/mobile suites that consume it)\" && exit 0",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.2"
+  }
+}

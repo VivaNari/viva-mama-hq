@@ -43,6 +43,20 @@ const messageSchema: Schema<IMessage> = new Schema<IMessage>(
             },
             default: null,
         },
+        // Experts the AI recommended in this message, already validated against what
+        // the user is allowed to see. The app renders a "Connect" button from these.
+        // Stored (rather than sent over SSE only) so the record matches what she was
+        // actually shown, and so referral-to-booking conversion stays queryable.
+        suggestedExperts: {
+            type: [
+                {
+                    expertId: { type: Schema.Types.ObjectId, ref: "experts" },
+                    name: String,
+                    speciality: String,
+                },
+            ],
+            default: [],
+        },
     },
     generalSchemaOptions,
 );

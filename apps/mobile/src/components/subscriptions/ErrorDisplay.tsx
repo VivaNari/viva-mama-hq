@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
     View,
     Text,
@@ -22,24 +23,25 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     onRetry,
     onDismiss,
 }) => {
+    const { t } = useTranslation();
     if (!error) return null;
 
     const getErrorTitle = (type: SubscriptionErrorType): string => {
         switch (type) {
             case SubscriptionErrorType.NETWORK_ERROR:
-                return 'Connection Error';
+                return t('subscription.errorTitles.connection');
             case SubscriptionErrorType.ORDER_CREATION_FAILED:
-                return 'Order Failed';
+                return t('subscription.errorTitles.orderFailed');
             case SubscriptionErrorType.PAYMENT_FAILED:
-                return 'Payment Failed';
+                return t('subscription.errorTitles.paymentFailed');
             case SubscriptionErrorType.PAYMENT_CANCELLED:
-                return 'Payment Cancelled';
+                return t('subscription.errorTitles.paymentCancelled');
             case SubscriptionErrorType.VERIFICATION_FAILED:
-                return 'Verification Failed';
+                return t('subscription.errorTitles.verificationFailed');
             case SubscriptionErrorType.FREE_PLAN_FAILED:
-                return 'Activation Failed';
+                return t('subscription.errorTitles.activationFailed');
             default:
-                return 'Error';
+                return t('subscription.errorTitles.generic');
         }
     };
 
@@ -59,12 +61,12 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                     </Text>
 
                     <Text style={[styles.message, globalStyles.fontRegular]}>
-                        {error.message}
+                        {t(error.message)}
                     </Text>
 
                     {showContactSupport && (
                         <Text style={[styles.supportText, globalStyles.fontRegular]}>
-                            Please contact support with your payment details.
+                            {t('subscription.contactSupport')}
                         </Text>
                     )}
 
@@ -77,7 +79,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                                 accessibilityLabel="Try again"
                             >
                                 <Text style={[styles.retryButtonText, globalStyles.fontSemiBold]}>
-                                    Try Again
+                                    {t('subscription.tryAgain')}
                                 </Text>
                             </TouchableOpacity>
                         )}
@@ -93,7 +95,7 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
                             accessibilityLabel={error.retryable ? 'Cancel' : 'OK'}
                         >
                             <Text style={[styles.dismissButtonText, globalStyles.fontSemiBold]}>
-                                {error.retryable ? 'Cancel' : 'OK'}
+                                {error.retryable ? t('common.cancel') : t('common.ok')}
                             </Text>
                         </TouchableOpacity>
                     </View>

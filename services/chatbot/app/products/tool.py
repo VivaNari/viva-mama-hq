@@ -30,6 +30,7 @@ def search_products_tool(query: str, limit: int = 3) -> List[Dict[str, Any]]:
 
     if settings.products_source == "mcp":
         from app.mcp.adapter import mcp_search_products
+
         products = mcp_search_products(query, limit=limit)
     else:
         products = search_local_products(query, limit=limit)

@@ -2,3 +2,7 @@
 .local_vector_store
 .DS_Store
 venv_mcp/
+# Organization documents live only in the private GCS bucket, never in git.
+data
+data_new
+lactmed_data/

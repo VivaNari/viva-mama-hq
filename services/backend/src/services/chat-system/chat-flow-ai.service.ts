@@ -11,12 +11,14 @@ import {
     FlowType,
     IFlowDefinition,
     IMessage,
+    ISuggestedExpert,
     MessageRoleEnum,
     MessageTypeEnum,
 } from "../../types/chat.types";
 import { getAIGreetingMessage } from "../../utils/commonFunctions/chatbot";
 import { getUuid } from "../../utils/commonFunctions/uuid";
 import BaseService from "../base.service";
+import { ExpertService } from "../expert/expert.service";
 import LLMService from "../llm/llm.service";
 import MessageService from "../message/message.service";
 import UserService from "../users/user.service";
@@ -26,13 +28,61 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
     private userService: UserService;
     private messageService: MessageService;
     private llmService: LLMService;
+    private expertService: ExpertService;
 
     constructor() {
         super(flowDefinitionModel);
         this.userService = new UserService();
         this.messageService = new MessageService();
         this.llmService = new LLMService();
+        this.expertService = new ExpertService();
     }
+
+    /**
+     * Keep only the experts this user is actually allowed to be sent to.
+     *
+     * The chatbot pipeline mirrors our referral rule when it builds its prompt
+     * directory, but this server owns that rule — so we re-check here rather than
+     * trusting the mirror. A drift in the Python port then costs a missing button,
+     * never a deep link to an expert she should not be seeing.
+     */
+    private resolveSuggestedExperts = async (
+        userId: string,
+        raw: unknown,
+    ): Promise<ISuggestedExpert[]> => {
+        if (!Array.isArray(raw) || raw.length === 0) {
+            return [];
+        }
+
+        try {
+            const visibleExperts = await this.expertService.getVisibleExperts(userId);
+            const visibleById = new Map(
+                visibleExperts.map((expert) => [String(expert._id), expert]),
+            );
+
+            return raw.reduce<ISuggestedExpert[]>((accepted, suggestion) => {
+                const suggestedId = String((suggestion as { id?: unknown })?.id ?? "");
+                const expert = visibleById.get(suggestedId);
+                if (!expert) {
+                    console.warn(
+                        `Dropping expert suggestion ${suggestedId}: not visible to user ${userId}`,
+                    );
+                    return accepted;
+                }
+
+                // Names come from our own record, not from the model's prose.
+                accepted.push({
+                    expertId: expert._id as unknown as ISuggestedExpert["expertId"],
+                    name: expert.name,
+                    speciality: expert.speciality,
+                });
+                return accepted;
+            }, []);
+        } catch (error) {
+            console.error("Failed to validate suggested experts:", error);
+            return [];
+        }
+    };
 
     setSseConnection = (res: Response): void => {
         res.setHeader("Content-Type", "text/event-stream");
@@ -88,12 +138,13 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
         try {
             const {
                 onboarding_data: { preferred_name },
+                preferred_language,
             } = userInstance as IUser;
 
             const greeetingMessage: AIGreetingMessage = {
                 id: getUuid(),
                 type: "ai_message",
-                text: getAIGreetingMessage(preferred_name || "there"),
+                text: getAIGreetingMessage(preferred_name || "there", preferred_language),
                 timestamp: Date.now(),
                 response: {},
                 nodeType: FlowNodeEnum.QUESTION_FREE_TEXT,
@@ -181,6 +232,10 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 sessionId,
                 model,
             );
+            const suggestedExperts = await this.resolveSuggestedExperts(
+                String(userInstance._id),
+                llmResponse.suggested_experts,
+            );
             const aiMessageInstance = await this.createMessage({
                 conversationId: conversationId,
                 userId: userInstance._id as unknown as string,
@@ -191,6 +246,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 attachments: null,
                 ai: null,
                 guided: null,
+                suggestedExperts,
             });
             await conversationModel.findByIdAndUpdate(conversationId, {
                 lastMessageAt: new Date(),
@@ -205,6 +261,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 timestamp: Date.now(),
                 response: llmResponse,
                 nodeType: FlowNodeEnum.QUESTION_FREE_TEXT,
+                suggestedExperts,
             };
 
             console.log("final aiLLMResponse is => ", aiLlmResponse);

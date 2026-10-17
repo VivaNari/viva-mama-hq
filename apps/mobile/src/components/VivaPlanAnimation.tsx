@@ -1,16 +1,18 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
-    useSharedValue,
-    useAnimatedStyle,
-    withRepeat,
-    withTiming,
-    withSequence,
     Easing,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withSequence,
+    withTiming,
 } from 'react-native-reanimated';
 import { globalStyles } from '../public/styles';
 
 export const Loader = () => {
+    const { t } = useTranslation();
     const bubble1Angle = useSharedValue(0);
     const bubble1Radius = useSharedValue(200);
     const bubble1Scale = useSharedValue(0);
@@ -153,7 +155,7 @@ export const Loader = () => {
 
             <Animated.View style={[styles.centerContent, centerStyle]}>
                 <Text style={[styles.title, globalStyles.fontMedium]}>Viva AI</Text>
-                <Text style={[styles.subtitle, globalStyles.fontRegular]}>is curating a plan for you...</Text>
+                <Text style={[styles.subtitle, globalStyles.fontRegular]}>{t('subscription.curatingPlan')}</Text>
             </Animated.View>
         </View>
     );

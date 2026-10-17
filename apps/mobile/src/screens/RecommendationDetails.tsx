@@ -24,7 +24,7 @@ const RecommendationDetails = () => {
 
     if (!recommendation) {
         return (
-            <SafeAreaView style={ContentDetailsStyles.center}>
+            <SafeAreaView style={ContentDetailsStyles.center} edges={['bottom', 'left', 'right']}>
                 <Text
                     style={[globalStyles.fontRegular]}
                 >
@@ -35,7 +35,7 @@ const RecommendationDetails = () => {
     }
 
     return (
-        <SafeAreaView style={{ flex: 1 }}>
+        <SafeAreaView style={{ flex: 1 }} edges={['bottom', 'left', 'right']}>
             <ScrollView contentContainerStyle={ContentDetailsStyles.scrollContent}>
 
                 {/* Title + Author */}

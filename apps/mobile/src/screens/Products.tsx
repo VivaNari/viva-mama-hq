@@ -1,15 +1,23 @@
 import { useNavigation } from '@react-navigation/native';
 import React, { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { getUserProducts } from '../api/getUserProducts';
+import { useLanguage } from '../context/LanguageContext';
 import ItemProduct from '../components/products/ItemProduct';
 import SearchInput from '../components/SearchInput';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { IUserProduct, IUserProductResponse } from '../types/product.types';
+import { AnalyticsEvent, recordError, track } from '../analytics';
+import { useScreenEdges } from '../hooks/useScreenEdges';
 
 const Products = () => {
+    const { t } = useTranslation();
+    // Registered both as a stack screen and as a tab; only the tab has a bar below it.
+    const edges = useScreenEdges(true);
+    const { language } = useLanguage();
     const navigation = useNavigation();
     const [searchData, setSearchData] = useState('');
     const [products, setProducts] = useState<IUserProduct[]>([]);
@@ -22,13 +30,15 @@ const Products = () => {
                 setLoading(true);
                 const response: IUserProductResponse = await getUserProducts();
                 setProducts(response.data);
+                track(AnalyticsEvent.VIEW_ITEM_LIST, { item_list_name: 'products' });
             } catch (error) {
                 console.error("Error fetching products:", error);
+                recordError(error, 'Products.getUserProducts');
             } finally {
                 setLoading(false);
             }
         })();
-    }, []);
+    }, [language]);
 
     // Derived filtered list
     const filteredProducts = useMemo(() => {
@@ -42,10 +52,10 @@ const Products = () => {
     }, [searchData, products]);
 
     return (
-        <SafeAreaView style={globalStyles.container}>
+        <SafeAreaView style={globalStyles.container} edges={edges}>
             <View style={{ backgroundColor: colors.pageBG, padding: 10, paddingVertical: 8, marginBottom: 10, borderRadius: 8, borderWidth: 1, borderColor: '#eee' }}>
                 <Text style={[globalStyles.fontRegular, { fontSize: 11, color: colors.darkGray, textAlign: 'center' }]}>
-                    VivaMama participates in the Amazon Associates Program. Product suggestions are for convenience only and are not medical recommendations. Please consult a qualified healthcare professional regarding any product that may affect your health, especially while breastfeeding or taking medication.
+                    {t('products.amazonDisclaimer')}
                 </Text>
             </View>
             <View>
@@ -75,7 +85,7 @@ const Products = () => {
                             <ActivityIndicator size="large" color={colors.purple} />
                         ) : (
                             <Text style={[{ color: colors.black }, globalStyles.fontRegular]}>
-                                No Products Found!
+                                {t('products.noProductsFound')}
                             </Text>
                         )}
                     </View>

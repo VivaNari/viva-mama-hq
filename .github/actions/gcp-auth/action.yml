@@ -1,0 +1,37 @@
+name: GCP auth
+description: >
+  Authenticate to Google Cloud and set up the gcloud SDK, optionally configuring
+  Docker credentials for an Artifact Registry region. Every GCP-touching workflow
+  in this repo repeats this same three-step preamble, so it lives here once.
+
+inputs:
+  credentials_json:
+    description: Service account key JSON.
+    required: true
+  project_id:
+    description: GCP project to operate against.
+    required: true
+  configure_docker_region:
+    description: >
+      Artifact Registry region (e.g. asia-south1). When set, configures Docker
+      auth for <region>-docker.pkg.dev. Leave empty for deploy-only jobs, which
+      never push an image.
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ inputs.credentials_json }}
+        project_id: ${{ inputs.project_id }}
+
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+
+    - name: Configure Docker for Artifact Registry
+      if: inputs.configure_docker_region != ''
+      shell: bash
+      run: gcloud auth configure-docker "${{ inputs.configure_docker_region }}-docker.pkg.dev" --quiet

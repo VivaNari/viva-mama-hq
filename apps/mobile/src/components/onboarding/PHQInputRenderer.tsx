@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { View, Text, TouchableOpacity, TextInput } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { IPHQQuestion } from "../../types";
@@ -12,6 +13,7 @@ interface Props {
 }
 
 const PHQInputRenderer: React.FC<Props> = ({ question, onChange }) => {
+    const { t } = useTranslation();
     const [showDatePicker, setShowDatePicker] = useState(false);
 
     switch (question.answerType) {
@@ -101,7 +103,7 @@ const PHQInputRenderer: React.FC<Props> = ({ question, onChange }) => {
                         <Text style={[{ color: colors.white }, globalStyles.fontRegular]}>
                             {question.answer
                                 ? new Date(question.answer as string).toLocaleDateString()
-                                : "Select Date"}
+                                : t('common.selectDate')}
 
                         </Text>
                         <MaterialDesignIcons name="calendar-month-outline" color={colors.white} size={20} />

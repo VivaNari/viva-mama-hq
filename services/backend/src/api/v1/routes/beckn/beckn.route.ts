@@ -16,7 +16,11 @@ const becknController = new BecknController();
 
 becknRouter.post("/beckn/select", requestValidator(becknSelectValidator), becknController.select);
 becknRouter.post("/beckn/init", requestValidator(becknInitValidator), becknController.init);
-becknRouter.post("/beckn/confirm", requestValidator(becknConfirmValidator), becknController.confirm);
+becknRouter.post(
+    "/beckn/confirm",
+    requestValidator(becknConfirmValidator),
+    becknController.confirm,
+);
 becknRouter.post("/beckn/status", requestValidator(becknStatusValidator), becknController.status);
 
 export default becknRouter;

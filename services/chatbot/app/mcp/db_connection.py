@@ -29,40 +29,40 @@ _database: Optional[Database] = None
 def get_mongo_client() -> MongoClient:
     """
     Get or create the MongoDB client connection.
-    
+
     This function uses a singleton pattern - it creates the connection once
     and returns the same connection on subsequent calls. This is important
     for performance because establishing database connections is expensive.
-    
+
     The connection string comes from the MONGODB_URI environment variable,
     which should be set in your .env file or deployment configuration.
-    
+
     Example connection strings:
     - Local development: "mongodb://localhost:27017/viva_mama"
     - MongoDB Atlas: "mongodb+srv://username:password@cluster.mongodb.net/viva_mama"
-    
+
     Returns:
         MongoClient: A connected MongoDB client instance
-        
+
     Raises:
         ValueError: If MONGODB_URI environment variable is not set
         ConnectionError: If unable to connect to MongoDB
     """
     global _mongo_client
-    
+
     # If we already have a connection, return it immediately
     if _mongo_client is not None:
         return _mongo_client
-    
+
     # Get the connection string from environment variables
     mongo_uri = settings.mongodb_uri
-    
+
     if not mongo_uri:
         raise ValueError(
             "MONGODB_URI environment variable is not set. "
             "Please add it to your .env file with your MongoDB connection string."
         )
-    
+
     try:
         # Create the MongoDB client
         # serverSelectionTimeoutMS controls how long to wait when connecting
@@ -71,17 +71,17 @@ def get_mongo_client() -> MongoClient:
             mongo_uri,
             serverSelectionTimeoutMS=5000,
         )
-        
+
         # Test the connection by running a simple command
         # This will raise an exception if MongoDB is unreachable
-        _mongo_client.admin.command('ping')
-        
-        #print(f"[DB] Successfully connected to MongoDB")
-        
+        _mongo_client.admin.command("ping")
+
+        # print(f"[DB] Successfully connected to MongoDB")
+
         return _mongo_client
-        
+
     except Exception as e:
-        #print(f"[DB ERROR] Failed to connect to MongoDB: {str(e)}")
+        # print(f"[DB ERROR] Failed to connect to MongoDB: {str(e)}")
         raise ConnectionError(
             f"Could not connect to MongoDB. Please check that MongoDB is running "
             f"and that your MONGODB_URI is correct. Error: {str(e)}"
@@ -91,49 +91,49 @@ def get_mongo_client() -> MongoClient:
 def get_database() -> Database:
     """
     Get the Viva Mama database instance.
-    
+
     This function returns a reference to your application database.
     The database name comes from the MONGODB_DATABASE environment variable,
     which defaults to "viva_mama" if not specified.
-    
+
     Returns:
         Database: The MongoDB database instance
     """
     global _database
-    
+
     if _database is not None:
         return _database
-    
+
     # Get the database name from environment variables
     # Default to "viva_mama" if not specified
     db_name = settings.mongodb_database
-    
+
     client = get_mongo_client()
     _database = client[db_name]
-    
-    #print(f"[DB] Using database: {db_name}")
-    
+
+    # print(f"[DB] Using database: {db_name}")
+
     return _database
 
 
 def close_connection():
     """
     Close the MongoDB connection.
-    
+
     This should be called when the MCP server is shutting down to ensure
     that database connections are properly closed and resources are released.
-    
+
     In normal operation, you don't need to call this manually - the connection
     will be closed when the Python process exits. However, it's useful for
     clean shutdowns and testing.
     """
     global _mongo_client, _database
-    
+
     if _mongo_client is not None:
         _mongo_client.close()
         _mongo_client = None
         _database = None
-        #print("[DB] MongoDB connection closed")
+        # print("[DB] MongoDB connection closed")
 
 
 # =============================================================================
@@ -143,13 +143,14 @@ def close_connection():
 # They match the collection names used by your Mongoose models in Node.js.
 # =============================================================================
 
+
 def get_users_collection() -> Collection:
     """
     Get the 'users' collection.
-    
+
     This collection stores user profiles, onboarding data, and current status.
     Schema reference: src/models/schema/user.schema.ts
-    
+
     Key fields used by chatbot:
     - onboarding_data.preferred_name: User's name
     - onboarding_data.delivery_date: When they gave birth
@@ -164,10 +165,10 @@ def get_users_collection() -> Collection:
 def get_experts_collection() -> Collection:
     """
     Get the 'experts' collection.
-    
+
     This collection stores expert profiles and their specialties.
     Schema reference: src/models/schema/expert.schema.ts
-    
+
     Key fields used by chatbot:
     - name: Expert's name
     - title: Expert's title
@@ -176,12 +177,28 @@ def get_experts_collection() -> Collection:
     db = get_database()
     return db["experts"]
 
+
+def get_expert_categories_collection() -> Collection:
+    """
+    Get the 'expert_categories' collection.
+
+    An expert's `category` field is an ObjectId reference into this collection.
+    Schema reference: src/models/schema/expert-category.schema.ts
+
+    Key fields used by chatbot:
+    - key: Stable machine key (e.g. "lactation")
+    - name: Human-readable category name, shown in the expert directory prompt
+    """
+    db = get_database()
+    return db["expert_categories"]
+
+
 def get_products_collection() -> Collection:
     """
     Get the 'products' collection.
-    
+
     This collection stores product information and their details.
-    
+
     Key fields used by chatbot:
     - name: Product name
     - description: Product description
@@ -191,13 +208,29 @@ def get_products_collection() -> Collection:
     return db["products"]
 
 
+def get_contents_collection() -> Collection:
+    """
+    Get the 'contents' collection.
+
+    Curated educational articles. Used as a fallback knowledge source when the
+    RAG vector index retrieves weakly.
+
+    Key fields used by the chatbot:
+    - featuredTitle: English article title (translations.hi.featuredTitle for Hindi)
+    - contentBody: array of {contentType: HEADING|PARAGRAPH, body: str} blocks
+    - validWeekStart / validWeekEnd: postpartum week validity range
+    """
+    db = get_database()
+    return db["contents"]
+
+
 def get_recommendation_history_collection() -> Collection:
     """
     Get the 'recommendation_history' collection.
-    
+
     This collection stores weekly recovery scores and recommendations.
     Schema reference: src/models/schema/recommendationHistory.schema.ts
-    
+
     Key fields used by chatbot:
     - week: Which postpartum week this assessment is for
     - finalScore: Overall recovery score (0-100)
@@ -213,11 +246,11 @@ def get_recommendation_history_collection() -> Collection:
 def get_recommendations_collection() -> Collection:
     """
     Get the 'Recommendation' collection (note the capital R and singular form).
-    
+
     This collection stores the template recommendations that get shown to users
     based on their recovery phase, zone, and category.
     Schema reference: src/models/schema/recommendation.schema.ts
-    
+
     Key fields:
     - phase: "1-2", "3-4", "5-6", "7-12", "13-26", "27-52"
     - zone: "RED", "YELLOW", "GREEN"
@@ -231,10 +264,10 @@ def get_recommendations_collection() -> Collection:
 def get_flow_instances_collection() -> Collection:
     """
     Get the 'flow_instances' collection.
-    
+
     This collection stores instances of questionnaire flows that users have started.
     Schema reference: src/models/schema/flowInstance.schema.ts
-    
+
     Key fields used by chatbot:
     - userId: Who this flow belongs to
     - flowSlug: Which questionnaire type (e.g., "weekly_checkin")
@@ -250,10 +283,10 @@ def get_flow_instances_collection() -> Collection:
 def get_flow_responses_collection() -> Collection:
     """
     Get the 'flow_responses' collection.
-    
+
     This collection stores individual answers to questionnaire nodes.
     Schema reference: src/models/schema/flowResponse.schema.ts
-    
+
     Key fields:
     - flowInstanceId: Links to a flow_instance
     - nodeId: Which question this answers
@@ -266,10 +299,10 @@ def get_flow_responses_collection() -> Collection:
 def get_conversations_collection() -> Collection:
     """
     Get the 'conversations' collection.
-    
+
     This collection stores chat conversation metadata.
     Schema reference: src/models/schema/conversation.schema.ts
-    
+
     Key fields:
     - userId: Who owns this conversation
     - title: Conversation title (often auto-generated)
@@ -283,10 +316,10 @@ def get_conversations_collection() -> Collection:
 def get_messages_collection() -> Collection:
     """
     Get the 'messages' collection.
-    
+
     This collection stores individual chat messages.
     Schema reference: src/models/schema/message.schema.ts
-    
+
     Key fields used by chatbot:
     - conversationId: Which conversation this belongs to
     - userId: Who sent/received this message
@@ -302,12 +335,13 @@ def get_messages_collection() -> Collection:
 # Health Check Function
 # =============================================================================
 
+
 def check_database_health() -> dict:
     """
     Verify that the database connection is working and collections are accessible.
-    
+
     This is useful for health check endpoints and debugging connection issues.
-    
+
     Returns:
         dict: Status information about the database connection
         {
@@ -319,34 +353,31 @@ def check_database_health() -> dict:
     """
     try:
         db = get_database()
-        
+
         # Try to list collections to verify we have access
         collections = db.list_collection_names()
-        
+
         # Check if key collections exist
         expected_collections = [
             "users",
             "recommendation_history",
             "flow_instances",
             "messages",
-            "conversations"
+            "conversations",
         ]
-        
+
         existing_collections = [c for c in expected_collections if c in collections]
-        
+
         return {
             "connected": True,
             "database": db.name,
             "collections_accessible": True,
             "collections_found": existing_collections,
-            "total_collections": len(collections)
+            "total_collections": len(collections),
         }
-        
+
     except Exception as e:
-        return {
-            "connected": False,
-            "collections_accessible": False,
-            "error": str(e)
-        }
-    
+        return {"connected": False, "collections_accessible": False, "error": str(e)}
+
+
 get_mongo_client()

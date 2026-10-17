@@ -1,5 +1,6 @@
 import { Router } from "express";
 import requestValidator from "../../../../middlewares/requestValidator.middleware";
+import InfantWellbeingController from "../../controllers/dashboard/infant-wellbeing.controller";
 import UserController from "../../controllers/users/user.controller";
 import googleAuthValidator from "../../validators/users/googleAuth.validator";
 import { sentOTPValidator, verifyOTPValidator } from "../../validators/users/otp.validator";
@@ -7,10 +8,15 @@ import authMiddleware from "../../../../middlewares/authorization.middleware";
 
 const userRouter = Router();
 const userController = new UserController();
+const infantWellbeingController = new InfantWellbeingController();
 
 userRouter.get("/user", authMiddleware(), userController.getUserbyAuthToken);
 
 userRouter.put("/user/update-fcm-token", authMiddleware(), userController.updateFCMToken);
+
+// Play's User Data policy requires an in-app account deletion path. Deliberately takes
+// no id — the account deleted is always the one the bearer token authenticates as.
+userRouter.delete("/user/me", authMiddleware("header"), userController.deleteMyAccount);
 
 userRouter.post(
     "/auth/send-otp",
@@ -28,6 +34,24 @@ userRouter.get(
     userController.getCheckinScoreData,
 );
 
+userRouter.patch(
+    "/dashboard/emergency-alert/:id/dismiss",
+    authMiddleware("header"),
+    userController.dismissEmergencyAlert,
+);
+
+// The infant half of the dashboard. Takes ?childId= rather than dropping it on the path,
+// matching the per-child log GETs the card summarises.
+userRouter.get(
+    "/dashboard/infant-wellbeing",
+    authMiddleware("header"),
+    infantWellbeingController.getInfantWellbeing,
+);
+
 userRouter.put("/user/update-user-data", authMiddleware("header"), userController.updateUserData);
+// POST /user/map-expert-referral was removed. It resolved codes against
+// `experts.referralCode`, which made that field a second source of truth alongside
+// `referral_programs.code` — two codes could exist for one doctor, only one of which
+// carried a plan. POST /referral/redeem replaces it.
 
 export default userRouter;

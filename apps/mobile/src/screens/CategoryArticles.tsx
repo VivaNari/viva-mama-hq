@@ -30,7 +30,7 @@ const SubCategoryBlock = ({ item }: { item: ISubCategory }) => {
 
 const CategoryScreen = ({ category }: { category: ICategory }) => {
     return (
-        <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: "#fff" }} edges={['bottom', 'left', 'right']}>
             {/* Header Image */}
             <Image
                 source={category.categoryThumbnailImage}
