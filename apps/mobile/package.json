@@ -21,7 +21,7 @@
     "@react-native-firebase/crashlytics": "^23.5.0",
     "@react-native-firebase/messaging": "^23.5.0",
     "@react-native-google-signin/google-signin": "^16.0.0",
-    "@react-native-vector-icons/lucide": "^12.4.0",
+    "@react-native-vector-icons/lucide": "^13.1.5",
     "@react-native-vector-icons/material-design-icons": "^12.3.0",
     "@react-navigation/bottom-tabs": "^7.4.7",
     "@react-navigation/elements": "^2.9.1",
