@@ -5,6 +5,7 @@ import {
     ActivityIndicator,
     ScrollView,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
@@ -60,8 +61,17 @@ const EditProfile = () => {
     const [loadError, setLoadError] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showStillBirthSupport, setShowStillBirthSupport] = useState(false);
+    // Height has no onboarding question yet, so it is edited here as its own field rather
+    // than through a flow node. Once onboarding asks it, map the node in
+    // onboardingFieldMap and drop this field so it is not shown twice.
+    const [heightInput, setHeightInput] = useState("");
 
     const user = userData?.user;
+
+    useEffect(() => {
+        const stored = user?.onboarding_data?.height_cm;
+        setHeightInput(stored ? String(stored) : "");
+    }, [user]);
 
     // Contact fields are shown read-only, and only when a value exists.
     const hasEmail = !!user?.email;
@@ -186,6 +196,20 @@ const EditProfile = () => {
             if (field === "feeding_method" && !isPostpartum) continue;
             (onboardingPatch as Record<string, AnswerValue>)[field] = answers[field] ?? null;
         }
+
+        // Blank clears it; anything else must be a whole height the backend accepts.
+        const trimmedHeight = heightInput.trim();
+        const heightCm = trimmedHeight ? Number(trimmedHeight) : null;
+        if (heightCm !== null && (!Number.isFinite(heightCm) || heightCm < 100 || heightCm > 220)) {
+            Toast.show({
+                type: "error",
+                text1: t("common.error"),
+                text2: t("editProfile.heightInvalid"),
+                position: "bottom",
+            });
+            return;
+        }
+        onboardingPatch.height_cm = heightCm === null ? null : Math.round(heightCm);
 
         const payload: UpdateUserDataPayload = { onboarding_data: onboardingPatch };
 
@@ -376,6 +400,23 @@ const EditProfile = () => {
                             </View>
                         );
                     })}
+
+                    <View style={styles.fieldBlock}>
+                        <Text style={[styles.questionLabel, globalStyles.fontSemiBold]}>
+                            {t("editProfile.height")}
+                        </Text>
+                        <View style={styles.input}>
+                            <TextInput
+                                placeholderTextColor={colors.gray}
+                                style={[styles.inputFocusedValue, globalStyles.fontRegular]}
+                                placeholder={t("editProfile.heightPlaceholder")}
+                                value={heightInput}
+                                onChangeText={text => setHeightInput(text.replace(/[^0-9]/g, ""))}
+                                keyboardType="number-pad"
+                                maxLength={3}
+                            />
+                        </View>
+                    </View>
                 </View>
 
                 {saveBlocked && (

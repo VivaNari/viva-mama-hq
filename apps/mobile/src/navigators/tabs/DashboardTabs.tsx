@@ -7,10 +7,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
 import ArticleContent from '../../screens/ArticleContent';
-import ChatWithVivaAI from '../../screens/ChatWithVivaAI';
 import Dashboard from '../../screens/Dashboard';
 import Experts from '../../screens/Experts';
 import Products from '../../screens/Products';
+import VivaAIHub from '../../screens/VivaAIHub';
 import { useCapability } from '../../context/SubscriptionContext';
 import { Capability } from '../../types/entitlements.types';
 
@@ -130,10 +130,10 @@ export const DashboardTabs = () => {
                     ),
                 }}
             /> */}
+            {/* The tab is a hub now; chat opens from its "Ask a question" action. */}
             <Tab.Screen
                 name="VivaAI"
-                component={ChatWithVivaAI as any}
-
+                component={VivaAIHub}
                 options={{
                     title: t('nav.tabVivaAi'),
                     tabBarIcon: ({ color }) => (
@@ -145,12 +145,6 @@ export const DashboardTabs = () => {
                     ),
                     headerShown: false,
                 }}
-                listeners={({ navigation }) => ({
-                    tabPress: e => {
-                        e.preventDefault();
-                        navigation.navigate('ChatWithVivaAI');
-                    },
-                })}
             />
             <Tab.Screen
                 name="Experts"

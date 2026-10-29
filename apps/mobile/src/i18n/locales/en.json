@@ -184,7 +184,10 @@
     "stillBirthAck": "We are extremely sorry for your loss. You can connect with one of our experts or chat with our Viva AI assistant for further support whenever you feel ready.",
     "availableAfterBirth": "You can answer this once your delivery date has passed",
     "answerRequired": "Please select an answer",
-    "deliveryDetailsRequired": "Please select your delivery outcome and delivery type before saving"
+    "deliveryDetailsRequired": "Please select your delivery outcome and delivery type before saving",
+    "height": "Your height (cm)",
+    "heightPlaceholder": "e.g. 160",
+    "heightInvalid": "Height must be between 100 and 220 cm"
   },
   "aboutScore": {
     "whatIs": "What is the Viva Recovery Score?",
@@ -1357,5 +1360,485 @@
       "removeFailed": "Could not remove that — please try again"
     },
     "statValue": "{{value}} {{unit}}"
+  },
+  "vivaHub": {
+    "title": "Viva AI",
+    "subtitle": "Your assistant · here to help",
+    "heroTitle": "Hi, I'm Viva, your pregnancy and postpartum assistant.",
+    "heroBody": "Please tell me how I can help you, or tap an option below.",
+    "askPlaceholder": "Type or speak your question...",
+    "listening": "Listening...",
+    "askByVoice": "Ask by voice",
+    "canHelpWith": "HERE'S WHAT VIVA CAN HELP WITH",
+    "askQuestion": "Ask a question",
+    "logSomething": "Log something",
+    "bookConsult": "Book a consult",
+    "uploadRecords": "Upload reports / records",
+    "setReminder": "Set a reminder",
+    "setReminderSub": "Medicines, BP/sugar checks, ANC visits"
+  },
+  "logs": {
+    "common": {
+      "back": "Back",
+      "increase": "Increase",
+      "decrease": "Decrease",
+      "removeLastTap": "Remove last tap",
+      "saveLog": "Save log",
+      "saved": "Saved",
+      "cancel": "Cancel",
+      "logMore": "Log more",
+      "orQuickPick": "...or tap a quick pick",
+      "takePhoto": "Take a photo or choose from gallery",
+      "loadFailed": "Could not load your logs. Please try again.",
+      "saveFailed": "Could not save. Please try again.",
+      "deleteFailed": "Could not remove this entry. Please try again.",
+      "removeTitle": "Remove this entry?",
+      "removeBody": "It will be removed from today's log.",
+      "remove": "Remove",
+      "longPressToRemove": "Long press to remove",
+      "nothingYet": "Nothing logged yet."
+    },
+    "units": {
+      "kg": "kg",
+      "min": "min",
+      "ml": "ml",
+      "mgdl": "mg/dL",
+      "fahrenheit": "°F",
+      "gdl": "g/dL",
+      "plus": "+",
+      "bpm": "bpm"
+    },
+    "picker": {
+      "title": "What would you like to log?",
+      "publicHint": "Just a few, easy ones. Your clinic card and reports fill in the rest.",
+      "alsoTrack": "ALSO TRACK",
+      "tookIronCalcium": "Took iron & calcium",
+      "babyMovedToday": "Baby moved today",
+      "howIFeelToday": "How I feel today",
+      "uploadCardOrReport": "Upload card or report",
+      "aReading": "A reading (BP, sugar, Hb)",
+      "aReadingSub": "Only when the clinic or camp gives you one",
+      "babyMovementKicks": "Baby movement / kicks",
+      "ancCheckup": "ANC checkup",
+      "scansReports": "Scans & reports",
+      "weightBmi": "Weight / BMI",
+      "pumping": "Pumping",
+      "meals": "Meals",
+      "water": "Water",
+      "bpSugarWeight": "BP / Sugar / Weight",
+      "medicines": "Medicines",
+      "moodCheckIn": "Mood check-in"
+    },
+    "kicks": {
+      "title": "Baby movement counter",
+      "intro": "Tap below every time your baby moves. Most babies move at least 10 times in 2 hours.",
+      "tap": "Tap",
+      "goal": "Goal: {{count}} of {{goal}}",
+      "complete": "Great! Today's count is complete",
+      "disclaimer": "This information is for reference only and is not medical advice. If movement feels much lower than usual, contact your care team right away."
+    },
+    "water": {
+      "title": "Water log",
+      "addGlass": "Add a glass",
+      "glassesTap": "glasses · tap",
+      "goal": "Goal: {{goal}} glasses",
+      "complete": "Today's goal complete"
+    },
+    "weight": {
+      "title": "Weight tracker",
+      "heightRecordedOnce": "Height: {{height}} cm (recorded once)",
+      "bmi": "BMI",
+      "bmiUnder": "Underweight range",
+      "bmiNormal": "In the normal range",
+      "bmiOver": "Overweight range",
+      "note": "Tracking weight in pregnancy and after delivery helps you and your care team spot trends early. This is for reference only — talk to your care team with any questions.",
+      "addHeight": "Add your height in Edit Profile to see your BMI ›"
+    },
+    "pumping": {
+      "title": "Pumping log",
+      "whichSide": "Which side?",
+      "left": "Left",
+      "right": "Right",
+      "both": "Both",
+      "duration": "Duration",
+      "quantity": "Quantity pumped",
+      "todayTotal": "Today's total pumping",
+      "timesMinutes": "{{count}} times · {{minutes}} min",
+      "totalPumped": "Total pumped today",
+      "ml": "{{value}} ml",
+      "todaySessions": "Today's sessions",
+      "sessionValue": "{{minutes}} min · {{quantity}} ml"
+    },
+    "medicine": {
+      "title": "Medicines & supplements",
+      "takenToday": "{{count}} of {{total}} taken today",
+      "ifaThisWeek": "Iron-folic acid, this week",
+      "daysOfWeek": "{{count}} of {{total}} days",
+      "seeSummary": "See your full summary ›",
+      "taken": "Taken ✓",
+      "markTaken": "Mark as taken",
+      "add": "Add a medicine or supplement",
+      "whatAdding": "What are you adding?",
+      "medicineName": "Medicine name",
+      "typeName": "Type any medicine name",
+      "howOften": "How often?",
+      "addToList": "Add to my list",
+      "presets": {
+        "ironFolicAcid": "Iron-Folic Acid",
+        "calcium": "Calcium",
+        "vitaminD": "Vitamin D",
+        "insulin": "Insulin",
+        "other": "Other"
+      },
+      "otherOptions": {
+        "magnesium": "Magnesium",
+        "multivitamin": "Multivitamin",
+        "probiotic": "Probiotic",
+        "omega3": "Omega-3",
+        "folicAcidOnly": "Folic Acid only",
+        "thyroid": "Thyroid medicine",
+        "bloodThinner": "Blood thinner"
+      },
+      "frequencies": {
+        "onceADay": "Once a day",
+        "sos": "SOS (as needed)",
+        "twiceADay": "Twice a day",
+        "thriceADay": "Thrice a day"
+      }
+    },
+    "records": {
+      "title": "Scans, lab reports & prescriptions",
+      "whatAdding": "What are you adding?",
+      "categories": {
+        "scan": "Scan",
+        "lab": "Lab report",
+        "prescription": "Prescription",
+        "mch": "MCH card"
+      },
+      "mchNote": "Your Mother and Child Protection card. Viva reads your ANC visits, weight, BP, Hb and TT doses from it to build your ANC-wise record and your shareable summary.",
+      "whichScan": "Which scan?",
+      "scanTypes": {
+        "dating": "Dating scan",
+        "anomaly": "Anomaly scan (TIFFA)",
+        "growth": "Growth scan"
+      },
+      "scanTypesShort": {
+        "dating": "Dating scan",
+        "anomaly": "Anomaly scan",
+        "growth": "Growth scan"
+      },
+      "photoAdded": "Photo added",
+      "removePhoto": "Remove photo",
+      "logged": "{{item}} logged",
+      "savedMch": "Saved. Viva is adding these to your ANC record.",
+      "savedWithPhoto": "Saved to Library with your photo attached",
+      "saved": "Saved to Library"
+    },
+    "readings": {
+      "title": "Readings Log",
+      "intro": "For mothers your doctor has asked to monitor closely. Log readings here so Viva can track trends and flag anything that needs attention.",
+      "tabs": {
+        "bp": "BP",
+        "sugar": "Sugar",
+        "weight": "Weight",
+        "other": "Other"
+      },
+      "systolic": "Systolic",
+      "diastolic": "Diastolic",
+      "bpHigh": "This reading is higher than usual. Consider contacting your care team.",
+      "sugarHigh": "This reading is higher than the usual range. Consider contacting your care team.",
+      "save": "Save reading",
+      "recent": "Recent readings",
+      "today": "Today",
+      "bpValue": "{{systolic}}/{{diastolic}} mmHg",
+      "fasting": "Fasting",
+      "postMeal": "Post-meal",
+      "heightOnFile": "Height on file: {{height}} cm",
+      "bmiLabel": "BMI:",
+      "weightValue": "{{weight}} kg · BMI {{bmi}}",
+      "whatLogging": "What are you logging?",
+      "other": {
+        "temperature": "Temperature",
+        "hb": "Hemoglobin (Hb)",
+        "urineProtein": "Urine protein",
+        "fetalHeartRate": "Fetal heart rate"
+      }
+    },
+    "anc": {
+      "title": "ANC checkup",
+      "weekToday": "Pregnancy week {{week}} · today's visit",
+      "logVisit": "Log a visit",
+      "recommendedSchedule": "Recommended schedule",
+      "whichChecks": "Which checks were done today? (select all)",
+      "checks": {
+        "bp": "BP check",
+        "weight": "Weight",
+        "abdominal": "Abdominal exam",
+        "hb": "Hb check",
+        "urine": "Urine test",
+        "fetalHeartbeat": "Fetal heartbeat"
+      },
+      "nextVisitHint": "Your next ANC visit is usually suggested in about 2 weeks.",
+      "logged": "ANC visit logged",
+      "checksRecorded": "{{count}} checks recorded",
+      "checksRecorded_one": "{{count}} check recorded",
+      "checksRecorded_other": "{{count}} checks recorded",
+      "checkedOff": "Checked off",
+      "progress": "{{count}} of {{total}}",
+      "done": "Done ✓",
+      "markDone": "Mark done",
+      "schedule": {
+        "public": {
+          "groups": {
+            "g1": "VISIT 1 · REGISTRATION (UP TO 12 WEEKS)",
+            "g2": "VISIT 2 · 14–26 WEEKS",
+            "g3": "VISIT 3 · 28–34 WEEKS",
+            "g4": "VISIT 4 · 36 WEEKS TO DELIVERY"
+          },
+          "g1a": {
+            "label": "Registration, weight, BP & urine test",
+            "timing": "At registration"
+          },
+          "g1b": {
+            "label": "Blood tests — Hb, blood group, VDRL, HIV, HBsAg",
+            "timing": "At registration"
+          },
+          "g1c": {
+            "label": "Td-1 injection",
+            "timing": "At registration"
+          },
+          "g2a": {
+            "label": "BP, weight & urine test",
+            "timing": "14–26 weeks"
+          },
+          "g2b": {
+            "label": "Anomaly scan (USG)",
+            "timing": "18–20 weeks"
+          },
+          "g2c": {
+            "label": "Td-2 injection",
+            "timing": "14–26 weeks"
+          },
+          "g2d": {
+            "label": "IFA & Calcium tablets started",
+            "timing": "14–26 weeks"
+          },
+          "g3a": {
+            "label": "BP, weight, urine & Hb repeat",
+            "timing": "28–34 weeks"
+          },
+          "g3b": {
+            "label": "Abdominal exam & fetal heart check",
+            "timing": "28–34 weeks"
+          },
+          "g4a": {
+            "label": "BP, weight & urine test",
+            "timing": "36+ weeks"
+          },
+          "g4b": {
+            "label": "Position check & birth preparedness",
+            "timing": "36+ weeks"
+          },
+          "footnote": "Based on India's minimum government ANC guideline (4 visits). Your actual PHC/CHC or PMSMA camp schedule may vary slightly."
+        },
+        "private": {
+          "groups": {
+            "p1": "TRIMESTER 1 · UP TO 12 WEEKS",
+            "p2": "TRIMESTER 2 · 13–27 WEEKS",
+            "p3": "TRIMESTER 3 · 28 WEEKS TO DELIVERY"
+          },
+          "p1a": {
+            "label": "Dating scan",
+            "timing": "6–8 weeks"
+          },
+          "p1b": {
+            "label": "Booking bloods — CBC, blood group, thyroid, HIV/HBsAg/VDRL, urine R/M",
+            "timing": "8–10 weeks"
+          },
+          "p1c": {
+            "label": "NT scan + Double marker",
+            "timing": "11–13 weeks"
+          },
+          "p2a": {
+            "label": "Anomaly / Level II scan",
+            "timing": "18–20 weeks"
+          },
+          "p2b": {
+            "label": "OGCT / GTT for gestational diabetes",
+            "timing": "24–28 weeks"
+          },
+          "p2c": {
+            "label": "Quadruple marker (if NT missed earlier)",
+            "timing": "15–20 weeks"
+          },
+          "p2d": {
+            "label": "Vitamin D, B12 & thyroid repeat",
+            "timing": "~24 weeks"
+          },
+          "p3a": {
+            "label": "Growth scan",
+            "timing": "28–32 weeks"
+          },
+          "p3b": {
+            "label": "GBS swab",
+            "timing": "35–37 weeks"
+          },
+          "p3c": {
+            "label": "Growth + Doppler scan",
+            "timing": "36–38 weeks"
+          },
+          "p3d": {
+            "label": "Weekly BP, urine & NST as advised",
+            "timing": "36+ weeks"
+          },
+          "footnote": "A denser, commonly-followed private/standard schedule with additional scans and blood panels. Exact tests vary by clinic and risk profile — always follow your own care team's advice."
+        }
+      }
+    },
+    "meals": {
+      "title": "Meals log",
+      "plateScanned": "Plate scanned",
+      "scanDetected": "Viva scanned your plate and detected: {{foods}}. Adjust the tags below if anything's missing.",
+      "whichMeal": "Which meal?",
+      "times": {
+        "breakfast": "Breakfast",
+        "lunch": "Lunch",
+        "eveningSnack": "Evening snack",
+        "dinner": "Dinner"
+      },
+      "whatEat": "What did you eat? (select, or add your own)",
+      "foods": {
+        "dal": "Dal",
+        "rice": "Rice",
+        "vegetables": "Vegetables",
+        "roti": "Roti",
+        "curd": "Curd",
+        "fruit": "Fruit",
+        "egg": "Egg",
+        "paneer": "Paneer",
+        "khichdi": "Khichdi",
+        "poha": "Poha",
+        "nuts": "Nuts / seeds"
+      },
+      "addOwn": "+ Add your own",
+      "nutritionTitle": "Today's nutrition assessment",
+      "balanced": "Well balanced today — you've covered protein, carbs, vegetables, fruit and dairy.",
+      "missing": "Good so far. Today's log is missing {{groups}}. Try adding this at your next meal for a more balanced day.",
+      "groups": {
+        "protein": "protein",
+        "carbs": "carbs",
+        "vegetables": "vegetables",
+        "fruit": "fruit",
+        "dairy": "dairy"
+      },
+      "todayMeals": "Today's meals"
+    },
+    "reminders": {
+      "title": "Reminders",
+      "activeCount": "{{count}} active reminders",
+      "activeCount_one": "{{count}} active reminder",
+      "activeCount_other": "{{count}} active reminders",
+      "newReminder": "New reminder",
+      "routeHint": {
+        "public": "From the government ANC schedule and your PHC. Viva sets these up for you.",
+        "private": "From your doctor's prescription and visit plan."
+      },
+      "presets": {
+        "ironCalcium": {
+          "detail": "Iron & calcium tablet",
+          "schedule": "Evening · Daily · Ongoing"
+        },
+        "ancVisit": {
+          "detail": "ANC visit at the PHC",
+          "schedule": "This Thursday"
+        },
+        "pmsma": {
+          "detail": "PMSMA checkup",
+          "schedule": "9th of the month"
+        },
+        "thr": {
+          "detail": "Take-home ration pickup",
+          "schedule": "Monthly"
+        },
+        "ironCalciumRx": {
+          "detail": "Iron & calcium (from your Rx)",
+          "schedule": "Morning & night · Daily"
+        },
+        "doctorAppointment": {
+          "detail": "Doctor appointment",
+          "schedule": "Tue 10:30 am"
+        },
+        "growthScan": {
+          "detail": "Growth scan",
+          "schedule": "Around 28 weeks"
+        },
+        "babyVaccines": {
+          "detail": "Baby's vaccines (IAP schedule)",
+          "schedule": "At birth, then 6 weeks"
+        }
+      },
+      "empty": "No reminders set yet.",
+      "stepOf": "STEP {{step}} OF {{total}}",
+      "whatReminded": "What do you want to be reminded of?",
+      "categories": {
+        "medicine": "Medicine",
+        "meals": "Meals",
+        "exercise": "Exercise",
+        "tests": "Tests / readings",
+        "other": "Other"
+      },
+      "remindAbout": "What should we remind you about?",
+      "typeOwn": "Type your own reminder",
+      "otherOptions": {
+        "doctorAppointment": "Doctor's appointment",
+        "journaling": "Journaling",
+        "restBreak": "Rest break",
+        "drinkWater": "Drink water"
+      },
+      "details": {
+        "medicine": "Medicine reminder",
+        "meals": "Meal log reminder",
+        "exercise": "Exercise reminder",
+        "tests": "Test / reading check"
+      },
+      "next": "Next",
+      "whenRemind": "When should we remind you?",
+      "timeOfDay": "Time of day",
+      "frequency": "Frequency",
+      "times": {
+        "morning": "Morning",
+        "afternoon": "Afternoon",
+        "evening": "Evening",
+        "night": "Night"
+      },
+      "frequencies": {
+        "daily": "Daily",
+        "alternateDays": "Alternate days",
+        "weekly": "Weekly",
+        "custom": "Custom"
+      },
+      "startEnd": "Start and end date",
+      "startDate": "Start date",
+      "today": "Today",
+      "endDate": "End date",
+      "ongoing": "Ongoing (no end date)",
+      "setEndDate": "Set an end date",
+      "endsInWeeks": "Ends in {{count}} weeks",
+      "endsInWeeks_one": "Ends in {{count}} week",
+      "endsInWeeks_other": "Ends in {{count}} weeks",
+      "fewerWeeks": "Fewer weeks",
+      "moreWeeks": "More weeks",
+      "confirmTitle": "Confirm your reminder",
+      "confirmRows": {
+        "reminder": "Reminder",
+        "care": "Care",
+        "time": "Time",
+        "frequency": "Frequency",
+        "duration": "Duration"
+      },
+      "doneSet": "Done, set reminder",
+      "public": "Public",
+      "private": "Private"
+    }
   }
 }

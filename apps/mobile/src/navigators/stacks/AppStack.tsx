@@ -46,6 +46,33 @@ import AboutVivaAI from '../../screens/AboutVivaAI';
 import Support from '../../screens/Support';
 import AboutRecoveryScore from '../../screens/AboutRecoveryScore';
 import MoodLog from '../../screens/MoodLog';
+import AncCheckup from '../../screens/logs/AncCheckup';
+import KickCounter from '../../screens/logs/KickCounter';
+import LogPicker from '../../screens/logs/LogPicker';
+import MealsLog from '../../screens/logs/MealsLog';
+import MedicineLog from '../../screens/logs/MedicineLog';
+import PumpingLog from '../../screens/logs/PumpingLog';
+import ReadingsLog from '../../screens/logs/ReadingsLog';
+import RecordsUpload from '../../screens/logs/RecordsUpload';
+import Reminders from '../../screens/logs/Reminders';
+import WaterLog from '../../screens/logs/WaterLog';
+import WeightBmiLog from '../../screens/logs/WeightBmiLog';
+
+// The Viva AI hub's log and reminder screens. Each draws its own back-button header,
+// as in the design, so none takes a navigator header.
+const VIVA_LOG_SCREENS = [
+    { name: 'LogPicker', component: LogPicker },
+    { name: 'KickCounter', component: KickCounter },
+    { name: 'MedicineLog', component: MedicineLog },
+    { name: 'RecordsUpload', component: RecordsUpload },
+    { name: 'ReadingsLog', component: ReadingsLog },
+    { name: 'AncCheckup', component: AncCheckup },
+    { name: 'WeightBmiLog', component: WeightBmiLog },
+    { name: 'PumpingLog', component: PumpingLog },
+    { name: 'MealsLog', component: MealsLog },
+    { name: 'WaterLog', component: WaterLog },
+    { name: 'Reminders', component: Reminders },
+];
 
 const Stack = createNativeStackNavigator();
 
@@ -378,6 +405,14 @@ const AppStack = () => {
                 name="MoodLog"
                 component={MoodLog}
             />
+            {VIVA_LOG_SCREENS.map(({ name, component }) => (
+                <Stack.Screen
+                    key={name}
+                    name={name}
+                    component={component}
+                    options={{ headerShown: false }}
+                />
+            ))}
         </Stack.Navigator>
     );
 }

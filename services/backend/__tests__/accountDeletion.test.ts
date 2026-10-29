@@ -17,6 +17,8 @@ import flowInstanceModel from "../src/models/flowInstance.model";
 import flowResponseModel from "../src/models/flowResponse.model";
 import messageModel from "../src/models/message.model";
 import moodLogModel from "../src/models/mood-log.model";
+import motherLogModel from "../src/models/mother-log.model";
+import motherMedicineModel from "../src/models/mother-medicine.model";
 import diaperLogModel from "../src/models/diaper-log.model";
 import milestoneLogModel from "../src/models/milestone-log.model";
 import feedingLogModel from "../src/models/feeding-log.model";
@@ -115,6 +117,14 @@ async function seed() {
     await messageModel.create({ userId: uid, text: "hello" });
     await aiMessageBookmarkModel.create({ userId: uid, messageId: new Types.ObjectId() });
     await moodLogModel.create({ userId: uid, mood: 3, logDate: new Date() });
+    await motherLogModel.create({
+        userId: uid,
+        logType: "bp",
+        fields: { systolic: 120, diastolic: 80 },
+        logDate: new Date(),
+        loggedAt: new Date(),
+    });
+    await motherMedicineModel.create({ userId: uid, presetKey: "calcium", frequency: "once_a_day" });
     // A child's growth log. Children themselves are embedded in the user document and go
     // with it, but their measurements are their own collection — health data about a named
     // minor, which must not outlive the account.
@@ -209,6 +219,8 @@ describe("AccountDeletionService", () => {
         expect(await messageModel.countDocuments({ userId: uid })).toBe(0);
         expect(await aiMessageBookmarkModel.countDocuments({ userId: uid })).toBe(0);
         expect(await moodLogModel.countDocuments({ userId: uid })).toBe(0);
+        expect(await motherLogModel.countDocuments({ userId: uid })).toBe(0);
+        expect(await motherMedicineModel.countDocuments({ userId: uid })).toBe(0);
         expect(await growthLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await diaperLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await milestoneLogModel.countDocuments({ userId: uid })).toBe(0);
@@ -370,7 +382,7 @@ describe("deletion coverage", () => {
             "consultation_reviews", "consultation_credits", "usage_counters",
             "subscriptions", "conversations", "messages", "ai_message_bookmarks",
             "mood_logs", "growth_logs", "diaper_logs", "milestone_logs", "vaccination_logs",
-            "feeding_logs",
+            "feeding_logs", "mother_logs", "mother_medicines",
             "recommendation_histories", "supports",
             "analytics_events",
             "viva_club_posts", "viva_club_comments", "reports",

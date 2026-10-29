@@ -1,5 +1,6 @@
 import mongoose, { Schema } from "mongoose";
 import {
+    ECareModel,
     EChildOnboardingStatus,
     ESex,
     EUserCategory,
@@ -306,6 +307,19 @@ const userSchema = new Schema<IUser>(
             },
             parity: {
                 type: String,
+                default: null,
+            },
+            care_model: {
+                type: String,
+                enum: [...Object.values(ECareModel), null],
+                default: null,
+            },
+            // update-user-data writes without running validators, so the range is
+            // also checked in UserController.updateUserData.
+            height_cm: {
+                type: Number,
+                min: 100,
+                max: 220,
                 default: null,
             },
             onboarded_at: {

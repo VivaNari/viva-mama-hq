@@ -123,6 +123,12 @@ export const API_CREATE_SUPPORT = `${API_VERSION_URL}/support`;
 // Mood log endpoints
 export const API_MOOD_LOGS = `${API_VERSION_URL}/mood-logs`;
 
+// The mother's own logs (Viva AI "Log something") and her medicine list.
+export const API_MOTHER_LOGS = `${API_VERSION_URL}/mother-logs`;
+export const API_MOTHER_LOGS_DAILY = `${API_VERSION_URL}/mother-logs/daily`;
+export const API_MOTHER_LOGS_ANC_SCHEDULE = `${API_VERSION_URL}/mother-logs/anc-schedule`;
+export const API_MOTHER_MEDICINES = `${API_VERSION_URL}/mother-medicines`;
+
 // Infant growth log endpoints. There is deliberately no endpoint for the WHO reference
 // curves — the app carries @vivamama/growth-standards, so the chart draws offline.
 export const API_GROWTH_LOGS = `${API_VERSION_URL}/growth-logs`;

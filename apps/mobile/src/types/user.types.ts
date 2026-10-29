@@ -4,6 +4,11 @@ export enum UserCategoryEnum {
   NN = 'NN', // Non-Postpartum Non-Pregnant Women
 }
 
+export enum CareModelEnum {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+}
+
 export type UserCategoryType =
   | UserCategoryEnum.PP
   | UserCategoryEnum.NP
@@ -78,6 +83,14 @@ export interface IUser {
     alcohol_use: AlcoholUseEnum | null;
     social_support: SocialSupportEnum | null;
     parity: ParityEnum | null;
+    /**
+     * Where she is taking care: sets the public (government) or private route for logs
+     * and reminders. Not asked at onboarding yet, so absent and null both mean "not
+     * known" and the app falls back to the public route.
+     */
+    care_model?: CareModelEnum | null;
+    /** Height in cm, for BMI. Asked at onboarding; editable in Edit Profile. */
+    height_cm?: number | null;
     onboarded_at: Date | null;
   };
   subscription: {

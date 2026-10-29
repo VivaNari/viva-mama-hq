@@ -176,6 +176,13 @@ export interface IUser {
         alcohol_use: AlcoholUseEnum | null;
         social_support: SocialSupportEnum | null;
         parity: ParityEnum | null;
+        /**
+         * Where she takes care: public (government) or private. Sets the route for her
+         * logs, schedules and reminders. Null until onboarding asks it.
+         */
+        care_model?: ECareModel | null;
+        /** Height in cm, for BMI. Null until onboarding or Edit Profile records it. */
+        height_cm?: number | null;
         onboarded_at: Date | null;
     };
     subscription: IUserSubscriptionSnapshot;
@@ -198,6 +205,11 @@ export interface IGoogleLoginPayload {
 }
 
 export type TTokenSource = "header" | "query";
+
+export enum ECareModel {
+    PUBLIC = "public",
+    PRIVATE = "private",
+}
 
 export enum EUserCategory {
     PP = "PP", // Postpartum_Women

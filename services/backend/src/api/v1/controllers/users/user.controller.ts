@@ -15,7 +15,7 @@ import recommendationHistoryModel from "../../../../models/recommendation-histor
 import { resolveLanguage } from "../../../../utils/i18n/localizeFlowDefinition";
 import { localizeRecommendationHistory } from "../../../../utils/i18n/localizeRecommendationHistory";
 import { buildEmergencyAlert } from "../../../../utils/buildEmergencyAlert";
-import { EUserCategory } from "../../../../types/user.types";
+import { ECareModel, EUserCategory } from "../../../../types/user.types";
 import { EAccessDenial } from "../../../../types/auth.types";
 import { calculatePostpartumState } from "../../../../utils/functions/postpartumWeek";
 
@@ -244,6 +244,29 @@ export default class UserController {
                 if (req.body[field] !== undefined) {
                     payload[field] = req.body[field];
                 }
+            }
+
+            // The partial update writes without schema validators, so the two fields the
+            // log screens depend on are range-checked here. Null clears either one.
+            const heightCm = payload.onboarding_data?.height_cm;
+            const careModel = payload.onboarding_data?.care_model;
+            const badHeight =
+                heightCm !== undefined &&
+                heightCm !== null &&
+                (typeof heightCm !== "number" || heightCm < 100 || heightCm > 220);
+            const badCareModel =
+                careModel !== undefined &&
+                careModel !== null &&
+                !Object.values(ECareModel).includes(careModel);
+            if (badHeight || badCareModel) {
+                sendResponse({
+                    data: null,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    success: false,
+                    message: badHeight ? messages.USER_HEIGHT_INVALID : messages.USER_CARE_MODEL_INVALID,
+                    response: res,
+                });
+                return;
             }
 
             // Contact fields (email / mobile_number): allow only null -> value, and
