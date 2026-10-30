@@ -33,7 +33,7 @@ google-cloud-storage==3.13.1
 
 # MCP SDK. Pinned: a newer release pulled into the image had no low-level Server decorator API
 # (@server.list_tools) that app/mcp/context_server.py is built on.
-mcp==1.27.2
+mcp==1.30.0
 
 # API + data access
 pymongo==4.6.1
