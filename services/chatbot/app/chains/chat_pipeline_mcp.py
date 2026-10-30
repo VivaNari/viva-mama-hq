@@ -43,6 +43,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from app.actions import run_log_actions
 from app.chains.followup import (
     build_declined_note,
     build_followup_query,
@@ -366,6 +367,10 @@ class ChatResponse:
     # "Connect" button from this; empty means no button. Always drawn from the
     # user's referral-scoped directory.
     suggested_experts: List[Dict[str, Any]] = field(default_factory=list)
+    # Logs read from her message, as {logType, fields, mode?, medicineRef?}. The core
+    # server validates them and shows a confirm card; nothing is saved until she
+    # taps Yes.
+    proposed_logs: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
@@ -1681,6 +1686,58 @@ async def chat_once(
     prior_turns = await loop.run_in_executor(None, memory.get_last_n, session_id, history_window)
     pending_topic = await loop.run_in_executor(None, memory.get_followup_topic, session_id)
 
+    # ---------------- Logging from chat ----------------
+    # Read on the raw message, before redaction and the medical-scope rule: "my bp is
+    # 150/100, what should I take?" must still yield the reading even though the
+    # question itself is reframed below.
+    log_start = time.time()
+    log_outcome = await run_log_actions(user_text, session_id, memory, request_id)
+    timings["log_actions"] = (time.time() - log_start) * 1000
+
+    if log_outcome.handled_fully:
+        log_answer = (
+            (log_outcome.banner + "\n\n" if log_outcome.banner else "") + (log_outcome.reply or "")
+        )
+        redacted_for_memory, redaction_report = redact(user_text)
+        await loop.run_in_executor(None, memory.append, session_id, "user", redacted_for_memory)
+        await loop.run_in_executor(None, memory.append, session_id, "assistant", log_answer)
+        await loop.run_in_executor(None, memory.clear_followup_topic, session_id)
+        timings["total"] = (time.time() - request_start_time) * 1000
+        _metrics.record_request(
+            success=True, service_level=ServiceLevel.FULL.value, timings=timings
+        )
+        logger.info(
+            f"[{request_id}] Log turn: {len(log_outcome.proposals)} proposal(s), no answer call"
+        )
+        return ChatResponse(
+            request_id=request_id,
+            session_id=session_id,
+            answer=log_answer,
+            intent="LOG_PROPOSAL",
+            used_rag=False,
+            rag_best_score=0.0,
+            user_context=UserContextResult(
+                profile_context="",
+                recovery_context="",
+                expert_directory="",
+                products_directory="",
+                has_profile=False,
+                has_recovery=False,
+                error=None,
+                fetch_time_ms=0.0,
+            ),
+            redaction=redaction_report,
+            scope={},
+            escalation_banner=log_outcome.banner or None,
+            memory_turns=await loop.run_in_executor(
+                None, memory.get_last_n, session_id, history_window
+            ),
+            final_prompt="[LOG_PROPOSAL — no answer LLM call]",
+            timing=timings,
+            service_level=ServiceLevel.FULL.value,
+            proposed_logs=log_outcome.proposals,
+        )
+
     # ---------------- Guardrails ----------------
     guardrails_start = time.time()
 
@@ -2245,6 +2302,11 @@ async def chat_once(
             else NO_CONTEXT_FALLBACK
         )
 
+    # A dangerous value she just reported ("bp 165/112, is that bad?") warns even when
+    # no symptom phrase matched.
+    if log_outcome.banner and not banner:
+        banner = log_outcome.banner
+
     final_answer = (banner + "\n\n" if banner else "") + draft_answer
 
     # ---------------- Expert Suggestion ----------------
@@ -2315,6 +2377,7 @@ async def chat_once(
         service_level=service_level.value,
         final_prompt=final_prompt,
         suggested_experts=suggested_experts,
+        proposed_logs=log_outcome.proposals,
     )
 
 

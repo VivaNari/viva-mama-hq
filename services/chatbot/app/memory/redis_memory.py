@@ -319,6 +319,14 @@ class RedisSessionMemory:
         """
         return f"chat:followup:{session_id}"
 
+    def _pending_log_key(self, session_id: str) -> str:
+        """
+        Redis key for a log message still missing one value ("sugar is 110" before
+        she says fasting or after a meal). Outside "chat:session:*" for the same
+        reason as _alerts_key.
+        """
+        return f"chat:pendinglog:{session_id}"
+
     def _check_redis_health(self) -> bool:
         """Check if Redis is healthy"""
         if self._is_fallback:
@@ -752,21 +760,71 @@ class RedisSessionMemory:
         """Forget any pending follow-up offer."""
         self.set_followup_topic(session_id, None)
 
+    # -------------------------------
+    # Log message awaiting one missing value (per session)
+    # -------------------------------
+
+    def get_pending_log(self, session_id: str) -> Optional[str]:
+        """Her earlier log message that is still missing a value, or None."""
+        try:
+            key = self._pending_log_key(session_id)
+
+            if self._is_fallback:
+                value = self._r.get(key)
+            else:
+                value = self._retry_operation(self._r.get, key)
+
+            if not value:
+                return None
+            return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+
+        except Exception as e:
+            logger.error(f"Error reading pending log for {session_id}: {str(e)}")
+            return None
+
+    def set_pending_log(self, session_id: str, text: Optional[str]) -> None:
+        """Remember the log message Viva asked about; None clears it."""
+        try:
+            key = self._pending_log_key(session_id)
+
+            if not text:
+                if self._is_fallback:
+                    self._r.delete(key)
+                else:
+                    self._retry_operation(self._r.delete, key)
+                return
+
+            if self._is_fallback:
+                self._r.set(key, text, ex=self.ttl)
+            else:
+                self._retry_operation(self._r.set, key, text, ex=self.ttl)
+
+        except Exception as e:
+            # A bookkeeping failure must never cost the user her answer.
+            logger.error(f"Error storing pending log for {session_id}: {str(e)}")
+
+    def clear_pending_log(self, session_id: str) -> None:
+        """Forget any log message awaiting a value."""
+        self.set_pending_log(session_id, None)
+
     def reset(self, session_id: str) -> None:
         """Delete all turns for a session"""
         try:
             key = self._key(session_id)
             alerts_key = self._alerts_key(session_id)
             followup_key = self._followup_key(session_id)
+            pending_log_key = self._pending_log_key(session_id)
 
             if self._is_fallback:
                 self._r.delete(key)
                 self._r.delete(alerts_key)
                 self._r.delete(followup_key)
+                self._r.delete(pending_log_key)
             else:
                 self._retry_operation(self._r.delete, key)
                 self._retry_operation(self._r.delete, alerts_key)
                 self._retry_operation(self._r.delete, followup_key)
+                self._retry_operation(self._r.delete, pending_log_key)
 
             _metrics.record_operation("delete")
             logger.info(f"Reset session {session_id}")

@@ -85,6 +85,7 @@ export interface IMessage {
         optionKey: string;
     } | null;
     suggestedExperts?: ISuggestedExpert[];
+    pendingLogs?: IPendingLog[];
     createdAt: Date;
     updatedAt: Date;
 }
@@ -97,6 +98,29 @@ export interface ISuggestedExpert {
     expertId: Schema.Types.ObjectId | string;
     name: string;
     speciality?: string;
+}
+
+/**
+ * A log Viva read out of her message ("today my bp is 118/80"), waiting for her to
+ * confirm it. Already validated; saved to mother_logs only when she taps Yes.
+ *
+ * `needs_medicine`: she said she took a medicine that is not on her list, so there
+ * is nothing to mark taken; the card offers to open her medicines instead.
+ */
+export type TPendingLogStatus = "pending" | "saved" | "dismissed" | "needs_medicine";
+
+export interface IPendingLog {
+    _id: Schema.Types.ObjectId | string;
+    logType: string;
+    fields: Record<string, any>;
+    /** water / kicks: add to today's total, or set it. */
+    mode?: "add" | "set" | null;
+    /** medicine_dose: the item on her list it matched. */
+    medicineId?: Schema.Types.ObjectId | string | null;
+    /** medicine_dose: how to name it on the card (her list's preset key or name). */
+    medicineRef?: { presetKey?: string; name?: string } | null;
+    status: TPendingLogStatus;
+    savedLogId?: Schema.Types.ObjectId | string | null;
 }
 
 export enum FlowDefinitionStatusEnum {
@@ -338,6 +362,13 @@ export type AILLMResponse = {
     nodeType?: FlowNodeType;
     /** Drives the "Connect" button in the chat bubble. Empty means no button. */
     suggestedExperts?: ISuggestedExpert[];
+    /** Drives the "Save this log?" card in the chat bubble. Empty means no card. */
+    pendingLogs?: IPendingLog[];
+    /**
+     * Set when she answered an earlier card by typing "yes"/"no": that message's card
+     * items as they now stand, so the app can update it in place.
+     */
+    updatedPendingLogs?: { messageId: string; pendingLogs: IPendingLog[] };
 };
 
 export type AnswerData = {

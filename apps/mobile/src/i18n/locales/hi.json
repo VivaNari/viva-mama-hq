@@ -1840,5 +1840,21 @@
       "public": "सरकारी",
       "private": "निजी"
     }
+  },
+  "chatLogs": {
+    "title": "अपने लॉग में सहेजें?",
+    "titleDone": "आपके लॉग",
+    "yes": "हाँ, सहेजें",
+    "no": "नहीं",
+    "savedView": "सहेजा गया ✓ · देखें ›",
+    "notSaved": "नहीं सहेजा",
+    "addMedicine": "यह आपकी दवाओं की सूची में नहीं है। जोड़ें ›",
+    "waterAdd": "पानी +{{count}} गिलास",
+    "waterSet": "पानी: आज {{count}} गिलास",
+    "kicksAdd": "बच्चे की किक +{{count}}",
+    "kicksSet": "बच्चे की किक: आज {{count}}",
+    "medicineTaken": "{{name}} ली",
+    "expired": "यह पिछले दिन का था। कृपया आज का Log something से जोड़ें।",
+    "medicineMissing": "यह दवा अब आपकी सूची में नहीं है।"
   }
 }

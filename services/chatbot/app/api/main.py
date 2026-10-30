@@ -73,6 +73,10 @@ class ChatResponse(BaseModel):
     # re-validates these against the user's visible expert list before the app
     # renders a "Connect" button from them.
     suggested_experts: List[Dict[str, Any]] = []
+    # Logs read from her message ("today my bp is 118/80"), as
+    # {logType, fields, mode?, medicineRef?}. The core server validates them and
+    # asks her to confirm before anything is saved.
+    proposed_logs: List[Dict[str, Any]] = []
     escalation_banner: Optional[str] = None
     latency_seconds: Optional[float] = None
     request_id: Optional[str] = None
@@ -281,6 +285,7 @@ async def chat_endpoint(req: ChatRequest, request: Request, ok: bool = Depends(r
             rag_best_score=result.rag_best_score,
             products=getattr(result, "products", []),
             suggested_experts=getattr(result, "suggested_experts", []),
+            proposed_logs=getattr(result, "proposed_logs", []),
             escalation_banner=result.escalation_banner or None,
             latency_seconds=round(elapsed, 3),
             request_id=request_id,

@@ -1840,5 +1840,21 @@
       "public": "Public",
       "private": "Private"
     }
+  },
+  "chatLogs": {
+    "title": "Save to your logs?",
+    "titleDone": "Your logs",
+    "yes": "Yes, save",
+    "no": "No",
+    "savedView": "Saved ✓ · View ›",
+    "notSaved": "Not saved",
+    "addMedicine": "Not on your medicines list. Add it ›",
+    "waterAdd": "Water +{{count}} glasses",
+    "waterSet": "Water: {{count}} glasses today",
+    "kicksAdd": "Baby kicks +{{count}}",
+    "kicksSet": "Baby kicks: {{count}} today",
+    "medicineTaken": "{{name}} taken",
+    "expired": "This was for an earlier day. Please add today's from Log something.",
+    "medicineMissing": "This medicine is no longer on your list."
   }
 }

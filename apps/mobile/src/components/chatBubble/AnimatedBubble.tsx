@@ -17,6 +17,7 @@ import {
 } from '../../utils/messageHelpers';
 import { bubbleStyles } from './styles';
 import { ConnectExpertButton } from './ConnectExpertButton';
+import { LogProposalCard } from './LogProposalCard';
 import { MarkdownText } from './MarkdownText';
 
 interface AnimatedBubbleProps {
@@ -244,6 +245,10 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
                         suggestedExperts={message.suggestedExperts}
                         onConnectExpert={onConnectExpert}
                     />
+                )}
+
+                {showOptions && isAi && (
+                    <LogProposalCard messageId={message.id} pendingLogs={message.pendingLogs} />
                 )}
 
                 {showOptions && isDeliveryDate && renderDeliveryDateOptions()}

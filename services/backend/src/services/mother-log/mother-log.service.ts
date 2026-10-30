@@ -172,6 +172,60 @@ class MotherLogService extends BaseService<IMotherLog> {
         }
     };
 
+    /**
+     * Add to today's running total ("drank 2 more glasses"), capped at `max`. The tap
+     * screens send totals; this is for logging from chat, where she reports a change.
+     */
+    addToDaily = async ({
+        userId,
+        logType,
+        delta,
+        max,
+        source,
+        context,
+    }: {
+        userId: string;
+        logType: TDailyLogType;
+        delta: number;
+        max: number;
+        source: TLogSource;
+        context: MotherContext;
+    }) => {
+        const key = logType === "water" ? "glasses" : "count";
+        const today = await motherLogModel
+            .findOne({ userId, logType, logDate: getISTCalendarDate(), isDailyTotal: true })
+            .lean();
+        const current = Number(today?.fields?.[key] ?? 0);
+        return this.upsertDaily({
+            userId,
+            logType,
+            fields: { [key]: Math.min(max, Math.max(0, current + delta)) },
+            source,
+            context,
+        });
+    };
+
+    /**
+     * The active medicine on her list that a name from chat refers to: same preset,
+     * or (for a typed name) the same name ignoring case. Null when it is not on her
+     * list.
+     */
+    matchMedicine = async (
+        userId: string,
+        ref: { presetKey?: TMedicinePreset; name?: string },
+    ): Promise<IMotherMedicine | null> => {
+        const medicines = await this.listMedicines(userId);
+        if (ref.presetKey) {
+            return medicines.find((medicine) => medicine.presetKey === ref.presetKey) ?? null;
+        }
+        const wanted = (ref.name ?? "").trim().toLowerCase();
+        if (!wanted) return null;
+        return (
+            medicines.find((medicine) => (medicine.name ?? "").trim().toLowerCase() === wanted) ??
+            null
+        );
+    };
+
     findOwn = async (userId: string, id: string): Promise<IMotherLog | null> =>
         (await motherLogModel.findOne({ _id: id, userId }).lean()) as unknown as IMotherLog | null;
 

@@ -63,6 +63,25 @@ export interface IAiMessage {
   conversationId?: string;
   /** Drives the "Connect" button under the bubble. Empty or absent means no button. */
   suggestedExperts?: ISuggestedExpert[];
+  /** Logs Viva read from her message, waiting for Yes / No. Absent means no card. */
+  pendingLogs?: IPendingLog[];
+}
+
+/**
+ * A log Viva read out of her message ("today my bp is 118/80"). Nothing is saved
+ * until she confirms. `needs_medicine`: the medicine is not on her list yet.
+ */
+export type PendingLogStatus = "pending" | "saved" | "dismissed" | "needs_medicine";
+
+export interface IPendingLog {
+  _id: string;
+  logType: string;
+  fields: Record<string, any>;
+  mode?: "add" | "set" | null;
+  medicineId?: string | null;
+  medicineRef?: { presetKey?: string; name?: string } | null;
+  status: PendingLogStatus;
+  savedLogId?: string | null;
 }
 
 export interface IUserMessage {
@@ -92,6 +111,9 @@ export interface ISSEMessageData {
   sessionId?: string;
   conversationId?: string;
   suggestedExperts?: ISuggestedExpert[];
+  pendingLogs?: IPendingLog[];
+  /** She answered an earlier card by typing yes/no: its items as they now stand. */
+  updatedPendingLogs?: { messageId: string; pendingLogs: IPendingLog[] };
 }
 
 // ============================================
@@ -140,7 +162,11 @@ export type ChatAction =
   | { type: "RESET" }
   | { type: "RESET_ERROR" }
   | { type: "TOGGLE_BOOKMARK"; payload: string }
-  | { type: "SET_BOOKMARKED_MESSAGES"; payload: string[] };
+  | { type: "SET_BOOKMARKED_MESSAGES"; payload: string[] }
+  | {
+      type: "UPDATE_PENDING_LOGS";
+      payload: { messageId: string; pendingLogs: IPendingLog[] };
+    };
 
 // ============================================
 // Navigation Types

@@ -17,6 +17,7 @@ import {
 } from '../../utils/messageHelpers';
 import { bubbleStyles } from './styles';
 import { ConnectExpertButton } from './ConnectExpertButton';
+import { LogProposalCard } from './LogProposalCard';
 import { MarkdownText } from './MarkdownText';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 import { colors } from '../../public/assets/colors';
@@ -286,6 +287,10 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                         suggestedExperts={message.suggestedExperts}
                         onConnectExpert={onConnectExpert}
                     />
+                )}
+
+                {isAi && (
+                    <LogProposalCard messageId={message.id} pendingLogs={message.pendingLogs} />
                 )}
 
                 {isDeliveryDate && isLast && !isAnimating && !isFlowComplete && renderDeliveryDateOptions()}

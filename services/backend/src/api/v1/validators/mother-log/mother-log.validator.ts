@@ -99,6 +99,52 @@ export const motherLogDailyValidator = Joi.object({
     source: Joi.string().valid(...LOG_SOURCES),
 });
 
+/**
+ * A log the chatbot read out of her message, before it becomes a confirm card.
+ *
+ * The chatbot mirrors these shapes, but this server owns them: every proposal is held
+ * to the same per-type fields as a manual entry, and one that fails is dropped rather
+ * than shown to her.
+ */
+export const chatLogProposalValidator = Joi.object({
+    logType: Joi.string()
+        .valid(...APPEND_LOG_TYPES, ...DAILY_LOG_TYPES, "medicine_dose")
+        .required(),
+    fields: Joi.alternatives()
+        .conditional("logType", {
+            switch: [
+                ...[...APPEND_LOG_TYPES, ...DAILY_LOG_TYPES].map((type) => ({
+                    is: type,
+                    then: FIELD_SCHEMAS[type],
+                })),
+                { is: "medicine_dose", then: Joi.object({}) },
+            ],
+        })
+        .required(),
+    mode: Joi.when("logType", {
+        is: Joi.valid(...DAILY_LOG_TYPES),
+        then: Joi.string().valid("add", "set").default("add"),
+        otherwise: Joi.forbidden(),
+    }),
+    medicineRef: Joi.when("logType", {
+        is: "medicine_dose",
+        then: Joi.object({
+            presetKey: Joi.string().valid(...MEDICINE_PRESETS),
+            name: Joi.string().trim().min(1).max(60),
+        })
+            .xor("presetKey", "name")
+            .required(),
+        otherwise: Joi.forbidden(),
+    }),
+});
+
+/** POST /chat/log-proposals/confirm: her Yes or No on one item of a confirm card. */
+export const chatLogConfirmValidator = Joi.object({
+    messageId: Joi.string().hex().length(24).required(),
+    proposalId: Joi.string().hex().length(24).required(),
+    accept: Joi.boolean().required(),
+});
+
 /** PUT /mother-logs/anc-schedule/:itemId */
 export const ancScheduleItemValidator = Joi.object({
     done: Joi.boolean().required(),

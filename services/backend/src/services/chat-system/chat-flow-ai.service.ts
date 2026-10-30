@@ -20,6 +20,10 @@ import { getUuid } from "../../utils/commonFunctions/uuid";
 import BaseService from "../base.service";
 import { ExpertService } from "../expert/expert.service";
 import LLMService from "../llm/llm.service";
+import ChatLogProposalService, {
+    confirmationReply,
+    parseConfirmReply,
+} from "../mother-log/chat-log-proposal.service";
 import MessageService from "../message/message.service";
 import UserService from "../users/user.service";
 
@@ -28,6 +32,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
     private userService: UserService;
     private messageService: MessageService;
     private llmService: LLMService;
+    private chatLogProposalService: ChatLogProposalService;
     private expertService: ExpertService;
 
     constructor() {
@@ -36,6 +41,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
         this.messageService = new MessageService();
         this.llmService = new LLMService();
         this.expertService = new ExpertService();
+        this.chatLogProposalService = new ChatLogProposalService();
     }
 
     /**
@@ -226,6 +232,56 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 guided: null,
             });
             console.log(`User chatbot message saved`);
+
+            // A typed "yes" / "haan" answers the "Save this log?" card on her last
+            // reply. It is not a question, so it never reaches the chatbot.
+            const confirmReply = parseConfirmReply(message);
+            if (confirmReply) {
+                const answered = await this.chatLogProposalService.answerLatest(
+                    String(userInstance._id),
+                    String(conversationId),
+                    confirmReply === "yes",
+                );
+                if (answered) {
+                    const text = confirmationReply(message, answered.saved, answered.dismissed);
+                    const replyInstance = await this.createMessage({
+                        conversationId: conversationId,
+                        userId: userInstance._id as unknown as string,
+                        role: MessageRoleEnum.ASSITANT,
+                        type: MessageTypeEnum.AI,
+                        text,
+                        rich: null,
+                        attachments: null,
+                        ai: null,
+                        guided: null,
+                    });
+                    await conversationModel.findByIdAndUpdate(conversationId, {
+                        lastMessageAt: new Date(),
+                    });
+                    const confirmSession = this.getUserConnection(userInstance._id as any);
+                    if (confirmSession) {
+                        this.writeToSse(confirmSession, {
+                            sessionId,
+                            conversationId,
+                            id: replyInstance._id as unknown as string,
+                            type: "ai_message",
+                            text,
+                            timestamp: Date.now(),
+                            response: { intent: "LOG_CONFIRMATION" },
+                            nodeType: FlowNodeEnum.QUESTION_FREE_TEXT,
+                            updatedPendingLogs: {
+                                messageId: answered.messageId,
+                                pendingLogs: answered.pendingLogs,
+                            },
+                        } satisfies AILLMResponse);
+                    }
+                    return {
+                        success: true,
+                        message: "Chatbot message processed successfully",
+                    };
+                }
+            }
+
             const llmResponse = await this.llmService.sendUserQuery(
                 userInstance,
                 message,
@@ -235,6 +291,12 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
             const suggestedExperts = await this.resolveSuggestedExperts(
                 String(userInstance._id),
                 llmResponse.suggested_experts,
+            );
+            // Logs the chatbot read out of her message, validated here before they
+            // become a confirm card. Nothing is saved until she says yes.
+            const pendingLogs = await this.chatLogProposalService.prepare(
+                String(userInstance._id),
+                llmResponse.proposed_logs,
             );
             const aiMessageInstance = await this.createMessage({
                 conversationId: conversationId,
@@ -247,6 +309,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 ai: null,
                 guided: null,
                 suggestedExperts,
+                pendingLogs,
             });
             await conversationModel.findByIdAndUpdate(conversationId, {
                 lastMessageAt: new Date(),
@@ -262,6 +325,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                 response: llmResponse,
                 nodeType: FlowNodeEnum.QUESTION_FREE_TEXT,
                 suggestedExperts,
+                pendingLogs,
             };
 
             console.log("final aiLLMResponse is => ", aiLlmResponse);

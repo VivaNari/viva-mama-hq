@@ -41,6 +41,18 @@ export const chatReducer = (
       };
     }
 
+    case "UPDATE_PENDING_LOGS": {
+      const { messageId, pendingLogs } = action.payload;
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.type === "ai" && msg.id === messageId
+            ? ({ ...msg, pendingLogs } as IAiMessage)
+            : msg,
+        ),
+      };
+    }
+
     case "SET_LOADING":
       return {
         ...state,

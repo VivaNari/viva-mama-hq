@@ -132,7 +132,13 @@ export const useChatSession = ({
             sessionId: data.sessionId || "",
             conversationId: data.conversationId || "",
             suggestedExperts: data.suggestedExperts || [],
+            pendingLogs: data.pendingLogs || [],
           };
+
+          // A typed "yes"/"no" answered an earlier card: update it in place.
+          if (data.updatedPendingLogs) {
+            dispatch({ type: "UPDATE_PENDING_LOGS", payload: data.updatedPendingLogs });
+          }
 
           // Measured from the last outbound moment we know about (stream open or
           // the previous reply), then reset so each turn is timed independently.

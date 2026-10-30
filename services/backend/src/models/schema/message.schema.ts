@@ -57,6 +57,27 @@ const messageSchema: Schema<IMessage> = new Schema<IMessage>(
             ],
             default: [],
         },
+        // Logs Viva read out of her message, validated and waiting for her Yes. Kept
+        // on the message so the confirm card survives an app restart and so the
+        // record shows what she agreed to. See IPendingLog.
+        pendingLogs: {
+            type: [
+                {
+                    logType: { type: String, required: true },
+                    fields: { type: Schema.Types.Mixed, default: {} },
+                    mode: { type: String, enum: ["add", "set", null], default: null },
+                    medicineId: { type: Schema.Types.ObjectId, default: null },
+                    medicineRef: { type: Schema.Types.Mixed, default: null },
+                    status: {
+                        type: String,
+                        enum: ["pending", "saved", "dismissed", "needs_medicine"],
+                        default: "pending",
+                    },
+                    savedLogId: { type: Schema.Types.ObjectId, default: null },
+                },
+            ],
+            default: [],
+        },
     },
     generalSchemaOptions,
 );

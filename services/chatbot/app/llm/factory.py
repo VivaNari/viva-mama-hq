@@ -40,7 +40,7 @@ _CLASSIFIER_TEMPERATURE = 0.0
 _clients: Dict[str, BaseChatModel] = {}
 
 
-def _build_vertex(model: str, temperature: float, is_classifier: bool) -> BaseChatModel:
+def _build_vertex(model: str, temperature: float, role: str) -> BaseChatModel:
     """Construct a ChatVertexAI client with health-appropriate safety settings."""
     # Imported lazily so the module imports even when the Vertex SDK isn't
     # installed (e.g. a Groq-only environment).
@@ -79,9 +79,12 @@ def _build_vertex(model: str, temperature: float, is_classifier: bool) -> BaseCh
     # isn't needed. We disable thinking everywhere (thinking_budget=0) and size the
     # output cap per role.
     kwargs["thinking_budget"] = 0
-    if is_classifier:
+    if role == "classifier":
         # Grounding/scope check: a single YES/NO — a tiny cap is plenty.
         kwargs["max_output_tokens"] = 16
+    elif role == "extractor":
+        # Structured log extraction: a small JSON object, never prose.
+        kwargs["max_output_tokens"] = 1024
     else:
         # Main generation / translation: generous cap so structured, formatted
         # answers (bullets, product/expert sections) complete in full.
@@ -96,7 +99,9 @@ def _build_vertex(model: str, temperature: float, is_classifier: bool) -> BaseCh
     return ChatVertexAI(**kwargs)
 
 
-def get_llm(model: Optional[str] = None, *, classifier: bool = False) -> BaseChatModel:
+def get_llm(
+    model: Optional[str] = None, *, classifier: bool = False, extractor: bool = False
+) -> BaseChatModel:
     """Return a chat model for `model` (default: settings.llm_model).
 
     Same interface as the old Groq client: the result has `.invoke(prompt)`
@@ -108,19 +113,22 @@ def get_llm(model: Optional[str] = None, *, classifier: bool = False) -> BaseCha
     can now be the SAME model (e.g. both gemini-2.5-flash in asia-south1 where
     flash-lite isn't served), and a name-based guess would wrongly cap the main
     model's output at a few tokens.
+
+    `extractor=True` selects the structured-extraction role used for logging from
+    chat: deterministic like the classifier, but with room for a JSON object.
     """
     resolved = model or settings.llm_model
-    temperature = _CLASSIFIER_TEMPERATURE if classifier else _MAIN_TEMPERATURE
+    temperature = _CLASSIFIER_TEMPERATURE if (classifier or extractor) else _MAIN_TEMPERATURE
     provider = settings.llm_provider
 
-    role = "classifier" if classifier else "main"
+    role = "classifier" if classifier else "extractor" if extractor else "main"
     cache_key = f"{provider}:{resolved}:{temperature}:{role}"
     cached = _clients.get(cache_key)
     if cached is not None:
         return cached
 
     if provider == "vertex":
-        client = _build_vertex(resolved, temperature, classifier)
+        client = _build_vertex(resolved, temperature, role)
     elif provider == "groq":
         # Delegate to the legacy client (its own caching/resilience applies).
         from app.llm.groq_client import get_llm as _groq_get_llm
