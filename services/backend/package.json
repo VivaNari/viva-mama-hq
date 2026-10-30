@@ -11,6 +11,7 @@
         "build": "tsc",
         "cron:week-progression": "ts-node src/cron-jobs/weekProgression",
         "job:consultation-reminders": "ts-node scripts/run-consultation-reminders.ts",
+        "job:custom-reminders": "ts-node scripts/run-custom-reminders.ts",
         "diagnose:consultation-reminders": "ts-node scripts/diagnose-consultation-reminders.ts",
         "diagnose:play-api": "ts-node scripts/diagnose-play-api.ts",
         "diagnose:otel": "ts-node scripts/verify-otel.ts",

@@ -8,6 +8,7 @@ import { weeklyContentNotification } from "./weeklyContentNotification";
 import { subscriptionLifecycle } from "./subscriptionLifecycle";
 import { consultationReminders } from "./consultationReminders";
 import { babyAgeReminders } from "./babyAgeReminders";
+import { customReminders } from "./customReminders";
 import { randomUUID } from "crypto";
 import { SpanStatusCode, trace } from "@opentelemetry/api";
 import env from "../config/env";
@@ -108,4 +109,9 @@ export const initScheduledJobs = () => {
     // still unlogged in it. After pregnancy-transition/week-progression in the overnight
     // block, ahead of the day's traffic. See babyAgeReminders.ts.
     schedule("30 0 * * *", babyAgeReminders, "baby-age-reminders");
+
+    // Every 15 minutes — reminders she set herself, sent once their slot (08:00, 13:00,
+    // 18:00, 21:00) has passed. Run on demand with `npm run job:custom-reminders`.
+    // See customReminders.ts.
+    schedule("*/15 * * * *", customReminders, "custom-reminders");
 };

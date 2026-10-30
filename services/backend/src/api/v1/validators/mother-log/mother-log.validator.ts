@@ -14,6 +14,11 @@ import {
     TAppendLogType,
     TDailyLogType,
 } from "../../../../types/mother-log.types";
+import {
+    REMINDER_CATEGORIES,
+    REMINDER_FREQUENCIES,
+    REMINDER_TIMES,
+} from "../../../../types/reminder.types";
 
 /**
  * Mother log request validation.
@@ -163,4 +168,31 @@ export const motherMedicineCreateValidator = Joi.object({
 export const motherMedicineTakenValidator = Joi.object({
     taken: Joi.boolean().required(),
     source: Joi.string().valid(...LOG_SOURCES),
+});
+
+/**
+ * POST /mother-reminders. The start date is always today and is set by the server;
+ * `endWeeks` absent or null means ongoing.
+ */
+export const motherReminderCreateValidator = Joi.object({
+    category: Joi.string()
+        .valid(...REMINDER_CATEGORIES)
+        .required(),
+    detail: Joi.when("category", {
+        is: "other",
+        then: Joi.string().trim().min(1).max(80).required(),
+        otherwise: Joi.forbidden(),
+    }),
+    timeOfDay: Joi.string()
+        .valid(...REMINDER_TIMES)
+        .required(),
+    frequency: Joi.string()
+        .valid(...REMINDER_FREQUENCIES)
+        .required(),
+    weekdays: Joi.when("frequency", {
+        is: "custom",
+        then: Joi.array().items(Joi.number().integer().min(0).max(6)).min(1).max(7).required(),
+        otherwise: Joi.forbidden(),
+    }),
+    endWeeks: Joi.number().integer().min(1).max(52).allow(null),
 });

@@ -1412,7 +1412,7 @@
       "title": "What would you like to log?",
       "publicHint": "Just a few, easy ones. Your clinic card and reports fill in the rest.",
       "alsoTrack": "ALSO TRACK",
-      "tookIronCalcium": "Took iron & calcium",
+      "medicinesSupplements": "Medicines & supplements",
       "babyMovedToday": "Baby moved today",
       "howIFeelToday": "How I feel today",
       "uploadCardOrReport": "Upload card or report",
@@ -1739,44 +1739,6 @@
       "activeCount_one": "{{count}} active reminder",
       "activeCount_other": "{{count}} active reminders",
       "newReminder": "New reminder",
-      "routeHint": {
-        "public": "From the government ANC schedule and your PHC. Viva sets these up for you.",
-        "private": "From your doctor's prescription and visit plan."
-      },
-      "presets": {
-        "ironCalcium": {
-          "detail": "Iron & calcium tablet",
-          "schedule": "Evening · Daily · Ongoing"
-        },
-        "ancVisit": {
-          "detail": "ANC visit at the PHC",
-          "schedule": "This Thursday"
-        },
-        "pmsma": {
-          "detail": "PMSMA checkup",
-          "schedule": "9th of the month"
-        },
-        "thr": {
-          "detail": "Take-home ration pickup",
-          "schedule": "Monthly"
-        },
-        "ironCalciumRx": {
-          "detail": "Iron & calcium (from your Rx)",
-          "schedule": "Morning & night · Daily"
-        },
-        "doctorAppointment": {
-          "detail": "Doctor appointment",
-          "schedule": "Tue 10:30 am"
-        },
-        "growthScan": {
-          "detail": "Growth scan",
-          "schedule": "Around 28 weeks"
-        },
-        "babyVaccines": {
-          "detail": "Baby's vaccines (IAP schedule)",
-          "schedule": "At birth, then 6 weeks"
-        }
-      },
       "empty": "No reminders set yet.",
       "stepOf": "STEP {{step}} OF {{total}}",
       "whatReminded": "What do you want to be reminded of?",
@@ -1838,7 +1800,21 @@
       },
       "doneSet": "Done, set reminder",
       "public": "Public",
-      "private": "Private"
+      "private": "Private",
+      "notifyHint": "Viva will send you a notification at the time you choose.",
+      "pickDays": "Which days?",
+      "weekdays": {
+        "0": "Sun",
+        "1": "Mon",
+        "2": "Tue",
+        "3": "Wed",
+        "4": "Thu",
+        "5": "Fri",
+        "6": "Sat"
+      },
+      "weeklyOn": "Every {{day}}",
+      "endsOn": "Ends {{date}}",
+      "ongoingShort": "Ongoing"
     }
   },
   "chatLogs": {

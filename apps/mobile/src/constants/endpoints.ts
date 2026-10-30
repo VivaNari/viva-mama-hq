@@ -128,6 +128,8 @@ export const API_MOTHER_LOGS = `${API_VERSION_URL}/mother-logs`;
 export const API_MOTHER_LOGS_DAILY = `${API_VERSION_URL}/mother-logs/daily`;
 export const API_MOTHER_LOGS_ANC_SCHEDULE = `${API_VERSION_URL}/mother-logs/anc-schedule`;
 export const API_MOTHER_MEDICINES = `${API_VERSION_URL}/mother-medicines`;
+// Her reminders; the server pushes each one at its time of day.
+export const API_MOTHER_REMINDERS = `${API_VERSION_URL}/mother-reminders`;
 // Her Yes / No on a log Viva proposed in chat.
 export const API_CHAT_LOG_CONFIRM = `${API_VERSION_URL}/chat/log-proposals/confirm`;
 

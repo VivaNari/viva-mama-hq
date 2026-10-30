@@ -26,7 +26,17 @@ interface NotificationData {
     minutesBefore?: string;
     /** Carried by GROWTH_LOG_NUDGE, VACCINATION_DUE and MILESTONE_DUE. */
     childId?: string;
+    /** Carried by CUSTOM_REMINDER: the reminder she set and what it is for. */
+    reminderId?: string;
+    category?: string;
 }
+
+// Where a reminder she set opens: the log it is about, or the list itself.
+const REMINDER_SCREENS: Record<string, string> = {
+    medicine: 'MedicineLog',
+    meals: 'MealsLog',
+    tests: 'ReadingsLog',
+};
 
 export default function RootNavigator() {
     const { userToken, isLoading, isFullyOnboarded, onboardingStatus, pendingRedirect, setPendingRedirect } = useAuth();
@@ -47,7 +57,7 @@ export default function RootNavigator() {
             source: NotificationSource,
         ) => {
             console.log('[ROOT_NAVIGATOR] Handling notification:', remoteMessage);
-            const { flowSlug, consultationId, type, contentId, childId } =
+            const { flowSlug, consultationId, type, contentId, childId, category } =
                 remoteMessage.data as unknown as NotificationData;
 
             // Logged before the onboarding gate below, so pushes that land on a
@@ -96,6 +106,10 @@ export default function RootNavigator() {
                     console.log("[ROOT_NAVIGATOR] Navigating to the consultation banner");
                     navigationRef.current?.navigate("AppStack", {
                         screen: "DashboardTabNavigator",
+                    });
+                } else if (type === 'CUSTOM_REMINDER') {
+                    navigationRef.current?.navigate("AppStack", {
+                        screen: REMINDER_SCREENS[category ?? ''] ?? 'Reminders',
                     });
                 } else if (
                     (type === 'GROWTH_LOG_NUDGE' ||

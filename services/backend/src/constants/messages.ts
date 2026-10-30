@@ -109,6 +109,11 @@ export const messages = {
     CHAT_LOG_NOT_FOUND: "This log suggestion was not found",
     CHAT_LOG_DAY_CLOSED: "This suggestion was for an earlier day and can no longer be saved",
     CHAT_LOG_MEDICINE_MISSING: "This medicine is no longer on your list",
+    REMINDER_FETCH_SUCCESS: "Reminders fetched successfully",
+    REMINDER_SAVED_SUCCESS: "Reminder set successfully",
+    REMINDER_DELETED_SUCCESS: "Reminder removed",
+    REMINDER_NOT_FOUND: "Reminder not found",
+    REMINDER_LIMIT_REACHED: "You have the maximum number of reminders; remove one to add another",
     GROWTH_LOG_SAVED_SUCCESS: "Growth log saved successfully",
     GROWTH_LOG_FETCH_SUCCESS: "Growth logs fetched successfully",
     GROWTH_LOG_DELETED_SUCCESS: "Growth log deleted successfully",
@@ -209,4 +214,24 @@ export const notificationMessages = {
             : `Your consultation is in ${minutesBefore} minutes`,
     CONSULTATION_REMINDER_BODY: (name: string, time: string) =>
         `Your call with ${name} starts at ${time}. Join from the app.`,
+    /**
+     * Reminders she set herself, by category and language. "other" has no fixed title:
+     * her own words are the title.
+     */
+    CUSTOM_REMINDER: {
+        en: {
+            medicine: { title: "Time for your medicine 💊", body: "Tap to mark today's dose." },
+            meals: { title: "Time for a healthy meal 🍲", body: "Tap to log what you ate." },
+            exercise: { title: "Time to move a little 🚶‍♀️", body: "A short walk or stretch helps." },
+            tests: { title: "Time to check your reading 🩺", body: "Tap to log your reading." },
+            other: { title: "", body: "Your reminder from Viva." },
+        },
+        hi: {
+            medicine: { title: "दवा का समय 💊", body: "आज की खुराक दर्ज करने के लिए टैप करें।" },
+            meals: { title: "पौष्टिक भोजन का समय 🍲", body: "आपने क्या खाया, दर्ज करने के लिए टैप करें।" },
+            exercise: { title: "थोड़ा चलने-फिरने का समय 🚶‍♀️", body: "थोड़ी सैर या स्ट्रेचिंग फायदेमंद है।" },
+            tests: { title: "रीडिंग जाँचने का समय 🩺", body: "अपनी रीडिंग दर्ज करने के लिए टैप करें।" },
+            other: { title: "", body: "Viva की ओर से आपका रिमाइंडर।" },
+        },
+    },
 };

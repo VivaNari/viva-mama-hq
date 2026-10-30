@@ -20,7 +20,7 @@ export interface LogTile {
 // The public route keeps to the few logs a mother can do herself; the clinic card and
 // her reports fill in the rest. "Baby moved today" only makes sense while pregnant.
 const PUBLIC_TILES: LogTile[] = [
-    { key: 'ironCalcium', labelKey: 'tookIronCalcium', icon: 'pill', screen: 'MedicineLog' },
+    { key: 'medicines', labelKey: 'medicinesSupplements', icon: 'pill', screen: 'MedicineLog' },
     { key: 'babyMoved', labelKey: 'babyMovedToday', icon: 'heart', screen: 'KickCounter' },
     { key: 'mood', labelKey: 'howIFeelToday', icon: 'smile', screen: 'MoodLog' },
     { key: 'upload', labelKey: 'uploadCardOrReport', icon: 'upload', screen: 'RecordsUpload' },

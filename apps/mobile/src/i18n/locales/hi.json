@@ -1412,7 +1412,7 @@
       "title": "आप क्या लॉग करना चाहेंगी?",
       "publicHint": "बस कुछ आसान चीज़ें। बाकी जानकारी आपके क्लिनिक कार्ड और रिपोर्ट से भर जाएगी।",
       "alsoTrack": "यह भी ट्रैक करें",
-      "tookIronCalcium": "आयरन और कैल्शियम लिया",
+      "medicinesSupplements": "दवाइयाँ और सप्लीमेंट",
       "babyMovedToday": "आज बच्चे ने हलचल की",
       "howIFeelToday": "आज मैं कैसा महसूस कर रही हूँ",
       "uploadCardOrReport": "कार्ड या रिपोर्ट अपलोड करें",
@@ -1739,44 +1739,6 @@
       "activeCount_one": "{{count}} सक्रिय रिमाइंडर",
       "activeCount_other": "{{count}} सक्रिय रिमाइंडर",
       "newReminder": "नया रिमाइंडर",
-      "routeHint": {
-        "public": "सरकारी ANC शेड्यूल और आपके PHC से। Viva इन्हें आपके लिए सेट करती है।",
-        "private": "आपके डॉक्टर के पर्चे और विज़िट प्लान से।"
-      },
-      "presets": {
-        "ironCalcium": {
-          "detail": "आयरन और कैल्शियम की गोली",
-          "schedule": "शाम · रोज़ · लगातार"
-        },
-        "ancVisit": {
-          "detail": "PHC पर ANC विज़िट",
-          "schedule": "इस गुरुवार"
-        },
-        "pmsma": {
-          "detail": "PMSMA जाँच",
-          "schedule": "हर महीने की 9 तारीख़"
-        },
-        "thr": {
-          "detail": "टेक-होम राशन लेना",
-          "schedule": "हर महीने"
-        },
-        "ironCalciumRx": {
-          "detail": "आयरन और कैल्शियम (आपके पर्चे से)",
-          "schedule": "सुबह और रात · रोज़"
-        },
-        "doctorAppointment": {
-          "detail": "डॉक्टर से अपॉइंटमेंट",
-          "schedule": "मंगल 10:30 सुबह"
-        },
-        "growthScan": {
-          "detail": "ग्रोथ स्कैन",
-          "schedule": "लगभग 28 हफ़्ते पर"
-        },
-        "babyVaccines": {
-          "detail": "बच्चे के टीके (IAP शेड्यूल)",
-          "schedule": "जन्म पर, फिर 6 हफ़्ते पर"
-        }
-      },
       "empty": "अभी कोई रिमाइंडर सेट नहीं है।",
       "stepOf": "चरण {{step}} / {{total}}",
       "whatReminded": "आप किस बात का रिमाइंडर चाहती हैं?",
@@ -1838,7 +1800,21 @@
       },
       "doneSet": "हो गया, रिमाइंडर सेट करें",
       "public": "सरकारी",
-      "private": "निजी"
+      "private": "निजी",
+      "notifyHint": "आप जो समय चुनेंगी, Viva उस समय आपको नोटिफ़िकेशन भेजेगी।",
+      "pickDays": "किन दिनों?",
+      "weekdays": {
+        "0": "रवि",
+        "1": "सोम",
+        "2": "मंगल",
+        "3": "बुध",
+        "4": "गुरु",
+        "5": "शुक्र",
+        "6": "शनि"
+      },
+      "weeklyOn": "हर {{day}}",
+      "endsOn": "{{date}} को ख़त्म",
+      "ongoingShort": "लगातार"
     }
   },
   "chatLogs": {

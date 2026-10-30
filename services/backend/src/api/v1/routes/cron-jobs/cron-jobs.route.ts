@@ -10,6 +10,7 @@ import {
     runSubscriptionLifecycle,
     runConsultationReminders,
     runBabyAgeReminders,
+    runCustomReminders,
 } from "../../controllers/cron-jobs/cron-jobs.controller";
 
 /**
@@ -36,5 +37,8 @@ cronJobsRouter.post("/consultation-reminders", runConsultationReminders);
 // 00:30 — has a child reached a vaccination visit or milestone band with something still
 // unlogged in it. See babyAgeReminders.ts.
 cronJobsRouter.post("/baby-age-reminders", runBabyAgeReminders);
+// Every 15 minutes — reminders she set on the Viva AI Reminders screen, sent at their
+// slot time. Needs its own Cloud Scheduler entry per environment. See customReminders.ts.
+cronJobsRouter.post("/custom-reminders", runCustomReminders);
 
 export default cronJobsRouter;

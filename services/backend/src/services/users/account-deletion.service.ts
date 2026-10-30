@@ -12,6 +12,7 @@ import messageModel from "../../models/message.model";
 import moodLogModel from "../../models/mood-log.model";
 import motherLogModel from "../../models/mother-log.model";
 import motherMedicineModel from "../../models/mother-medicine.model";
+import motherReminderModel from "../../models/mother-reminder.model";
 import diaperLogModel from "../../models/diaper-log.model";
 import milestoneLogModel from "../../models/milestone-log.model";
 import feedingLogModel from "../../models/feeding-log.model";
@@ -168,6 +169,9 @@ export class AccountDeletionService {
         await record("mother_logs", () => motherLogModel.deleteMany({ userId: _id }));
         await record("mother_medicines", () =>
             motherMedicineModel.deleteMany({ userId: _id }),
+        );
+        await record("mother_reminders", () =>
+            motherReminderModel.deleteMany({ userId: _id }),
         );
         // Children themselves are embedded in the user document and go with it. Their
         // growth, diaper, milestone and vaccination logs are not — they are their own collections

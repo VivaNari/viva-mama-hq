@@ -19,6 +19,7 @@ import messageModel from "../src/models/message.model";
 import moodLogModel from "../src/models/mood-log.model";
 import motherLogModel from "../src/models/mother-log.model";
 import motherMedicineModel from "../src/models/mother-medicine.model";
+import motherReminderModel from "../src/models/mother-reminder.model";
 import diaperLogModel from "../src/models/diaper-log.model";
 import milestoneLogModel from "../src/models/milestone-log.model";
 import feedingLogModel from "../src/models/feeding-log.model";
@@ -125,6 +126,13 @@ async function seed() {
         loggedAt: new Date(),
     });
     await motherMedicineModel.create({ userId: uid, presetKey: "calcium", frequency: "once_a_day" });
+    await motherReminderModel.create({
+        userId: uid,
+        category: "medicine",
+        timeOfDay: "evening",
+        frequency: "daily",
+        startDate: "2026-11-01",
+    });
     // A child's growth log. Children themselves are embedded in the user document and go
     // with it, but their measurements are their own collection — health data about a named
     // minor, which must not outlive the account.
@@ -221,6 +229,7 @@ describe("AccountDeletionService", () => {
         expect(await moodLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await motherLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await motherMedicineModel.countDocuments({ userId: uid })).toBe(0);
+        expect(await motherReminderModel.countDocuments({ userId: uid })).toBe(0);
         expect(await growthLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await diaperLogModel.countDocuments({ userId: uid })).toBe(0);
         expect(await milestoneLogModel.countDocuments({ userId: uid })).toBe(0);
@@ -382,7 +391,7 @@ describe("deletion coverage", () => {
             "consultation_reviews", "consultation_credits", "usage_counters",
             "subscriptions", "conversations", "messages", "ai_message_bookmarks",
             "mood_logs", "growth_logs", "diaper_logs", "milestone_logs", "vaccination_logs",
-            "feeding_logs", "mother_logs", "mother_medicines",
+            "feeding_logs", "mother_logs", "mother_medicines", "mother_reminders",
             "recommendation_histories", "supports",
             "analytics_events",
             "viva_club_posts", "viva_club_comments", "reports",
