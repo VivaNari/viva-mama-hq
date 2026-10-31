@@ -18,6 +18,9 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
+// Initialises Firebase Admin as a side effect. The server gets this through its
+// imports; a standalone script must load it itself or every push fails.
+import "../src/config/firebase";
 import { consultationReminders } from "../src/cron-jobs/consultationReminders";
 
 const buildMongoUri = () => {

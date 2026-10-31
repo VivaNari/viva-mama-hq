@@ -89,7 +89,7 @@ export const customReminders = async (now: Date = new Date()): Promise<ICustomRe
                     continue;
                 }
 
-                await sendPushNotification({
+                const delivered = await sendPushNotification({
                     token: user.FCM_token,
                     ...pushText(reminder, user.preferred_language),
                     data: {
@@ -99,6 +99,12 @@ export const customReminders = async (now: Date = new Date()): Promise<ICustomRe
                     },
                 });
 
+                // The helper logs and swallows send failures; count them as errors so
+                // the run's result says what actually happened.
+                if (!delivered) {
+                    errors++;
+                    continue;
+                }
                 sent++;
             } catch (error: any) {
                 errors++;

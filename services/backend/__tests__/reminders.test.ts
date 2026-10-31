@@ -11,7 +11,7 @@ jest.mock("razorpay", () =>
     jest.fn().mockImplementation(() => ({ orders: { create: jest.fn() } })),
 );
 
-const sendPushNotificationMock = jest.fn(async () => undefined);
+const sendPushNotificationMock = jest.fn(async () => true);
 jest.mock(require.resolve("../src/utils/sendPushNotification"), () => ({
     __esModule: true,
     sendPushNotification: (...args: unknown[]) => sendPushNotificationMock(...(args as [])),
@@ -245,6 +245,13 @@ describe("custom reminders job", () => {
         // Sends again the next day.
         await customReminders(at("13:05", "2026-11-03"));
         expect(sendPushNotificationMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("counts a push Firebase refused as an error, not a send", async () => {
+        const { userId } = await mother();
+        await seed(userId);
+        sendPushNotificationMock.mockResolvedValueOnce(false);
+        expect(await customReminders(at("13:05"))).toMatchObject({ sent: 0, errors: 1 });
     });
 
     it("does not send before the slot or more than an hour late", async () => {

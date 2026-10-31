@@ -18,6 +18,9 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
+// Initialises Firebase Admin as a side effect. The server gets this through its
+// imports; a standalone script must load it itself or every push fails.
+import "../src/config/firebase";
 import { customReminders } from "../src/cron-jobs/customReminders";
 
 const buildMongoUri = () => {
@@ -48,6 +51,8 @@ async function run() {
     }
 
     await mongoose.connect(buildMongoUri());
+    // Host and database only, never the credentials: shows which data this run will touch.
+    console.log(`Database: ${mongoose.connection.host}/${mongoose.connection.name}`);
 
     const istNow = new Intl.DateTimeFormat("en-IN", {
         timeZone: "Asia/Kolkata",

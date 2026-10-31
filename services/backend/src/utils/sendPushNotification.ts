@@ -7,7 +7,7 @@ export const sendPushNotification = async ({
     title,
     body,
     data,
-}: IPuhNotificationParams) => {
+}: IPuhNotificationParams): Promise<boolean> => {
     const message: Message = {
         notification: {
             title: title,
@@ -32,7 +32,9 @@ export const sendPushNotification = async ({
     try {
         const response = await admin.messaging().send(message);
         console.log("Successfully sent message:", response);
+        return true;
     } catch (error) {
         console.error("Error sending message:", error);
+        return false;
     }
 };
