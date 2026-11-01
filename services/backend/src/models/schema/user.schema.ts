@@ -215,6 +215,13 @@ const userSchema = new Schema<IUser>(
             ],
             default: [],
         },
+        // Her explicit consent to Viva reading the health documents she attaches in
+        // chat (DPDP: sensitive personal data). Versioned, so a change to what she
+        // agreed to asks her again.
+        chat_attachment_consent: {
+            type: new Schema({ version: String, acceptedAt: Date }, { _id: false }),
+            default: null,
+        },
         FCM_token: {
             type: String,
         },

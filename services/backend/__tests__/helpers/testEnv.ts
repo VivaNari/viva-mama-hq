@@ -18,6 +18,9 @@ const TEST_DEFAULTS: Record<string, string> = {
     RAZORPAY_API_KEY: "rzp_test_key",
     RAZORPAY_SECRET_KEY: "rzp_test_secret",
     PLAY_PACKAGE_NAME: "com.wellnessemporio.vivamama",
+    CHAT_ATTACHMENTS_ENABLED: "true",
+    CHAT_ATTACHMENTS_BUCKET: "test-chat-attachments",
+    CHAT_ATTACHMENTS_ROLLOUT_PERCENT: "100",
 };
 
 for (const [key, value] of Object.entries(TEST_DEFAULTS)) {

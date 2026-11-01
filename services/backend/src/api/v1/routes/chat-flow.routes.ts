@@ -13,4 +13,7 @@ chatFlowRouter.get(
 
 chatFlowRouter.post("/chat-flow/answer", authMiddleware("header"), chatFlowController.saveResponse);
 
+/** Fallback for a chatbot reply the stream did not deliver. */
+chatFlowRouter.get("/chat-flow/reply", authMiddleware("header"), chatFlowController.getReply);
+
 export default chatFlowRouter;

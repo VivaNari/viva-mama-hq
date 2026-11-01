@@ -807,6 +807,50 @@ class RedisSessionMemory:
         """Forget any log message awaiting a value."""
         self.set_pending_log(session_id, None)
 
+    # -------------------------------
+    # Document she shared this session (per session)
+    # -------------------------------
+
+    def _document_key(self, session_id: str) -> str:
+        """
+        Redis key for what Viva read off the last report she attached, so a
+        follow-up ("what does MCV mean?") is answered from it without sending the
+        file again. Outside "chat:session:*" for the same reason as _alerts_key.
+        """
+        return f"chat:document:{session_id}"
+
+    def get_document_context(self, session_id: str) -> Optional[str]:
+        """The compact findings of the last document she shared, or None."""
+        try:
+            key = self._document_key(session_id)
+            if self._is_fallback:
+                value = self._r.get(key)
+            else:
+                value = self._retry_operation(self._r.get, key)
+            if not value:
+                return None
+            return value.decode("utf-8") if isinstance(value, bytes) else str(value)
+        except Exception as e:
+            logger.error(f"Error reading document context for {session_id}: {str(e)}")
+            return None
+
+    def set_document_context(self, session_id: str, text: Optional[str]) -> None:
+        """Remember (or, with None, forget) the document she shared. Same TTL as the session."""
+        try:
+            key = self._document_key(session_id)
+            if not text:
+                if self._is_fallback:
+                    self._r.delete(key)
+                else:
+                    self._retry_operation(self._r.delete, key)
+                return
+            if self._is_fallback:
+                self._r.set(key, text, ex=self.ttl)
+            else:
+                self._retry_operation(self._r.set, key, text, ex=self.ttl)
+        except Exception as e:
+            logger.error(f"Error storing document context for {session_id}: {str(e)}")
+
     def reset(self, session_id: str) -> None:
         """Delete all turns for a session"""
         try:
@@ -814,17 +858,20 @@ class RedisSessionMemory:
             alerts_key = self._alerts_key(session_id)
             followup_key = self._followup_key(session_id)
             pending_log_key = self._pending_log_key(session_id)
+            document_key = self._document_key(session_id)
 
             if self._is_fallback:
                 self._r.delete(key)
                 self._r.delete(alerts_key)
                 self._r.delete(followup_key)
                 self._r.delete(pending_log_key)
+                self._r.delete(document_key)
             else:
                 self._retry_operation(self._r.delete, key)
                 self._retry_operation(self._r.delete, alerts_key)
                 self._retry_operation(self._r.delete, followup_key)
                 self._retry_operation(self._r.delete, pending_log_key)
+                self._retry_operation(self._r.delete, document_key)
 
             _metrics.record_operation("delete")
             logger.info(f"Reset session {session_id}")

@@ -96,6 +96,7 @@ _SOURCE_LEADINS = {
     "message": "We detected {matches}.",
     "checkin": "As per your recently logged recovery check-in, we noticed {matches}.",
     "profile": "Based on your health profile, we noticed {matches}.",
+    "document": "The report you shared shows {matches}.",
 }
 
 
@@ -109,7 +110,8 @@ def format_escalation_banner(
       level   = "NONE" | "MEDIUM" | "HIGH"
       matches = phrases that triggered the alert
       source  = "message" (her current message) | "checkin" (recovery
-                check-in answers) | "profile" (stored health profile)
+                check-in answers) | "profile" (stored health profile) |
+                "document" (a report she attached)
     OUTPUT:
       banner string to prepend to the answer (or "" if no alert)
 

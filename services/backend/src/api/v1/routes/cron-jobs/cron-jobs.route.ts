@@ -11,6 +11,7 @@ import {
     runConsultationReminders,
     runBabyAgeReminders,
     runCustomReminders,
+    runChatAttachmentJanitor,
 } from "../../controllers/cron-jobs/cron-jobs.controller";
 
 /**
@@ -40,5 +41,8 @@ cronJobsRouter.post("/baby-age-reminders", runBabyAgeReminders);
 // Every 5 minutes — reminders she set (on the Reminders screen or through Viva), sent
 // at their time. Needs its own Cloud Scheduler entry per environment. See customReminders.ts.
 cronJobsRouter.post("/custom-reminders", runCustomReminders);
+// Hourly — removes chat attachments that were never sent or whose delete failed, and
+// retries account-deletion purges. Needs its own Cloud Scheduler entry per environment.
+cronJobsRouter.post("/chat-attachment-janitor", runChatAttachmentJanitor);
 
 export default cronJobsRouter;

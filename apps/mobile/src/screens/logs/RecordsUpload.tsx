@@ -46,8 +46,8 @@ const RecordsUpload: React.FC = () => {
         category === 'mch'
             ? t('logs.records.savedMch')
             : photoAdded
-              ? t('logs.records.savedWithPhoto')
-              : t('logs.records.saved');
+                ? t('logs.records.savedWithPhoto')
+                : t('logs.records.saved');
 
     if (done) {
         return (

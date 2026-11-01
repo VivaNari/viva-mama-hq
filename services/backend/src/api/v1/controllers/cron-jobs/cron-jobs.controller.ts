@@ -10,6 +10,7 @@ import { subscriptionLifecycle } from "../../../../cron-jobs/subscriptionLifecyc
 import { consultationReminders } from "../../../../cron-jobs/consultationReminders";
 import { babyAgeReminders } from "../../../../cron-jobs/babyAgeReminders";
 import { customReminders } from "../../../../cron-jobs/customReminders";
+import { chatAttachmentJanitor } from "../../../../cron-jobs/chatAttachmentJanitor";
 
 const log = createModuleLogger(logger, "cron-jobs.controller");
 
@@ -80,3 +81,6 @@ export const runBabyAgeReminders = (_req: Request, res: Response): Promise<void>
 
 export const runCustomReminders = (_req: Request, res: Response): Promise<void> =>
     runJob(res, "custom-reminders", () => customReminders());
+
+export const runChatAttachmentJanitor = (_req: Request, res: Response): Promise<void> =>
+    runJob(res, "chat-attachment-janitor", () => chatAttachmentJanitor());

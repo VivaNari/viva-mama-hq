@@ -258,6 +258,24 @@ export class EntitlementService {
         );
     }
 
+    /** Current usage of a metered capability, without spending any. */
+    public async peekQuota(
+        userId: TObjectIdLike,
+        capability: ECapability,
+        now: Date = new Date(),
+    ): Promise<{ used: number; limit: number | null; remaining: number | null }> {
+        const { rule, snapshot } = await this.resolveFor(userId, capability, now);
+        if (!rule.quotaKey || !rule.window || rule.limit == null) {
+            return { used: 0, limit: null, remaining: null };
+        }
+        const used = await this.getUsedCount(
+            userId,
+            rule.quotaKey,
+            this.windowKeyFor(rule.window, snapshot, now),
+        );
+        return { used, limit: rule.limit, remaining: Math.max(0, rule.limit - used) };
+    }
+
     private async getUsedCount(
         userId: TObjectIdLike,
         key: EUsageCounterKey,

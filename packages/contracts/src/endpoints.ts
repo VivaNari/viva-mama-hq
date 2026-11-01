@@ -31,6 +31,14 @@ export const apiRoutes = {
     guidedFlowStart: `${v}/chat/checkin/start`,
     guidedFlowAnswer: `${v}/chat/checkin/answer`,
     flowAnswer: `${v}/chat-flow/answer`,
+    /** The reply to a chatbot turn by its clientMessageId; 202 while pending. */
+    flowReply: `${v}/chat-flow/reply`,
+    /** Reports, scans and prescriptions attached in Viva AI chat. */
+    attachments: `${v}/chat/attachments`,
+    attachmentsConfig: `${v}/chat/attachments/config`,
+    attachmentsConsent: `${v}/chat/attachments/consent`,
+    attachmentUrl: (id: string) => `${v}/chat/attachments/${id}/url`,
+    attachment: (id: string) => `${v}/chat/attachments/${id}`,
     weeklyCheckinAnswer: `${v}/weekly-checkin/answer`,
     chatbotMessage: `${v}/chatbot/message`,
     /** SSE stream. Token is passed as a query param because EventSource cannot set headers. */

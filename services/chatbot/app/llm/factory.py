@@ -35,6 +35,8 @@ logger = logging.getLogger(__name__)
 # generation + translation get a little warmth for natural language.
 _MAIN_TEMPERATURE = 0.2
 _CLASSIFIER_TEMPERATURE = 0.0
+# Reading a report: near-deterministic, since the same report must read the same way.
+_ANALYZER_TEMPERATURE = 0.1
 
 # Cache built clients by config so repeated calls reuse one instance.
 _clients: Dict[str, BaseChatModel] = {}
@@ -85,6 +87,12 @@ def _build_vertex(model: str, temperature: float, role: str) -> BaseChatModel:
     elif role == "extractor":
         # Structured log extraction: a small JSON object, never prose.
         kwargs["max_output_tokens"] = 1024
+    elif role == "vision_classifier":
+        # Attachment triage: a small JSON verdict about what the file is.
+        kwargs["max_output_tokens"] = 512
+    elif role == "analyzer":
+        # Attachment explanation: a JSON object holding up to ~25 findings.
+        kwargs["max_output_tokens"] = 4096
     else:
         # Main generation / translation: generous cap so structured, formatted
         # answers (bullets, product/expert sections) complete in full.
@@ -100,7 +108,12 @@ def _build_vertex(model: str, temperature: float, role: str) -> BaseChatModel:
 
 
 def get_llm(
-    model: Optional[str] = None, *, classifier: bool = False, extractor: bool = False
+    model: Optional[str] = None,
+    *,
+    classifier: bool = False,
+    extractor: bool = False,
+    vision_classifier: bool = False,
+    analyzer: bool = False,
 ) -> BaseChatModel:
     """Return a chat model for `model` (default: settings.llm_model).
 
@@ -116,12 +129,31 @@ def get_llm(
 
     `extractor=True` selects the structured-extraction role used for logging from
     chat: deterministic like the classifier, but with room for a JSON object.
+
+    `vision_classifier=True` / `analyzer=True` are the two attachment roles: the
+    triage call that decides whether a file is a mother/baby health document, and
+    the call that reads an accepted one. Both are deterministic (or nearly) and
+    return JSON; they need a vision-capable provider (see `supports_vision`).
     """
     resolved = model or settings.llm_model
-    temperature = _CLASSIFIER_TEMPERATURE if (classifier or extractor) else _MAIN_TEMPERATURE
+    if classifier or extractor or vision_classifier:
+        temperature = _CLASSIFIER_TEMPERATURE
+    elif analyzer:
+        temperature = _ANALYZER_TEMPERATURE
+    else:
+        temperature = _MAIN_TEMPERATURE
     provider = settings.llm_provider
 
-    role = "classifier" if classifier else "extractor" if extractor else "main"
+    if classifier:
+        role = "classifier"
+    elif extractor:
+        role = "extractor"
+    elif vision_classifier:
+        role = "vision_classifier"
+    elif analyzer:
+        role = "analyzer"
+    else:
+        role = "main"
     cache_key = f"{provider}:{resolved}:{temperature}:{role}"
     cached = _clients.get(cache_key)
     if cached is not None:
@@ -139,6 +171,11 @@ def get_llm(
 
     _clients[cache_key] = client
     return client
+
+
+def supports_vision() -> bool:
+    """Whether the active provider can read images and PDFs. Groq's models cannot."""
+    return settings.llm_provider == "vertex"
 
 
 def get_llm_metrics() -> Dict[str, Any]:

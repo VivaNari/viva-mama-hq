@@ -25,6 +25,8 @@ export enum MessageEventType {
   USER_MESSAGE = "user_message",
   END_FLOW = "end_flow",
   ERROR = "error",
+  /** Her chatbot turn could not be answered; carries `replyTo` and `code`. */
+  AI_ERROR = "ai_error",
 }
 
 // ============================================
@@ -65,6 +67,8 @@ export interface IAiMessage {
   suggestedExperts?: ISuggestedExpert[];
   /** Logs Viva read from her message, waiting for Yes / No. Absent means no card. */
   pendingLogs?: IPendingLog[];
+  /** The clientMessageId of the turn this answers. */
+  replyTo?: string | null;
 }
 
 /**
@@ -84,10 +88,54 @@ export interface IPendingLog {
   savedLogId?: string | null;
 }
 
+// ============================================
+// Attachments (reports, scans, prescriptions)
+// ============================================
+
+export type AttachmentKind = "IMAGE" | "PDF";
+
+/** A file picked for the next message, uploading in the background while she types. */
+export interface IPendingAttachment {
+  localId: string;
+  /** Sent with the upload, so a retried upload is recognised by the server. */
+  clientUploadId: string;
+  kind: AttachmentKind;
+  /** Local file URI from the picker. */
+  uri: string;
+  mimeType: string;
+  name?: string | null;
+  sizeBytes?: number | null;
+  width?: number | null;
+  height?: number | null;
+  state: "uploading" | "uploaded" | "failed";
+  /** 0-1 while uploading. */
+  progress: number;
+  serverId?: string;
+  pageCount?: number | null;
+  errorCode?: string;
+}
+
+/** A file shown in a sent bubble. */
+export interface IMessageAttachment {
+  id: string;
+  kind: AttachmentKind;
+  localUri?: string;
+  name?: string | null;
+  pageCount?: number | null;
+  sizeBytes?: number | null;
+  width?: number | null;
+  height?: number | null;
+}
+
 export interface IUserMessage {
   type: "user";
   text: string;
   timestamp: number;
+  /** clientMessageId of a chatbot turn: keys the reply and in-place updates. */
+  id?: string;
+  attachments?: IMessageAttachment[];
+  /** Chatbot turns only. Absent on older messages, which are always sent. */
+  status?: "sending" | "sent" | "failed";
 }
 
 export type IChatMessage = IAiMessage | IUserMessage;
@@ -114,6 +162,14 @@ export interface ISSEMessageData {
   pendingLogs?: IPendingLog[];
   /** She answered an earlier card by typing yes/no: its items as they now stand. */
   updatedPendingLogs?: { messageId: string; pendingLogs: IPendingLog[] };
+  /** The clientMessageId of the turn this answers (ai_message and ai_error). */
+  replyTo?: string | null;
+  /** ai_error: why the turn failed. */
+  code?: string;
+  /** Her AI allowance after a refund. */
+  quota?: { used: number; limit: number | null; remaining: number | null } | null;
+  /** Reply to a turn with files: what was decided about them. */
+  attachment?: { verdict: string; reasonCode?: string | null } | null;
 }
 
 // ============================================
@@ -142,6 +198,8 @@ export interface ChatState {
   connectionStatus: "connecting" | "connected" | "disconnected" | "error";
   errorMessage: string | null;
   bookMarkedMessages: string[];
+  /** Files picked for the next chatbot message. */
+  pendingAttachments: IPendingAttachment[];
 }
 
 export type ChatAction =
@@ -166,7 +224,15 @@ export type ChatAction =
   | {
       type: "UPDATE_PENDING_LOGS";
       payload: { messageId: string; pendingLogs: IPendingLog[] };
-    };
+    }
+  | { type: "UPDATE_USER_MESSAGE"; payload: { id: string; patch: Partial<IUserMessage> } }
+  | { type: "ADD_PENDING_ATTACHMENTS"; payload: IPendingAttachment[] }
+  | {
+      type: "UPDATE_PENDING_ATTACHMENT";
+      payload: { localId: string; patch: Partial<IPendingAttachment> };
+    }
+  | { type: "REMOVE_PENDING_ATTACHMENT"; payload: string }
+  | { type: "SET_PENDING_ATTACHMENTS"; payload: IPendingAttachment[] };
 
 // ============================================
 // Navigation Types

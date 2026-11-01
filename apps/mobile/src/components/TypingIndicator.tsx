@@ -5,16 +5,22 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 
-export const TypingIndicator: React.FC = () => {
+interface TypingIndicatorProps {
+    /** Override the label, e.g. "Viva is reading your report…" on a turn with files. */
+    label?: string;
+}
+
+export const TypingIndicator: React.FC<TypingIndicatorProps> = ({ label }) => {
     const { t } = useTranslation();
     return (
         <View
             style={styles.container}
-            accessibilityLabel="Viva AI is thinking"
+            accessibilityLabel={label ?? 'Viva AI is thinking'}
+            accessibilityLiveRegion="polite"
             accessibilityRole="text"
         >
             <Text style={[styles.text, globalStyles.fontSemiBold]}>
-                {t('chat.vivaThinking')}
+                {label ?? t('chat.vivaThinking')}
             </Text>
         </View>
     );

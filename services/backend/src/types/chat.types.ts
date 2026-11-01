@@ -57,6 +57,26 @@ export type AttachmentType =
     | AttachmentTypeEnum.PDF;
 export type Provider = ProviderEnum.OPENAI | ProviderEnum.LOCAL | ProviderEnum.GROQ;
 
+/** Attachment metadata as kept on a message. Never a URL; see chat_attachments. */
+export interface IMessageAttachment {
+    attachmentId: Schema.Types.ObjectId | string;
+    kind: AttachmentType;
+    mimeType: string;
+    sizeBytes?: number | null;
+    width?: number | null;
+    height?: number | null;
+    pageCount?: number | null;
+    originalName?: string | null;
+}
+
+/** What the chatbot decided about an attachment turn. Never describes the content. */
+export interface IAttachmentVerdict {
+    verdict: string;
+    category?: string | null;
+    subject?: string | null;
+    reasonCode?: string | null;
+}
+
 export interface IMessage {
     _id: Schema.Types.ObjectId;
     conversationId: Schema.Types.ObjectId;
@@ -65,11 +85,13 @@ export interface IMessage {
     type: MessageType;
     text: string;
     rich: any;
-    attachments: Array<{
-        type: AttachmentType;
-        url: string;
-        meta: any;
-    }> | null;
+    attachments: IMessageAttachment[] | null;
+    clientMessageId?: string | null;
+    replyTo?: string | null;
+    quotaRefunded?: boolean;
+    sessionId?: string | null;
+    errorCode?: string | null;
+    attachmentVerdict?: IAttachmentVerdict | null;
     ai: {
         promptId: string;
         provider: Provider;
@@ -369,6 +391,21 @@ export type AILLMResponse = {
      * items as they now stand, so the app can update it in place.
      */
     updatedPendingLogs?: { messageId: string; pendingLogs: IPendingLog[] };
+    /** The clientMessageId of the turn this answers. */
+    replyTo?: string | null;
+    /** Set on the reply to an attachment turn. */
+    attachment?: { verdict: string; reasonCode?: string | null } | null;
+    /** Her AI allowance after this turn, when a refund changed it. */
+    quota?: { used: number; limit: number | null; remaining: number | null } | null;
+};
+
+/** Sent instead of an answer when her turn could not be processed. */
+export type AIErrorEvent = {
+    type: "ai_error";
+    replyTo: string | null;
+    code: "AI_UNAVAILABLE" | "ATTACHMENT_PROCESSING_FAILED";
+    timestamp: number;
+    quota?: { used: number; limit: number | null; remaining: number | null } | null;
 };
 
 export type AnswerData = {

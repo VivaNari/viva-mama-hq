@@ -93,4 +93,5 @@ export const INITIAL_CHAT_STATE = {
   connectionStatus: "disconnected" as const,
   errorMessage: null,
   bookMarkedMessages: [],
+  pendingAttachments: [],
 };

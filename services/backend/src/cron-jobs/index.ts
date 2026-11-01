@@ -9,6 +9,7 @@ import { subscriptionLifecycle } from "./subscriptionLifecycle";
 import { consultationReminders } from "./consultationReminders";
 import { babyAgeReminders } from "./babyAgeReminders";
 import { customReminders } from "./customReminders";
+import { chatAttachmentJanitor } from "./chatAttachmentJanitor";
 import { randomUUID } from "crypto";
 import { SpanStatusCode, trace } from "@opentelemetry/api";
 import env from "../config/env";
@@ -54,7 +55,10 @@ export const initScheduledJobs = () => {
                         const startedAt = Date.now();
                         try {
                             await job();
-                            jobLog.info({ durationMs: Date.now() - startedAt }, "Scheduled job completed");
+                            jobLog.info(
+                                { durationMs: Date.now() - startedAt },
+                                "Scheduled job completed",
+                            );
                         } catch (error) {
                             span.recordException(error as Error);
                             span.setStatus({ code: SpanStatusCode.ERROR });
@@ -114,4 +118,9 @@ export const initScheduledJobs = () => {
     // normally within 5 minutes of it. Run on demand with `npm run job:custom-reminders`.
     // See customReminders.ts.
     schedule("*/5 * * * *", customReminders, "custom-reminders");
+
+    // Hourly — deletes chat attachments that were uploaded but never sent, retries
+    // failed deletes, and purges files of accounts deleted during a storage outage.
+    // See chatAttachmentJanitor.ts.
+    schedule("17 * * * *", () => chatAttachmentJanitor(), "chat-attachment-janitor");
 };

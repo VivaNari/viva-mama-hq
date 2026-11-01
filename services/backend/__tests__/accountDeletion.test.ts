@@ -7,6 +7,11 @@ import path from "path";
 import mongoose, { Types } from "mongoose";
 
 import { clearTestDb, closeTestDb, connectTestDb } from "./helpers/db";
+import { createFakeGcs } from "./helpers/fakeGcs";
+import { setStorageForTests } from "../src/config/gcs.config";
+import env from "../src/config/env";
+import chatAttachmentModel from "../src/models/chat-attachment.model";
+import pendingGcsPurgeModel from "../src/models/pending-gcs-purge.model";
 import aiMessageBookmarkModel from "../src/models/ai-message-bookmark.model";
 import analyticsEventModel from "../src/models/analytics-event.model";
 import consultationCreditModel from "../src/models/consultation-credit.model";
@@ -50,6 +55,8 @@ import { ConsultationTypeEnum } from "../src/types/consultation.types";
 jest.setTimeout(120000);
 
 const service = new AccountDeletionService();
+const gcs = createFakeGcs();
+setStorageForTests(gcs.storage);
 
 beforeAll(connectTestDb);
 afterAll(closeTestDb);
@@ -125,7 +132,11 @@ async function seed() {
         logDate: new Date(),
         loggedAt: new Date(),
     });
-    await motherMedicineModel.create({ userId: uid, presetKey: "calcium", frequency: "once_a_day" });
+    await motherMedicineModel.create({
+        userId: uid,
+        presetKey: "calcium",
+        frequency: "once_a_day",
+    });
     await motherReminderModel.create({
         userId: uid,
         category: "medicine",
@@ -186,7 +197,10 @@ async function seed() {
     // carrying the right user key.
     await recommendationHistoryModel.collection.insertOne({ userId: uid } as never);
     await supportModel.create({ userId: uid, supportType: "general", message: "help" });
-    await analyticsEventModel.create({ user_id: uid, event: EAnalyticsEvent.SUBSCRIPTION_ACTIVATED });
+    await analyticsEventModel.create({
+        user_id: uid,
+        event: EAnalyticsEvent.SUBSCRIPTION_ACTIVATED,
+    });
 
     // Community: the victim's own post (liked by the bystander), a bystander comment on
     // that post, the victim's comment on a bystander post, and a bystander post the
@@ -205,6 +219,27 @@ async function seed() {
         { _id: bid },
         { $set: { referred_user_object_id: uid, referred_user_id: victim.user_id } },
     );
+
+    // A report she attached in chat, and one of the bystander's.
+    for (const [owner, name] of [
+        [uid, "victim.jpg"],
+        [bid, "bystander.jpg"],
+    ] as const) {
+        const objectName = `chat/${owner}/${name}`;
+        gcs.objects.set(`${env.CHAT_ATTACHMENTS_BUCKET}/${objectName}`, { data: Buffer.from("x") });
+        await chatAttachmentModel.create({
+            userId: owner,
+            clientUploadId: new Types.ObjectId().toString(),
+            kind: "IMAGE",
+            mimeType: "image/jpeg",
+            sizeBytes: 1,
+            sha256: "0",
+            bucket: env.CHAT_ATTACHMENTS_BUCKET,
+            objectName,
+            expiresAt: new Date(Date.now() + 86_400_000),
+            purgeAt: new Date(Date.now() + 2 * 86_400_000),
+        });
+    }
 
     return { uid, bid, bystanderPost };
 }
@@ -240,6 +275,31 @@ describe("AccountDeletionService", () => {
         expect(await analyticsEventModel.countDocuments({ user_id: uid })).toBe(0);
         expect(await VivaClubPostModel.countDocuments({ user: uid })).toBe(0);
         expect(await VivaClubCommentModel.countDocuments({ user: uid })).toBe(0);
+        expect(await chatAttachmentModel.countDocuments({ userId: uid })).toBe(0);
+    });
+
+    it("deletes her attached files from storage, and only hers", async () => {
+        const { uid, bid } = await seed();
+
+        await service.deleteAccount(uid);
+
+        expect(gcs.keys().some((k) => k.includes(`chat/${uid}/`))).toBe(false);
+        expect(gcs.keys().some((k) => k.includes(`chat/${bid}/`))).toBe(true);
+        expect(await chatAttachmentModel.countDocuments({ userId: bid })).toBe(1);
+    });
+
+    it("queues her files for retry when storage is down, and still deletes the account", async () => {
+        const { uid } = await seed();
+        gcs.failNext("deleteFiles");
+
+        await service.deleteAccount(uid);
+
+        expect(await UserModel.countDocuments({ _id: uid })).toBe(0);
+        const queued = await pendingGcsPurgeModel.find().lean();
+        expect(queued).toHaveLength(1);
+        expect(queued[0].prefix).toBe(`chat/${uid}/`);
+        // No reference to the deleted user beyond the storage prefix.
+        expect(Object.keys(queued[0])).not.toContain("userId");
     });
 
     it("leaves other accounts and their content intact", async () => {
@@ -387,15 +447,34 @@ describe("deletion coverage", () => {
 
     it("sweeps every registered collection that keys on a user", async () => {
         const SWEPT = new Set([
-            "users", "flow_instances", "flow_responses", "consultations",
-            "consultation_reviews", "consultation_credits", "usage_counters",
-            "subscriptions", "conversations", "messages", "ai_message_bookmarks",
-            "mood_logs", "growth_logs", "diaper_logs", "milestone_logs", "vaccination_logs",
-            "feeding_logs", "mother_logs", "mother_medicines", "mother_reminders",
-            "recommendation_histories", "supports",
+            "users",
+            "flow_instances",
+            "flow_responses",
+            "consultations",
+            "consultation_reviews",
+            "consultation_credits",
+            "usage_counters",
+            "subscriptions",
+            "conversations",
+            "messages",
+            "ai_message_bookmarks",
+            "mood_logs",
+            "growth_logs",
+            "diaper_logs",
+            "milestone_logs",
+            "vaccination_logs",
+            "feeding_logs",
+            "mother_logs",
+            "mother_medicines",
+            "mother_reminders",
+            "recommendation_histories",
+            "supports",
             "analytics_events",
-            "viva_club_posts", "viva_club_comments", "reports",
+            "viva_club_posts",
+            "viva_club_comments",
+            "reports",
             "referral_redemptions",
+            "chat_attachments",
         ]);
         const RETAINED = new Set<string>(AccountDeletionService.RETAINED);
 

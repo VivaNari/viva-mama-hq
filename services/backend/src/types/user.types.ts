@@ -143,6 +143,8 @@ export interface IUser {
     referral_program_id: Schema.Types.ObjectId | null;
     /** Per-user narrowings of the tier matrix. Never widens — see `resolveRule`. */
     entitlement_overrides: ICapabilityOverride[];
+    /** Consent to Viva reading attached health documents. Null until she agrees. */
+    chat_attachment_consent: { version: string; acceptedAt: Date } | null;
     FCM_token: string;
     preferred_language: FlowLanguage;
     current_weekdays: {

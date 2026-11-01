@@ -8,6 +8,7 @@ import {
     StyleSheet,
 } from 'react-native';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
+import Lucide from '@react-native-vector-icons/lucide';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles/globalStyles';
 import { InputMode } from '../types/chat.types';
@@ -27,6 +28,19 @@ interface ChatInputBarProps {
      * measurements, so without this the answer would just vanish.
      */
     validationError?: string | null;
+    /**
+     * Viva AI only: a paperclip to attach reports, scans or prescriptions. Absent for
+     * guided check-ins, which share this bar but take no files.
+     */
+    attachments?: {
+        onAttachPress: () => void;
+        /** At least one picked file has finished uploading. */
+        hasReady: boolean;
+        /** A picked file is still uploading (or failed): sending waits for it. */
+        blocking: boolean;
+        /** No more files can be added to this message. */
+        full: boolean;
+    };
 }
 
 export const ChatInputBar: React.FC<ChatInputBarProps> = ({
@@ -39,6 +53,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     onDatePickerOpen,
     onMultiSelectSubmit,
     validationError = null,
+    attachments,
 }) => {
     const { t } = useTranslation();
     // Multi-select submit bar
@@ -75,13 +90,21 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     const isDateMode = inputMode === 'date';
     const isNumberMode = inputMode === 'number';
     const hasError = isNumberMode && inputText.trim().length > 0 && !!validationError;
+    const showAttach = !!attachments && inputMode === 'text';
+    const hasText = inputText.trim().length > 0;
+    // A message may be only files; it may not leave while one is still uploading.
     const isSendDisabled =
-        inputText.trim().length === 0 || isLoading || (isNumberMode && !!validationError);
+        isLoading ||
+        (isNumberMode && !!validationError) ||
+        (showAttach && attachments!.blocking) ||
+        (!hasText && !(showAttach && attachments!.hasReady));
     const placeholder = isDateMode
         ? t('chat.selectADate')
         : isNumberMode
             ? t('chat.enterNumber')
-            : t('chat.typeAnswer');
+            : showAttach && (attachments!.hasReady || attachments!.blocking)
+                ? t('chat.attachments.addQuestion')
+                : t('chat.typeAnswer');
 
     return (
         <View>
@@ -93,6 +116,18 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
             )}
 
             <View style={styles.container}>
+                {showAttach && (
+                    <TouchableOpacity
+                        style={[styles.attachButton, (isLoading || attachments!.full) && styles.attachButtonDisabled]}
+                        onPress={attachments!.onAttachPress}
+                        disabled={isLoading || attachments!.full}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('chat.attachments.a11y.attach')}
+                        accessibilityState={{ disabled: isLoading || attachments!.full }}
+                    >
+                        <Lucide name="paperclip" size={22} color={colors.darkPurple} />
+                    </TouchableOpacity>
+                )}
                 <TouchableOpacity
                     style={styles.inputWrapper}
                     activeOpacity={isDateMode ? 0.7 : 1}
@@ -181,6 +216,19 @@ const styles = StyleSheet.create({
         flex: 1,
         color: colors.black,
         fontSize: 14,
+    },
+
+    attachButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.lightPurple,
+    },
+
+    attachButtonDisabled: {
+        opacity: 0.4,
     },
 
     sendButton: {

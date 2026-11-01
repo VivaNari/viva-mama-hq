@@ -38,10 +38,7 @@ const CONTENT_MODELS: Partial<Record<EReportTargetType, Model<any>>> = {
     [EReportTargetType.VIVA_CLUB_COMMENT]: VivaClubCommentModel,
 };
 
-const findContent = async (
-    model: Model<any>,
-    id: string,
-): Promise<IReportableContent | null> =>
+const findContent = async (model: Model<any>, id: string): Promise<IReportableContent | null> =>
     model.findById(id).lean<IReportableContent | null>().exec();
 
 export class ModerationError extends Error {
@@ -168,8 +165,20 @@ export class ModerationService {
                 createdAt: { $lt: message.createdAt },
             })
             .sort({ createdAt: -1 })
-            .select("text")
+            .select("text attachments")
             .lean();
+        // Her attached report stays out of the review queue: a reviewer gets that a
+        // file was shared and what kind, never a way to open it.
+        const precedingContext = precedingUserTurn
+            ? [
+                  ...(precedingUserTurn.attachments ?? []).map(
+                      (a) => `[attachment: ${String(a.kind).toLowerCase()}]`,
+                  ),
+                  String(precedingUserTurn.text ?? ""),
+              ]
+                  .filter(Boolean)
+                  .join(" ")
+            : null;
 
         try {
             await reportModel.create({
@@ -180,9 +189,7 @@ export class ModerationService {
                 reason: input.reason,
                 details: input.details ?? null,
                 snapshot: String(message.text ?? "").slice(0, 2000),
-                contextSnapshot: precedingUserTurn
-                    ? String(precedingUserTurn.text ?? "").slice(0, 2000)
-                    : null,
+                contextSnapshot: precedingContext ? precedingContext.slice(0, 2000) : null,
             });
         } catch (error: any) {
             // Same idempotency shape as community reports: a repeat is what the user
@@ -193,10 +200,7 @@ export class ModerationService {
             throw error;
         }
 
-        log.info(
-            { messageId: input.messageId, reason: input.reason },
-            "AI message reported",
-        );
+        log.info({ messageId: input.messageId, reason: input.reason }, "AI message reported");
 
         return { alreadyReported: false };
     }
@@ -218,10 +222,7 @@ export class ModerationService {
     }): Promise<{ alreadyReported: boolean; hidden: boolean }> {
         const model = CONTENT_MODELS[input.targetType];
         if (!model) {
-            throw new ModerationError(
-                `${input.targetType} cannot be reported yet`,
-                "UNSUPPORTED",
-            );
+            throw new ModerationError(`${input.targetType} cannot be reported yet`, "UNSUPPORTED");
         }
 
         const target = await findContent(model, input.targetId);

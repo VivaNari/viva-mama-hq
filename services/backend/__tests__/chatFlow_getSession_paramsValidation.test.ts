@@ -19,6 +19,7 @@ jest.mock("razorpay", () => {
 
 jest.mock(require.resolve("../src/api/v1/controllers/chat-system/chat-flow.controller"), () => {
     return jest.fn().mockImplementation(() => ({
+        getReply: () => {},
         handleSseConnection: (req: any, res: any) => {
             const slug = req.params.slug;
             if (!slug || slug === "invalid") {

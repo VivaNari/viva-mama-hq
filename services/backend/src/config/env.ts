@@ -24,6 +24,16 @@ function parseBillingMode(raw: string | undefined): EBillingMode {
     );
 }
 
+/** A non-negative integer from the environment, or the default when unset or junk. */
+function intFromEnv(raw: string | undefined, fallback: number): number {
+    if (raw === undefined || raw.trim() === "") return fallback;
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value < 0) {
+        throw new Error(`Expected a non-negative integer, got "${raw}".`);
+    }
+    return value;
+}
+
 /**
  * How the OTLP exporters authenticate to the collector.
  *
@@ -153,6 +163,32 @@ const env = {
     // Trimmed for the same reason: the middleware compares it for exact equality against
     // the token's verified `email` claim, so one stray byte rejects every delivery.
     PUBSUB_PUSH_SA_EMAIL: process.env.PUBSUB_PUSH_SA_EMAIL?.trim(),
+    // ── Chat attachments (reports, scans, prescriptions in Viva AI) ──────────────────
+    // Off unless CHAT_ATTACHMENTS_ENABLED=true: that is also the kill switch, since the
+    // app only shows the attach button when GET /chat/attachments/config says enabled.
+    CHAT_ATTACHMENTS_ENABLED: process.env.CHAT_ATTACHMENTS_ENABLED === "true",
+    // Private bucket holding the files. Must be the bucket the chatbot is told to read.
+    CHAT_ATTACHMENTS_BUCKET: process.env.CHAT_ATTACHMENTS_BUCKET?.trim() || "",
+    // Percentage (0-100) of users who get the feature, by a stable hash of their id.
+    CHAT_ATTACHMENTS_ROLLOUT_PERCENT: intFromEnv(process.env.CHAT_ATTACHMENTS_ROLLOUT_PERCENT, 0),
+    // Comma-separated user ids who always get it (internal and clinician testers).
+    CHAT_ATTACHMENTS_ALLOWLIST: (process.env.CHAT_ATTACHMENTS_ALLOWLIST || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean),
+    CHAT_ATTACHMENT_MAX_BYTES: intFromEnv(process.env.CHAT_ATTACHMENT_MAX_BYTES, 10 * 1024 * 1024),
+    CHAT_ATTACHMENT_MAX_PDF_PAGES: intFromEnv(process.env.CHAT_ATTACHMENT_MAX_PDF_PAGES, 10),
+    CHAT_ATTACHMENT_MAX_PER_TURN: intFromEnv(process.env.CHAT_ATTACHMENT_MAX_PER_TURN, 3),
+    CHAT_ATTACHMENT_DAILY_LIMIT: intFromEnv(process.env.CHAT_ATTACHMENT_DAILY_LIMIT, 20),
+    CHAT_ATTACHMENT_SIGNED_URL_TTL_SEC: intFromEnv(
+        process.env.CHAT_ATTACHMENT_SIGNED_URL_TTL_SEC,
+        900,
+    ),
+    // Must match the bucket's lifecycle rule; the app shows "expired" after this.
+    CHAT_ATTACHMENT_RETENTION_DAYS: intFromEnv(process.env.CHAT_ATTACHMENT_RETENTION_DAYS, 90),
+    // Bumped whenever the consent text changes, so she is asked again.
+    CHAT_ATTACHMENT_CONSENT_VERSION:
+        process.env.CHAT_ATTACHMENT_CONSENT_VERSION?.trim() || "2026-11-v1",
     LLM_SERVER_URL: process.env.LLM_SERVER_URL as string,
     LLM_API_KEY: process.env.LLM_API_KEY as string,
     GETGABS_API_KEY: process.env.GETGABS_API_KEY as string,
@@ -210,10 +246,7 @@ const env = {
         process.env.OTEL_COLLECTOR_AUDIENCE,
         OTEL_EXPORTER_OTLP_ENDPOINT,
     ),
-    OTEL_AUTH_MODE: parseOtelAuthMode(
-        process.env.OTEL_AUTH_MODE,
-        OTEL_EXPORTER_OTLP_ENDPOINT,
-    ),
+    OTEL_AUTH_MODE: parseOtelAuthMode(process.env.OTEL_AUTH_MODE, OTEL_EXPORTER_OTLP_ENDPOINT),
     // Spans are opt-in. Without them every log record still exports, just with an empty
     // trace_id — so this can stay false until the collector has a traces pipeline.
     OTEL_TRACES_ENABLED: process.env.OTEL_TRACES_ENABLED === "true",

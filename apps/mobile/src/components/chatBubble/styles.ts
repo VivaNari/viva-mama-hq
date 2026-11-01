@@ -62,6 +62,13 @@ export const bubbleStyles = StyleSheet.create({
     color: colors.white,
   },
 
+  failedText: {
+    alignSelf: 'flex-end',
+    color: colors.error,
+    fontSize: 12,
+    marginTop: 4,
+  },
+
   optionsContainer: {
     marginTop: 12,
     gap: 8,

@@ -117,6 +117,22 @@ jest.mock('react-native-toast-message', () => ({
 }));
 
 // -----------------------------
+// Chat attachment pickers (native-only)
+// -----------------------------
+jest.mock('react-native-image-picker', () => ({
+  launchCamera: jest.fn().mockResolvedValue({ didCancel: true }),
+  launchImageLibrary: jest.fn().mockResolvedValue({ didCancel: true }),
+}));
+
+jest.mock('@react-native-documents/picker', () => ({
+  pick: jest.fn().mockRejectedValue(Object.assign(new Error('cancel'), { code: 'OPERATION_CANCELED' })),
+  keepLocalCopy: jest.fn().mockResolvedValue([]),
+  isErrorWithCode: (e) => !!e && typeof e.code === 'string',
+  errorCodes: { OPERATION_CANCELED: 'OPERATION_CANCELED' },
+  types: { pdf: 'application/pdf' },
+}));
+
+// -----------------------------
 // Google Sign-In mock
 // -----------------------------
 jest.mock('@react-native-google-signin/google-signin', () => ({

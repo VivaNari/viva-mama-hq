@@ -12,7 +12,8 @@ import {
     Text,
     TouchableOpacity,
     View,
-    Keyboard
+    Keyboard,
+    Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
@@ -70,6 +71,26 @@ import { AnalyticsEvent, recordError, track } from '../analytics';
 import Lucide from '@react-native-vector-icons/lucide';
 import { useTranslation } from 'react-i18next';
 import { useScreenEdges } from '../hooks/useScreenEdges';
+import { useChatAttachments } from '../hooks/useChatAttachments';
+import { useSubscriptionContext } from '../context/SubscriptionContext';
+import { getAttachmentUrl, getChatReply } from '../api/chatAttachments.api';
+import AttachmentPreviewTray from '../components/chatAttachments/AttachmentPreviewTray';
+import AttachmentSourceSheet from '../components/chatAttachments/AttachmentSourceSheet';
+import AttachmentConsentSheet from '../components/chatAttachments/AttachmentConsentSheet';
+import ImageViewerModal from '../components/chatAttachments/ImageViewerModal';
+import {
+    AttachmentViewerContext,
+    IAttachmentViewer,
+} from '../components/chatAttachments/AttachmentViewerContext';
+import { IMessageAttachment, IPendingAttachment, ISSEMessageData } from '../types/chat.types';
+import { errorCodeToI18nKey } from '../utils/attachments';
+
+/** Start polling for a reply the stream has not delivered after this long. */
+const REPLY_FALLBACK_AFTER_MS = 45_000;
+const REPLY_POLL_EVERY_MS = 5_000;
+// Past the server's own limit for a turn with files (150 s), so a slow report still
+// gets its answer or its error rather than a give-up toast.
+const REPLY_GIVE_UP_AFTER_MS = 180_000;
 
 const ChatWithVivaAI: React.FC = () => {
     const { t } = useTranslation();
@@ -291,6 +312,122 @@ const ChatWithVivaAI: React.FC = () => {
     );
 
     // ============================================
+    // Reply tracking (Viva AI)
+    // ============================================
+    // The reply to a turn arrives over SSE. If it does not (the stream dropped, the app
+    // was backgrounded), it is fetched by its clientMessageId instead, so her question
+    // never just goes unanswered.
+    const { refresh: refreshEntitlements } = useSubscriptionContext();
+    const awaitingRef = useRef<{ id: string; startedAt: number; timer: ReturnType<typeof setTimeout> | null } | null>(null);
+    const [awaitingReport, setAwaitingReport] = useState(false);
+
+    const stopAwaiting = useCallback((replyTo?: string | null) => {
+        const awaiting = awaitingRef.current;
+        if (!awaiting || (replyTo && awaiting.id !== replyTo)) return;
+        if (awaiting.timer) clearTimeout(awaiting.timer);
+        awaitingRef.current = null;
+        setAwaitingReport(false);
+    }, []);
+
+    const handleTurnError = useCallback((data: ISSEMessageData) => {
+        stopAwaiting(data.replyTo);
+        if (data.replyTo) {
+            dispatch({ type: 'UPDATE_USER_MESSAGE', payload: { id: data.replyTo, patch: { status: 'failed' } } });
+        }
+        dispatch({ type: 'SET_LOADING', payload: false });
+        Toast.show({ type: 'error', text1: t(errorCodeToI18nKey(data.code)), position: 'bottom' });
+    }, [dispatch, stopAwaiting, t]);
+
+    const handleChatbotReply = useCallback(async (message: IAiMessage) => {
+        stopAwaiting(message.replyTo);
+        await handleMessageReceived(message);
+    }, [handleMessageReceived, stopAwaiting]);
+
+    const pollForReply = useCallback(async (id: string) => {
+        const awaiting = awaitingRef.current;
+        if (!awaiting || awaiting.id !== id) return;
+        try {
+            const reply = await getChatReply(id);
+            if (reply?.type === 'ai_error') return handleTurnError(reply);
+            if (reply?.type === 'ai_message' && reply.id && reply.text) {
+                return handleChatbotReply({
+                    type: 'ai',
+                    id: reply.id,
+                    flowInstanceId: 'chatbot',
+                    text: reply.text,
+                    options: [],
+                    nodeType: reply.nodeType,
+                    timestamp: Date.now(),
+                    uuid: '',
+                    sessionId: reply.sessionId || '',
+                    conversationId: reply.conversationId || '',
+                    suggestedExperts: reply.suggestedExperts || [],
+                    pendingLogs: reply.pendingLogs || [],
+                    replyTo: id,
+                });
+            }
+        } catch (error) {
+            chatLogger.warn('Reply poll failed', error);
+        }
+        if (awaitingRef.current?.id !== id) return;
+        if (Date.now() - awaitingRef.current.startedAt > REPLY_GIVE_UP_AFTER_MS) {
+            stopAwaiting(id);
+            dispatch({ type: 'SET_LOADING', payload: false });
+            Toast.show({ type: 'error', text1: t('chat.attachments.errors.GENERIC'), position: 'bottom' });
+            return;
+        }
+        awaitingRef.current.timer = setTimeout(() => pollForReply(id), REPLY_POLL_EVERY_MS);
+    }, [dispatch, handleChatbotReply, handleTurnError, stopAwaiting, t]);
+
+    const handleTurnSent = useCallback((clientMessageId: string, hasAttachments: boolean) => {
+        stopAwaiting();
+        awaitingRef.current = {
+            id: clientMessageId,
+            startedAt: Date.now(),
+            timer: setTimeout(() => pollForReply(clientMessageId), REPLY_FALLBACK_AFTER_MS),
+        };
+        setAwaitingReport(hasAttachments);
+    }, [pollForReply, stopAwaiting]);
+
+    useEffect(() => () => stopAwaiting(), [stopAwaiting]);
+
+    // ============================================
+    // Attachments (Viva AI)
+    // ============================================
+    const attachments = useChatAttachments({
+        enabled: isChatbotFlow,
+        pending: state.pendingAttachments,
+        dispatch,
+    });
+    const [viewer, setViewer] = useState<{ images: IMessageAttachment[]; index: number } | null>(null);
+
+    const attachmentViewer = useMemo<IAttachmentViewer>(() => ({
+        openImages: (images, index) => setViewer({ images, index }),
+        // The phone's own viewer, through a link that works for a few minutes.
+        openPdf: async (attachment) => {
+            try {
+                const { url } = await getAttachmentUrl(attachment.id);
+                await Linking.openURL(url);
+            } catch (error: any) {
+                Toast.show({
+                    type: 'error',
+                    text1: t(error?.response?.status === 410
+                        ? 'chat.attachments.expired'
+                        : 'chat.attachments.couldNotLoad'),
+                    position: 'bottom',
+                });
+            }
+        },
+    }), [t]);
+
+    const handleSendFailed = useCallback((files: IPendingAttachment[], code?: string) => {
+        if (files.length) attachments.restore(files);
+        if (code === 'ATTACHMENT_NOT_AVAILABLE' || code === 'FEATURE_DISABLED') {
+            attachments.refreshConfig();
+        }
+    }, [attachments]);
+
+    // ============================================
     // Guided Flow Hook (for Onboarding + Checkin)
     // ============================================
     /**
@@ -332,9 +469,11 @@ const ChatWithVivaAI: React.FC = () => {
         flowSlug: !isGuidedFlow ? flowSlug : null,
         userToken,
         dispatch,
-        onMessageReceived: handleMessageReceived,
+        onMessageReceived: handleChatbotReply,
         onFlowComplete: handleFlowComplete,
         hasExistingMessages: state.messages.length > 0,
+        onTurnError: handleTurnError,
+        onQuotaChanged: refreshEntitlements,
     });
 
     // ============================================
@@ -356,6 +495,8 @@ const ChatWithVivaAI: React.FC = () => {
         saveUserMessage,
         submitGuidedAnswer: isGuidedFlow ? submitGuidedAnswer : undefined,
         selectedModel: isChatbotFlow ? selectedModel : undefined,
+        onTurnSent: isChatbotFlow ? handleTurnSent : undefined,
+        onSendFailed: isChatbotFlow ? handleSendFailed : undefined,
     });
 
     const handleAnimationComplete = useCallback(() => {
@@ -370,8 +511,13 @@ const ChatWithVivaAI: React.FC = () => {
     );
 
     const handleSend = useCallback(() => {
+        if (isChatbotFlow && attachments.enabled && attachments.hasReady) {
+            if (attachments.blocking) return;
+            handleTextSubmit(state.inputText, attachments.takeReady());
+            return;
+        }
         handleTextSubmit(state.inputText);
-    }, [handleTextSubmit, state.inputText]);
+    }, [handleTextSubmit, state.inputText, isChatbotFlow, attachments]);
 
     const handleDatePickerOpen = useCallback(() => {
         setIsLmpDatePicker(false);
@@ -807,6 +953,7 @@ const ChatWithVivaAI: React.FC = () => {
                         onClose={() => setMenuVisible(false)}
                         onOptionSelect={handleMenuOptionSelect}
                     />
+                    <AttachmentViewerContext.Provider value={attachmentViewer}>
                     <ScrollView
                         ref={scrollViewRef}
                         style={styles.scrollView}
@@ -858,7 +1005,11 @@ const ChatWithVivaAI: React.FC = () => {
                             );
                         })}
 
-                        {state.isLoading && <TypingIndicator />}
+                        {state.isLoading && (
+                            <TypingIndicator
+                                label={awaitingReport ? t('chat.attachments.readingReport') : undefined}
+                            />
+                        )}
                         {/* The message itself was never rendered — only a bare "Retry" on
                             an otherwise blank screen, and only when errorMessage was set,
                             which the guided-flow hook never did. */}
@@ -889,6 +1040,7 @@ const ChatWithVivaAI: React.FC = () => {
                             </View>
                         ) : null}
                     </ScrollView>
+                    </AttachmentViewerContext.Provider>
                 </View>
 
                 <View style={{ backgroundColor: colors.white }}>
@@ -914,6 +1066,13 @@ const ChatWithVivaAI: React.FC = () => {
                         </Text>
                     ) : null}
 
+                    {attachments.enabled && inputMode === 'text' ? (
+                        <AttachmentPreviewTray
+                            items={state.pendingAttachments}
+                            onRemove={attachments.remove}
+                            onRetry={attachments.retry}
+                        />
+                    ) : null}
                     <ChatInputBar
                         inputMode={inputMode}
                         inputText={state.inputText}
@@ -924,11 +1083,43 @@ const ChatWithVivaAI: React.FC = () => {
                         onDatePickerOpen={handleDatePickerOpen}
                         onMultiSelectSubmit={handleMultiSubmit}
                         validationError={measurementError}
+                        attachments={attachments.enabled ? {
+                            onAttachPress: attachments.openAttach,
+                            hasReady: attachments.hasReady,
+                            blocking: attachments.blocking,
+                            full: attachments.full,
+                        } : undefined}
                     />
                     <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, textAlign: 'center', paddingBottom: 10, paddingTop: 5, paddingHorizontal: 10 }]}>
                         {t('chat.disclaimer')}
                     </Text>
                 </View>
+
+                {attachments.enabled ? (
+                    <>
+                        <AttachmentSourceSheet
+                            visible={attachments.sheetVisible}
+                            onClose={attachments.closeSheet}
+                            onSelect={attachments.pickFrom}
+                            retentionDays={attachments.config?.retentionDays ?? 90}
+                            remainingToday={attachments.config?.remainingToday ?? null}
+                            disabledSources={attachments.disabledSources}
+                        />
+                        <AttachmentConsentSheet
+                            visible={attachments.consentVisible}
+                            retentionDays={attachments.config?.retentionDays ?? 90}
+                            submitting={attachments.consentSubmitting}
+                            onAccept={attachments.acceptConsent}
+                            onDecline={attachments.declineConsent}
+                        />
+                    </>
+                ) : null}
+                <ImageViewerModal
+                    visible={!!viewer}
+                    images={viewer?.images ?? []}
+                    initialIndex={viewer?.index ?? 0}
+                    onClose={() => setViewer(null)}
+                />
 
                 <CustomDatePicker
                     show={showDatePicker}

@@ -1,4 +1,4 @@
-import { ChatState, ChatAction, IAiMessage } from "../types/chat.types";
+import { ChatState, ChatAction, IAiMessage, IUserMessage } from "../types/chat.types";
 import { INITIAL_CHAT_STATE } from "../constants/chat";
 import { toggleMultiOption } from "../utils/messageHelpers";
 
@@ -52,6 +52,41 @@ export const chatReducer = (
         ),
       };
     }
+
+    case "UPDATE_USER_MESSAGE": {
+      const { id, patch } = action.payload;
+      return {
+        ...state,
+        messages: state.messages.map(msg =>
+          msg.type === "user" && msg.id === id ? ({ ...msg, ...patch } as IUserMessage) : msg,
+        ),
+      };
+    }
+
+    case "ADD_PENDING_ATTACHMENTS":
+      return {
+        ...state,
+        pendingAttachments: [...state.pendingAttachments, ...action.payload],
+      };
+
+    case "UPDATE_PENDING_ATTACHMENT": {
+      const { localId, patch } = action.payload;
+      return {
+        ...state,
+        pendingAttachments: state.pendingAttachments.map(a =>
+          a.localId === localId ? { ...a, ...patch } : a,
+        ),
+      };
+    }
+
+    case "REMOVE_PENDING_ATTACHMENT":
+      return {
+        ...state,
+        pendingAttachments: state.pendingAttachments.filter(a => a.localId !== action.payload),
+      };
+
+    case "SET_PENDING_ATTACHMENTS":
+      return { ...state, pendingAttachments: action.payload };
 
     case "SET_LOADING":
       return {

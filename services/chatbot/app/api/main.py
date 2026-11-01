@@ -5,15 +5,16 @@ import logging
 import secrets
 import time
 import uuid
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Literal, Optional
 
+from app.attachments.schemas import AttachmentRef
 from app.chains.chat_pipeline_mcp import chat_once, chat_once_name_detector
 from app.memory.redis_memory import RedisSessionMemory
 from app.settings import settings
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -23,9 +24,11 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
-# Set DEBUG level only for the chat pipeline so build_prompt() output is visible
-# without flooding the console with httpx / HuggingFace noise.
-logging.getLogger("app.chains.chat_pipeline_mcp").setLevel(logging.DEBUG)
+# DEBUG for the chat pipeline makes build_prompt() output visible locally. Never in
+# deployed environments: the prompt holds her profile and anything read off a report
+# she shared, which do not belong in logs.
+if settings.is_development:
+    logging.getLogger("app.chains.chat_pipeline_mcp").setLevel(logging.DEBUG)
 
 limiter = Limiter(key_func=get_remote_address)
 
@@ -54,10 +57,29 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 class ChatRequest(BaseModel):
     """Chat request with user context"""
 
-    query: str = Field(..., min_length=1, max_length=2000, description="User's message")
+    query: Optional[str] = Field(
+        None, max_length=2000, description="User's message (optional with attachments)"
+    )
     user_id: Optional[str] = Field(None, description="User's MongoDB ObjectId for personalization")
     session_id: Optional[str] = Field(None, description="Conversation session ID")
     model: Optional[str] = Field(None, description="Model to use for chat")
+    lang: Optional[Literal["en", "hi"]] = Field(None, description="Language to answer in")
+    attachments: List[AttachmentRef] = Field(
+        default_factory=list,
+        max_length=3,
+        description="Files stored by the core API: up to 3 images, or 1 PDF",
+    )
+
+    @model_validator(mode="after")
+    def _query_or_attachments(self) -> "ChatRequest":
+        if not (self.query and self.query.strip()) and not self.attachments:
+            raise ValueError("query or attachments is required")
+        if self.attachments and not self.user_id:
+            raise ValueError("user_id is required with attachments")
+        pdfs = sum(1 for a in self.attachments if a.kind == "pdf")
+        if pdfs and len(self.attachments) > 1:
+            raise ValueError("send one PDF, or up to 3 images")
+        return self
 
 
 class ChatResponse(BaseModel):
@@ -81,6 +103,27 @@ class ChatResponse(BaseModel):
     latency_seconds: Optional[float] = None
     request_id: Optional[str] = None
     final_prompt: Optional[str] = None
+    # Attachment turns: {verdict, category, subject, reason_code, per_item}. Never
+    # describes the content of a refused file.
+    attachment: Optional[Dict[str, Any]] = None
+    # True when the files were refused or unreadable: the core API gives her
+    # question back.
+    quota_refund: bool = False
+
+
+def _check_attachment_scope(req: ChatRequest) -> None:
+    """
+    Files may only be read from the attachments bucket, under this user's prefix.
+    Defence in depth behind the API key: a leaked key still cannot make Gemini read
+    the RAG buckets or another user's reports.
+    """
+    if not req.attachments:
+        return
+    if not settings.attachments_enabled or not settings.attachments_bucket:
+        raise HTTPException(status_code=422, detail="Attachments are not enabled")
+    prefix = f"gs://{settings.attachments_bucket}/chat/{req.user_id}/"
+    if any(not a.uri.startswith(prefix) for a in req.attachments):
+        raise HTTPException(status_code=422, detail="Attachment is not this user's")
 
 
 class ChatNameDetectorRequest(BaseModel):
@@ -255,17 +298,25 @@ async def chat_endpoint(req: ChatRequest, request: Request, ok: bool = Depends(r
     """
     request_id = str(uuid.uuid4())
 
+    _check_attachment_scope(req)
     logger.info(
         f"[{request_id}] Chat request: "
         f"user_id={req.user_id}, "
         f"session_id={req.session_id}, "
-        f"query_length={len(req.query)}"
+        f"query_length={len(req.query or '')}, "
+        f"attachments={len(req.attachments)}"
+        + (f" kinds={','.join(a.kind for a in req.attachments)}" if req.attachments else "")
     )
 
     start = time.time()
     try:
         result = await chat_once(
-            req.query, user_id=req.user_id, session_id=req.session_id, model=settings.llm_model
+            req.query or "",
+            user_id=req.user_id,
+            session_id=req.session_id,
+            model=settings.llm_model,
+            attachments=req.attachments or None,
+            lang=req.lang,
         )
 
         elapsed = time.time() - start
@@ -289,7 +340,10 @@ async def chat_endpoint(req: ChatRequest, request: Request, ok: bool = Depends(r
             escalation_banner=result.escalation_banner or None,
             latency_seconds=round(elapsed, 3),
             request_id=request_id,
-            final_prompt=getattr(result, "final_prompt", None),
+            # The prompt carries her profile and context: only for local debugging.
+            final_prompt=getattr(result, "final_prompt", None) if settings.is_development else None,
+            attachment=getattr(result, "attachment", None),
+            quota_refund=bool(getattr(result, "quota_refund", False)),
         )
 
         return resp

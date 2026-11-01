@@ -8,6 +8,7 @@ import consultationModel from "../../models/consultation.model";
 import conversationModel from "../../models/conversation.model";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
+import chatAttachmentModel from "../../models/chat-attachment.model";
 import messageModel from "../../models/message.model";
 import moodLogModel from "../../models/mood-log.model";
 import motherLogModel from "../../models/mother-log.model";
@@ -28,6 +29,7 @@ import UserModel from "../../models/user.model";
 import VivaClubCommentModel from "../../models/vivaClubComment.model";
 import VivaClubPostModel from "../../models/vivaClubPost.model";
 import logger, { createModuleLogger } from "../../utils/logger";
+import { chatAttachmentService } from "../chat-system/chat-attachment.service";
 import { getBillingProvider } from "../subscription/billing";
 import { ISubscription } from "../../types/subscription.types";
 
@@ -158,6 +160,24 @@ export class AccountDeletionService {
         );
 
         // ── Chat ─────────────────────────────────────────────────────────────────
+        // The files she attached (reports, scans, prescriptions) are the most
+        // sensitive thing she gave us, and they live outside Mongo. Deleted first, by
+        // her prefix, so a file is gone even if its record was lost. A storage outage
+        // must not block the deletion she is entitled to: the prefix is queued for the
+        // janitor to retry, and the bucket's 90-day lifecycle rule is the backstop.
+        await record("chat_attachment_objects", async () => {
+            try {
+                await chatAttachmentService.deleteAllForUser(String(_id));
+            } catch (error) {
+                log.error(
+                    { err: error },
+                    "Account deletion: attachment purge failed; queued for retry",
+                );
+                await chatAttachmentService.queuePurge(String(_id), error);
+            }
+            return { deletedCount: 0 };
+        });
+        await record("chat_attachments", () => chatAttachmentModel.deleteMany({ userId: _id }));
         await record("messages", () => messageModel.deleteMany({ userId: _id }));
         await record("conversations", () => conversationModel.deleteMany({ userId: _id }));
         await record("ai_message_bookmarks", () =>
@@ -167,24 +187,16 @@ export class AccountDeletionService {
         // ── Health logs and derived content ──────────────────────────────────────
         await record("mood_logs", () => moodLogModel.deleteMany({ userId: _id }));
         await record("mother_logs", () => motherLogModel.deleteMany({ userId: _id }));
-        await record("mother_medicines", () =>
-            motherMedicineModel.deleteMany({ userId: _id }),
-        );
-        await record("mother_reminders", () =>
-            motherReminderModel.deleteMany({ userId: _id }),
-        );
+        await record("mother_medicines", () => motherMedicineModel.deleteMany({ userId: _id }));
+        await record("mother_reminders", () => motherReminderModel.deleteMany({ userId: _id }));
         // Children themselves are embedded in the user document and go with it. Their
         // growth, diaper, milestone and vaccination logs are not — they are their own collections
         // keyed on userId,
         // and are health data about a named child, so they must be swept explicitly.
         await record("growth_logs", () => growthLogModel.deleteMany({ userId: _id }));
         await record("diaper_logs", () => diaperLogModel.deleteMany({ userId: _id }));
-        await record("milestone_logs", () =>
-            milestoneLogModel.deleteMany({ userId: _id }),
-        );
-        await record("vaccination_logs", () =>
-            vaccinationLogModel.deleteMany({ userId: _id }),
-        );
+        await record("milestone_logs", () => milestoneLogModel.deleteMany({ userId: _id }));
+        await record("vaccination_logs", () => vaccinationLogModel.deleteMany({ userId: _id }));
         await record("feeding_logs", () => feedingLogModel.deleteMany({ userId: _id }));
         await record("recommendation_history", () =>
             recommendationHistoryModel.deleteMany({ userId: _id }),

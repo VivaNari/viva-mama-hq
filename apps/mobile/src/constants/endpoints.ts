@@ -33,6 +33,14 @@ export const API_VERIFY_OTP = `${API_VERSION_URL}/auth/verify-otp`;
 
 // Chat endpoints
 export const CHAT_FLOW_ANSWER = `${API_VERSION_URL}/chat-flow/answer`;
+/** The reply to a chatbot turn, for when the stream did not deliver it. */
+export const CHAT_FLOW_REPLY = `${API_VERSION_URL}/chat-flow/reply`;
+export const CHAT_ATTACHMENTS = `${API_VERSION_URL}/chat/attachments`;
+export const CHAT_ATTACHMENTS_CONFIG = `${API_VERSION_URL}/chat/attachments/config`;
+export const CHAT_ATTACHMENTS_CONSENT = `${API_VERSION_URL}/chat/attachments/consent`;
+export const CHAT_ATTACHMENT_URL = (id: string) =>
+  `${API_VERSION_URL}/chat/attachments/${id}/url`;
+export const CHAT_ATTACHMENT = (id: string) => `${API_VERSION_URL}/chat/attachments/${id}`;
 export const CHATBOT_MESSAGE_URL = `${API_VERSION_URL}/chatbot/message`;
 
 // Subscription endpoints.

@@ -160,6 +160,70 @@ class Settings(BaseSettings):
     )
 
     # ============================================
+    # Chat attachments (reports, scans, prescriptions)
+    # ============================================
+
+    attachments_enabled: bool = Field(
+        default=False,
+        description=(
+            "Accept image/PDF attachments on /v1/chat. Off by default; the core API "
+            "has its own switch, and both must be on."
+        ),
+    )
+
+    attachments_bucket: str = Field(
+        default="",
+        description=(
+            "The only GCS bucket attachment URIs may point into. Every URI must also "
+            "sit under chat/{user_id}/, so a leaked API key cannot make Gemini read "
+            "the RAG buckets or another user's files."
+        ),
+    )
+
+    attachment_transport: Literal["inline", "uri"] = Field(
+        default="inline",
+        description=(
+            "inline: this service downloads the file with its own credentials and "
+            "sends the bytes to Gemini (always works, no extra IAM). uri: Gemini "
+            "reads gs:// directly (needs the Vertex service agent to read the bucket)."
+        ),
+    )
+
+    attachment_max_bytes: int = Field(
+        default=10 * 1024 * 1024, gt=0, description="Refuse to load larger objects."
+    )
+
+    attachment_classifier_model: str = Field(
+        default="gemini-2.5-flash",
+        description="Vision model that decides whether a file is a mother/baby health document.",
+    )
+
+    attachment_analysis_model: str = Field(
+        default="gemini-2.5-flash",
+        description="Vision model that reads an accepted document and explains it.",
+    )
+
+    attachment_classifier_min_confidence: float = Field(
+        default=0.6,
+        ge=0.0,
+        le=1.0,
+        description="Below this the classifier's verdict is treated as a refusal (fail closed).",
+    )
+
+    # Worst case for one attachment turn: download + triage + analysis = 45 + 25 + 50
+    # = 120 s. The core API waits 150 s for the chatbot and the app 180 s for the
+    # reply, so each layer gives up after the one below it, never before.
+    attachment_download_timeout_s: float = Field(
+        default=45.0,
+        gt=0,
+        description="Fetching the turn's files from GCS (sized for 10 MB on a slow link).",
+    )
+    attachment_classifier_timeout_s: float = Field(default=25.0, gt=0)
+    attachment_analysis_timeout_s: float = Field(
+        default=50.0, gt=0, description="Reading up to 10 PDF pages or 3 photos."
+    )
+
+    # ============================================
     # API Authentication
     # ============================================
 

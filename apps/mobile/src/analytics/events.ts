@@ -62,6 +62,12 @@ export const AnalyticsEvent = {
   CHAT_RESPONSE_RECEIVED: 'chat_response_received',
   CHAT_STREAM_FAILED: 'chat_stream_failed',
   CHAT_QUOTA_BLOCKED: 'chat_quota_blocked',
+  // Attachments: only source, kind, count, size bucket and outcome codes. Never a
+  // file name, a caption, a URL or anything read off the document.
+  CHAT_ATTACHMENT_PICKED: 'chat_attachment_picked',
+  CHAT_ATTACHMENT_UPLOAD_FAILED: 'chat_attachment_upload_failed',
+  CHAT_ATTACHMENT_SENT: 'chat_attachment_sent',
+  CHAT_ATTACHMENT_REJECTED: 'chat_attachment_rejected',
   CHAT_FLOW_COMPLETED: 'chat_flow_completed',
   CHAT_BOOKMARK_ADDED: 'chat_bookmark_added',
   CHAT_BOOKMARK_REMOVED: 'chat_bookmark_removed',
@@ -276,6 +282,19 @@ export interface EventParams {
     latency_bucket: SizeBucket;
   };
   [AnalyticsEvent.CHAT_STREAM_FAILED]: { reason: string; flow_type?: string };
+  [AnalyticsEvent.CHAT_ATTACHMENT_PICKED]: {
+    source: 'camera' | 'gallery' | 'pdf';
+    kind: 'image' | 'pdf';
+    count: number;
+  };
+  [AnalyticsEvent.CHAT_ATTACHMENT_UPLOAD_FAILED]: { code: string };
+  [AnalyticsEvent.CHAT_ATTACHMENT_SENT]: {
+    kind: 'image' | 'pdf';
+    count: number;
+    size_bucket: SizeBucket;
+    has_caption: boolean;
+  };
+  [AnalyticsEvent.CHAT_ATTACHMENT_REJECTED]: { reason_code: string };
   [AnalyticsEvent.CHAT_FLOW_COMPLETED]: { flow_type?: string };
 
   [AnalyticsEvent.EXPERT_PROFILE_VIEWED]: { expert_id: string };
@@ -371,6 +390,10 @@ export const toBucket = (
 /** Message length in characters. */
 export const lengthBucket = (chars: number): SizeBucket =>
   toBucket(chars, [20, 60, 150, 400]);
+
+/** File size in bytes. */
+export const byteSizeBucket = (bytes: number): SizeBucket =>
+  toBucket(bytes, [200_000, 1_000_000, 3_000_000, 6_000_000]);
 
 /** Elapsed time in milliseconds. */
 export const latencyBucket = (ms: number): SizeBucket =>

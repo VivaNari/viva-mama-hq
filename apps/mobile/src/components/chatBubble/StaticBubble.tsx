@@ -19,6 +19,8 @@ import { bubbleStyles } from './styles';
 import { ConnectExpertButton } from './ConnectExpertButton';
 import { LogProposalCard } from './LogProposalCard';
 import { MarkdownText } from './MarkdownText';
+import AttachmentBubbleContent from '../chatAttachments/AttachmentBubbleContent';
+import { useAttachmentViewer } from '../chatAttachments/AttachmentViewerContext';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 import { colors } from '../../public/assets/colors';
 
@@ -67,6 +69,7 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
     onConnectExpert,
 }) => {
     const { t } = useTranslation();
+    const attachmentViewer = useAttachmentViewer();
     const isAi = isAiMessage(message);
     const isChatbot = isChatbotMessage(message);
     const isTextInput = isAi && isTextInputMessage(message);
@@ -204,35 +207,56 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                 maxWidth: '85%',
                 alignSelf: isAi ? 'flex-start' : 'flex-end',
             }}>
-                <View
-                    style={[
-                        bubbleStyles.bubble,
-                        isAi ? bubbleStyles.aiBubble : bubbleStyles.userBubble,
-                        { alignSelf: isAi ? 'flex-start' : 'flex-end' },
-                    ]}
-                    accessibilityRole="text"
-                >
-                    {isAi ? (
-                        <MarkdownText
-                            text={message.text}
-                            baseStyle={[
-                                bubbleStyles.messageText,
-                                globalStyles.fontSemiBold,
-                                bubbleStyles.aiText,
-                            ]}
-                        />
-                    ) : (
-                        <Text
-                            style={[
-                                bubbleStyles.messageText,
-                                globalStyles.fontSemiBold,
-                                bubbleStyles.userText,
-                            ]}
-                        >
-                            {message.text}
-                        </Text>
-                    )}
-                </View>
+                {/* Her files sit above her message, outside the bubble; the bubble
+                    holds only what she typed. */}
+                {message.type === 'user' && message.attachments?.length ? (
+                    <AttachmentBubbleContent
+                        attachments={message.attachments}
+                        status={message.status}
+                        onOpenImage={attachmentViewer.openImages}
+                        onOpenPdf={attachmentViewer.openPdf}
+                    />
+                ) : null}
+                {/* A message can be only files: then there is no bubble at all. */}
+                {isAi || message.text ? (
+                    <View
+                        style={[
+                            bubbleStyles.bubble,
+                            isAi ? bubbleStyles.aiBubble : bubbleStyles.userBubble,
+                            { alignSelf: isAi ? 'flex-start' : 'flex-end' },
+                        ]}
+                        accessibilityRole="text"
+                    >
+                        {isAi ? (
+                            <MarkdownText
+                                text={message.text}
+                                baseStyle={[
+                                    bubbleStyles.messageText,
+                                    globalStyles.fontSemiBold,
+                                    bubbleStyles.aiText,
+                                ]}
+                            />
+                        ) : (
+                            <Text
+                                style={[
+                                    bubbleStyles.messageText,
+                                    globalStyles.fontSemiBold,
+                                    bubbleStyles.userText,
+                                ]}
+                            >
+                                {message.text}
+                            </Text>
+                        )}
+                    </View>
+                ) : null}
+                {message.type === 'user' && message.status === 'failed' ? (
+                    <Text
+                        style={[bubbleStyles.failedText, globalStyles.fontRegular]}
+                        accessibilityLiveRegion="polite"
+                    >
+                        {t('chat.attachments.notSent')}
+                    </Text>
+                ) : null}
                 {isChatbot && !isFirst && isAi ? <View
                     style={{
                         paddingVertical: 8,

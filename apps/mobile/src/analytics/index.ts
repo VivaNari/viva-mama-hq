@@ -25,6 +25,7 @@ export {
   lengthBucket,
   latencyBucket,
   dwellBucket,
+  byteSizeBucket,
   toBucket,
   toAnalyticsConsultationType,
 } from './events';

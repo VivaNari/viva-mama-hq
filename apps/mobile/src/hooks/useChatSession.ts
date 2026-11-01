@@ -27,6 +27,10 @@ interface UseChatSessionProps {
   onMessageReceived: (message: IAiMessage) => Promise<void>;
   onFlowComplete: (flowType: FlowType) => Promise<void>;
   hasExistingMessages: boolean;
+  /** Her chatbot turn could not be answered (`ai_error`). */
+  onTurnError?: (data: ISSEMessageData) => void;
+  /** A reply gave her question back (a refused or unreadable file). */
+  onQuotaChanged?: () => void;
 }
 
 interface UseChatSessionReturn {
@@ -43,6 +47,8 @@ export const useChatSession = ({
   onMessageReceived,
   onFlowComplete,
   hasExistingMessages,
+  onTurnError,
+  onQuotaChanged,
 }: UseChatSessionProps): UseChatSessionReturn => {
   const eventSourceRef = useRef<EventSource | null>(null);
   const retryCountRef = useRef(0);
@@ -112,6 +118,11 @@ export const useChatSession = ({
           });
           break;
 
+        case MessageEventType.AI_ERROR:
+          onTurnError?.(data);
+          if (data.quota) onQuotaChanged?.();
+          break;
+
         case MessageEventType.AI_MESSAGE:
           if (!data.id || !data.text) {
             chatLogger.warn("Received incomplete AI message", data);
@@ -133,7 +144,15 @@ export const useChatSession = ({
             conversationId: data.conversationId || "",
             suggestedExperts: data.suggestedExperts || [],
             pendingLogs: data.pendingLogs || [],
+            replyTo: data.replyTo ?? null,
           };
+
+          if (data.quota) onQuotaChanged?.();
+          if (data.attachment && data.attachment.verdict !== "ANALYZED") {
+            track(AnalyticsEvent.CHAT_ATTACHMENT_REJECTED, {
+              reason_code: data.attachment.reasonCode || data.attachment.verdict,
+            });
+          }
 
           // A typed "yes"/"no" answered an earlier card: update it in place.
           if (data.updatedPendingLogs) {
@@ -163,7 +182,7 @@ export const useChatSession = ({
           });
       }
     },
-    [dispatch, disconnect, onFlowComplete, onMessageReceived, flowType],
+    [dispatch, disconnect, onFlowComplete, onMessageReceived, flowType, onTurnError, onQuotaChanged],
   );
 
   const connect = useCallback(() => {

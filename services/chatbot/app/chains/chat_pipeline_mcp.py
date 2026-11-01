@@ -359,10 +359,18 @@ class ChatResponse:
     scope: Dict[str, Any]
     escalation_banner: Optional[str]
     memory_turns: List[Dict[str, Any]]
-    final_prompt: str
     # Performance metrics (Issue #3)
     timing: Dict[str, float]
     service_level: str  # FULL, DEGRADED_NO_MCP, DEGRADED_NO_RAG, MINIMAL
+    # Defaulted: the early returns (rate limit, injection refusal, attachment
+    # refusals) make no LLM call and have no prompt. Without a default every one of
+    # them raised TypeError, so a prompt-injection refusal reached the user as a 500.
+    final_prompt: str = ""
+    # Attachment turns only: what was decided about her files (verdict, category,
+    # subject, reason_code, per_item), and whether her question should be given
+    # back because the files were refused or could not be read.
+    attachment: Optional[Dict[str, Any]] = None
+    quota_refund: bool = False
     # Experts this answer recommended, as {id, name, speciality}. The app renders a
     # "Connect" button from this; empty means no button. Always drawn from the
     # user's referral-scoped directory.
@@ -1082,6 +1090,7 @@ EXPERT_DIRECTORY_UNAVAILABLE_HI = (
     "कंसल्टेशन बुक कर सकती हैं।"
 )
 
+
 def format_directory_answer(experts: List[Dict[str, Any]], user_text: str) -> str:
     """
     Deterministic expert-request answer straight from the directory — used when
@@ -1339,6 +1348,7 @@ def build_prompt(
     request_id: str,
     content_context: str = "",
     expert_request: bool = False,
+    document_context: str = "",
 ) -> str:
     """
     Build final prompt with size validation.
@@ -1423,6 +1433,11 @@ def build_prompt(
         )
         prompt_parts.append(history_block)
         prompt_parts.append("\n")
+
+    # --- A document she shared this session (her own report) ---
+    if document_context:
+        prompt_parts.append(document_context)
+        prompt_parts.append("\n\n")
 
     # --- RAG context ---
     has_rag = rag_context and rag_context.strip() != "None"
@@ -1536,7 +1551,7 @@ def build_prompt(
         "  ✗ ONLY directory experts are VivaMama experts. Never present a doctor or researcher "
         "named in the knowledge base as someone she can consult or book.\n"
         "  ✓ END with ONE follow-up offer about a related sub-topic from the context that you did "
-        "NOT cover (\"Would you like to know more about <X>?\"), in the user's language, followed "
+        'NOT cover ("Would you like to know more about <X>?"), in the user\'s language, followed '
         "by a final line [[FOLLOWUP: <X in short English>]]. Skip both in the STEP 4 fallback and "
         "in emergencies.\n\n"
         "⚠️ LANGUAGE & SCRIPT — THIS IS MANDATORY, DO THIS BEFORE WRITING ANYTHING:\n"
@@ -1571,6 +1586,8 @@ async def chat_once(
     ip_address: Optional[str] = None,
     history_window: int = 3,
     model: Optional[str] = None,
+    attachments: Optional[List[Any]] = None,
+    lang: Optional[str] = None,
 ) -> ChatResponse:
     """
     Process a single chat message with full production features.
@@ -1669,6 +1686,20 @@ async def chat_once(
             service_level=ServiceLevel.MINIMAL.value,
         )
 
+    # Files (reports, scans, prescriptions) take their own path, with its own
+    # guardrail; see app.chains.attachment_turn. Imported here to avoid a cycle.
+    if attachments:
+        from app.chains.attachment_turn import chat_once_with_attachments
+
+        return await chat_once_with_attachments(
+            user_text or "",
+            attachments,
+            user_id=user_id,
+            session_id=session_id,
+            lang=lang,
+            request_id=request_id,
+        )
+
     # Issue #17: Use async memory operations
     memory = RedisSessionMemory(window_size=8)
     session_id = memory.ensure_session_id(session_id)
@@ -1695,8 +1726,8 @@ async def chat_once(
     timings["log_actions"] = (time.time() - log_start) * 1000
 
     if log_outcome.handled_fully:
-        log_answer = (
-            (log_outcome.banner + "\n\n" if log_outcome.banner else "") + (log_outcome.reply or "")
+        log_answer = (log_outcome.banner + "\n\n" if log_outcome.banner else "") + (
+            log_outcome.reply or ""
         )
         redacted_for_memory, redaction_report = redact(user_text)
         await loop.run_in_executor(None, memory.append, session_id, "user", redacted_for_memory)
@@ -1746,9 +1777,7 @@ async def chat_once(
     # Follow-up acceptance: a bare "yes" / "haan" / "tell me more" after an answer
     # that ended with "Would you like to know more about X?" means "explain X".
     # X is retrieved on and answered instead of the literal reply.
-    accepted_topic = (
-        pending_topic if pending_topic and is_affirmative(redacted_text) else None
-    )
+    accepted_topic = pending_topic if pending_topic and is_affirmative(redacted_text) else None
     # "No, I want to speak to an expert" — the previous offer was turned down; the
     # model is told not to repeat it and the rest of the message is answered as asked.
     declined_topic = (
@@ -2058,6 +2087,12 @@ async def chat_once(
     if content_context:
         logger.info(f"[{request_id}] Retrieved content context:\n{content_context}")
 
+    # A report she shared earlier in this session: follow-ups ("what does MCV
+    # mean?") are answered from what was read off it, not by resending the file.
+    from app.chains.attachment_turn import document_context_block
+
+    document_context = await loop.run_in_executor(None, document_context_block, memory, session_id)
+
     # ---------------- Hard Grounding Gate (optional, default OFF) ----------------
     # Deterministic short-circuit: a fast classifier decides whether a context
     # source actually contains an answer, and if not, returns a canned fallback
@@ -2077,7 +2112,9 @@ async def chat_once(
             user_context.products_directory,
             request_id,
             best_score,
-            content_context,
+            # Her document counts as a source, or every follow-up about it would be
+            # turned away as ungrounded.
+            "\n\n".join(p for p in (document_context, content_context) if p),
         )
 
         if not grounded:
@@ -2134,9 +2171,7 @@ async def chat_once(
     # Assistant turns keep their last line so a pending follow-up offer stays visible.
     history_block = format_history(prior_turns)
 
-    prompt_query = (
-        build_followup_query(safe_text, accepted_topic) if accepted_topic else safe_text
-    )
+    prompt_query = build_followup_query(safe_text, accepted_topic) if accepted_topic else safe_text
     if declined_topic:
         prompt_query += build_declined_note(declined_topic)
 
@@ -2155,6 +2190,7 @@ async def chat_once(
         request_id,
         content_context,
         expert_request=expert_mode,
+        document_context=document_context,
     )
 
     # ============================================================
@@ -2170,7 +2206,10 @@ async def chat_once(
         # Issue #9: Run LLM in executor to avoid blocking
         loop = asyncio.get_event_loop()
         llm_response = await loop.run_in_executor(None, llm.invoke, final_prompt)
-        logger.info(f"[llm_response is=>> {llm_response}] ")
+        # Length only: the answer is about her health and does not belong in logs.
+        logger.info(
+            f"[{request_id}] LLM responded: {len(getattr(llm_response, 'content', '') or '')} chars"
+        )
 
         timings["llm"] = (time.time() - llm_start) * 1000
 
