@@ -243,7 +243,12 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                     confirmReply === "yes",
                 );
                 if (answered) {
-                    const text = confirmationReply(message, answered.saved, answered.dismissed);
+                    const text = confirmationReply(
+                        message,
+                        answered.saved,
+                        answered.dismissed,
+                        answered.reminder,
+                    );
                     const replyInstance = await this.createMessage({
                         conversationId: conversationId,
                         userId: userInstance._id as unknown as string,

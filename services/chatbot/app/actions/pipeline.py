@@ -1,7 +1,8 @@
 """
 The logging step that runs before the answer pipeline.
 
-It decides one of three things for a message:
+It decides one of three things for a message (a reminder she asks for counts
+as a log here: it is proposed and confirmed the same way):
 - nothing to log: the normal pipeline answers it, untouched;
 - a log and nothing else: a short templated reply plus proposals, no RAG or
   answer generation (`handled_fully`);
@@ -103,8 +104,12 @@ async def run_log_actions(
         return LogActionOutcome()
 
     proposals = to_proposals(result)
+    # Reminders are about the future; "yesterday" only ever closes logs.
+    log_items = [p for p in proposals.logs if p["logType"] != "reminder"]
+    log_missing = [m for m in proposals.missing if m[0] != "reminder"]
+    reminders_only = bool(proposals.logs) and not log_items
 
-    if result.past_day and (proposals.logs or proposals.missing):
+    if result.past_day and (log_items or log_missing):
         await clear_pending()
         if result.has_question:
             return LogActionOutcome()
@@ -120,7 +125,11 @@ async def run_log_actions(
         kind, missing_field = proposals.missing[0]
         await loop.run_in_executor(None, memory.set_pending_log, session_id, user_text)
         question = replies.ask_reply(user_text, kind, missing_field)
-        reply = f"{replies.propose_reply(user_text)}\n\n{question}" if proposals.logs else question
+        reply = (
+            f"{replies.propose_reply(user_text, reminders_only)}\n\n{question}"
+            if proposals.logs
+            else question
+        )
         return LogActionOutcome(
             proposals=proposals.logs, reply=reply, handled_fully=True, banner=banner
         )
@@ -142,7 +151,7 @@ async def run_log_actions(
 
     return LogActionOutcome(
         proposals=proposals.logs,
-        reply=replies.propose_reply(user_text),
+        reply=replies.propose_reply(user_text, reminders_only),
         handled_fully=True,
         banner=banner,
     )

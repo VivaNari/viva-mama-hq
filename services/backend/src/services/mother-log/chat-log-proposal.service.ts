@@ -5,6 +5,7 @@ import messageModel from "../../models/message.model";
 import { IPendingLog, MessageRoleEnum } from "../../types/chat.types";
 import { APPEND_LOG_TYPES, TAppendLogType, TDailyLogType } from "../../types/mother-log.types";
 import { getISTCalendarDate } from "../date/date.service";
+import ReminderService from "../reminders/reminder.service";
 import MotherLogService from "./mother-log.service";
 
 /** More than this in one message is not a mother logging her day. */
@@ -17,7 +18,9 @@ export type TConfirmOutcome =
     | { result: "ok"; item: IPendingLog }
     | { result: "not_found" }
     | { result: "day_closed" }
-    | { result: "medicine_missing" };
+    | { result: "medicine_missing" }
+    | { result: "reminder_limit" }
+    | { result: "reminder_in_past" };
 
 // A bare yes or no, as a whole message, in English, Hinglish or Hindi.
 const YES_REPLY =
@@ -34,9 +37,30 @@ export const parseConfirmReply = (text: string): "yes" | "no" | null => {
 
 const isDevanagari = (text: string) => /[ऀ-ॿ]/.test(text);
 
-/** The short reply when she answers a confirm card by typing instead of tapping. */
-export const confirmationReply = (text: string, saved: number, dismissed: number): string => {
+/**
+ * The short reply when she answers a confirm card by typing instead of tapping.
+ * `reminder` is true when what she answered was a reminder rather than a log.
+ */
+export const confirmationReply = (
+    text: string,
+    saved: number,
+    dismissed: number,
+    reminder = false,
+): string => {
     const hindi = isDevanagari(text);
+    if (reminder) {
+        if (saved > 0) {
+            return hindi
+                ? "रिमाइंडर सेट हो गया ✓ आप इसे Reminders में देख सकती हैं।"
+                : "Reminder set ✓ You can see it under Reminders.";
+        }
+        if (dismissed > 0) {
+            return hindi ? "ठीक है, मैंने रिमाइंडर सेट नहीं किया।" : "Okay, I haven't set the reminder.";
+        }
+        return hindi
+            ? "रिमाइंडर सेट नहीं हो सका। कृपया Reminders से जोड़ें।"
+            : "I couldn't set that reminder. Please add it from Reminders.";
+    }
     if (saved > 0) {
         return hindi
             ? "सहेज दिया ✓ आप इसे Log something में देख सकती हैं।"
@@ -59,6 +83,7 @@ export const confirmationReply = (text: string, saved: number, dismissed: number
  */
 class ChatLogProposalService {
     private logs = new MotherLogService();
+    private reminders = new ReminderService();
 
     /**
      * Validate what the chatbot proposed and turn it into pending card items. Anything
@@ -159,6 +184,15 @@ class ChatLogProposalService {
                 await this.setStatus(messageId, proposalId, "needs_medicine");
                 return { result: "medicine_missing" };
             }
+            if (savedLogId === "reminder_limit") {
+                // Back to pending: once she removes a reminder, the card works again.
+                await this.setStatus(messageId, proposalId, "pending");
+                return { result: "reminder_limit" };
+            }
+            if (savedLogId === "reminder_in_past") {
+                await this.setStatus(messageId, proposalId, "dismissed");
+                return { result: "reminder_in_past" };
+            }
             const updated = await messageModel.findOneAndUpdate(
                 { _id: messageId, "pendingLogs._id": new Types.ObjectId(proposalId) },
                 { $set: { "pendingLogs.$.savedLogId": savedLogId } },
@@ -182,7 +216,14 @@ class ChatLogProposalService {
         userId: string,
         conversationId: string,
         accept: boolean,
-    ): Promise<{ messageId: string; saved: number; dismissed: number; pendingLogs: IPendingLog[] } | null> => {
+    ): Promise<{
+        messageId: string;
+        saved: number;
+        dismissed: number;
+        /** Every item answered was a reminder, so the reply talks about reminders. */
+        reminder: boolean;
+        pendingLogs: IPendingLog[];
+    } | null> => {
         const latest = await messageModel
             .findOne({ userId, conversationId, role: MessageRoleEnum.ASSITANT })
             .sort({ createdAt: -1 })
@@ -209,6 +250,7 @@ class ChatLogProposalService {
             messageId: String(latest._id),
             saved,
             dismissed,
+            reminder: waiting.every((item) => item.logType === "reminder"),
             pendingLogs: (refreshed?.pendingLogs ?? []) as IPendingLog[],
         };
     };
@@ -219,11 +261,24 @@ class ChatLogProposalService {
             { $set: { "pendingLogs.$.status": status } },
         );
 
-    /** Write one confirmed item as her log. Returns the log's id where it has one. */
+    /**
+     * Write one confirmed item: her log, or the reminder she asked for. Returns the new
+     * record's id where it has one.
+     */
     private write = async (
         userId: string,
         item: IPendingLog,
-    ): Promise<Types.ObjectId | null | "medicine_missing"> => {
+    ): Promise<
+        Types.ObjectId | null | "medicine_missing" | "reminder_limit" | "reminder_in_past"
+    > => {
+        if (item.logType === "reminder") {
+            // Created as of now: a "today at 7 pm" card answered at 8 pm is in the past.
+            const created = await this.reminders.create(userId, item.fields as never);
+            if (created.result === "limit") return "reminder_limit";
+            if (created.result === "in_past") return "reminder_in_past";
+            return created.reminder._id as unknown as Types.ObjectId;
+        }
+
         const context = await this.logs.getContext(userId);
 
         if ((APPEND_LOG_TYPES as readonly string[]).includes(item.logType)) {

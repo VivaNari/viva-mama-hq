@@ -5,7 +5,6 @@ import {
     IMotherReminder,
     REMINDER_CATEGORIES,
     REMINDER_FREQUENCIES,
-    REMINDER_TIMES,
 } from "../../types/reminder.types";
 import { ECareModel } from "../../types/user.types";
 
@@ -28,9 +27,10 @@ const motherReminderSchema = new Schema<IMotherReminder>(
             maxlength: 80,
             default: null,
         },
-        timeOfDay: {
-            type: String,
-            enum: REMINDER_TIMES,
+        timeMinutes: {
+            type: Number,
+            min: 0,
+            max: 1439,
             required: true,
         },
         frequency: {
@@ -64,7 +64,7 @@ const motherReminderSchema = new Schema<IMotherReminder>(
 );
 
 motherReminderSchema.index({ userId: 1, createdAt: 1 });
-// The job's scan: one slot at a time, not yet sent today.
-motherReminderSchema.index({ timeOfDay: 1, lastSentDate: 1 });
+// The job's scan: a window of times, not yet sent today.
+motherReminderSchema.index({ timeMinutes: 1, lastSentDate: 1 });
 
 export default motherReminderSchema;

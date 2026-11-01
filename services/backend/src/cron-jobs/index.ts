@@ -110,8 +110,8 @@ export const initScheduledJobs = () => {
     // block, ahead of the day's traffic. See babyAgeReminders.ts.
     schedule("30 0 * * *", babyAgeReminders, "baby-age-reminders");
 
-    // Every 15 minutes — reminders she set herself, sent once their slot (08:00, 13:00,
-    // 18:00, 21:00) has passed. Run on demand with `npm run job:custom-reminders`.
+    // Every 5 minutes — reminders she set herself, sent once their time has passed, so
+    // normally within 5 minutes of it. Run on demand with `npm run job:custom-reminders`.
     // See customReminders.ts.
-    schedule("*/15 * * * *", customReminders, "custom-reminders");
+    schedule("*/5 * * * *", customReminders, "custom-reminders");
 };

@@ -129,7 +129,7 @@ async function seed() {
     await motherReminderModel.create({
         userId: uid,
         category: "medicine",
-        timeOfDay: "evening",
+        timeMinutes: 1080,
         frequency: "daily",
         startDate: "2026-11-01",
     });

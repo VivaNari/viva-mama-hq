@@ -1,5 +1,5 @@
 """
-Structured extraction of logs from one message, with the main model in a
+Structured extraction of logs and reminder requests from one message, with the main model in a
 deterministic, JSON-only role (`get_llm(..., extractor=True)`).
 
 Any failure here (timeout, provider error, schema the model could not fill) is
@@ -11,9 +11,10 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime
 from typing import Optional
 
-from app.actions.schemas import ExtractionResult
+from app.actions.schemas import IST, ExtractionResult
 from app.llm.factory import get_llm
 from app.settings import settings
 
@@ -56,18 +57,47 @@ Rules:
   answer ("my bp is 150/100, is that dangerous?").
 - If nothing can be logged, return an empty logs list.
 
+Reminders: if she asks Viva to remind her of something ("remind me to take iron
+at 9 pm", "kal subah 10 baje doctor ko call karne ka yaad dilana", "हर रोज़ शाम
+को पानी पीने का रिमाइंडर लगा दो"), return it in `reminders`, not in `logs`.
+- Right now it is {weekday}, {today} {now_time} (India time). Use this to turn
+  "today", "tomorrow"/"kal", weekday names and "in 2 hours" into a date and a
+  24-hour time.
+- time: only if she gives a clock time or a relative one. If she only says
+  morning/subah, afternoon/dopahar, evening/shaam or night/raat, fill
+  part_of_day instead. If she gives neither, leave both empty.
+- frequency: daily for "every day"/"roz"/"daily"; once for a single occasion
+  ("tomorrow at 10", "on Friday"); custom with weekdays for named days ("every
+  Monday"); alternateDays for "every other day"; weekly for "once a week".
+  "Remind me to take iron at 9 pm" with no day named is daily.
+- Only set reminders she asks for herself; a question about reminders is not a
+  request. Never change what she wants reminding about (no doses or advice of
+  your own). past_day does not apply to reminders.
+
 Message:
 {message}
 """
 
 
-async def extract_logs(text: str, request_id: str) -> Optional[ExtractionResult]:
-    """Extract loggable values from `text`, or None if extraction failed."""
+def build_prompt(text: str, now: datetime) -> str:
+    return _PROMPT.format(
+        message=text,
+        weekday=now.strftime("%A"),
+        today=now.strftime("%Y-%m-%d"),
+        now_time=now.strftime("%H:%M"),
+    )
+
+
+async def extract_logs(
+    text: str, request_id: str, now: Optional[datetime] = None
+) -> Optional[ExtractionResult]:
+    """Extract loggable values and reminder requests from `text`, or None if extraction failed."""
     try:
         llm = get_llm(settings.llm_model, extractor=True).with_structured_output(ExtractionResult)
         loop = asyncio.get_event_loop()
+        prompt = build_prompt(text, now or datetime.now(IST))
         result = await asyncio.wait_for(
-            loop.run_in_executor(None, llm.invoke, _PROMPT.format(message=text)),
+            loop.run_in_executor(None, llm.invoke, prompt),
             timeout=EXTRACTION_TIMEOUT_S,
         )
         if isinstance(result, dict):
@@ -77,6 +107,7 @@ async def extract_logs(text: str, request_id: str) -> Optional[ExtractionResult]
             return None
         logger.info(
             f"[{request_id}] Log extraction: {len(result.logs)} log(s), "
+            f"{len(result.reminders)} reminder(s), "
             f"past_day={result.past_day}, has_question={result.has_question}"
         )
         return result

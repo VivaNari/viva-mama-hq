@@ -66,7 +66,7 @@ async function run() {
     console.log("Result:", result);
     if (result.sent === 0) {
         console.log(
-            "Nothing sent. A reminder goes out up to 60 minutes after its slot (08:00, 13:00, 18:00, 21:00 IST), once a day, to users with an FCM token.",
+            "Nothing sent. A reminder goes out from its time until 60 minutes after it (IST), once a day, to users with an FCM token.",
         );
     }
 

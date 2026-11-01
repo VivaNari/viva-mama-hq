@@ -11,12 +11,15 @@ from __future__ import annotations
 
 import asyncio
 import unittest
+from datetime import datetime
 from unittest.mock import AsyncMock, patch
 
 from app.actions.pipeline import danger_banner, run_log_actions
 from app.actions.prefilter import may_contain_log
 from app.actions.schemas import (
+    IST,
     ExtractedLog,
+    ExtractedReminder,
     ExtractionResult,
     map_foods,
     medicine_ref,
@@ -49,6 +52,9 @@ class TestPrefilter(unittest.TestCase):
             "had dal roti for lunch",
             "आज मेरा बीपी 130/90 है",
             "maine paani 3 glass piya",
+            "remind me to drink water at 7:30 pm",
+            "kal subah 10 baje doctor ko call karne ka yaad dilana",
+            "रोज़ रात को दवा का रिमाइंडर लगा दो",
         ]:
             with self.subTest(text=text):
                 self.assertTrue(may_contain_log(text))
@@ -219,3 +225,99 @@ class TestRunLogActions(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Monday 2 Nov 2026, 10:00 IST.
+NOW = datetime(2026, 11, 2, 10, 0, tzinfo=IST)
+
+
+def reminders(*items: ExtractedReminder) -> ExtractionResult:
+    return ExtractionResult(reminders=list(items))
+
+
+class TestReminderProposals(unittest.TestCase):
+    def fields(self, reminder: ExtractedReminder):
+        return to_proposals(reminders(reminder), now=NOW).logs[0]["fields"]
+
+    def test_daily_with_a_clock_time(self) -> None:
+        self.assertEqual(
+            self.fields(ExtractedReminder(category="other", detail="Drink water", time="19:30")),
+            {"category": "other", "detail": "Drink water", "time": "19:30", "frequency": "daily"},
+        )
+
+    def test_part_of_day_uses_the_quick_time(self) -> None:
+        self.assertEqual(
+            self.fields(ExtractedReminder(category="medicine", part_of_day="night"))["time"],
+            "21:00",
+        )
+
+    def test_no_time_is_asked_for(self) -> None:
+        out = to_proposals(reminders(ExtractedReminder(category="medicine")), now=NOW)
+        self.assertEqual(out.missing, [("reminder", "time")])
+        self.assertEqual(out.logs, [])
+
+    def test_once_defaults_to_today_or_tomorrow(self) -> None:
+        later = self.fields(ExtractedReminder(category="tests", time="18:00", frequency="once"))
+        self.assertEqual(later["date"], "2026-11-02")
+        earlier = self.fields(ExtractedReminder(category="tests", time="09:00", frequency="once"))
+        self.assertEqual(earlier["date"], "2026-11-03")
+
+    def test_a_day_that_has_gone_is_rechecked(self) -> None:
+        out = to_proposals(
+            reminders(
+                ExtractedReminder(
+                    category="tests", time="09:00", frequency="once", date="2026-11-01"
+                )
+            ),
+            now=NOW,
+        )
+        self.assertEqual(out.out_of_range, ["reminder"])
+
+    def test_named_weekdays_become_custom(self) -> None:
+        fields = self.fields(
+            ExtractedReminder(
+                category="exercise", time="07:00", frequency="weekly", weekdays=[1, 4]
+            )
+        )
+        self.assertEqual((fields["frequency"], fields["weekdays"]), ("custom", [1, 4]))
+
+    def test_end_weeks_only_for_repeating(self) -> None:
+        fields = self.fields(ExtractedReminder(category="medicine", time="21:00", end_weeks=4))
+        self.assertEqual(fields["endWeeks"], 4)
+
+
+class TestReminderTurns(unittest.TestCase):
+    # Same fixture as TestRunLogActions, without re-running its tests.
+    setUp = TestRunLogActions.setUp
+    turn = TestRunLogActions.turn
+
+    def test_reminder_is_proposed_with_a_reminder_reply(self) -> None:
+        outcome, _ = self.turn(
+            "remind me to take iron at 9 pm",
+            reminders(ExtractedReminder(category="medicine", time="21:00")),
+        )
+        self.assertTrue(outcome.handled_fully)
+        self.assertEqual(outcome.proposals[0]["logType"], "reminder")
+        self.assertIn("Yes, set", outcome.reply)
+
+    def test_missing_time_asks_then_completes_from_memory(self) -> None:
+        outcome, _ = self.turn(
+            "remind me to take my iron every day",
+            reminders(ExtractedReminder(category="medicine")),
+        )
+        self.assertIn("What time", outcome.reply)
+        outcome, mock = self.turn(
+            "9 pm", reminders(ExtractedReminder(category="medicine", time="21:00"))
+        )
+        self.assertEqual(mock.call_args.args[0], "remind me to take my iron every day\n9 pm")
+        self.assertEqual(outcome.proposals[0]["fields"]["time"], "21:00")
+
+    def test_past_day_never_blocks_a_reminder(self) -> None:
+        outcome, _ = self.turn(
+            "kal raat yaad dilana",
+            ExtractionResult(
+                reminders=[ExtractedReminder(category="medicine", part_of_day="night")],
+                past_day=True,
+            ),
+        )
+        self.assertEqual(len(outcome.proposals), 1)

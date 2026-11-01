@@ -114,6 +114,7 @@ export const messages = {
     REMINDER_DELETED_SUCCESS: "Reminder removed",
     REMINDER_NOT_FOUND: "Reminder not found",
     REMINDER_LIMIT_REACHED: "You have the maximum number of reminders; remove one to add another",
+    REMINDER_IN_PAST: "That time has already passed; choose a later time",
     GROWTH_LOG_SAVED_SUCCESS: "Growth log saved successfully",
     GROWTH_LOG_FETCH_SUCCESS: "Growth logs fetched successfully",
     GROWTH_LOG_DELETED_SUCCESS: "Growth log deleted successfully",

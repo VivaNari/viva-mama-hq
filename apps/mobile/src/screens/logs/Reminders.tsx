@@ -3,8 +3,10 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Lucide } from '@react-native-vector-icons/lucide';
 import { useTranslation } from 'react-i18next';
+import Toast from 'react-native-toast-message';
 
 import { createReminder, deleteReminder, getReminders } from '../../api/reminders.api';
+import CustomDatePicker from '../../components/CustomDatePicker';
 import { PrimaryButton, SecondaryButton } from '../../components/logs/Buttons';
 import Chip from '../../components/logs/Chip';
 import LogScreen from '../../components/logs/LogScreen';
@@ -14,14 +16,23 @@ import { globalStyles } from '../../public/styles';
 import { logsStyles } from '../../public/styles/logsStyles';
 import {
     MotherReminder,
-    REMINDER_SLOT_TIMES,
+    REMINDER_QUICK_TIMES,
     ReminderCategory as Category,
     ReminderFrequency as Frequency,
     ReminderTime as TimeOfDay,
 } from '../../types/reminder.types';
 import { CareModelEnum } from '../../types/user.types';
+import { fromISODateKey, toISODateKey } from '../../utils/dateKey';
 import { showLogError } from '../../utils/motherLogHelpers';
 import { ensureNotificationPermission } from '../../utils/notificationPermission';
+import {
+    WEEKDAYS,
+    formatReminderDay,
+    formatReminderTime,
+    reminderFrequencyLabel,
+    reminderTimeAsDate,
+    toReminderTime,
+} from '../../utils/reminderFormat';
 
 type Step = 'list' | 'category' | 'when' | 'dates' | 'confirm';
 
@@ -33,32 +44,27 @@ const CATEGORIES: { key: Category; icon: string }[] = [
     { key: 'other', icon: 'plus' },
 ];
 const TIMES: TimeOfDay[] = ['morning', 'afternoon', 'evening', 'night'];
-const FREQUENCIES: Frequency[] = ['daily', 'alternateDays', 'weekly', 'custom'];
+const FREQUENCIES: Frequency[] = ['daily', 'alternateDays', 'weekly', 'custom', 'once'];
 const OTHER_OPTIONS = ['doctorAppointment', 'journaling', 'restBreak', 'drinkWater'] as const;
-// Monday first, as the chips read; values are JS weekdays (0 = Sunday).
-const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
 
 interface Draft {
     category: Category;
     otherDetail: string;
-    time: TimeOfDay;
+    /** "HH:MM", 24-hour. */
+    time: string;
     frequency: Frequency;
     /** For "custom" only. */
     weekdays: number[];
+    /** For "once" only: "YYYY-MM-DD". */
+    date: string;
     ongoing: boolean;
     endWeeks: number;
 }
 
-/** "YYYY-MM-DD" as a local Date, for weekday and month names. */
-const dayOf = (iso: string) => {
-    const [year, month, day] = iso.split('-').map(Number);
-    return new Date(year, month - 1, day);
-};
-
 /**
- * Her reminders. Each is saved on the server, which sends it as a push notification at
- * the slot's time (REMINDER_SLOT_TIMES) on the days its frequency covers. The list holds
- * only what she set; nothing is pre-filled.
+ * Her reminders, set here or through Viva in chat. Each is saved on the server, which
+ * sends it as a push notification at the time she chose on the days its frequency
+ * covers. The list holds only what she set; nothing is pre-filled.
  */
 const Reminders: React.FC = () => {
     const { t, i18n } = useTranslation();
@@ -67,9 +73,10 @@ const Reminders: React.FC = () => {
     const newDraft = (): Draft => ({
         category: 'medicine',
         otherDetail: t('logs.reminders.otherOptions.doctorAppointment'),
-        time: 'morning',
+        time: REMINDER_QUICK_TIMES.morning,
         frequency: 'daily',
         weekdays: [],
+        date: toISODateKey(new Date()),
         ongoing: true,
         endWeeks: 4,
     });
@@ -79,6 +86,7 @@ const Reminders: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [draft, setDraft] = useState<Draft>(newDraft);
+    const [picker, setPicker] = useState<'time' | 'date' | null>(null);
 
     useFocusEffect(
         useCallback(() => {
@@ -98,40 +106,48 @@ const Reminders: React.FC = () => {
                 : [...draft.weekdays, day],
         });
 
-    const timeLabel = (time: TimeOfDay) => `${t(`logs.reminders.times.${time}`)} · ${REMINDER_SLOT_TIMES[time]}`;
-    const weekdayNames = (days: number[]) =>
-        WEEKDAYS.filter(day => days.includes(day))
-            .map(day => t(`logs.reminders.weekdays.${day}`))
-            .join(', ');
-    const frequencyLabel = (frequency: Frequency, weekdays: number[], startDate?: string) => {
-        if (frequency === 'custom') return weekdayNames(weekdays);
-        if (frequency === 'weekly') {
-            const day = (startDate ? dayOf(startDate) : new Date()).getDay();
-            return t('logs.reminders.weeklyOn', { day: t(`logs.reminders.weekdays.${day}`) });
-        }
-        return t(`logs.reminders.frequencies.${frequency}`);
-    };
+    const quickLabel = (key: TimeOfDay) =>
+        `${t(`logs.reminders.times.${key}`)} · ${formatReminderTime(REMINDER_QUICK_TIMES[key])}`;
+    const frequencyLabel = (frequency: Frequency, weekdays: number[], startDate?: string) =>
+        reminderFrequencyLabel(t, i18n.language, frequency, weekdays, startDate);
 
     const detailOf = (d: Draft) =>
         d.category === 'other' ? d.otherDetail : t(`logs.reminders.details.${d.category}`);
-    const durationOf = (d: Draft) =>
-        d.ongoing ? t('logs.reminders.ongoing') : t('logs.reminders.endsInWeeks', { count: d.endWeeks });
+    const durationOf = (d: Draft) => {
+        if (d.frequency === 'once') return formatReminderDay(d.date, i18n.language);
+        return d.ongoing ? t('logs.reminders.ongoing') : t('logs.reminders.endsInWeeks', { count: d.endWeeks });
+    };
 
     const savedDetail = (r: MotherReminder) =>
         r.category === 'other' ? (r.detail ?? '') : t(`logs.reminders.details.${r.category}`);
-    const savedSchedule = (r: MotherReminder) =>
-        [
-            timeLabel(r.timeOfDay),
+    const savedSchedule = (r: MotherReminder) => {
+        const time = formatReminderTime(r.time);
+        if (r.frequency === 'once') {
+            const parts = [formatReminderDay(r.startDate, i18n.language), time];
+            if (r.lastSentDate === r.startDate) parts.push(t('logs.reminders.sent'));
+            return parts.join(' · ');
+        }
+        return [
+            time,
             frequencyLabel(r.frequency, r.weekdays, r.startDate),
             r.endDate
                 ? t('logs.reminders.endsOn', {
-                      date: dayOf(r.endDate).toLocaleDateString(i18n.language, { day: 'numeric', month: 'short' }),
+                      date: fromISODateKey(r.endDate).toLocaleDateString(i18n.language, {
+                          day: 'numeric',
+                          month: 'short',
+                      }),
                   })
                 : t('logs.reminders.ongoingShort'),
         ].join(' · ');
+    };
 
     const routeLabel = careModel === CareModelEnum.PRIVATE ? t('logs.reminders.private') : t('logs.reminders.public');
-    const canSave = !saving && (draft.category !== 'other' || draft.otherDetail.trim().length > 0);
+    // A one-time reminder for a moment already gone would never send.
+    const oncePast =
+        draft.frequency === 'once' &&
+        draft.date === toISODateKey(new Date()) &&
+        draft.time <= toReminderTime(new Date());
+    const canSave = !saving && !oncePast && (draft.category !== 'other' || draft.otherDetail.trim().length > 0);
 
     const confirm = async () => {
         if (!canSave) return;
@@ -140,18 +156,30 @@ const Reminders: React.FC = () => {
             const saved = await createReminder({
                 category: draft.category,
                 ...(draft.category === 'other' ? { detail: draft.otherDetail.trim() } : {}),
-                timeOfDay: draft.time,
+                time: draft.time,
                 frequency: draft.frequency,
                 ...(draft.frequency === 'custom' ? { weekdays: draft.weekdays } : {}),
-                endWeeks: draft.ongoing ? null : draft.endWeeks,
+                ...(draft.frequency === 'once'
+                    ? { date: draft.date }
+                    : { endWeeks: draft.ongoing ? null : draft.endWeeks }),
             });
             setReminders(prev => [...prev, saved]);
             setDraft(newDraft());
             setStep('list');
             // A reminder is only useful if it can notify; asks once, or points to settings.
             ensureNotificationPermission().catch(() => undefined);
-        } catch (error) {
-            showLogError(t, 'save', error, 'Reminders.create');
+        } catch (error: any) {
+            const code = error?.response?.data?.data?.code;
+            if (code === 'in_past' || code === 'limit') {
+                Toast.show({
+                    type: 'error',
+                    text1: t('common.error'),
+                    text2: t(code === 'in_past' ? 'logs.reminders.inPast' : 'logs.reminders.limit'),
+                    position: 'bottom',
+                });
+            } else {
+                showLogError(t, 'save', error, 'Reminders.create');
+            }
         } finally {
             setSaving(false);
         }
@@ -320,12 +348,25 @@ const Reminders: React.FC = () => {
                             {TIMES.map(key => (
                                 <Chip
                                     key={key}
-                                    label={timeLabel(key)}
-                                    selected={draft.time === key}
-                                    onPress={() => update({ time: key })}
+                                    label={quickLabel(key)}
+                                    selected={draft.time === REMINDER_QUICK_TIMES[key]}
+                                    onPress={() => update({ time: REMINDER_QUICK_TIMES[key] })}
                                 />
                             ))}
                         </View>
+                        <TouchableOpacity
+                            onPress={() => setPicker('time')}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('logs.reminders.changeTime')}
+                            style={[logsStyles.startDateBox, logsStyles.spaceBetween]}
+                        >
+                            <Text style={[{ fontSize: 13.5, color: colors.darkPurple }, globalStyles.fontBold]}>
+                                {formatReminderTime(draft.time)}
+                            </Text>
+                            <Text style={[{ fontSize: 12, color: colors.darkPurple }, globalStyles.fontSemiBold]}>
+                                {t('logs.reminders.changeTime')}
+                            </Text>
+                        </TouchableOpacity>
                     </View>
                     <View style={{ gap: 8 }}>
                         <Text style={[logsStyles.fieldLabel, globalStyles.fontBold]}>{t('logs.reminders.frequency')}</Text>
@@ -368,66 +409,89 @@ const Reminders: React.FC = () => {
 
             {step === 'dates' ? (
                 <>
-                    {stepHeader(3, 'logs.reminders.startEnd')}
-                    <View style={{ gap: 8 }}>
-                        <Text style={[logsStyles.fieldLabel, globalStyles.fontBold]}>{t('logs.reminders.startDate')}</Text>
-                        <View style={logsStyles.startDateBox}>
+                    {stepHeader(3, draft.frequency === 'once' ? 'logs.reminders.whichDay' : 'logs.reminders.startEnd')}
+                    {draft.frequency === 'once' ? (
+                        <TouchableOpacity
+                            onPress={() => setPicker('date')}
+                            accessibilityRole="button"
+                            accessibilityLabel={t('logs.reminders.changeDate')}
+                            style={[logsStyles.startDateBox, logsStyles.spaceBetween]}
+                        >
                             <Text style={[{ fontSize: 13.5, color: colors.darkPurple }, globalStyles.fontBold]}>
-                                {t('logs.reminders.today')}
+                                {formatReminderDay(draft.date, i18n.language)}
                             </Text>
-                        </View>
-                    </View>
-                    <View style={{ gap: 8 }}>
-                        <Text style={[logsStyles.fieldLabel, globalStyles.fontBold]}>{t('logs.reminders.endDate')}</Text>
-                        <View style={logsStyles.buttonPair}>
-                            {[true, false].map(ongoing => {
-                                const on = draft.ongoing === ongoing;
-                                return (
-                                    <TouchableOpacity
-                                        key={String(ongoing)}
-                                        onPress={() => update({ ongoing })}
-                                        accessibilityRole="button"
-                                        accessibilityState={{ selected: on }}
-                                        style={[logsStyles.endOption, on && logsStyles.categoryTileOn]}
-                                    >
-                                        <Text
-                                            style={[
-                                                { fontSize: 12.5, textAlign: 'center', color: on ? colors.white : colors.darkPurple },
-                                                globalStyles.fontBold,
-                                            ]}
-                                        >
-                                            {ongoing ? t('logs.reminders.ongoing') : t('logs.reminders.setEndDate')}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-
-                        {!draft.ongoing ? (
-                            <View style={logsStyles.weeksBox}>
-                                <TouchableOpacity
-                                    onPress={() => update({ endWeeks: Math.max(1, draft.endWeeks - 1) })}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={t('logs.reminders.fewerWeeks')}
-                                    style={[logsStyles.weeksButton, { backgroundColor: colors.white }]}
-                                >
-                                    <Text style={[{ fontSize: 18, color: colors.darkPurple }, globalStyles.fontBold]}>−</Text>
-                                </TouchableOpacity>
-                                <Text style={[{ fontSize: 14.5, minWidth: 130, textAlign: 'center', color: colors.vivaInk }, globalStyles.fontBold]}>
-                                    {t('logs.reminders.endsInWeeks', { count: draft.endWeeks })}
-                                </Text>
-                                <TouchableOpacity
-                                    onPress={() => update({ endWeeks: draft.endWeeks + 1 })}
-                                    accessibilityRole="button"
-                                    accessibilityLabel={t('logs.reminders.moreWeeks')}
-                                    style={[logsStyles.weeksButton, { backgroundColor: colors.darkPurple }]}
-                                >
-                                    <Text style={[{ fontSize: 18, color: colors.white }, globalStyles.fontBold]}>+</Text>
-                                </TouchableOpacity>
+                            <Text style={[{ fontSize: 12, color: colors.darkPurple }, globalStyles.fontSemiBold]}>
+                                {t('logs.reminders.changeDate')}
+                            </Text>
+                        </TouchableOpacity>
+                    ) : (
+                        <>
+                            <View style={{ gap: 8 }}>
+                                <Text style={[logsStyles.fieldLabel, globalStyles.fontBold]}>{t('logs.reminders.startDate')}</Text>
+                                <View style={logsStyles.startDateBox}>
+                                    <Text style={[{ fontSize: 13.5, color: colors.darkPurple }, globalStyles.fontBold]}>
+                                        {t('logs.reminders.today')}
+                                    </Text>
+                                </View>
                             </View>
-                        ) : null}
-                    </View>
-                    {nav(() => setStep('when'), () => setStep('confirm'))}
+                            <View style={{ gap: 8 }}>
+                                <Text style={[logsStyles.fieldLabel, globalStyles.fontBold]}>{t('logs.reminders.endDate')}</Text>
+                                <View style={logsStyles.buttonPair}>
+                                    {[true, false].map(ongoing => {
+                                        const on = draft.ongoing === ongoing;
+                                        return (
+                                            <TouchableOpacity
+                                                key={String(ongoing)}
+                                                onPress={() => update({ ongoing })}
+                                                accessibilityRole="button"
+                                                accessibilityState={{ selected: on }}
+                                                style={[logsStyles.endOption, on && logsStyles.categoryTileOn]}
+                                            >
+                                                <Text
+                                                    style={[
+                                                        { fontSize: 12.5, textAlign: 'center', color: on ? colors.white : colors.darkPurple },
+                                                        globalStyles.fontBold,
+                                                    ]}
+                                                >
+                                                    {ongoing ? t('logs.reminders.ongoing') : t('logs.reminders.setEndDate')}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        );
+                                    })}
+                                </View>
+
+                                {!draft.ongoing ? (
+                                    <View style={logsStyles.weeksBox}>
+                                        <TouchableOpacity
+                                            onPress={() => update({ endWeeks: Math.max(1, draft.endWeeks - 1) })}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={t('logs.reminders.fewerWeeks')}
+                                            style={[logsStyles.weeksButton, { backgroundColor: colors.white }]}
+                                        >
+                                            <Text style={[{ fontSize: 18, color: colors.darkPurple }, globalStyles.fontBold]}>−</Text>
+                                        </TouchableOpacity>
+                                        <Text style={[{ fontSize: 14.5, minWidth: 130, textAlign: 'center', color: colors.vivaInk }, globalStyles.fontBold]}>
+                                            {t('logs.reminders.endsInWeeks', { count: draft.endWeeks })}
+                                        </Text>
+                                        <TouchableOpacity
+                                            onPress={() => update({ endWeeks: draft.endWeeks + 1 })}
+                                            accessibilityRole="button"
+                                            accessibilityLabel={t('logs.reminders.moreWeeks')}
+                                            style={[logsStyles.weeksButton, { backgroundColor: colors.darkPurple }]}
+                                        >
+                                            <Text style={[{ fontSize: 18, color: colors.white }, globalStyles.fontBold]}>+</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                ) : null}
+                            </View>
+                        </>
+                    )}
+                    {oncePast ? (
+                        <Text style={[logsStyles.mutedLabel, { fontSize: 12, color: colors.vivaDangerText }, globalStyles.fontSemiBold]}>
+                            {t('logs.reminders.inPast')}
+                        </Text>
+                    ) : null}
+                    {nav(() => setStep('when'), () => setStep('confirm'), undefined, undefined, oncePast)}
                 </>
             ) : null}
 
@@ -438,7 +502,7 @@ const Reminders: React.FC = () => {
                         {[
                             ['reminder', detailOf(draft)],
                             ['care', routeLabel],
-                            ['time', timeLabel(draft.time)],
+                            ['time', formatReminderTime(draft.time)],
                             ['frequency', frequencyLabel(draft.frequency, draft.weekdays)],
                             ['duration', durationOf(draft)],
                         ].map(([key, value]) => (
@@ -455,6 +519,19 @@ const Reminders: React.FC = () => {
                     {nav(() => setStep('dates'), confirm, 'logs.common.back', 'logs.reminders.doneSet', !canSave)}
                 </>
             ) : null}
+
+            <CustomDatePicker
+                show={picker !== null}
+                setShow={show => {
+                    if (!show) setPicker(null);
+                }}
+                mode={picker === 'date' ? 'date' : 'time'}
+                minimumDate={picker === 'date'}
+                selectedDate={picker === 'date' ? fromISODateKey(draft.date) : reminderTimeAsDate(draft.time)}
+                onSelect={value =>
+                    update(picker === 'date' ? { date: toISODateKey(value) } : { time: toReminderTime(value) })
+                }
+            />
         </LogScreen>
     );
 };

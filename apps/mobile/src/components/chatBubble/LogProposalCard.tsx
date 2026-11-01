@@ -12,6 +12,9 @@ import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles/globalStyles';
 import { IPendingLog } from '../../types/chat.types';
 import { i18nKey } from '../../types/motherLog.types';
+import { ReminderFrequency } from '../../types/reminder.types';
+import { ensureNotificationPermission } from '../../utils/notificationPermission';
+import { formatReminderTime, reminderFrequencyLabel } from '../../utils/reminderFormat';
 
 interface LogProposalCardProps {
     messageId: string;
@@ -32,12 +35,37 @@ const SCREEN_FOR: Record<string, string> = {
     medicine_dose: 'MedicineLog',
     pumping: 'PumpingLog',
     meal: 'MealsLog',
+    reminder: 'Reminders',
 };
 
-/** One line for a proposed log, in her language: "BP 118/80 mmHg", "Water +2 glasses". */
-export const describePendingLog = (item: IPendingLog, t: TFunction): string => {
+// Refusals from the confirm route, with the message each one shows.
+const ERROR_TEXT: Record<string, string> = {
+    day_closed: 'chatLogs.expired',
+    medicine_missing: 'chatLogs.medicineMissing',
+    reminder_limit: 'logs.reminders.limit',
+    reminder_in_past: 'logs.reminders.inPast',
+};
+
+/**
+ * One line for a proposed log or reminder, in her language: "BP 118/80 mmHg",
+ * "Water +2 glasses", "⏰ Drink water · 7:30 pm · Daily".
+ */
+export const describePendingLog = (item: IPendingLog, t: TFunction, locale = 'en'): string => {
     const f = item.fields ?? {};
     switch (item.logType) {
+        case 'reminder': {
+            const what =
+                f.category === 'other' ? f.detail : t(`logs.reminders.details.${f.category}`);
+            // A one-time reminder's day sits where a repeating one's frequency does.
+            const when = reminderFrequencyLabel(
+                t,
+                locale,
+                f.frequency as ReminderFrequency,
+                f.weekdays,
+                f.frequency === 'once' ? f.date : undefined,
+            );
+            return `⏰ ${what} · ${formatReminderTime(f.time)} · ${when}`;
+        }
         case 'bp':
             return `${t('logs.readings.tabs.bp')} ${f.systolic}/${f.diastolic} mmHg`;
         case 'sugar':
@@ -91,7 +119,7 @@ export const describePendingLog = (item: IPendingLog, t: TFunction): string => {
  * the server makes a second answer harmless, so a retry never saves twice.
  */
 export const LogProposalCard: React.FC<LogProposalCardProps> = ({ messageId, pendingLogs }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const navigation = useNavigation<any>();
     const [items, setItems] = useState<IPendingLog[]>(pendingLogs ?? []);
     const [busy, setBusy] = useState(false);
@@ -104,6 +132,8 @@ export const LogProposalCard: React.FC<LogProposalCardProps> = ({ messageId, pen
     if (items.length === 0) return null;
 
     const waiting = items.filter(item => item.status === 'pending');
+    // A card of reminders only reads "Set this reminder?" rather than "Save to your logs?".
+    const reminderCard = items.every(item => item.logType === 'reminder');
 
     const answer = async (accept: boolean) => {
         setBusy(true);
@@ -118,49 +148,58 @@ export const LogProposalCard: React.FC<LogProposalCardProps> = ({ messageId, pen
                 Toast.show({
                     type: 'error',
                     text1: t('common.error'),
-                    text2:
-                        code === 'day_closed'
-                            ? t('chatLogs.expired')
-                            : code === 'medicine_missing'
-                              ? t('chatLogs.medicineMissing')
-                              : t('logs.common.saveFailed'),
+                    text2: t(ERROR_TEXT[code] ?? 'logs.common.saveFailed'),
                     position: 'bottom',
                 });
             }
         }
         setItems(next);
         setBusy(false);
+        // A reminder is only useful if it can notify; asks once, or points to settings.
+        if (next.some(item => item.logType === 'reminder' && item.status === 'saved')) {
+            ensureNotificationPermission().catch(() => undefined);
+        }
     };
 
     return (
         <View style={styles.card}>
             <Text style={[styles.title, globalStyles.fontBold]}>
-                {waiting.length > 0 ? t('chatLogs.title') : t('chatLogs.titleDone')}
+                {reminderCard
+                    ? waiting.length > 0
+                        ? t('chatLogs.reminderTitle')
+                        : t('chatLogs.reminderTitleDone')
+                    : waiting.length > 0
+                      ? t('chatLogs.title')
+                      : t('chatLogs.titleDone')}
             </Text>
 
             {items.map(item => (
                 <View key={item._id} style={styles.row}>
                     <View style={styles.rowIcon}>
                         <Lucide
-                            name={item.status === 'saved' ? 'check' : 'clipboard-list'}
+                            name={item.status === 'saved' ? 'check' : item.logType === 'reminder' ? 'bell' : 'clipboard-list'}
                             size={14}
                             color={item.status === 'saved' ? colors.vivaSuccess : colors.darkPurple}
                         />
                     </View>
                     <View style={{ flex: 1 }}>
                         <Text style={[styles.rowText, globalStyles.fontSemiBold]}>
-                            {describePendingLog(item, t)}
+                            {describePendingLog(item, t, i18n.language)}
                         </Text>
                         {item.status === 'saved' ? (
                             <TouchableOpacity
                                 onPress={() => navigation.navigate(SCREEN_FOR[item.logType] ?? 'LogPicker')}
                                 accessibilityRole="link"
                             >
-                                <Text style={[styles.link, globalStyles.fontSemiBold]}>{t('chatLogs.savedView')}</Text>
+                                <Text style={[styles.link, globalStyles.fontSemiBold]}>
+                                    {t(item.logType === 'reminder' ? 'chatLogs.setView' : 'chatLogs.savedView')}
+                                </Text>
                             </TouchableOpacity>
                         ) : null}
                         {item.status === 'dismissed' ? (
-                            <Text style={[styles.muted, globalStyles.fontRegular]}>{t('chatLogs.notSaved')}</Text>
+                            <Text style={[styles.muted, globalStyles.fontRegular]}>
+                                {t(item.logType === 'reminder' ? 'chatLogs.notSet' : 'chatLogs.notSaved')}
+                            </Text>
                         ) : null}
                         {item.status === 'needs_medicine' ? (
                             <TouchableOpacity onPress={() => navigation.navigate('MedicineLog')} accessibilityRole="link">
@@ -192,7 +231,9 @@ export const LogProposalCard: React.FC<LogProposalCardProps> = ({ messageId, pen
                         {busy ? (
                             <ActivityIndicator color={colors.white} size="small" />
                         ) : (
-                            <Text style={[styles.primaryText, globalStyles.fontBold]}>{t('chatLogs.yes')}</Text>
+                            <Text style={[styles.primaryText, globalStyles.fontBold]}>
+                                {t(reminderCard ? 'chatLogs.yesSet' : 'chatLogs.yes')}
+                            </Text>
                         )}
                     </TouchableOpacity>
                 </View>

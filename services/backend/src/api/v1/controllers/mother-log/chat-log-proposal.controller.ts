@@ -5,7 +5,15 @@ import { messages } from "../../../../constants/messages";
 import ChatLogProposalService from "../../../../services/mother-log/chat-log-proposal.service";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 
-/** Her Yes / No on a "Save this log?" card in the Viva AI chat. */
+/** Why an accepted card item could not be saved, with the message the app shows. */
+const REFUSAL_MESSAGES = {
+    day_closed: messages.CHAT_LOG_DAY_CLOSED,
+    medicine_missing: messages.CHAT_LOG_MEDICINE_MISSING,
+    reminder_limit: messages.REMINDER_LIMIT_REACHED,
+    reminder_in_past: messages.REMINDER_IN_PAST,
+};
+
+/** Her Yes / No on a "Save this log?" or "Set this reminder?" card in the Viva AI chat. */
 export default class ChatLogProposalController {
     private service = new ChatLogProposalService();
 
@@ -33,15 +41,12 @@ export default class ChatLogProposalController {
                     response: res,
                 });
             }
-            if (outcome.result === "day_closed" || outcome.result === "medicine_missing") {
+            if (outcome.result !== "ok") {
                 return sendResponse({
                     data: { code: outcome.result },
                     statusCode: StatusCodes.BAD_REQUEST,
                     success: false,
-                    message:
-                        outcome.result === "day_closed"
-                            ? messages.CHAT_LOG_DAY_CLOSED
-                            : messages.CHAT_LOG_MEDICINE_MISSING,
+                    message: REFUSAL_MESSAGES[outcome.result],
                     response: res,
                 });
             }

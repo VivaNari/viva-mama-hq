@@ -1,7 +1,7 @@
 import motherReminderModel from "../models/mother-reminder.model";
 import UserModel from "../models/user.model";
 import { notificationMessages } from "../constants/messages";
-import { isDueOn, istClock, slotsToSend } from "../services/reminders/reminder-schedule";
+import { isDueOn, istClock, sendWindow } from "../services/reminders/reminder-schedule";
 import { FlowLanguageEnum } from "../types/chat.types";
 import { IMotherReminder } from "../types/reminder.types";
 import logger, { createModuleLogger } from "../utils/logger";
@@ -30,9 +30,9 @@ const pushText = (reminder: IMotherReminder, language: string | null | undefined
 /**
  * Pushes the reminders she set on the Reminders screen.
  *
- * Runs every 15 minutes. A reminder goes out once its slot time (REMINDER_SLOT_MINUTES)
- * has passed, at most REMINDER_SEND_TOLERANCE_MINUTES late, and only on days its
- * frequency covers.
+ * Runs every 5 minutes. A reminder goes out once its time has passed, at most
+ * REMINDER_SEND_TOLERANCE_MINUTES late, and only on days its frequency covers — so
+ * normally within 5 minutes of the time she chose.
  *
  * Each send is claimed first by moving `lastSentDate` to today with a conditional
  * update, the same claim-then-push order as consultationReminders: overlapping runs
@@ -47,15 +47,11 @@ export const customReminders = async (now: Date = new Date()): Promise<ICustomRe
 
     try {
         const { today, minutes } = istClock(now);
-        const slots = slotsToSend(minutes);
-        if (!slots.length) {
-            log.info({ minutes }, "No reminder slot is due");
-            return { due: 0, sent, skipped, errors };
-        }
+        const window = sendWindow(minutes);
 
         const candidates = (await motherReminderModel
             .find({
-                timeOfDay: { $in: slots },
+                timeMinutes: { $gte: window.from, $lte: window.to },
                 lastSentDate: { $ne: today },
                 startDate: { $lte: today },
                 $or: [{ endDate: null }, { endDate: { $gte: today } }],
@@ -70,7 +66,7 @@ export const customReminders = async (now: Date = new Date()): Promise<ICustomRe
             .lean();
         const byId = new Map(users.map((user) => [String(user._id), user]));
 
-        log.info({ slots, count: due.length }, "Found reminders due");
+        log.info({ window, count: due.length }, "Found reminders due");
 
         for (const reminder of due) {
             try {

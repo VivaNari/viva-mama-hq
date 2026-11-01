@@ -26,7 +26,7 @@ import env from "../src/config/env";
 import { customReminders } from "../src/cron-jobs/customReminders";
 import motherReminderModel from "../src/models/mother-reminder.model";
 import UserModel from "../src/models/user.model";
-import { isDueOn, istClock, slotsToSend } from "../src/services/reminders/reminder-schedule";
+import { isDueOn, istClock, sendWindow } from "../src/services/reminders/reminder-schedule";
 import ReminderService from "../src/services/reminders/reminder.service";
 import { ECareModel, EUserCategory } from "../src/types/user.types";
 
@@ -87,11 +87,15 @@ describe("repeat rule", () => {
         expect(istClock(at("00:30", "2026-11-03"))).toEqual({ today: "2026-11-03", minutes: 30 });
     });
 
-    it("sends a slot from its time until 60 minutes later", () => {
-        expect(slotsToSend(7 * 60 + 59)).toEqual([]);
-        expect(slotsToSend(8 * 60)).toEqual(["morning"]);
-        expect(slotsToSend(9 * 60)).toEqual(["morning"]);
-        expect(slotsToSend(9 * 60 + 1)).toEqual([]);
+    it("a one-time reminder is due on its day only", () => {
+        const reminder = { ...base, frequency: "once" as const, endDate: "2026-11-02" };
+        expect(isDueOn(reminder, "2026-11-02")).toBe(true);
+        expect(isDueOn(reminder, "2026-11-03")).toBe(false);
+    });
+
+    it("sends times from the last 60 minutes, never wrapping past midnight", () => {
+        expect(sendWindow(19 * 60 + 35)).toEqual({ from: 18 * 60 + 35, to: 19 * 60 + 35 });
+        expect(sendWindow(20)).toEqual({ from: 0, to: 20 });
     });
 });
 
@@ -106,12 +110,13 @@ describe("reminder routes", () => {
         const created = await request(app)
             .post(`${API}/mother-reminders`)
             .set("Authorization", auth)
-            .send({ category: "other", detail: "  Journaling ", timeOfDay: "night", frequency: "daily", endWeeks: 4 });
+            .send({ category: "other", detail: "  Journaling ", time: "21:00", frequency: "daily", endWeeks: 4 });
         expect(created.status).toBe(201);
         expect(created.body.data).toMatchObject({
             category: "other",
             detail: "Journaling",
             careModel: ECareModel.PRIVATE,
+            time: "21:00",
         });
 
         const listed = await request(app).get(`${API}/mother-reminders`).set("Authorization", auth);
@@ -129,13 +134,13 @@ describe("reminder routes", () => {
         const custom = await request(app)
             .post(`${API}/mother-reminders`)
             .set("Authorization", auth)
-            .send({ category: "medicine", timeOfDay: "morning", frequency: "custom" });
+            .send({ category: "medicine", time: "08:00", frequency: "custom" });
         expect(custom.status).toBe(400);
 
         const detail = await request(app)
             .post(`${API}/mother-reminders`)
             .set("Authorization", auth)
-            .send({ category: "medicine", detail: "x", timeOfDay: "morning", frequency: "daily" });
+            .send({ category: "medicine", detail: "x", time: "08:00", frequency: "daily" });
         expect(detail.status).toBe(400);
     });
 
@@ -145,7 +150,7 @@ describe("reminder routes", () => {
         const created = await request(app)
             .post(`${API}/mother-reminders`)
             .set("Authorization", owner.auth)
-            .send({ category: "meals", timeOfDay: "afternoon", frequency: "daily" });
+            .send({ category: "meals", time: "13:00", frequency: "daily" });
 
         const res = await request(app)
             .delete(`${API}/mother-reminders/${created.body.data._id}`)
@@ -160,7 +165,7 @@ describe("reminder routes", () => {
             Array.from({ length: 20 }, () => ({
                 userId,
                 category: "medicine",
-                timeOfDay: "morning",
+                timeMinutes: 480,
                 frequency: "daily",
                 startDate: "2026-01-01",
             })),
@@ -168,7 +173,7 @@ describe("reminder routes", () => {
         const res = await request(app)
             .post(`${API}/mother-reminders`)
             .set("Authorization", auth)
-            .send({ category: "meals", timeOfDay: "afternoon", frequency: "daily" });
+            .send({ category: "meals", time: "13:00", frequency: "daily" });
         expect(res.status).toBe(400);
     });
 });
@@ -176,25 +181,57 @@ describe("reminder routes", () => {
 describe("reminder service", () => {
     const service = new ReminderService();
 
-    it("starts today, and a slot already past today starts tomorrow", async () => {
+    it("starts today, and a time already past today starts tomorrow", async () => {
         const { userId } = await mother();
         const morning = await service.create(
             userId,
-            { category: "medicine", timeOfDay: "morning", frequency: "daily", endWeeks: 1 },
+            { category: "medicine", time: "08:00", frequency: "daily", endWeeks: 1 },
             at("08:10"),
         );
         expect(morning).toMatchObject({
-            startDate: "2026-11-02",
-            endDate: "2026-11-08",
-            lastSentDate: "2026-11-02",
+            result: "ok",
+            reminder: {
+                timeMinutes: 480,
+                startDate: "2026-11-02",
+                endDate: "2026-11-08",
+                lastSentDate: "2026-11-02",
+            },
         });
 
         const evening = await service.create(
             userId,
-            { category: "medicine", timeOfDay: "evening", frequency: "daily" },
+            { category: "medicine", time: "19:30", frequency: "daily" },
             at("08:10"),
         );
-        expect(evening).toMatchObject({ endDate: null, lastSentDate: null });
+        expect(evening).toMatchObject({
+            reminder: { timeMinutes: 19 * 60 + 30, endDate: null, lastSentDate: null },
+        });
+    });
+
+    it("sets a one-time reminder for its day, and refuses one in the past", async () => {
+        const { userId } = await mother();
+        const later = await service.create(
+            userId,
+            { category: "other", detail: "Call doctor", time: "10:00", frequency: "once", date: "2026-11-06" },
+            at("08:10"),
+        );
+        expect(later).toMatchObject({
+            reminder: { startDate: "2026-11-06", endDate: "2026-11-06", lastSentDate: null },
+        });
+
+        // Today, after its time; and a day already gone.
+        for (const input of [
+            { time: "08:00", date: "2026-11-02" },
+            { time: "10:00", date: "2026-11-01" },
+        ]) {
+            expect(
+                await service.create(
+                    userId,
+                    { category: "tests", frequency: "once", ...input },
+                    at("08:10"),
+                ),
+            ).toEqual({ result: "in_past" });
+        }
     });
 
     it("hides reminders whose end date has passed", async () => {
@@ -202,7 +239,7 @@ describe("reminder service", () => {
         await motherReminderModel.create({
             userId,
             category: "tests",
-            timeOfDay: "morning",
+            timeMinutes: 480,
             frequency: "daily",
             startDate: "2026-10-01",
             endDate: "2026-10-28",
@@ -216,7 +253,7 @@ describe("custom reminders job", () => {
         motherReminderModel.create({
             userId,
             category: "medicine",
-            timeOfDay: "afternoon",
+            timeMinutes: 13 * 60,
             frequency: "daily",
             startDate: "2026-11-01",
             ...extra,
@@ -254,7 +291,23 @@ describe("custom reminders job", () => {
         expect(await customReminders(at("13:05"))).toMatchObject({ sent: 0, errors: 1 });
     });
 
-    it("does not send before the slot or more than an hour late", async () => {
+    it("sends an exact time within the 5-minute run after it", async () => {
+        const { userId } = await mother();
+        await seed(userId, { timeMinutes: 19 * 60 + 32 });
+        expect(await customReminders(at("19:30"))).toMatchObject({ sent: 0 });
+        expect(await customReminders(at("19:35"))).toMatchObject({ sent: 1 });
+    });
+
+    it("sends a one-time reminder once, on its day", async () => {
+        const { userId } = await mother();
+        await seed(userId, { frequency: "once", startDate: "2026-11-02", endDate: "2026-11-02" });
+        await customReminders(at("13:05", "2026-11-01"));
+        await customReminders(at("13:05"));
+        await customReminders(at("13:05", "2026-11-03"));
+        expect(sendPushNotificationMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not send before its time or more than an hour late", async () => {
         const { userId } = await mother();
         await seed(userId);
         await customReminders(at("12:55"));

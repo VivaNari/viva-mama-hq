@@ -1777,7 +1777,8 @@
         "daily": "Daily",
         "alternateDays": "Alternate days",
         "weekly": "Weekly",
-        "custom": "Custom"
+        "custom": "Custom",
+        "once": "Once"
       },
       "startEnd": "Start and end date",
       "startDate": "Start date",
@@ -1814,7 +1815,13 @@
       },
       "weeklyOn": "Every {{day}}",
       "endsOn": "Ends {{date}}",
-      "ongoingShort": "Ongoing"
+      "ongoingShort": "Ongoing",
+      "whichDay": "Which day?",
+      "changeTime": "Change time",
+      "changeDate": "Change day",
+      "sent": "Sent",
+      "inPast": "That time has already passed. Choose a later time.",
+      "limit": "You have the maximum number of reminders. Remove one to add another."
     }
   },
   "chatLogs": {
@@ -1831,6 +1838,11 @@
     "kicksSet": "Baby kicks: {{count}} today",
     "medicineTaken": "{{name}} taken",
     "expired": "This was for an earlier day. Please add today's from Log something.",
-    "medicineMissing": "This medicine is no longer on your list."
+    "medicineMissing": "This medicine is no longer on your list.",
+    "reminderTitle": "Set this reminder?",
+    "reminderTitleDone": "Reminder",
+    "yesSet": "Yes, set",
+    "setView": "Set ✓ · View",
+    "notSet": "Not set"
   }
 }

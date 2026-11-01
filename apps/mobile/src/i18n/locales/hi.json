@@ -1777,7 +1777,8 @@
         "daily": "रोज़",
         "alternateDays": "एक दिन छोड़कर",
         "weekly": "हर हफ़्ते",
-        "custom": "अपने हिसाब से"
+        "custom": "अपने हिसाब से",
+        "once": "एक बार"
       },
       "startEnd": "शुरू और ख़त्म होने की तारीख़",
       "startDate": "शुरू होने की तारीख़",
@@ -1814,7 +1815,13 @@
       },
       "weeklyOn": "हर {{day}}",
       "endsOn": "{{date}} को ख़त्म",
-      "ongoingShort": "लगातार"
+      "ongoingShort": "लगातार",
+      "whichDay": "किस दिन?",
+      "changeTime": "समय बदलें",
+      "changeDate": "दिन बदलें",
+      "sent": "भेजा गया",
+      "inPast": "यह समय निकल चुका है। कोई बाद का समय चुनें।",
+      "limit": "आपके रिमाइंडर पूरे हो गए हैं। नया जोड़ने के लिए कोई एक हटाएँ।"
     }
   },
   "chatLogs": {
@@ -1831,6 +1838,11 @@
     "kicksSet": "बच्चे की किक: आज {{count}}",
     "medicineTaken": "{{name}} ली",
     "expired": "यह पिछले दिन का था। कृपया आज का Log something से जोड़ें।",
-    "medicineMissing": "यह दवा अब आपकी सूची में नहीं है।"
+    "medicineMissing": "यह दवा अब आपकी सूची में नहीं है।",
+    "reminderTitle": "यह रिमाइंडर सेट करें?",
+    "reminderTitleDone": "रिमाइंडर",
+    "yesSet": "हाँ, सेट करें",
+    "setView": "सेट ✓ · देखें",
+    "notSet": "सेट नहीं किया"
   }
 }

@@ -1,10 +1,4 @@
-import {
-    IMotherReminder,
-    REMINDER_SEND_TOLERANCE_MINUTES,
-    REMINDER_SLOT_MINUTES,
-    REMINDER_TIMES,
-    TReminderTime,
-} from "../../types/reminder.types";
+import { IMotherReminder, REMINDER_SEND_TOLERANCE_MINUTES } from "../../types/reminder.types";
 import { formatDateToISO, getISTCalendarDate, parseISODateToStartOfDay } from "../date/date.service";
 
 const DAY_MS = 86_400_000;
@@ -49,17 +43,19 @@ export const isDueOn = (
             return weekdayOf(day) === weekdayOf(reminder.startDate);
         case "custom":
             return reminder.weekdays.includes(weekdayOf(day));
+        case "once":
+            return day === reminder.startDate;
         default:
             return false;
     }
 };
 
-/** The slots whose time has passed within the send tolerance. */
-export const slotsToSend = (minutes: number): TReminderTime[] =>
-    REMINDER_TIMES.filter((slot) => {
-        const lateBy = minutes - REMINDER_SLOT_MINUTES[slot];
-        return lateBy >= 0 && lateBy <= REMINDER_SEND_TOLERANCE_MINUTES;
-    });
-
-export const slotPassed = (slot: TReminderTime, minutes: number): boolean =>
-    minutes >= REMINDER_SLOT_MINUTES[slot];
+/**
+ * The reminder times a run at `minutes` should send: those already passed today, at
+ * most REMINDER_SEND_TOLERANCE_MINUTES ago. The window never wraps past midnight, so a
+ * 23:50 reminder whose every run failed is skipped rather than sent the next morning.
+ */
+export const sendWindow = (minutes: number): { from: number; to: number } => ({
+    from: Math.max(0, minutes - REMINDER_SEND_TOLERANCE_MINUTES),
+    to: minutes,
+});

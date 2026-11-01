@@ -14,11 +14,7 @@ import {
     TAppendLogType,
     TDailyLogType,
 } from "../../../../types/mother-log.types";
-import {
-    REMINDER_CATEGORIES,
-    REMINDER_FREQUENCIES,
-    REMINDER_TIMES,
-} from "../../../../types/reminder.types";
+import { REMINDER_CATEGORIES, REMINDER_FREQUENCIES } from "../../../../types/reminder.types";
 
 /**
  * Mother log request validation.
@@ -105,6 +101,43 @@ export const motherLogDailyValidator = Joi.object({
 });
 
 /**
+ * A reminder's fields, shared by POST /mother-reminders and reminders Viva proposes in
+ * chat. Repeating reminders start today (set by the server); `endWeeks` absent or null
+ * means ongoing. A one-time reminder takes a `date` instead (default today).
+ */
+export const reminderFieldsSchema = Joi.object({
+    category: Joi.string()
+        .valid(...REMINDER_CATEGORIES)
+        .required(),
+    detail: Joi.when("category", {
+        is: "other",
+        then: Joi.string().trim().min(1).max(80).required(),
+        otherwise: Joi.forbidden(),
+    }),
+    time: Joi.string()
+        .pattern(/^([01]\d|2[0-3]):[0-5]\d$/)
+        .required(),
+    frequency: Joi.string()
+        .valid(...REMINDER_FREQUENCIES)
+        .required(),
+    weekdays: Joi.when("frequency", {
+        is: "custom",
+        then: Joi.array().items(Joi.number().integer().min(0).max(6)).min(1).max(7).required(),
+        otherwise: Joi.forbidden(),
+    }),
+    date: Joi.when("frequency", {
+        is: "once",
+        then: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/),
+        otherwise: Joi.forbidden(),
+    }),
+    endWeeks: Joi.when("frequency", {
+        is: "once",
+        then: Joi.forbidden(),
+        otherwise: Joi.number().integer().min(1).max(52).allow(null),
+    }),
+});
+
+/**
  * A log the chatbot read out of her message, before it becomes a confirm card.
  *
  * The chatbot mirrors these shapes, but this server owns them: every proposal is held
@@ -113,7 +146,7 @@ export const motherLogDailyValidator = Joi.object({
  */
 export const chatLogProposalValidator = Joi.object({
     logType: Joi.string()
-        .valid(...APPEND_LOG_TYPES, ...DAILY_LOG_TYPES, "medicine_dose")
+        .valid(...APPEND_LOG_TYPES, ...DAILY_LOG_TYPES, "medicine_dose", "reminder")
         .required(),
     fields: Joi.alternatives()
         .conditional("logType", {
@@ -123,6 +156,8 @@ export const chatLogProposalValidator = Joi.object({
                     then: FIELD_SCHEMAS[type],
                 })),
                 { is: "medicine_dose", then: Joi.object({}) },
+                // Not a log: a reminder she asked Viva to set, created on her Yes.
+                { is: "reminder", then: reminderFieldsSchema },
             ],
         })
         .required(),
@@ -170,29 +205,5 @@ export const motherMedicineTakenValidator = Joi.object({
     source: Joi.string().valid(...LOG_SOURCES),
 });
 
-/**
- * POST /mother-reminders. The start date is always today and is set by the server;
- * `endWeeks` absent or null means ongoing.
- */
-export const motherReminderCreateValidator = Joi.object({
-    category: Joi.string()
-        .valid(...REMINDER_CATEGORIES)
-        .required(),
-    detail: Joi.when("category", {
-        is: "other",
-        then: Joi.string().trim().min(1).max(80).required(),
-        otherwise: Joi.forbidden(),
-    }),
-    timeOfDay: Joi.string()
-        .valid(...REMINDER_TIMES)
-        .required(),
-    frequency: Joi.string()
-        .valid(...REMINDER_FREQUENCIES)
-        .required(),
-    weekdays: Joi.when("frequency", {
-        is: "custom",
-        then: Joi.array().items(Joi.number().integer().min(0).max(6)).min(1).max(7).required(),
-        otherwise: Joi.forbidden(),
-    }),
-    endWeeks: Joi.number().integer().min(1).max(52).allow(null),
-});
+/** POST /mother-reminders */
+export const motherReminderCreateValidator = reminderFieldsSchema;

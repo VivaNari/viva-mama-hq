@@ -6,12 +6,13 @@ import { messages } from "../../../../constants/messages";
 import ReminderService, {
     ICreateReminderInput,
 } from "../../../../services/reminders/reminder.service";
-import { IMotherReminder } from "../../../../types/reminder.types";
+import { formatReminderTime, IMotherReminder } from "../../../../types/reminder.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 
 /**
- * Her reminders from the Viva AI Reminders screen. Nothing is seeded: the list holds
- * only what she set. The custom-reminders job sends them as push notifications.
+ * Her reminders, set on the Viva AI Reminders screen or through Viva in chat. Nothing is
+ * seeded: the list holds only what she set. The custom-reminders job sends them as push
+ * notifications.
  */
 export default class MotherReminderController {
     private service: ReminderService;
@@ -24,12 +25,13 @@ export default class MotherReminderController {
         _id: reminder._id,
         category: reminder.category,
         detail: reminder.detail,
-        timeOfDay: reminder.timeOfDay,
+        time: formatReminderTime(reminder.timeMinutes),
         frequency: reminder.frequency,
         weekdays: reminder.weekdays,
         startDate: reminder.startDate,
         endDate: reminder.endDate,
         careModel: reminder.careModel,
+        lastSentDate: reminder.lastSentDate,
     });
 
     getReminders = async (req: Request, res: Response, next: NextFunction) => {
@@ -49,22 +51,25 @@ export default class MotherReminderController {
 
     createReminder = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const reminder = await this.service.create(
+            const created = await this.service.create(
                 req.user._id,
                 req.body as ICreateReminderInput,
             );
-            if (!reminder) {
+            if (created.result !== "ok") {
                 return sendResponse({
-                    data: null,
+                    data: { code: created.result },
                     statusCode: StatusCodes.BAD_REQUEST,
                     success: false,
-                    message: messages.REMINDER_LIMIT_REACHED,
+                    message:
+                        created.result === "limit"
+                            ? messages.REMINDER_LIMIT_REACHED
+                            : messages.REMINDER_IN_PAST,
                     response: res,
                 });
             }
 
             sendResponse({
-                data: this.serialize(reminder),
+                data: this.serialize(created.reminder),
                 statusCode: StatusCodes.CREATED,
                 success: true,
                 message: messages.REMINDER_SAVED_SUCCESS,

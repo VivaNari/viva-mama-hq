@@ -35,6 +35,7 @@ import conversationModel from "../src/models/conversation.model";
 import messageModel from "../src/models/message.model";
 import motherLogModel from "../src/models/mother-log.model";
 import motherMedicineModel from "../src/models/mother-medicine.model";
+import motherReminderModel from "../src/models/mother-reminder.model";
 import UserModel from "../src/models/user.model";
 import ChatFlowAIService from "../src/services/chat-system/chat-flow-ai.service";
 import { getISTCalendarDate } from "../src/services/date/date.service";
@@ -353,5 +354,93 @@ describe("the confirm route", () => {
             .set("Authorization", auth)
             .send({ messageId, proposalId: "nope", accept: true });
         expect(bad.status).toBe(400);
+    });
+});
+
+describe("reminders from chat", () => {
+    // Far enough ahead that "today, after its time" never trips the test.
+    const tomorrow = () =>
+        new Date(getISTCalendarDate().getTime() + MS_PER_DAY).toISOString().slice(0, 10);
+
+    it("sets the reminder on Yes, once", async () => {
+        const userId = await createMother();
+        const { messageId, proposalIds } = await cardMessage(userId, [
+            {
+                logType: "reminder",
+                fields: { category: "other", detail: "Drink water", time: "19:30", frequency: "daily" },
+            },
+        ]);
+
+        const outcome = await service.confirm({
+            userId,
+            messageId,
+            proposalId: proposalIds[0] as string,
+            accept: true,
+        });
+        expect(outcome).toMatchObject({ result: "ok", item: { status: "saved" } });
+        await service.confirm({ userId, messageId, proposalId: proposalIds[0] as string, accept: true });
+
+        const reminders = await motherReminderModel.find({ userId }).lean();
+        expect(reminders).toHaveLength(1);
+        expect(reminders[0]).toMatchObject({ detail: "Drink water", timeMinutes: 19 * 60 + 30 });
+    });
+
+    it("drops a reminder proposal that breaks the reminder rules", async () => {
+        const userId = await createMother();
+        const items = await service.prepare(userId, [
+            { logType: "reminder", fields: { category: "medicine", time: "25:00", frequency: "daily" } },
+            { logType: "reminder", fields: { category: "medicine", time: "09:00", frequency: "custom" } },
+            {
+                logType: "reminder",
+                fields: { category: "tests", time: "09:00", frequency: "once", date: tomorrow() },
+            },
+        ]);
+        expect(items).toHaveLength(1);
+        expect(items[0]?.fields).toMatchObject({ frequency: "once" });
+    });
+
+    it("refuses a one-time reminder whose time has passed", async () => {
+        const userId = await createMother();
+        const { messageId, proposalIds } = await cardMessage(userId, [
+            {
+                logType: "reminder",
+                fields: { category: "tests", time: "09:00", frequency: "once", date: "2020-01-01" },
+            },
+        ]);
+        const outcome = await service.confirm({
+            userId,
+            messageId,
+            proposalId: proposalIds[0] as string,
+            accept: true,
+        });
+        expect(outcome).toEqual({ result: "reminder_in_past" });
+        expect(await motherReminderModel.countDocuments({ userId })).toBe(0);
+    });
+
+    it("a typed haan sets it and the reply talks about the reminder", async () => {
+        const userId = await createMother();
+        const { conversationId, messageId } = await cardMessage(userId, [
+            {
+                logType: "reminder",
+                fields: { category: "medicine", time: "21:00", frequency: "daily" },
+            },
+        ]);
+        mockSendUserQuery.mockReset();
+
+        const user = await UserModel.findById(userId);
+        await new ChatFlowAIService().processChatbotResponse(
+            user as never,
+            "haan",
+            "session-1",
+            new Types.ObjectId(conversationId) as never,
+            "default",
+        );
+
+        expect(mockSendUserQuery).not.toHaveBeenCalled();
+        expect(await motherReminderModel.countDocuments({ userId })).toBe(1);
+        const reply = await messageModel
+            .findOne({ conversationId, role: MessageRoleEnum.ASSITANT, _id: { $ne: messageId } })
+            .lean();
+        expect(reply?.text).toContain("Reminder set");
     });
 });

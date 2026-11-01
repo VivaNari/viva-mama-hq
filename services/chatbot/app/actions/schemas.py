@@ -1,6 +1,10 @@
 """
 What the extraction model returns, and the proposals built from it.
 
+Reminders she asks for ride the same path: they become proposals with
+`logType: "reminder"`, checked against the backend's reminder rules
+(`reminderFieldsSchema` in the same validator file) and created on her Yes.
+
 The model fills a deliberately flat schema (one optional slot per value) because
 flat schemas are what small structured-output calls get right. `to_proposals`
 then turns that into the backend's `{logType, fields}` shape and applies the same
@@ -13,7 +17,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Literal, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 from pydantic import BaseModel, Field
 
@@ -63,10 +69,39 @@ class ExtractedLog(BaseModel):
     foods: List[str] = Field(default_factory=list, description="meal: foods as she said them")
 
 
+class ExtractedReminder(BaseModel):
+    """A reminder she asked Viva to set."""
+
+    category: Literal["medicine", "meals", "exercise", "tests", "other"] = Field(
+        description="medicine: tablets/supplements; meals: eating; exercise: walk/yoga; "
+        "tests: checking BP/sugar or other readings; other: anything else"
+    )
+    detail: Optional[str] = Field(
+        None, description="other only: what to remind her about, in her words, short"
+    )
+    time: Optional[str] = Field(
+        None, description="clock time as 24-hour HH:MM if she gave one ('9:30 pm' -> '21:30')"
+    )
+    part_of_day: Optional[Literal["morning", "afternoon", "evening", "night"]] = Field(
+        None, description="only when she gives a part of the day but no clock time"
+    )
+    frequency: Literal["daily", "alternateDays", "weekly", "custom", "once"] = Field(
+        "daily",
+        description="once for a single day; custom with weekdays for named weekdays "
+        "('every Monday and Thursday')",
+    )
+    weekdays: List[int] = Field(
+        default_factory=list, description="custom: 0=Sunday, 1=Monday ... 6=Saturday"
+    )
+    date: Optional[str] = Field(None, description="once: the day as YYYY-MM-DD, if she named one")
+    end_weeks: Optional[int] = Field(None, description="'for 4 weeks' -> 4; omit if ongoing")
+
+
 class ExtractionResult(BaseModel):
-    """Everything loggable in one message."""
+    """Everything loggable in one message, and any reminders she asked for."""
 
     logs: List[ExtractedLog] = Field(default_factory=list)
+    reminders: List[ExtractedReminder] = Field(default_factory=list)
     past_day: bool = Field(
         False, description="true if she is reporting an earlier day (yesterday, last week)"
     )
@@ -97,6 +132,14 @@ _FOODS = {
     "poha": ["poha", "पोहा"],
     "nuts": ["nut", "nuts", "badam", "almond", "seeds", "dry fruit", "मेवा", "बादाम"],
 }
+
+# The quick-pick times behind Morning / Afternoon / Evening / Night (backend
+# REMINDER_QUICK_TIMES), used when she gives a part of the day but no clock time.
+QUICK_TIMES = {"morning": "08:00", "afternoon": "13:00", "evening": "18:00", "night": "21:00"}
+
+_HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+IST = ZoneInfo("Asia/Kolkata")
 
 # Backend ranges (mother-log.validator.ts).
 _RANGES = {
@@ -152,9 +195,64 @@ class Proposals:
     out_of_range: List[str] = field(default_factory=list)
 
 
-def to_proposals(result: ExtractionResult) -> Proposals:
-    """Turn extracted logs into backend proposals, or note what is missing."""
+def reminder_proposal(
+    reminder: ExtractedReminder, now: datetime
+) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    """
+    A backend reminder proposal, or the reason there is none: "time" when she has
+    to say when, "past" when the day or time she named has already gone.
+    """
+    time = reminder.time if reminder.time and _HHMM.match(reminder.time) else None
+    if time is None and reminder.part_of_day:
+        time = QUICK_TIMES[reminder.part_of_day]
+    if time is None:
+        return None, "time"
+
+    frequency = reminder.frequency
+    weekdays = sorted({d for d in reminder.weekdays if 0 <= d <= 6})
+    # "Every Monday": the backend's weekly repeats on the start day, so a named
+    # weekday is a custom set of days.
+    if frequency == "weekly" and weekdays:
+        frequency = "custom"
+    if frequency == "custom" and not weekdays:
+        frequency = "weekly"
+
+    fields: Dict[str, Any] = {"category": reminder.category, "time": time, "frequency": frequency}
+    if reminder.category == "other":
+        fields["detail"] = (reminder.detail or "Reminder").strip()[:80] or "Reminder"
+    if frequency == "custom":
+        fields["weekdays"] = weekdays
+
+    if frequency == "once":
+        today = now.strftime("%Y-%m-%d")
+        now_hhmm = now.strftime("%H:%M")
+        if reminder.date and _DATE.match(reminder.date):
+            date = reminder.date
+        else:
+            # No day named: today if the time is still ahead, else tomorrow.
+            date = today if time > now_hhmm else (now + timedelta(days=1)).strftime("%Y-%m-%d")
+        if date < today or (date == today and time <= now_hhmm):
+            return None, "past"
+        fields["date"] = date
+    elif reminder.end_weeks and 1 <= reminder.end_weeks <= 52:
+        fields["endWeeks"] = reminder.end_weeks
+
+    return {"logType": "reminder", "fields": fields}, None
+
+
+def to_proposals(result: ExtractionResult, now: Optional[datetime] = None) -> Proposals:
+    """Turn extracted logs and reminders into backend proposals, or note what is missing."""
     out = Proposals()
+    now = now or datetime.now(IST)
+
+    for reminder in result.reminders:
+        proposal, problem = reminder_proposal(reminder, now)
+        if proposal:
+            out.logs.append(proposal)
+        elif problem == "time":
+            out.missing.append(("reminder", "time"))
+        else:
+            out.out_of_range.append("reminder")
 
     for log in result.logs:
         kind = log.kind

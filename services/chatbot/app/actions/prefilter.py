@@ -3,8 +3,9 @@ Cheap gate in front of the extraction LLM call.
 
 Most messages are questions, and they should not pay for an extra model call.
 A message is worth extracting only if it mentions something loggable: a reading
-word with a number, or a daily-log phrase (water, kicks, medicine taken, pumping,
-a meal). English, Hindi (Devanagari) and Roman-script Hinglish are covered.
+word with a number, a daily-log phrase (water, kicks, medicine taken, pumping,
+a meal), or a request for a reminder. English, Hindi (Devanagari) and
+Roman-script Hinglish are covered.
 
 False positives are cheap (one extra small call that returns no logs); false
 negatives mean a log is missed, so the keyword lists lean inclusive.
@@ -42,10 +43,20 @@ _DAILY_WORDS = re.compile(
 )
 
 
+# Reminder requests: "remind me", "yaad dilana", "रिमाइंडर लगा दो".
+_REMINDER_WORDS = re.compile(
+    r"\b(remind|reminder|reminders|alarm|alert\s*me|yaad|yad\s*dila|notify\s*me)\b"
+    r"|याद|रिमाइंडर|अलार्म",
+    re.IGNORECASE,
+)
+
+
 def may_contain_log(text: str) -> bool:
-    """True if `text` could be a log worth sending to the extractor."""
+    """True if `text` could hold a log or a reminder worth sending to the extractor."""
     if not text or not text.strip():
         return False
+    if _REMINDER_WORDS.search(text):
+        return True
     if _BP_SHAPE.search(text):
         return True
     if _NUMBER.search(text) and _READING_WORDS.search(text):

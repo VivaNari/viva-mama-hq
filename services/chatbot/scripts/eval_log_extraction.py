@@ -21,7 +21,7 @@ from app.actions.extractor import extract_logs  # noqa: E402
 from app.actions.schemas import to_proposals  # noqa: E402
 
 # (message, expected logTypes in order; "?" = Viva should ask for a missing value,
-#  "past" = earlier day, [] = nothing to log)
+#  "past" = earlier day, [] = nothing to log). Reminders count as logType "reminder".
 CASES = [
     ("today my bp is 118/80", ["bp"]),
     ("bp 130/90", ["bp"]),
@@ -54,6 +54,17 @@ CASES = [
     ("what should my sugar level be?", []),
     ("my husband's bp is 140/90", []),
     ("how much water should I drink?", []),
+    ("remind me to drink water at 7:30 pm every day", ["reminder"]),
+    ("remind me to take my iron tablet at night", ["reminder"]),
+    ("kal subah 10 baje doctor ko call karne ka yaad dilana", ["reminder"]),
+    ("har somvar aur guruvar shaam 6 baje walk ka reminder laga do", ["reminder"]),
+    ("रोज़ रात 9 बजे दवा का रिमाइंडर लगा दो", ["reminder"]),
+    ("remind me to check my sugar every morning for 2 weeks", ["reminder"]),
+    ("set a reminder for my scan on Friday at 11", ["reminder"]),
+    ("remind me to take calcium", "?"),
+    ("every other day remind me to do yoga at 7 am", ["reminder"]),
+    ("can you set reminders?", []),
+    ("took my iron, and remind me tomorrow at 9 too", ["reminder", "medicine_dose"]),
 ]
 
 
