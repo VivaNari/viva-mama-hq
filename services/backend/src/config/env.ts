@@ -189,6 +189,19 @@ const env = {
     // Bumped whenever the consent text changes, so she is asked again.
     CHAT_ATTACHMENT_CONSENT_VERSION:
         process.env.CHAT_ATTACHMENT_CONSENT_VERSION?.trim() || "2026-11-v1",
+    // ── Health records (scans, lab reports, prescriptions, MCH card) ────────────────
+    // Off unless HEALTH_RECORDS_ENABLED=true; the app hides the records screens when
+    // GET /health-records/config says disabled, so this is also the kill switch.
+    HEALTH_RECORDS_ENABLED: process.env.HEALTH_RECORDS_ENABLED === "true",
+    // Private bucket with NO lifecycle rule: these are kept until she deletes them.
+    // Must be the bucket the chatbot is told to read (HEALTH_RECORDS_BUCKET there too).
+    HEALTH_RECORDS_BUCKET: process.env.HEALTH_RECORDS_BUCKET?.trim() || "",
+    HEALTH_RECORD_MAX_FILES: intFromEnv(process.env.HEALTH_RECORD_MAX_FILES, 5),
+    HEALTH_RECORD_MAX_BYTES: intFromEnv(process.env.HEALTH_RECORD_MAX_BYTES, 10 * 1024 * 1024),
+    HEALTH_RECORD_MAX_PDF_PAGES: intFromEnv(process.env.HEALTH_RECORD_MAX_PDF_PAGES, 20),
+    // Bumped whenever the consent text changes, so she is asked again.
+    HEALTH_RECORDS_CONSENT_VERSION:
+        process.env.HEALTH_RECORDS_CONSENT_VERSION?.trim() || "2026-11-v1",
     LLM_SERVER_URL: process.env.LLM_SERVER_URL as string,
     LLM_API_KEY: process.env.LLM_API_KEY as string,
     GETGABS_API_KEY: process.env.GETGABS_API_KEY as string,

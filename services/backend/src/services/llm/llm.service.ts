@@ -6,6 +6,69 @@ import type { TChatbotAttachmentRef } from "../chat-system/chat-attachment.servi
 
 const log = createModuleLogger(logger, "llm-client");
 
+export type TRecordSubjectPayload = {
+    type: "mother" | "child";
+    child_name?: string | null;
+    child_age_text?: string | null;
+};
+
+export type TRecordAnalyzePayload = {
+    user_id: string;
+    record_id: string;
+    category: string;
+    scan_type?: string | null;
+    subject: TRecordSubjectPayload;
+    files: TChatbotAttachmentRef[];
+    lang: "en" | "hi";
+};
+
+export type TRecordAnalyzeResult = {
+    request_id: string;
+    verdict: string;
+    reason_code: string;
+    document_type?: string | null;
+    message?: string | null;
+    title?: string | null;
+    report_date?: string | null;
+    analysis?: Record<string, unknown> | null;
+    summary_markdown?: string | null;
+    digest?: string | null;
+    severity: "NONE" | "MEDIUM" | "HIGH";
+    critical_matches: string[];
+};
+
+export type THealthSummaryPayload = {
+    user_id: string;
+    lang: "en" | "hi";
+    records: {
+        record_id: string;
+        record_date: string;
+        category: string;
+        scan_type?: string | null;
+        subject: TRecordSubjectPayload;
+        title?: string | null;
+        digest: string;
+        severity: "NONE" | "MEDIUM" | "HIGH";
+        critical_matches: string[];
+        out_of_range: {
+            name: string;
+            value: string;
+            unit?: string | null;
+            reference_range?: string | null;
+            status: string;
+        }[];
+    }[];
+    vitals: {
+        type: string;
+        value: string;
+        unit?: string | null;
+        note?: string | null;
+        date: string;
+    }[];
+    medicines: { name: string; dose?: string | null; frequency?: string | null }[];
+    child_names: string[];
+};
+
 /**
  * Longer than the chatbot's own worst case, so its answer or error arrives before we
  * give up. For an attachment turn that is download + triage + analysis = 120 s (see
@@ -58,6 +121,44 @@ class LLMService {
                 latencyMs: Date.now() - startedAt,
             },
             "Chatbot answered",
+        );
+        return data;
+    };
+
+    /** Read one saved health record. Always a verdict, never an HTTP error, on success. */
+    analyzeRecord = async (payload: TRecordAnalyzePayload): Promise<TRecordAnalyzeResult> => {
+        const startedAt = Date.now();
+        const { data } = await this.axiosInstance.post("/v1/records/analyze", payload);
+        log.info(
+            {
+                userId: payload.user_id,
+                recordId: payload.record_id,
+                files: payload.files.length,
+                verdict: data?.verdict,
+                reasonCode: data?.reason_code,
+                requestId: data?.request_id,
+                latencyMs: Date.now() - startedAt,
+            },
+            "Record analysed",
+        );
+        return data;
+    };
+
+    /** Her overall health summary from the stored per-record summaries. */
+    buildHealthSummary = async (
+        payload: THealthSummaryPayload,
+    ): Promise<{ content: Record<string, unknown>; share_text: string; request_id: string }> => {
+        const startedAt = Date.now();
+        const { data } = await this.axiosInstance.post("/v1/records/summary", payload);
+        log.info(
+            {
+                userId: payload.user_id,
+                records: payload.records.length,
+                vitals: payload.vitals.length,
+                requestId: data?.request_id,
+                latencyMs: Date.now() - startedAt,
+            },
+            "Health summary built",
         );
         return data;
     };

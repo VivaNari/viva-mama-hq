@@ -25,16 +25,21 @@ from app.actions import replies
 from app.actions.extractor import extract_logs
 from app.actions.prefilter import may_contain_log
 from app.actions.schemas import to_proposals
+from app.attachments.critical_values import (
+    bp_level,
+    glucose_level,
+    hb_level,
+    urine_protein_level,
+)
 from app.escalation.policy import format_escalation_banner
 from app.guardrails.input_guard import check_prompt_injection
 from app.memory.redis_memory import RedisSessionMemory
 
 logger = logging.getLogger(__name__)
 
-# Danger cut-offs for a value she reports (Red flags & escalation tab of the
-# 1000-day schedule). To be confirmed with the clinical advisors.
-BP_EMERGENCY = (160, 110)
-HB_URGENT_BELOW = 7.0
+# BP, Hb, sugar and urine protein use the same cut-offs as a report she uploads
+# (app.attachments.critical_values). Fever has no report rule; to be confirmed
+# with the clinical advisors.
 FEVER_F = 100.4
 
 
@@ -52,18 +57,35 @@ def danger_banner(proposals: List[Dict[str, Any]]) -> str:
     """A red-flag banner for dangerous values she reported, or ""."""
     high: List[str] = []
     medium: List[str] = []
+
+    def add(level: str, label: str) -> None:
+        if level == "HIGH":
+            high.append(label)
+        elif level == "MEDIUM":
+            medium.append(label)
+
+    bp_raised = False
     for proposal in proposals:
         fields = proposal.get("fields", {})
         log_type = proposal.get("logType")
-        if log_type == "bp" and (
-            fields.get("systolic", 0) >= BP_EMERGENCY[0]
-            or fields.get("diastolic", 0) >= BP_EMERGENCY[1]
-        ):
-            high.append(f"blood pressure {fields['systolic']}/{fields['diastolic']}")
-        elif log_type == "hb" and fields.get("value", 99) < HB_URGENT_BELOW:
-            medium.append(f"haemoglobin {fields['value']} g/dL")
+        if log_type == "bp" and "systolic" in fields and "diastolic" in fields:
+            level = bp_level(fields["systolic"], fields["diastolic"])
+            bp_raised = bp_raised or level != "NONE"
+            add(level, f"blood pressure {fields['systolic']}/{fields['diastolic']}")
+        elif log_type == "hb" and "value" in fields:
+            add(hb_level(fields["value"]), f"haemoglobin {fields['value']} g/dL")
+        elif log_type == "sugar" and "value" in fields:
+            add(glucose_level(fields["value"]), f"blood sugar {fields['value']} mg/dL")
         elif log_type == "temperature" and fields.get("valueF", 0) >= FEVER_F:
             medium.append(f"fever {fields['valueF']}°F")
+    # Protein in urine is graded against BP, as on a report: read it after BP.
+    for proposal in proposals:
+        fields = proposal.get("fields", {})
+        if proposal.get("logType") == "urine_protein" and "value" in fields:
+            add(
+                urine_protein_level(int(fields["value"]), bp_raised),
+                f"urine protein {fields['value']}+",
+            )
 
     if high:
         return format_escalation_banner("HIGH", high + medium)

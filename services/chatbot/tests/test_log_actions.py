@@ -25,6 +25,8 @@ from app.actions.schemas import (
     medicine_ref,
     to_proposals,
 )
+from app.attachments.critical_values import evaluate
+from app.attachments.schemas import AnalysisOutput, Finding
 from app.memory.redis_memory import RedisSessionMemory, _InProcessStore
 
 
@@ -129,6 +131,54 @@ class TestDangerBanner(unittest.TestCase):
         self.assertEqual(
             danger_banner([{"logType": "bp", "fields": {"systolic": 118, "diastolic": 80}}]), ""
         )
+
+    def test_typed_values_match_the_report_rules(self) -> None:
+        """The same value raises the same banner typed in chat as on a report."""
+        cases = [
+            ({"logType": "bp", "fields": {"systolic": 145, "diastolic": 92}}, "BP", "MEDIUM"),
+            ({"logType": "hb", "fields": {"value": 6.5}}, "Hb", "HIGH"),
+            ({"logType": "hb", "fields": {"value": 8.5}}, "Hb", "MEDIUM"),
+            (
+                {"logType": "sugar", "fields": {"value": 260, "timing": "post_meal"}},
+                "Sugar",
+                "HIGH",
+            ),
+        ]
+        for proposal, report_name, level in cases:
+            banner = danger_banner([proposal])
+            self.assertIn("Urgent" if level == "HIGH" else "Medical Attention", banner, proposal)
+            fields = proposal["fields"]
+            value = (
+                f"{fields['systolic']}/{fields['diastolic']}"
+                if "systolic" in fields
+                else str(fields["value"])
+            )
+            report = AnalysisOutput(
+                out_of_scope=False,
+                findings=[
+                    Finding(
+                        name={"BP": "Blood pressure", "Hb": "Haemoglobin", "Sugar": "Glucose"}[
+                            report_name
+                        ],
+                        value=value,
+                        unit={"BP": "mmHg", "Hb": "g/dL", "Sugar": "mg/dL"}[report_name],
+                        range_source="none",
+                        status="not_stated",
+                        plain_explanation="",
+                    )
+                ],
+            )
+            self.assertEqual(evaluate(report)[0], level, proposal)
+
+    def test_urine_protein_with_raised_bp_is_urgent(self) -> None:
+        banner = danger_banner(
+            [
+                {"logType": "urine_protein", "fields": {"value": 2}},
+                {"logType": "bp", "fields": {"systolic": 145, "diastolic": 95}},
+            ]
+        )
+        self.assertIn("Urgent", banner)
+        self.assertIn("urine protein 2+", banner)
 
 
 class TestRunLogActions(unittest.TestCase):

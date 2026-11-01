@@ -6,7 +6,8 @@ import { messages } from "../constants/messages";
 import { EAttachmentError } from "../types/chat-attachment.types";
 
 /**
- * Multipart parsing for a single chat attachment, held in memory.
+ * Multipart parsing for a single uploaded file (chat attachment or health record page),
+ * held in memory.
  *
  * Memory is fine at this size (one file, capped) and lets the file be validated and
  * cleaned before a byte of it is stored anywhere. What memory cannot absorb is many at
@@ -31,41 +32,49 @@ export const sendAttachmentError = (
     });
 };
 
-const parser = multer({
-    storage: multer.memoryStorage(),
-    limits: {
-        fileSize: env.CHAT_ATTACHMENT_MAX_BYTES,
-        files: 1,
-        fields: 4,
-        parts: 6,
-        fieldSize: 1024,
-    },
-}).single("file");
+/**
+ * A single-file multipart parser with its own size cap. Every parser made here shares
+ * one in-flight count, since they all draw on the same instance's memory.
+ */
+export const makeSingleUpload = ({ maxBytes }: { maxBytes: number }) => {
+    const parser = multer({
+        storage: multer.memoryStorage(),
+        limits: {
+            fileSize: maxBytes,
+            files: 1,
+            fields: 4,
+            parts: 6,
+            fieldSize: 1024,
+        },
+    }).single("file");
 
-export const singleAttachmentUpload = (req: Request, res: Response, next: NextFunction) => {
-    if (inFlight >= MAX_CONCURRENT_UPLOADS) {
-        res.setHeader("Retry-After", "2");
-        return sendAttachmentError(res, 503, EAttachmentError.BUSY);
-    }
-    inFlight += 1;
-    let released = false;
-    const release = () => {
-        if (!released) {
-            released = true;
-            inFlight -= 1;
+    return (req: Request, res: Response, next: NextFunction) => {
+        if (inFlight >= MAX_CONCURRENT_UPLOADS) {
+            res.setHeader("Retry-After", "2");
+            return sendAttachmentError(res, 503, EAttachmentError.BUSY);
         }
-    };
-    res.on("finish", release);
-    res.on("close", release);
-
-    parser(req, res, (err: unknown) => {
-        if (!err) return next();
-        if (err instanceof multer.MulterError) {
-            if (err.code === "LIMIT_FILE_SIZE") {
-                return sendAttachmentError(res, 413, EAttachmentError.TOO_LARGE);
+        inFlight += 1;
+        let released = false;
+        const release = () => {
+            if (!released) {
+                released = true;
+                inFlight -= 1;
             }
-            return sendAttachmentError(res, 400, EAttachmentError.MISSING);
-        }
-        return next(err);
-    });
+        };
+        res.on("finish", release);
+        res.on("close", release);
+
+        parser(req, res, (err: unknown) => {
+            if (!err) return next();
+            if (err instanceof multer.MulterError) {
+                if (err.code === "LIMIT_FILE_SIZE") {
+                    return sendAttachmentError(res, 413, EAttachmentError.TOO_LARGE);
+                }
+                return sendAttachmentError(res, 400, EAttachmentError.MISSING);
+            }
+            return next(err);
+        });
+    };
 };
+
+export const singleAttachmentUpload = makeSingleUpload({ maxBytes: env.CHAT_ATTACHMENT_MAX_BYTES });

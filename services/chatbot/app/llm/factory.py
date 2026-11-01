@@ -37,6 +37,8 @@ _MAIN_TEMPERATURE = 0.2
 _CLASSIFIER_TEMPERATURE = 0.0
 # Reading a report: near-deterministic, since the same report must read the same way.
 _ANALYZER_TEMPERATURE = 0.1
+# Summarising her stored records: the same records should summarise the same way.
+_SUMMARIZER_TEMPERATURE = 0.1
 
 # Cache built clients by config so repeated calls reuse one instance.
 _clients: Dict[str, BaseChatModel] = {}
@@ -93,6 +95,9 @@ def _build_vertex(model: str, temperature: float, role: str) -> BaseChatModel:
     elif role == "analyzer":
         # Attachment explanation: a JSON object holding up to ~25 findings.
         kwargs["max_output_tokens"] = 4096
+    elif role == "summarizer":
+        # Overall health summary: a JSON object of short points across her records.
+        kwargs["max_output_tokens"] = 3072
     else:
         # Main generation / translation: generous cap so structured, formatted
         # answers (bullets, product/expert sections) complete in full.
@@ -114,6 +119,7 @@ def get_llm(
     extractor: bool = False,
     vision_classifier: bool = False,
     analyzer: bool = False,
+    summarizer: bool = False,
 ) -> BaseChatModel:
     """Return a chat model for `model` (default: settings.llm_model).
 
@@ -134,12 +140,17 @@ def get_llm(
     triage call that decides whether a file is a mother/baby health document, and
     the call that reads an accepted one. Both are deterministic (or nearly) and
     return JSON; they need a vision-capable provider (see `supports_vision`).
+
+    `summarizer=True` is the text-only role that turns her stored per-record
+    summaries into one overall health summary (JSON).
     """
     resolved = model or settings.llm_model
     if classifier or extractor or vision_classifier:
         temperature = _CLASSIFIER_TEMPERATURE
     elif analyzer:
         temperature = _ANALYZER_TEMPERATURE
+    elif summarizer:
+        temperature = _SUMMARIZER_TEMPERATURE
     else:
         temperature = _MAIN_TEMPERATURE
     provider = settings.llm_provider
@@ -152,6 +163,8 @@ def get_llm(
         role = "vision_classifier"
     elif analyzer:
         role = "analyzer"
+    elif summarizer:
+        role = "summarizer"
     else:
         role = "main"
     cache_key = f"{provider}:{resolved}:{temperature}:{role}"

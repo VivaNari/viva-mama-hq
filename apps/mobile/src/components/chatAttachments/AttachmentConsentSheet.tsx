@@ -12,13 +12,15 @@ interface IAttachmentConsentSheetProps {
     submitting: boolean;
     onAccept: () => void;
     onDecline: () => void;
+    /** Where the copy lives: chat by default, health records pass their own. */
+    i18nPrefix?: string;
 }
 
 const POINTS = [
-    { icon: 'file-heart', key: 'chat.attachments.consent.purpose' },
-    { icon: 'lock', key: 'chat.attachments.consent.storage' },
-    { icon: 'trash-2', key: 'chat.attachments.consent.deletion' },
-    { icon: 'stethoscope', key: 'chat.attachments.consent.notDiagnosis' },
+    { icon: 'file-heart', key: 'purpose' },
+    { icon: 'lock', key: 'storage' },
+    { icon: 'trash-2', key: 'deletion' },
+    { icon: 'stethoscope', key: 'notDiagnosis' },
 ];
 
 /**
@@ -31,18 +33,20 @@ const AttachmentConsentSheet = ({
     submitting,
     onAccept,
     onDecline,
+    i18nPrefix = 'chat.attachments.consent',
 }: IAttachmentConsentSheetProps) => {
     const { t } = useTranslation();
+    const k = (key: string) => `${i18nPrefix}.${key}`;
     return (
-        <BottomSheetModal visible={visible} onClose={onDecline} accessibilityLabel={t('chat.attachments.consent.title')}>
+        <BottomSheetModal visible={visible} onClose={onDecline} accessibilityLabel={t(k('title'))}>
             <Text style={[styles.title, globalStyles.fontBold]} accessibilityRole="header">
-                {t('chat.attachments.consent.title')}
+                {t(k('title'))}
             </Text>
             {POINTS.map(point => (
                 <View key={point.key} style={styles.point}>
                     <Lucide name={point.icon as any} size={20} color={colors.darkPurple} />
                     <Text style={[styles.pointText, globalStyles.fontRegular]}>
-                        {t(point.key, { days: retentionDays })}
+                        {t(k(point.key), { days: retentionDays })}
                     </Text>
                 </View>
             ))}
@@ -51,13 +55,13 @@ const AttachmentConsentSheet = ({
                 onPress={onAccept}
                 disabled={submitting}
                 accessibilityRole="button"
-                accessibilityLabel={t('chat.attachments.consent.accept')}
+                accessibilityLabel={t(k('accept'))}
             >
                 {submitting ? (
                     <ActivityIndicator color={colors.white} />
                 ) : (
                     <Text style={[styles.primaryText, globalStyles.fontSemiBold]}>
-                        {t('chat.attachments.consent.accept')}
+                        {t(k('accept'))}
                     </Text>
                 )}
             </TouchableOpacity>
@@ -65,10 +69,10 @@ const AttachmentConsentSheet = ({
                 style={styles.secondary}
                 onPress={onDecline}
                 accessibilityRole="button"
-                accessibilityLabel={t('chat.attachments.consent.decline')}
+                accessibilityLabel={t(k('decline'))}
             >
                 <Text style={[styles.secondaryText, globalStyles.fontMedium]}>
-                    {t('chat.attachments.consent.decline')}
+                    {t(k('decline'))}
                 </Text>
             </TouchableOpacity>
         </BottomSheetModal>

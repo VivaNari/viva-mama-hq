@@ -331,10 +331,12 @@ class UserContextResult:
 
     profile_context: str
     recovery_context: str
-    expert_directory: str
-    products_directory: str
-    has_profile: bool
-    has_recovery: bool
+    # Defaults so an early return (circuit open, missing server script) can build an
+    # empty result without listing every directory.
+    expert_directory: str = ""
+    products_directory: str = ""
+    has_profile: bool = False
+    has_recovery: bool = False
     error: Optional[str] = None
     fetch_time_ms: float = 0.0
     # Structured twin of `expert_directory`, already scoped to the user's referral:

@@ -35,9 +35,6 @@ const SCHEDULES: Record<CareModelEnum, { group: string; items: string[] }[]> = {
     ],
 };
 
-// Placeholder until the stage engine supplies her real pregnancy week.
-const PLACEHOLDER_WEEK = 24;
-
 /**
  * Log an ANC visit, or tick off the recommended schedule. The design lets you switch
  * between the government and private schedules; here her care route picks one.
@@ -45,7 +42,7 @@ const PLACEHOLDER_WEEK = 24;
 const AncCheckup: React.FC = () => {
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
-    const { careModel } = useCareContext();
+    const { careModel, pregnancyWeek } = useCareContext();
     const [tab, setTab] = useState<'log' | 'schedule'>('log');
     const [checks, setChecks] = useState<Set<Check>>(new Set());
     const [done, setDone] = useState(false);
@@ -103,7 +100,9 @@ const AncCheckup: React.FC = () => {
         <View style={{ paddingHorizontal: 20, paddingTop: 14, gap: 12 }}>
             <View style={[logsStyles.tintNote, { paddingHorizontal: 16 }]}>
                 <Text style={[logsStyles.tintNoteText, { fontSize: 13 }, globalStyles.fontSemiBold]}>
-                    {t('logs.anc.weekToday', { week: PLACEHOLDER_WEEK })}
+                    {pregnancyWeek
+                        ? t('logs.anc.weekToday', { week: pregnancyWeek })
+                        : t('logs.anc.visitToday')}
                 </Text>
             </View>
             <SegmentedToggle

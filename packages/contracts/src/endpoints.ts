@@ -47,6 +47,23 @@ export const apiRoutes = {
     weeklyCheckinStream: (week: number, flowSlug: string) =>
       `${v}/weekly-checkin/stream?week=${week}&flowSlug=${encodeURIComponent(flowSlug)}`,
   },
+  /** Her saved scans, lab reports, prescriptions and MCH card, and the overall summary. */
+  healthRecords: {
+    root: `${v}/health-records`,
+    config: `${v}/health-records/config`,
+    consent: `${v}/health-records/consent`,
+    bulkDelete: `${v}/health-records/delete`,
+    record: (id: string) => `${v}/health-records/${id}`,
+    files: (id: string) => `${v}/health-records/${id}/files`,
+    file: (id: string, fileId: string) => `${v}/health-records/${id}/files/${fileId}`,
+    fileUrl: (id: string, fileId: string) => `${v}/health-records/${id}/files/${fileId}/url`,
+    submit: (id: string) => `${v}/health-records/${id}/submit`,
+    retry: (id: string) => `${v}/health-records/${id}/retry`,
+    summary: `${v}/health-records/summary`,
+    summaryLatest: `${v}/health-records/summary/latest`,
+    summaryHistory: `${v}/health-records/summary/history`,
+    summaryById: (id: string) => `${v}/health-records/summary/${id}`,
+  },
 
   payments: {
     createOrder: `${v}/orders/create`,

@@ -24,17 +24,23 @@ import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
 import { IMessageAttachment } from '../../types/chat.types';
 
+export type TResolveImageUrl = (image: IMessageAttachment) => Promise<{ url: string }>;
+
 interface IImageViewerModalProps {
     visible: boolean;
     images: IMessageAttachment[];
     initialIndex: number;
     onClose: () => void;
+    /** Where a fresh short-lived link comes from. Defaults to chat attachments. */
+    resolveUrl?: TResolveImageUrl;
 }
+
+const chatAttachmentUrl: TResolveImageUrl = image => getAttachmentUrl(image.id);
 
 const MAX_SCALE = 4;
 
 /** Resolve what to show: the local file from this session, else a fresh short-lived link. */
-const useImageSource = (image: IMessageAttachment) => {
+const useImageSource = (image: IMessageAttachment, resolveUrl: TResolveImageUrl) => {
     const [uri, setUri] = useState<string | null>(image.localUri ?? null);
     const [state, setState] = useState<'ready' | 'loading' | 'expired' | 'error'>(
         image.localUri ? 'ready' : 'loading',
@@ -43,13 +49,13 @@ const useImageSource = (image: IMessageAttachment) => {
     const fetchRemote = useCallback(async () => {
         setState('loading');
         try {
-            const { url } = await getAttachmentUrl(image.id);
+            const { url } = await resolveUrl(image);
             setUri(url);
             setState('ready');
         } catch (error: any) {
             setState(error?.response?.status === 410 ? 'expired' : 'error');
         }
-    }, [image.id]);
+    }, [image, resolveUrl]);
 
     useEffect(() => {
         if (!image.localUri) fetchRemote();
@@ -70,15 +76,17 @@ const ZoomableImage = ({
     height,
     onZoomChange,
     onDismiss,
+    resolveUrl,
 }: {
     image: IMessageAttachment;
     width: number;
     height: number;
     onZoomChange: (zoomed: boolean) => void;
     onDismiss: () => void;
+    resolveUrl: TResolveImageUrl;
 }) => {
     const { t } = useTranslation();
-    const { uri, state, onError, retry } = useImageSource(image);
+    const { uri, state, onError, retry } = useImageSource(image, resolveUrl);
     const scale = useSharedValue(1);
     const savedScale = useSharedValue(1);
     const tx = useSharedValue(0);
@@ -177,7 +185,13 @@ const ZoomableImage = ({
 };
 
 /** Full-screen photo viewer: pinch or double-tap to zoom, swipe down to close. */
-const ImageViewerModal = ({ visible, images, initialIndex, onClose }: IImageViewerModalProps) => {
+const ImageViewerModal = ({
+    visible,
+    images,
+    initialIndex,
+    onClose,
+    resolveUrl = chatAttachmentUrl,
+}: IImageViewerModalProps) => {
     const { t } = useTranslation();
     const { width, height } = useWindowDimensions();
     const insets = useSafeAreaInsets();
@@ -211,6 +225,7 @@ const ImageViewerModal = ({ visible, images, initialIndex, onClose }: IImageView
                             height={height}
                             onZoomChange={setZoomed}
                             onDismiss={onClose}
+                            resolveUrl={resolveUrl}
                         />
                     )}
                 />

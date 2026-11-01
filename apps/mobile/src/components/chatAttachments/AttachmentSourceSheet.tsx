@@ -16,6 +16,10 @@ interface IAttachmentSourceSheetProps {
     remainingToday: number | null;
     /** Photos are disabled once a PDF is picked, and the reverse. */
     disabledSources?: TAttachmentSource[];
+    /** Copy for another use than chat (health records). Defaults to the chat copy. */
+    title?: string;
+    subtitle?: string;
+    privacyNote?: string;
 }
 
 const OPTIONS: { source: TAttachmentSource; icon: string; titleKey: string; hintKey: string }[] = [
@@ -32,15 +36,19 @@ const AttachmentSourceSheet = ({
     retentionDays,
     remainingToday,
     disabledSources = [],
+    title,
+    subtitle,
+    privacyNote,
 }: IAttachmentSourceSheetProps) => {
     const { t } = useTranslation();
+    const heading = title ?? t('chat.attachments.sheetTitle');
     return (
-        <BottomSheetModal visible={visible} onClose={onClose} accessibilityLabel={t('chat.attachments.sheetTitle')}>
+        <BottomSheetModal visible={visible} onClose={onClose} accessibilityLabel={heading}>
             <Text style={[styles.title, globalStyles.fontBold]} accessibilityRole="header">
-                {t('chat.attachments.sheetTitle')}
+                {heading}
             </Text>
             <Text style={[styles.subtitle, globalStyles.fontRegular]}>
-                {t('chat.attachments.sheetSubtitle')}
+                {subtitle ?? t('chat.attachments.sheetSubtitle')}
             </Text>
 
             {OPTIONS.map(option => {
@@ -76,7 +84,7 @@ const AttachmentSourceSheet = ({
             <View style={styles.privacy}>
                 <Lucide name="shield-check" size={16} color={colors.darkGray} />
                 <Text style={[styles.privacyText, globalStyles.fontRegular]}>
-                    {t('chat.attachments.privacyNote', { days: retentionDays })}
+                    {privacyNote ?? t('chat.attachments.privacyNote', { days: retentionDays })}
                     {remainingToday != null ? ` ${t('chat.attachments.remainingToday', { count: remainingToday })}` : ''}
                 </Text>
             </View>

@@ -8,6 +8,8 @@ import consultationModel from "../../models/consultation.model";
 import conversationModel from "../../models/conversation.model";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
+import healthRecordModel from "../../models/health-record.model";
+import healthSummaryModel from "../../models/health-summary.model";
 import chatAttachmentModel from "../../models/chat-attachment.model";
 import messageModel from "../../models/message.model";
 import moodLogModel from "../../models/mood-log.model";
@@ -29,6 +31,7 @@ import UserModel from "../../models/user.model";
 import VivaClubCommentModel from "../../models/vivaClubComment.model";
 import VivaClubPostModel from "../../models/vivaClubPost.model";
 import logger, { createModuleLogger } from "../../utils/logger";
+import { healthRecordService } from "../health-records/health-record.service";
 import { chatAttachmentService } from "../chat-system/chat-attachment.service";
 import { getBillingProvider } from "../subscription/billing";
 import { ISubscription } from "../../types/subscription.types";
@@ -183,6 +186,24 @@ export class AccountDeletionService {
         await record("ai_message_bookmarks", () =>
             aiMessageBookmarkModel.deleteMany({ userId: _id }),
         );
+
+        // ── Health records ───────────────────────────────────────────────────────
+        // Kept until she deletes them, so there is no lifecycle backstop: a failed
+        // purge is queued and retried by the attachment janitor until it goes through.
+        await record("health_record_objects", async () => {
+            try {
+                await healthRecordService.deleteAllForUser(String(_id));
+            } catch (error) {
+                log.error(
+                    { err: error },
+                    "Account deletion: health record purge failed; queued for retry",
+                );
+                await healthRecordService.queuePurge(String(_id), error);
+            }
+            return { deletedCount: 0 };
+        });
+        await record("health_records", () => healthRecordModel.deleteMany({ userId: _id }));
+        await record("health_summaries", () => healthSummaryModel.deleteMany({ userId: _id }));
 
         // ── Health logs and derived content ──────────────────────────────────────
         await record("mood_logs", () => moodLogModel.deleteMany({ userId: _id }));

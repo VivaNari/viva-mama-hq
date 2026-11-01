@@ -12,6 +12,7 @@ import {
     runBabyAgeReminders,
     runCustomReminders,
     runChatAttachmentJanitor,
+    runHealthRecordsJanitor,
 } from "../../controllers/cron-jobs/cron-jobs.controller";
 
 /**
@@ -44,5 +45,9 @@ cronJobsRouter.post("/custom-reminders", runCustomReminders);
 // Hourly — removes chat attachments that were never sent or whose delete failed, and
 // retries account-deletion purges. Needs its own Cloud Scheduler entry per environment.
 cronJobsRouter.post("/chat-attachment-janitor", runChatAttachmentJanitor);
+
+// Hourly — deletes health-record drafts never submitted and fails (with a refund)
+// records and summaries stuck mid-read. Needs its own Cloud Scheduler entry.
+cronJobsRouter.post("/health-records-janitor", runHealthRecordsJanitor);
 
 export default cronJobsRouter;

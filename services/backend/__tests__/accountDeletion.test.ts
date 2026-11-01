@@ -475,6 +475,8 @@ describe("deletion coverage", () => {
             "reports",
             "referral_redemptions",
             "chat_attachments",
+            "health_records",
+            "health_summaries",
         ]);
         const RETAINED = new Set<string>(AccountDeletionService.RETAINED);
 

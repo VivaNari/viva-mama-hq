@@ -54,6 +54,8 @@ import MedicineLog from '../../screens/logs/MedicineLog';
 import PumpingLog from '../../screens/logs/PumpingLog';
 import ReadingsLog from '../../screens/logs/ReadingsLog';
 import RecordsUpload from '../../screens/logs/RecordsUpload';
+import HealthRecords from '../../screens/HealthRecords';
+import HealthSummary from '../../screens/HealthSummary';
 import Reminders from '../../screens/logs/Reminders';
 import WaterLog from '../../screens/logs/WaterLog';
 import WeightBmiLog from '../../screens/logs/WeightBmiLog';
@@ -65,6 +67,8 @@ const VIVA_LOG_SCREENS = [
     { name: 'KickCounter', component: KickCounter },
     { name: 'MedicineLog', component: MedicineLog },
     { name: 'RecordsUpload', component: RecordsUpload },
+    { name: 'HealthRecords', component: HealthRecords },
+    { name: 'HealthSummary', component: HealthSummary },
     { name: 'ReadingsLog', component: ReadingsLog },
     { name: 'AncCheckup', component: AncCheckup },
     { name: 'WeightBmiLog', component: WeightBmiLog },

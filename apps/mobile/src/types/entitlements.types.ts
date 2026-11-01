@@ -48,6 +48,8 @@ export enum Capability {
   MOOD_LOG = 'moodLog',
   CONSULTATION_EXPERT = 'consultation.expert',
   CONSULTATION_CARE_MANAGER = 'consultation.careManager',
+  RECORDS_UPLOAD = 'records.upload',
+  HEALTH_SUMMARY = 'records.healthSummary',
 }
 
 export enum Access {

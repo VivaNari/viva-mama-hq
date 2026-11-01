@@ -101,6 +101,13 @@ const VivaAIHub: React.FC = () => {
                         sub={t('vivaHub.setReminderSub')}
                         onPress={() => navigation.navigate('Reminders')}
                     />
+                    <OptionTile
+                        icon="folder-heart"
+                        wide
+                        label={t('vivaHub.myRecords')}
+                        sub={t('vivaHub.myRecordsSub')}
+                        onPress={() => navigation.navigate('HealthRecords')}
+                    />
                 </View>
             </ScrollView>
         </SafeAreaView>

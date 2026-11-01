@@ -12,6 +12,11 @@ export interface CareContext {
     category: UserCategoryEnum | null;
     /** Her height for BMI, or null when not recorded yet. */
     heightCm: number | null;
+    /**
+     * Her pregnancy week (the `np_weeks` the Dashboard shows), or null when she is not
+     * pregnant or the week is not known yet.
+     */
+    pregnancyWeek: number | null;
     loading: boolean;
 }
 
@@ -29,6 +34,7 @@ export const useCareContext = (): CareContext => {
         careModel: CareModelEnum.PUBLIC,
         category: null,
         heightCm: null,
+        pregnancyWeek: null,
         loading: true,
     });
 
@@ -49,6 +55,10 @@ export const useCareContext = (): CareContext => {
                                 : CareModelEnum.PUBLIC,
                         category: user?.user_category ?? null,
                         heightCm: user?.onboarding_data?.height_cm ?? null,
+                        pregnancyWeek:
+                            user?.user_category === UserCategoryEnum.NP && user?.np_weeks > 0
+                                ? user.np_weeks
+                                : null,
                         loading: false,
                     });
                 } catch {

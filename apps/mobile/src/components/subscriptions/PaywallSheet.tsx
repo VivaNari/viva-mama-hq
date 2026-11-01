@@ -44,6 +44,8 @@ const CAPABILITY_COPY: Partial<Record<Capability, string>> = {
   [Capability.COMMUNITY_POST]: 'communityPost',
   [Capability.CONSULTATION_CARE_MANAGER]: 'careManager',
   [Capability.CONSULTATION_EXPERT]: 'expert',
+  [Capability.RECORDS_UPLOAD]: 'records',
+  [Capability.HEALTH_SUMMARY]: 'healthSummary',
 };
 
 interface PaywallSheetProps {

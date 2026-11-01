@@ -24,6 +24,10 @@ export enum ECapability {
     MOOD_LOG = "moodLog",
     CONSULTATION_EXPERT = "consultation.expert",
     CONSULTATION_CARE_MANAGER = "consultation.careManager",
+    /** Adding a health record (scan, lab report, prescription, MCH card) and its summary. */
+    RECORDS_UPLOAD = "records.upload",
+    /** Generating the overall, shareable health summary from her records. */
+    HEALTH_SUMMARY = "records.healthSummary",
 }
 
 export enum EAccess {
@@ -35,6 +39,10 @@ export enum EAccess {
 export enum EQuotaWindow {
     /** Resets at midnight IST. */
     DAY = "DAY",
+    /** Resets at midnight IST on Monday. */
+    WEEK = "WEEK",
+    /** Resets at midnight IST on the 1st. */
+    MONTH = "MONTH",
     /** One allowance for the whole subscription period (the trial's single check-in). */
     PERIOD = "PERIOD",
 }
@@ -64,6 +72,20 @@ export type TEntitlementMatrix = Record<ESubscriptionTier, Record<ECapability, I
 
 const UNLIMITED = { access: EAccess.ALLOWED, limit: null } as const;
 const LOCKED = { access: EAccess.LOCKED } as const;
+// Paid tiers are not unlimited here: every record is a vision call. These are abuse
+// limits, well above what a mother adds in a day.
+const RECORDS_UPLOAD_PAID: ICapabilityRule = {
+    access: EAccess.ALLOWED,
+    limit: 20,
+    window: EQuotaWindow.DAY,
+    quotaKey: EUsageCounterKey.RECORD_UPLOAD,
+};
+const HEALTH_SUMMARY_PAID: ICapabilityRule = {
+    access: EAccess.ALLOWED,
+    limit: 5,
+    window: EQuotaWindow.DAY,
+    quotaKey: EUsageCounterKey.HEALTH_SUMMARY,
+};
 
 export const ENTITLEMENTS: TEntitlementMatrix = {
     [ESubscriptionTier.FREE]: {
@@ -99,6 +121,19 @@ export const ENTITLEMENTS: TEntitlementMatrix = {
             access: EAccess.ALLOWED,
             fulfilment: EFulfilment.PAY_PER_SESSION,
         },
+        // Enough to try keeping her reports in one place; regular use is the upsell.
+        [ECapability.RECORDS_UPLOAD]: {
+            access: EAccess.ALLOWED,
+            limit: 5,
+            window: EQuotaWindow.MONTH,
+            quotaKey: EUsageCounterKey.RECORD_UPLOAD,
+        },
+        [ECapability.HEALTH_SUMMARY]: {
+            access: EAccess.ALLOWED,
+            limit: 1,
+            window: EQuotaWindow.WEEK,
+            quotaKey: EUsageCounterKey.HEALTH_SUMMARY,
+        },
     },
 
     [ESubscriptionTier.TRIAL]: {
@@ -129,6 +164,8 @@ export const ENTITLEMENTS: TEntitlementMatrix = {
             access: EAccess.ALLOWED,
             fulfilment: EFulfilment.PAY_PER_SESSION,
         },
+        [ECapability.RECORDS_UPLOAD]: RECORDS_UPLOAD_PAID,
+        [ECapability.HEALTH_SUMMARY]: HEALTH_SUMMARY_PAID,
     },
 
     [ESubscriptionTier.PREMIUM]: {
@@ -150,6 +187,8 @@ export const ENTITLEMENTS: TEntitlementMatrix = {
             access: EAccess.ALLOWED,
             fulfilment: EFulfilment.CREDITS,
         },
+        [ECapability.RECORDS_UPLOAD]: RECORDS_UPLOAD_PAID,
+        [ECapability.HEALTH_SUMMARY]: HEALTH_SUMMARY_PAID,
     },
 };
 

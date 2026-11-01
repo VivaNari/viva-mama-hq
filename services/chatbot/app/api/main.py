@@ -10,6 +10,14 @@ from typing import Any, Dict, List, Literal, Optional
 from app.attachments.schemas import AttachmentRef
 from app.chains.chat_pipeline_mcp import chat_once, chat_once_name_detector
 from app.memory.redis_memory import RedisSessionMemory
+from app.records.analyze_record import analyze_record
+from app.records.health_summary import SummaryError, build_health_summary
+from app.records.schemas import (
+    HealthSummaryRequest,
+    HealthSummaryResponse,
+    RecordAnalyzeRequest,
+    RecordAnalyzeResponse,
+)
 from app.settings import settings
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -111,19 +119,34 @@ class ChatResponse(BaseModel):
     quota_refund: bool = False
 
 
+def _check_uri_scope(user_id: Optional[str], refs: List[AttachmentRef], prefix: str) -> None:
+    """
+    Files may only be read from one bucket, under this user's prefix. Defence in
+    depth behind the API key: a leaked key still cannot make Gemini read the RAG
+    buckets or another user's reports.
+    """
+    if any(not a.uri.startswith(prefix) for a in refs):
+        raise HTTPException(status_code=422, detail="Attachment is not this user's")
+
+
 def _check_attachment_scope(req: ChatRequest) -> None:
-    """
-    Files may only be read from the attachments bucket, under this user's prefix.
-    Defence in depth behind the API key: a leaked key still cannot make Gemini read
-    the RAG buckets or another user's reports.
-    """
     if not req.attachments:
         return
     if not settings.attachments_enabled or not settings.attachments_bucket:
         raise HTTPException(status_code=422, detail="Attachments are not enabled")
-    prefix = f"gs://{settings.attachments_bucket}/chat/{req.user_id}/"
-    if any(not a.uri.startswith(prefix) for a in req.attachments):
-        raise HTTPException(status_code=422, detail="Attachment is not this user's")
+    _check_uri_scope(
+        req.user_id, req.attachments, f"gs://{settings.attachments_bucket}/chat/{req.user_id}/"
+    )
+
+
+def _check_record_scope(req: RecordAnalyzeRequest) -> None:
+    if not settings.health_records_bucket:
+        raise HTTPException(status_code=422, detail="Health records are not enabled")
+    _check_uri_scope(
+        req.user_id,
+        req.files,
+        f"gs://{settings.health_records_bucket}/records/{req.user_id}/{req.record_id}/",
+    )
 
 
 class ChatNameDetectorRequest(BaseModel):
@@ -419,3 +442,50 @@ async def chat_once_name_detector_endpoint(
         )
 
         raise HTTPException(status_code=500, detail="An error occurred processing your request.")
+
+
+@app.post("/v1/records/analyze", response_model=RecordAnalyzeResponse, tags=["records"])
+@limiter.limit("60/minute")
+async def records_analyze_endpoint(
+    req: RecordAnalyzeRequest, request: Request, ok: bool = Depends(require_api_key)
+):
+    """
+    Read one saved health record (1 PDF or up to 5 photos) and summarise it.
+
+    Always answers 200 with a verdict: ANALYZED (store the summary), ERROR (may be
+    retried) or a refusal (the core API deletes the files). Never describes a
+    refused file.
+    """
+    request_id = str(uuid.uuid4())
+    _check_record_scope(req)
+    logger.info(
+        f"[{request_id}] Record analyze: user_id={req.user_id} category={req.category} "
+        f"subject={req.subject.type} files={len(req.files)}"
+    )
+    try:
+        return await analyze_record(req, request_id)
+    except Exception as e:
+        logger.error(f"[{request_id}] Record analyze error: {type(e).__name__}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request.")
+
+
+@app.post("/v1/records/summary", response_model=HealthSummaryResponse, tags=["records"])
+@limiter.limit("30/minute")
+async def records_summary_endpoint(
+    req: HealthSummaryRequest, request: Request, ok: bool = Depends(require_api_key)
+):
+    """Her overall health summary from the stored per-record summaries."""
+    request_id = str(uuid.uuid4())
+    logger.info(
+        f"[{request_id}] Health summary: user_id={req.user_id} records={len(req.records)} "
+        f"vitals={len(req.vitals)} lang={req.lang}"
+    )
+    try:
+        content, share_text = await build_health_summary(req, request_id)
+    except SummaryError as e:
+        logger.warning(f"[{request_id}] Health summary failed: {e}")
+        raise HTTPException(status_code=502, detail="SUMMARY_FAILED")
+    except Exception as e:
+        logger.error(f"[{request_id}] Health summary error: {type(e).__name__}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request.")
+    return HealthSummaryResponse(request_id=request_id, content=content, share_text=share_text)

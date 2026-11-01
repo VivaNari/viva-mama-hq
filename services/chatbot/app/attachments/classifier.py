@@ -35,6 +35,10 @@ For EACH file, in order, decide only what kind of file it is and who it is about
 - A medical document whose patient name/sex is cropped or not shown is
   subject_evidence=none_visible, not someone else.
 - Reports for a man, an elderly person or an animal must be marked as such.
+- Her own reports count as health documents whatever they test: pregnancy, trying to
+  conceive (fertility tests such as HSG, follicular study, AMH), postpartum recovery,
+  or her general health (thyroid, blood counts, sugar). Use health_domain
+  womens_general_health when it is not specifically pregnancy or postpartum.
 - A photo of a body part, skin, wound, rash, breast or a baby's body is
   clinical_photo_of_body even if it looks medical.
 - Use a low confidence when you are unsure.

@@ -10,6 +10,7 @@ import { consultationReminders } from "./consultationReminders";
 import { babyAgeReminders } from "./babyAgeReminders";
 import { customReminders } from "./customReminders";
 import { chatAttachmentJanitor } from "./chatAttachmentJanitor";
+import { healthRecordsJanitor } from "./healthRecordsJanitor";
 import { randomUUID } from "crypto";
 import { SpanStatusCode, trace } from "@opentelemetry/api";
 import env from "../config/env";
@@ -123,4 +124,8 @@ export const initScheduledJobs = () => {
     // failed deletes, and purges files of accounts deleted during a storage outage.
     // See chatAttachmentJanitor.ts.
     schedule("17 * * * *", () => chatAttachmentJanitor(), "chat-attachment-janitor");
+
+    // Hourly — deletes health-record drafts never submitted, and fails (and refunds)
+    // records and summaries stuck mid-read. See healthRecordsJanitor.ts.
+    schedule("37 * * * *", () => healthRecordsJanitor(), "health-records-janitor");
 };

@@ -43,6 +43,25 @@ export const CHAT_ATTACHMENT_URL = (id: string) =>
 export const CHAT_ATTACHMENT = (id: string) => `${API_VERSION_URL}/chat/attachments/${id}`;
 export const CHATBOT_MESSAGE_URL = `${API_VERSION_URL}/chatbot/message`;
 
+// Health records: her saved scans, lab reports, prescriptions and MCH card, and the
+// overall health summary built from them.
+export const HEALTH_RECORDS = `${API_VERSION_URL}/health-records`;
+export const HEALTH_RECORDS_CONFIG = `${API_VERSION_URL}/health-records/config`;
+export const HEALTH_RECORDS_CONSENT = `${API_VERSION_URL}/health-records/consent`;
+export const HEALTH_RECORDS_BULK_DELETE = `${API_VERSION_URL}/health-records/delete`;
+export const HEALTH_RECORD = (id: string) => `${API_VERSION_URL}/health-records/${id}`;
+export const HEALTH_RECORD_FILES = (id: string) => `${API_VERSION_URL}/health-records/${id}/files`;
+export const HEALTH_RECORD_FILE = (id: string, fileId: string) =>
+  `${API_VERSION_URL}/health-records/${id}/files/${fileId}`;
+export const HEALTH_RECORD_FILE_URL = (id: string, fileId: string) =>
+  `${API_VERSION_URL}/health-records/${id}/files/${fileId}/url`;
+export const HEALTH_RECORD_SUBMIT = (id: string) => `${API_VERSION_URL}/health-records/${id}/submit`;
+export const HEALTH_RECORD_RETRY = (id: string) => `${API_VERSION_URL}/health-records/${id}/retry`;
+export const HEALTH_SUMMARY = `${API_VERSION_URL}/health-records/summary`;
+export const HEALTH_SUMMARY_LATEST = `${API_VERSION_URL}/health-records/summary/latest`;
+export const HEALTH_SUMMARY_HISTORY = `${API_VERSION_URL}/health-records/summary/history`;
+export const HEALTH_SUMMARY_BY_ID = (id: string) => `${API_VERSION_URL}/health-records/summary/${id}`;
+
 // Subscription endpoints.
 // These replace the payment endpoints below: the checkout route takes a planCode and
 // derives the amount server-side, where the legacy /orders/create accepted a

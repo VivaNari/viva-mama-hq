@@ -68,6 +68,12 @@ export const AnalyticsEvent = {
   CHAT_ATTACHMENT_UPLOAD_FAILED: 'chat_attachment_upload_failed',
   CHAT_ATTACHMENT_SENT: 'chat_attachment_sent',
   CHAT_ATTACHMENT_REJECTED: 'chat_attachment_rejected',
+  // Health records: category, verdict and counts only, never what a record says.
+  RECORD_UPLOAD_STARTED: 'record_upload_started',
+  RECORD_SAVED: 'record_saved',
+  RECORD_SUMMARY_VIEWED: 'record_summary_viewed',
+  RECORD_DELETED: 'record_deleted',
+  HEALTH_SUMMARY_GENERATED: 'health_summary_generated',
   CHAT_FLOW_COMPLETED: 'chat_flow_completed',
   CHAT_BOOKMARK_ADDED: 'chat_bookmark_added',
   CHAT_BOOKMARK_REMOVED: 'chat_bookmark_removed',
@@ -295,6 +301,15 @@ export interface EventParams {
     has_caption: boolean;
   };
   [AnalyticsEvent.CHAT_ATTACHMENT_REJECTED]: { reason_code: string };
+  [AnalyticsEvent.RECORD_UPLOAD_STARTED]: {
+    category: string;
+    source: 'camera' | 'gallery' | 'pdf';
+    file_count: number;
+  };
+  [AnalyticsEvent.RECORD_SAVED]: { category: string; verdict: string };
+  [AnalyticsEvent.RECORD_SUMMARY_VIEWED]: { category: string };
+  [AnalyticsEvent.RECORD_DELETED]: { count_bucket: SizeBucket; status: string };
+  [AnalyticsEvent.HEALTH_SUMMARY_GENERATED]: { record_count_bucket: SizeBucket };
   [AnalyticsEvent.CHAT_FLOW_COMPLETED]: { flow_type?: string };
 
   [AnalyticsEvent.EXPERT_PROFILE_VIEWED]: { expert_id: string };

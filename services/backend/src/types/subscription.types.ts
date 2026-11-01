@@ -105,6 +105,8 @@ export enum ECreditReason {
 export enum EUsageCounterKey {
     AI_MESSAGE = "ai.message",
     CHECKIN_START = "checkin.start",
+    RECORD_UPLOAD = "record.upload",
+    HEALTH_SUMMARY = "health.summary",
 }
 
 /** How a consultation was paid for — needed to know whether to refund a credit. */
@@ -255,7 +257,10 @@ export interface IUsageCounter {
     _id: Schema.Types.ObjectId;
     user_id: Schema.Types.ObjectId;
     key: EUsageCounterKey;
-    /** '2026-07-22' for an IST day window, or 'sub:<subscriptionId>' for a period window. */
+    /**
+     * '2026-07-22' for an IST day window, 'w:2026-07-20' (its Monday) for a week,
+     * 'm:2026-07' for a month, or 'sub:<subscriptionId>' for a period window.
+     */
     windowKey: string;
     count: number;
     expiresAt: Date;

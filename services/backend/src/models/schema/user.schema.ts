@@ -222,6 +222,12 @@ const userSchema = new Schema<IUser>(
             type: new Schema({ version: String, acceptedAt: Date }, { _id: false }),
             default: null,
         },
+        // Consent to keeping her health records (files and their summaries) until she
+        // deletes them. Separate from chat: those files are deleted after 90 days.
+        health_records_consent: {
+            type: new Schema({ version: String, acceptedAt: Date }, { _id: false }),
+            default: null,
+        },
         FCM_token: {
             type: String,
         },

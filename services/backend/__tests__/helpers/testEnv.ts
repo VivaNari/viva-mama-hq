@@ -21,6 +21,8 @@ const TEST_DEFAULTS: Record<string, string> = {
     CHAT_ATTACHMENTS_ENABLED: "true",
     CHAT_ATTACHMENTS_BUCKET: "test-chat-attachments",
     CHAT_ATTACHMENTS_ROLLOUT_PERCENT: "100",
+    HEALTH_RECORDS_ENABLED: "true",
+    HEALTH_RECORDS_BUCKET: "test-health-records",
 };
 
 for (const [key, value] of Object.entries(TEST_DEFAULTS)) {

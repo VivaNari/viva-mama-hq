@@ -42,6 +42,7 @@ import { setStorageForTests } from "../src/config/gcs.config";
 import { chatAttachmentJanitor } from "../src/cron-jobs/chatAttachmentJanitor";
 import chatAttachmentModel from "../src/models/chat-attachment.model";
 import messageModel from "../src/models/message.model";
+import motherLogModel from "../src/models/mother-log.model";
 import pendingGcsPurgeModel from "../src/models/pending-gcs-purge.model";
 import usageCounterModel from "../src/models/usage-counter.model";
 import UserModel from "../src/models/user.model";
@@ -598,6 +599,43 @@ describe("POST /chat-flow/answer with attachments", () => {
             .set("Authorization", auth);
         expect(poll.status).toBe(200);
         expect(poll.body.data.reply).toMatchObject({ type: "ai_error", replyTo: clientMessageId });
+    });
+
+    it("does not charge a question for logging, or for typing 'yes' to the card", async () => {
+        const { userId, auth } = await createMother();
+        mockSendUserQuery.mockResolvedValue({
+            answer: "Shall I save your BP 118/76?",
+            intent: "LOG_PROPOSAL",
+            proposed_logs: [{ logType: "bp", fields: { systolic: 118, diastolic: 76 } }],
+        });
+        const logTurn = randomUUID();
+        await answer(auth, { freeText: "bp 118/76", clientMessageId: logTurn });
+        const logged = await replyFor(logTurn);
+        expect(logged.payload.quota).toMatchObject({ used: 0 });
+        expect(await aiUsed(userId)).toBe(0);
+
+        const yesTurn = randomUUID();
+        // The app sends the conversation it is in; the card is looked up there.
+        const conversationId = String(logged.payload.conversationId);
+        await answer(auth, { freeText: "haan", clientMessageId: yesTurn, conversationId });
+        const confirmed = await replyFor(yesTurn);
+
+        expect(confirmed.payload.response).toMatchObject({ intent: "LOG_CONFIRMATION" });
+        expect(confirmed.payload.quota).toMatchObject({ used: 0 });
+        expect(mockSendUserQuery).toHaveBeenCalledTimes(1);
+        expect(await aiUsed(userId)).toBe(0);
+        expect(await motherLogModel.countDocuments({ userId, logType: "bp" })).toBe(1);
+
+        // A real question is still paid for.
+        mockSendUserQuery.mockResolvedValue({ answer: "Yes, gently.", intent: "USER_QUERY" });
+        const question = randomUUID();
+        await answer(auth, {
+            freeText: "is walking safe?",
+            clientMessageId: question,
+            conversationId,
+        });
+        await replyFor(question);
+        expect(await aiUsed(userId)).toBe(1);
     });
 
     it("does not take 'yes' with a file as an answer to a log card", async () => {

@@ -430,6 +430,8 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                     confirmReply === "yes",
                 );
                 if (answered) {
+                    // Answering a card is not a question: it costs her nothing.
+                    const quota = await this.refundTurn(userId, userMessageId);
                     const replyText = confirmationReply(
                         text,
                         answered.saved,
@@ -466,6 +468,7 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                             pendingLogs: answered.pendingLogs,
                         },
                         replyTo: clientMessageId,
+                        quota,
                     } satisfies AILLMResponse);
                     return {
                         success: true,
@@ -505,9 +508,10 @@ class ChatFlowAIService extends BaseService<IFlowDefinition> {
                     messageId: userMessageId,
                 });
             }
-            // Refused or unreadable files do not cost her a question.
+            // Refused or unreadable files do not cost her a question, and neither does
+            // a message that only logged something or set a reminder.
             const quota =
-                llmResponse.quota_refund === true
+                llmResponse.quota_refund === true || llmResponse.intent === "LOG_PROPOSAL"
                     ? await this.refundTurn(userId, userMessageId)
                     : null;
 

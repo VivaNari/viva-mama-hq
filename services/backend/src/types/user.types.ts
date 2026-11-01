@@ -145,6 +145,8 @@ export interface IUser {
     entitlement_overrides: ICapabilityOverride[];
     /** Consent to Viva reading attached health documents. Null until she agrees. */
     chat_attachment_consent: { version: string; acceptedAt: Date } | null;
+    /** Consent to keeping her health records until she deletes them. Null until she agrees. */
+    health_records_consent: { version: string; acceptedAt: Date } | null;
     FCM_token: string;
     preferred_language: FlowLanguage;
     current_weekdays: {

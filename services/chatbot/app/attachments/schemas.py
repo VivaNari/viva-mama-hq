@@ -7,10 +7,13 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-# The core API stores every file at chat/{24-hex user id}/{uuid}.{jpg|pdf}; images
-# are re-encoded to JPEG there, but png/webp are allowed for forward compatibility.
+# The core API stores chat files at chat/{24-hex user id}/{uuid}.{jpg|pdf} and health
+# records at records/{user id}/{record id}/{uuid}.{jpg|pdf}; images are re-encoded to
+# JPEG there, but png/webp are allowed for forward compatibility.
 ATTACHMENT_URI_PATTERN = (
-    r"^gs://[a-z0-9][a-z0-9._-]{1,220}/chat/[A-Za-z0-9]{1,64}/[A-Za-z0-9-]{1,64}"
+    r"^gs://[a-z0-9][a-z0-9._-]{1,220}/"
+    r"(chat/[A-Za-z0-9]{1,64}/[A-Za-z0-9-]{1,64}"
+    r"|records/[A-Za-z0-9]{1,64}/[A-Za-z0-9]{1,64}/[A-Za-z0-9-]{1,64})"
     r"\.(jpg|png|webp|pdf)$"
 )
 
@@ -22,7 +25,7 @@ class AttachmentRef(BaseModel):
     uri: str = Field(..., pattern=ATTACHMENT_URI_PATTERN)
     mime_type: Literal["image/jpeg", "image/png", "image/webp", "application/pdf"]
     kind: Literal["image", "pdf"]
-    page_count: Optional[int] = Field(None, ge=1, le=10)
+    page_count: Optional[int] = Field(None, ge=1, le=20)
 
 
 class Verdict(str, Enum):
@@ -41,6 +44,7 @@ DocumentType = Literal[
     "ultrasound_image",
     "discharge_summary",
     "vaccination_card",
+    "mch_card",
     "growth_chart",
     "medicine_label",
     "other_medical_document",
@@ -55,6 +59,7 @@ MEDICAL_DOCUMENT_TYPES = {
     "ultrasound_image",
     "discharge_summary",
     "vaccination_card",
+    "mch_card",
     "growth_chart",
     "medicine_label",
     "other_medical_document",
@@ -67,7 +72,8 @@ class FileTriage(BaseModel):
     document_type: DocumentType = Field(
         ...,
         description=(
-            "What kind of file this is. clinical_photo_of_body = a photo of a person's "
+            "What kind of file this is. mch_card = a Mother and Child Protection (MCP/MCH) "
+            "card or booklet page. clinical_photo_of_body = a photo of a person's "
             "body or skin (rash, wound, swelling, breast, a baby's skin or nappy area). "
             "non_medical = anything that is not a health document (selfie, food, "
             "meme, ID card, bill, vehicle papers, chat screenshot, scenery)."
@@ -142,8 +148,12 @@ class AnalysisOutput(BaseModel):
     out_of_scope: bool = Field(
         ...,
         description=(
-            "True if, on reading, this is not a health document about the mother or "
-            "her baby/child. Then leave every other field empty."
+            "True only if, on reading, this is clearly not a health document, or clearly "
+            "about someone other than the mother or her baby/child. Her pregnancy, trying "
+            "to conceive (fertility tests), postpartum recovery and her own health reports "
+            "are all in scope. Never judge who it belongs to by the patient name: a "
+            "different name on a woman's report does not make it someone else's. Then "
+            "leave every other field empty."
         ),
     )
     document_title: str = ""

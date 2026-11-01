@@ -41,6 +41,24 @@ export function nextIstMidnightUtc(now: Date = new Date()): Date {
     return new Date(nextIstMidnight - IST_OFFSET_MS);
 }
 
+/** The UTC instant of the next IST Monday midnight — when a WEEK quota resets. */
+export function nextIstWeekStartUtc(now: Date = new Date()): Date {
+    const ist = new Date(now.getTime() + IST_OFFSET_MS);
+    const daysSinceMonday = (ist.getUTCDay() + 6) % 7;
+    const next = Date.UTC(
+        ist.getUTCFullYear(),
+        ist.getUTCMonth(),
+        ist.getUTCDate() - daysSinceMonday + 7,
+    );
+    return new Date(next - IST_OFFSET_MS);
+}
+
+/** The UTC instant of the next IST 1st-of-month midnight — when a MONTH quota resets. */
+export function nextIstMonthStartUtc(now: Date = new Date()): Date {
+    const ist = new Date(now.getTime() + IST_OFFSET_MS);
+    return new Date(Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth() + 1, 1) - IST_OFFSET_MS);
+}
+
 export interface IResolvedCapability extends ICapabilityRule {
     used?: number;
     remaining?: number | null;
@@ -124,7 +142,24 @@ export class EntitlementService {
             // with no subscription must still be one allowance, not one per day.
             return snapshot?.subscription_id ? `sub:${snapshot.subscription_id}` : "sub:none";
         }
+        if (window === EQuotaWindow.WEEK) {
+            const weekEnd = nextIstWeekStartUtc(now);
+            return `w:${istDayKey(new Date(weekEnd.getTime() - 7 * 24 * 60 * 60 * 1000))}`;
+        }
+        if (window === EQuotaWindow.MONTH) return `m:${istDayKey(now).slice(0, 7)}`;
         return istDayKey(now);
+    }
+
+    /** When the window containing `now` ends, or null for a period with no end date. */
+    public resetAtFor(
+        window: EQuotaWindow,
+        snapshot: IUserSubscriptionSnapshot | undefined,
+        now: Date = new Date(),
+    ): Date | null {
+        if (window === EQuotaWindow.DAY) return nextIstMidnightUtc(now);
+        if (window === EQuotaWindow.WEEK) return nextIstWeekStartUtc(now);
+        if (window === EQuotaWindow.MONTH) return nextIstMonthStartUtc(now);
+        return snapshot?.currentPeriodEnd ?? snapshot?.trialEndAt ?? null;
     }
 
     /**
@@ -204,10 +239,7 @@ export class EntitlementService {
         }
 
         const windowKey = this.windowKeyFor(rule.window, snapshot, now);
-        const resetAt =
-            rule.window === EQuotaWindow.DAY
-                ? nextIstMidnightUtc(now)
-                : (snapshot?.currentPeriodEnd ?? snapshot?.trialEndAt ?? null);
+        const resetAt = this.resetAtFor(rule.window, snapshot, now);
 
         try {
             const counter = await usageCounterModel.findOneAndUpdate(
@@ -352,10 +384,7 @@ export class EntitlementService {
                 const used = await this.getUsedCount(userId, rule.quotaKey, windowKey);
                 entry.used = used;
                 entry.remaining = Math.max(0, rule.limit - used);
-                entry.resetAt =
-                    rule.window === EQuotaWindow.DAY
-                        ? nextIstMidnightUtc(now)
-                        : (snapshot?.currentPeriodEnd ?? snapshot?.trialEndAt ?? null);
+                entry.resetAt = this.resetAtFor(rule.window, snapshot, now);
             }
 
             resolved[capability] = entry;

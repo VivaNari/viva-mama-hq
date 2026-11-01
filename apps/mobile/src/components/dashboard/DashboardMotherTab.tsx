@@ -26,6 +26,7 @@ import { IExpert, IExpertResponse } from '../../types/expert.types';
 import { UserCategoryEnum } from '../../types/user.types';
 import ActiveConsultation from '../ActiveConsultation';
 import EmergencyAlertCard from './EmergencyAlertCard';
+import HealthSummaryCard from './HealthSummaryCard';
 import { useBottomSheet } from '../bottomSheet/AppBottomSheet';
 import HowToGenerateVivaScoreGuide from '../bottomSheet/HowToGenerateVivaScoreGuide';
 import RecoveryProgressGraph from '../bottomSheet/RecoveryProgressGraph';
@@ -617,6 +618,8 @@ const DashboardMotherTab = ({ userData, userActiveConsultationsData }: { userDat
                 }
 
 
+
+                <HealthSummaryCard />
 
                 <CareManagerCard />
                 <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, marginTop: 5, marginBottom: 15, textAlign: "center" }]}>

@@ -102,7 +102,7 @@ async function processImage(buf: Buffer): Promise<TProcessedAttachment> {
  * the page limit, and launch actions or embedded files, which a report never needs.
  * Embedded JavaScript is tolerated: neither Gemini nor the app's PDF viewers run it.
  */
-async function processPdf(buf: Buffer): Promise<TProcessedAttachment> {
+async function processPdf(buf: Buffer, maxPdfPages: number): Promise<TProcessedAttachment> {
     const raw = buf.toString("latin1");
     if (/\/Launch\b/.test(raw) || /\/EmbeddedFiles?\b/.test(raw)) {
         throw new AttachmentError(EAttachmentError.PDF_UNSAFE, 422);
@@ -126,7 +126,7 @@ async function processPdf(buf: Buffer): Promise<TProcessedAttachment> {
     }
     const pageCount = doc.getPageCount();
     if (pageCount < 1) throw new AttachmentError(EAttachmentError.CORRUPT, 422);
-    if (pageCount > env.CHAT_ATTACHMENT_MAX_PDF_PAGES) {
+    if (pageCount > maxPdfPages) {
         throw new AttachmentError(EAttachmentError.PDF_TOO_MANY_PAGES, 422);
     }
 
@@ -142,10 +142,21 @@ async function processPdf(buf: Buffer): Promise<TProcessedAttachment> {
     };
 }
 
-/** Validate an uploaded file by its content and return what should be stored. */
-export async function processAttachment(buf: Buffer): Promise<TProcessedAttachment> {
+export type TProcessingLimits = { maxBytes: number; maxPdfPages: number };
+
+/**
+ * Validate an uploaded file by its content and return what should be stored. Limits
+ * default to chat's; health records pass their own (longer PDFs).
+ */
+export async function processAttachment(
+    buf: Buffer,
+    limits: TProcessingLimits = {
+        maxBytes: env.CHAT_ATTACHMENT_MAX_BYTES,
+        maxPdfPages: env.CHAT_ATTACHMENT_MAX_PDF_PAGES,
+    },
+): Promise<TProcessedAttachment> {
     if (!buf || buf.length === 0) throw new AttachmentError(EAttachmentError.MISSING, 400);
-    if (buf.length > env.CHAT_ATTACHMENT_MAX_BYTES) {
+    if (buf.length > limits.maxBytes) {
         throw new AttachmentError(EAttachmentError.TOO_LARGE, 413);
     }
 
@@ -156,7 +167,7 @@ export async function processAttachment(buf: Buffer): Promise<TProcessedAttachme
         case "image/webp":
             return processImage(buf);
         case "application/pdf":
-            return processPdf(buf);
+            return processPdf(buf, limits.maxPdfPages);
         default:
             // HEIC lands here too: the app always converts it, so seeing one means an
             // old build or a hand-made request.

@@ -5,6 +5,9 @@ The model reads the values off the report; whether a value is dangerous is
 decided here, so the same Hb of 6.5 always raises the same banner and the rule
 can be tested at its boundaries. The model's own `urgent` flag (for things only
 prose can say, like "absent cardiac activity") can raise severity, never lower it.
+
+The cut-offs are shared with logging from chat (app.actions.pipeline), so a value
+she types and the same value on a report raise the same banner.
 """
 
 from __future__ import annotations
@@ -15,6 +18,46 @@ from typing import List, Optional, Tuple
 from app.attachments.schemas import AnalysisOutput, Finding
 
 _ORDER = {"NONE": 0, "MEDIUM": 1, "HIGH": 2}
+
+# Cut-offs (clinical sign-off pending, with the reference table).
+BP_HIGH = (160, 110)  # systolic or diastolic at or above
+BP_MEDIUM = (140, 90)
+HB_HIGH_BELOW = 7.0  # g/dL
+HB_MEDIUM_BELOW = 9.0
+PLATELETS_HIGH_BELOW = 50_000  # per µL
+PLATELETS_MEDIUM_BELOW = 100_000
+GLUCOSE_HIGH_AT_OR_ABOVE = 250.0  # mg/dL
+GLUCOSE_HIGH_AT_OR_BELOW = 54.0
+URINE_PROTEIN_FLAG_FROM = 2  # plus signs; HIGH when BP is raised too
+
+
+def bp_level(systolic: float, diastolic: float) -> str:
+    if systolic >= BP_HIGH[0] or diastolic >= BP_HIGH[1]:
+        return "HIGH"
+    if systolic >= BP_MEDIUM[0] or diastolic >= BP_MEDIUM[1]:
+        return "MEDIUM"
+    return "NONE"
+
+
+def hb_level(g_dl: float) -> str:
+    if g_dl < HB_HIGH_BELOW:
+        return "HIGH"
+    if g_dl < HB_MEDIUM_BELOW:
+        return "MEDIUM"
+    return "NONE"
+
+
+def glucose_level(mg_dl: float) -> str:
+    if mg_dl >= GLUCOSE_HIGH_AT_OR_ABOVE or mg_dl <= GLUCOSE_HIGH_AT_OR_BELOW:
+        return "HIGH"
+    return "NONE"
+
+
+def urine_protein_level(plus_grade: int, bp_raised: bool) -> str:
+    if plus_grade >= URINE_PROTEIN_FLAG_FROM:
+        return "HIGH" if bp_raised else "MEDIUM"
+    return "NONE"
+
 
 _ALIASES = {
     "hb": ("haemoglobin", "hemoglobin", "hb", "hgb", "हीमोग्लोबिन"),
@@ -95,6 +138,8 @@ def evaluate(analysis: AnalysisOutput) -> Tuple[str, List[str]]:
 
     def raise_to(new: str, label: str) -> None:
         nonlocal level
+        if new == "NONE":
+            return
         if _ORDER[new] > _ORDER[level]:
             level = new
         matches.append(label)
@@ -104,32 +149,28 @@ def evaluate(analysis: AnalysisOutput) -> Tuple[str, List[str]]:
         shown = f"{f.name} {f.value}{(' ' + f.unit) if f.unit else ''}".strip()
         if kind == "hb":
             v = _hb_g_dl(f)
-            if v is not None and v < 7.0:
-                raise_to("HIGH", shown)
-            elif v is not None and v < 9.0:
-                raise_to("MEDIUM", shown)
+            if v is not None:
+                raise_to(hb_level(v), shown)
         elif kind == "platelets":
             v = _platelets_per_ul(f)
-            if v is not None and v < 50_000:
+            if v is not None and v < PLATELETS_HIGH_BELOW:
                 raise_to("HIGH", shown)
-            elif v is not None and v < 100_000:
+            elif v is not None and v < PLATELETS_MEDIUM_BELOW:
                 raise_to("MEDIUM", shown)
         elif kind == "bp":
             bp = _bp(f.value)
-            if bp and (bp[0] >= 160 or bp[1] >= 110):
-                high_bp = True
-                raise_to("HIGH", shown)
-            elif bp and (bp[0] >= 140 or bp[1] >= 90):
-                high_bp = True
-                raise_to("MEDIUM", shown)
+            if bp:
+                bp_lvl = bp_level(*bp)
+                high_bp = high_bp or bp_lvl != "NONE"
+                raise_to(bp_lvl, shown)
         elif kind == "glucose":
             v = _glucose_mg_dl(f)
-            if v is not None and (v >= 250 or v <= 54):
-                raise_to("HIGH", shown)
+            if v is not None:
+                raise_to(glucose_level(v), shown)
 
     for f in analysis.findings:
-        if _analyte(f.name) == "urine_protein" and _plus_grade(f.value) >= 2:
-            raise_to("HIGH" if high_bp else "MEDIUM", f"{f.name} {f.value}")
+        if _analyte(f.name) == "urine_protein":
+            raise_to(urine_protein_level(_plus_grade(f.value), high_bp), f"{f.name} {f.value}")
 
     if analysis.urgent and _ORDER[level] < _ORDER["MEDIUM"]:
         level = "MEDIUM"

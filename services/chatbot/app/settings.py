@@ -224,6 +224,27 @@ class Settings(BaseSettings):
     )
 
     # ============================================
+    # Health records (permanent, user-uploaded) and the overall health summary
+    # ============================================
+
+    health_records_bucket: str = Field(
+        default="",
+        description=(
+            "The only GCS bucket health-record URIs may point into; every URI must sit "
+            "under records/{user_id}/. Empty disables /v1/records/analyze."
+        ),
+    )
+
+    health_summary_model: str = Field(
+        default="gemini-2.5-flash",
+        description="Text model that turns her per-record summaries into one summary.",
+    )
+
+    health_summary_timeout_s: float = Field(
+        default=60.0, gt=0, description="The overall summary call (text only)."
+    )
+
+    # ============================================
     # API Authentication
     # ============================================
 
