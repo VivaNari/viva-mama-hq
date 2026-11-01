@@ -148,12 +148,11 @@ class AnalysisOutput(BaseModel):
     out_of_scope: bool = Field(
         ...,
         description=(
-            "True only if, on reading, this is clearly not a health document, or clearly "
-            "about someone other than the mother or her baby/child. Her pregnancy, trying "
-            "to conceive (fertility tests), postpartum recovery and her own health reports "
-            "are all in scope. Never judge who it belongs to by the patient name: a "
-            "different name on a woman's report does not make it someone else's. Then "
-            "leave every other field empty."
+            "True only if, on reading, this is clearly not a health document, or the "
+            "report states the patient is male, or it is for an animal. Nothing else makes "
+            "it someone else's: not the patient name, and not a mismatch with her stage "
+            "(a fertility or pregnancy report while she is postpartum is an earlier or a "
+            "new report of hers). Then leave every other field empty."
         ),
     )
     document_title: str = ""

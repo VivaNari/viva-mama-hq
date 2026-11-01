@@ -156,8 +156,10 @@ class TestSubjectRule(unittest.TestCase):
         prompt = analysis.ANALYSIS_PROMPT
         for phrase in ("trying to conceive", "HSG", "her own health", "out_of_scope=true"):
             self.assertIn(phrase, prompt)
-        # A different patient name (nickname, married surname) never makes it someone else's.
-        self.assertIn("NEVER decide who it belongs to from the\npatient NAME", prompt)
+        # A different patient name (nickname, married surname), or a report that does not
+        # match her stage (fertility report while postpartum), never makes it someone else's.
+        self.assertIn("NEVER decide who it belongs to from the patient NAME", prompt)
+        self.assertIn("NEVER decide it from her stage", prompt)
 
     def test_chat_turns_are_unchanged(self) -> None:
         self.assertEqual(self.verdict("any", subject_evidence="child"), "OK")
