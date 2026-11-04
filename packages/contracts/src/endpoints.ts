@@ -33,6 +33,8 @@ export const apiRoutes = {
     flowAnswer: `${v}/chat-flow/answer`,
     /** The reply to a chatbot turn by its clientMessageId; 202 while pending. */
     flowReply: `${v}/chat-flow/reply`,
+    /** A Devanagari copy of a Hinglish reply, for reading it aloud. */
+    speechText: `${v}/chat-flow/speech-text`,
     /** Reports, scans and prescriptions attached in Viva AI chat. */
     attachments: `${v}/chat/attachments`,
     attachmentsConfig: `${v}/chat/attachments/config`,

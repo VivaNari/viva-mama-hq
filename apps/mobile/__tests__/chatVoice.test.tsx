@@ -9,12 +9,17 @@ import * as Speech from "expo-speech";
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 import Toast from "react-native-toast-message";
 
+import { ChatBubble } from "../src/components/chatBubble";
 import { ChatInputBar } from "../src/components/ChatInputBar";
+import { useChatEntry } from "../src/hooks/useChatEntry";
 import { useReadAloud } from "../src/hooks/useReadAloud";
+import VivaAIHub from "../src/screens/VivaAIHub";
 import { useSpeechToText } from "../src/hooks/useSpeechToText";
+import { useSpokenReplyAutoplay } from "../src/hooks/useSpokenReplyAutoplay";
 import {
   chunkForSpeech,
   detectSpeechLang,
+  isLikelyHinglish,
   speechLangForAppLanguage,
   toSpeakableText,
 } from "../src/utils/messageHelpers";
@@ -25,6 +30,14 @@ jest.mock("../src/analytics", () => ({
   AnalyticsEvent: new Proxy({}, { get: (_t, key) => key }),
   track: jest.fn(),
 }));
+jest.mock("../src/api/speechText.api", () => ({ getSpeechText: jest.fn() }));
+const mockNavigate = jest.fn();
+jest.mock("@react-navigation/native", () => ({
+  ...jest.requireActual("@react-navigation/native"),
+  useNavigation: () => ({ navigate: mockNavigate }),
+}));
+// Needs a navigator, and has nothing to do with audio.
+jest.mock("../src/components/chatBubble/LogProposalCard", () => ({ LogProposalCard: () => null }));
 
 const emit = (name: string, event?: unknown) =>
   act(() => {
@@ -35,6 +48,8 @@ const result = (transcript: string, isFinal = false) => ({ isFinal, results: [{ 
 
 beforeEach(() => {
   jest.clearAllMocks();
+  // A working engine: sound starts as soon as it is asked to speak.
+  (Speech.speak as jest.Mock).mockImplementation((_text, options) => options?.onStart?.());
 });
 
 describe("speech text helpers", () => {
@@ -219,6 +234,320 @@ describe("useReadAloud", () => {
     const options = (Speech.speak as jest.Mock).mock.calls[0][1];
     act(() => options.onDone());
     expect(hook.current.speakingId).toBeNull();
+  });
+});
+
+describe("Hinglish replies", () => {
+  const HINGLISH = "Aapko **aaram** karna chahiye";
+  const SPOKEN = "Aapko aaram karna chahiye";
+  const DEVANAGARI = "आपको आराम करना चाहिए";
+  const getSpeechText = jest.requireMock("../src/api/speechText.api").getSpeechText as jest.Mock;
+
+  it("are recognised without catching ordinary English", () => {
+    expect(isLikelyHinglish("Aapko aaram karna chahiye")).toBe(true);
+    expect(isLikelyHinglish("Kya aap theek hain?")).toBe(true);
+    expect(isLikelyHinglish("You should rest and drink water.")).toBe(false);
+    // One Hindi word alone: a name or a borrowed word in an English reply.
+    expect(isLikelyHinglish("Your doctor Dr. Rahi will call you.")).toBe(false);
+    expect(isLikelyHinglish("The main thing is agar in the din of the ward.")).toBe(false);
+    expect(isLikelyHinglish("आपको आराम करना चाहिए")).toBe(false);
+  });
+
+  it("are spoken in Devanagari with the Hindi voice", async () => {
+    getSpeechText.mockResolvedValueOnce(DEVANAGARI);
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(() => hook.current.toggle("m1", HINGLISH));
+    expect(getSpeechText).toHaveBeenCalledWith(SPOKEN);
+    expect(Speech.speak).toHaveBeenCalledWith(DEVANAGARI, expect.objectContaining({ language: "hi-IN" }));
+    expect(hook.current.speakingId).toBe("m1");
+    expect(hook.current.preparingId).toBeNull();
+  });
+
+  it("are converted once, however often they are replayed", async () => {
+    getSpeechText.mockResolvedValueOnce(DEVANAGARI);
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(() => hook.current.toggle("m1", HINGLISH));
+    act(() => hook.current.toggle("m1", HINGLISH));
+    await act(() => hook.current.toggle("m1", HINGLISH));
+    expect(getSpeechText).toHaveBeenCalledTimes(1);
+    expect(Speech.speak).toHaveBeenCalledTimes(2);
+  });
+
+  it("don't call the server when English is being read", async () => {
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(() => hook.current.toggle("m1", "You should rest"));
+    expect(getSpeechText).not.toHaveBeenCalled();
+    expect(Speech.speak).toHaveBeenCalledWith("You should rest", expect.objectContaining({ language: "en-IN" }));
+  });
+
+  it("never fall back to the English voice when conversion fails", async () => {
+    getSpeechText.mockRejectedValueOnce(new Error("offline"));
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(() => hook.current.toggle("m1", HINGLISH));
+    expect(Speech.speak).not.toHaveBeenCalled();
+    expect(Toast.show).toHaveBeenCalledWith(expect.objectContaining({ text1: en.chat.voice.speakFailed }));
+    expect(hook.current.preparingId).toBeNull();
+    expect(hook.current.speakingId).toBeNull();
+  });
+
+  it("reject a conversion that came back without Devanagari", async () => {
+    getSpeechText.mockResolvedValueOnce(SPOKEN);
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(() => hook.current.toggle("m1", HINGLISH));
+    expect(Speech.speak).not.toHaveBeenCalled();
+    expect(Toast.show).toHaveBeenCalled();
+  });
+
+  it("show the loading state, and a tap during it cancels the reply", async () => {
+    let resolve: (text: string) => void = () => undefined;
+    getSpeechText.mockReturnValueOnce(new Promise((r) => (resolve = r)));
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(async () => {
+      hook.current.toggle("m1", HINGLISH);
+    });
+    await waitFor(() => expect(hook.current.preparingId).toBe("m1"));
+
+    act(() => hook.current.toggle("m1", HINGLISH));
+    expect(hook.current.preparingId).toBeNull();
+    await act(async () => resolve(DEVANAGARI));
+    expect(Speech.speak).not.toHaveBeenCalled();
+    expect(hook.current.speakingId).toBeNull();
+  });
+});
+
+describe("speaking wave", () => {
+  const WAVE = "speaking-wave";
+  const bubbleProps = {
+    isLast: true,
+    isFirst: false,
+    isAnimating: false,
+    isFlowComplete: false,
+    selectedMultiOptions: new Set<string>(),
+    onOptionSelect: jest.fn(),
+    onMultiOptionToggle: jest.fn(),
+    onDatePickerOpen: jest.fn(),
+    onLmpDatePickerOpen: jest.fn(),
+    onNotPregnantSelect: jest.fn(),
+    onConsultExpert: jest.fn(),
+    onChatWithViva: jest.fn(),
+    onBookmarkPress: jest.fn(),
+    onAnimationComplete: jest.fn(),
+    onSpeakPress: jest.fn(),
+    message: { id: "m1", type: "ai", flowInstanceId: "chatbot", text: "Rest well", options: [] } as any,
+  };
+  // The wave is hidden from screen readers, and queries skip hidden elements by default:
+  // without this the "isn't shown" tests would pass even with the wave on screen.
+  const HIDDEN = { includeHiddenElements: true };
+
+  // The finished bubble (after a tap, or once typing ends) and the typing bubble (a
+  // reply to a spoken question plays while it types).
+  describe.each([
+    ["finished", false],
+    ["typing", true],
+  ])("on a %s reply", (_name, shouldAnimate) => {
+    it("moves while audio plays, and stops the reply when tapped", () => {
+      const { getByTestId, getByLabelText } = render(
+        <ChatBubble {...bubbleProps} shouldAnimate={shouldAnimate} isSpeaking />,
+      );
+      expect(getByTestId(WAVE, HIDDEN)).toBeTruthy();
+      fireEvent.press(getByLabelText(en.chat.voice.stopA11y));
+      expect(bubbleProps.onSpeakPress).toHaveBeenCalledWith("m1", "Rest well");
+    });
+
+    it("isn't shown before the sound starts", () => {
+      const { queryByTestId } = render(
+        <ChatBubble {...bubbleProps} shouldAnimate={shouldAnimate} isPreparingSpeech />,
+      );
+      expect(queryByTestId(WAVE, HIDDEN)).toBeNull();
+    });
+
+    it("isn't shown when nothing is playing", () => {
+      const { queryByTestId } = render(
+        <ChatBubble {...bubbleProps} shouldAnimate={shouldAnimate} />,
+      );
+      expect(queryByTestId(WAVE, HIDDEN)).toBeNull();
+    });
+  });
+
+  it("follows the engine: waiting, then playing, then finished", async () => {
+    (Speech.speak as jest.Mock).mockImplementationOnce(() => undefined);
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(() => hook.current.toggle("m1", "You should rest"));
+    expect(hook.current.preparingId).toBe("m1");
+    expect(hook.current.speakingId).toBeNull();
+
+    const options = (Speech.speak as jest.Mock).mock.calls[0][1];
+    act(() => options.onStart());
+    expect(hook.current.preparingId).toBeNull();
+    expect(hook.current.speakingId).toBe("m1");
+
+    act(() => options.onDone());
+    expect(hook.current.speakingId).toBeNull();
+  });
+
+  it("clears the waiting state if the engine fails before any sound", async () => {
+    (Speech.speak as jest.Mock).mockImplementationOnce(() => undefined);
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(() => hook.current.toggle("m1", "You should rest"));
+    const options = (Speech.speak as jest.Mock).mock.calls[0][1];
+    act(() => options.onError(new Error("timeout")));
+    expect(hook.current.preparingId).toBeNull();
+    expect(hook.current.speakingId).toBeNull();
+    expect(Toast.show).toHaveBeenCalled();
+  });
+});
+
+describe("useSpokenReplyAutoplay", () => {
+  const ai = (id: string, text = "Reply") => ({ id, type: "ai", text, options: [] }) as any;
+  const user = (id: string) => ({ id, type: "user", text: "Question" }) as any;
+
+  const setup = () => {
+    const play = jest.fn();
+    const hook = renderHook(
+      (props: { inputText: string; lastMessage: any }) => useSpokenReplyAutoplay({ ...props, play }),
+      { initialProps: { inputText: "", lastMessage: ai("a1") } },
+    );
+    return { ...hook, play };
+  };
+
+  it("plays the reply to a spoken question, once", () => {
+    const { result: hook, rerender, play } = setup();
+    hook.current.markSpoken();
+    rerender({ inputText: "मुझे दर्द है", lastMessage: ai("a1") });
+    hook.current.noteSent();
+    rerender({ inputText: "", lastMessage: user("u1") });
+    expect(play).not.toHaveBeenCalled();
+
+    rerender({ inputText: "", lastMessage: ai("a2", "आराम करें") });
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(play).toHaveBeenCalledWith("a2", "आराम करें");
+
+    rerender({ inputText: "", lastMessage: ai("a3") });
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays silent for a typed question", () => {
+    const { result: hook, rerender, play } = setup();
+    rerender({ inputText: "typed", lastMessage: ai("a1") });
+    hook.current.noteSent();
+    rerender({ inputText: "", lastMessage: user("u1") });
+    rerender({ inputText: "", lastMessage: ai("a2") });
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it("still plays when she corrected the spoken words by hand", () => {
+    const { result: hook, rerender, play } = setup();
+    hook.current.markSpoken();
+    rerender({ inputText: "spoken", lastMessage: ai("a1") });
+    rerender({ inputText: "spoken and corrected", lastMessage: ai("a1") });
+    hook.current.noteSent();
+    rerender({ inputText: "", lastMessage: ai("a2") });
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("forgets the mic once she empties the box and types instead", () => {
+    const { result: hook, rerender, play } = setup();
+    hook.current.markSpoken();
+    rerender({ inputText: "spoken", lastMessage: ai("a1") });
+    rerender({ inputText: "", lastMessage: ai("a1") });
+    rerender({ inputText: "typed", lastMessage: ai("a1") });
+    hook.current.noteSent();
+    rerender({ inputText: "", lastMessage: ai("a2") });
+    expect(play).not.toHaveBeenCalled();
+  });
+
+  it("doesn't carry over to the next typed question", () => {
+    const { result: hook, rerender, play } = setup();
+    hook.current.markSpoken();
+    rerender({ inputText: "spoken", lastMessage: ai("a1") });
+    hook.current.noteSent();
+    rerender({ inputText: "", lastMessage: ai("a2") });
+    rerender({ inputText: "typed", lastMessage: ai("a2") });
+    hook.current.noteSent();
+    rerender({ inputText: "", lastMessage: ai("a3") });
+    expect(play).toHaveBeenCalledTimes(1);
+  });
+
+  it("doesn't start if she left or opened the mic while waiting", () => {
+    const { result: hook, rerender, play } = setup();
+    hook.current.markSpoken();
+    rerender({ inputText: "spoken", lastMessage: ai("a1") });
+    hook.current.noteSent();
+    hook.current.cancel();
+    rerender({ inputText: "", lastMessage: ai("a2") });
+    expect(play).not.toHaveBeenCalled();
+  });
+});
+
+describe("arriving from the Viva AI hub", () => {
+  const setup = (entry: "type" | "voice" | undefined, canAsk = true) => {
+    const skipAnimation = jest.fn();
+    const startListening = jest.fn();
+    const hook = renderHook(
+      (props: { inputMode: any; isAnimating: boolean }) =>
+        useChatEntry({ entry, canAsk, skipAnimation, startListening, ...props }),
+      { initialProps: { inputMode: "none", isAnimating: false } },
+    );
+    return { ...hook, skipAnimation, startListening };
+  };
+  const ready = { inputMode: "text", isAnimating: false };
+
+  it("waits for chat to be ready, skips the welcome typing, then listens once", () => {
+    const { rerender, skipAnimation, startListening } = setup("voice");
+    expect(startListening).not.toHaveBeenCalled();
+
+    rerender({ inputMode: "none", isAnimating: true });
+    expect(skipAnimation).toHaveBeenCalledTimes(1);
+    expect(startListening).not.toHaveBeenCalled();
+
+    rerender(ready);
+    expect(startListening).toHaveBeenCalledTimes(1);
+
+    rerender({ inputMode: "none", isAnimating: true });
+    rerender(ready);
+    expect(startListening).toHaveBeenCalledTimes(1);
+    expect(skipAnimation).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the mic closed when she has no questions left", () => {
+    const { rerender, startListening } = setup("voice", false);
+    rerender(ready);
+    expect(startListening).not.toHaveBeenCalled();
+  });
+
+  it("doesn't open the mic after she left", () => {
+    const { result: hook, rerender, startListening } = setup("voice");
+    act(() => hook.current.cancel());
+    rerender(ready);
+    expect(startListening).not.toHaveBeenCalled();
+  });
+
+  it("opens the keyboard for the text box, not the mic, until she sends", () => {
+    const { result: hook, rerender, startListening } = setup("type");
+    expect(hook.current.autoFocus).toBe(true);
+    rerender(ready);
+    expect(startListening).not.toHaveBeenCalled();
+    act(() => hook.current.cancel());
+    expect(hook.current.autoFocus).toBe(false);
+  });
+
+  it("leaves other ways into chat untouched", () => {
+    const { result: hook, rerender, skipAnimation, startListening } = setup(undefined);
+    rerender({ inputMode: "none", isAnimating: true });
+    rerender(ready);
+    expect(hook.current.autoFocus).toBe(false);
+    expect(skipAnimation).not.toHaveBeenCalled();
+    expect(startListening).not.toHaveBeenCalled();
+  });
+
+  it("hub buttons say how she arrived", () => {
+    const { getByLabelText, getByText } = render(<VivaAIHub />);
+    fireEvent.press(getByLabelText(en.vivaHub.askByVoice));
+    expect(mockNavigate).toHaveBeenLastCalledWith("ChatWithVivaAI", { entry: "voice" });
+    fireEvent.press(getByText(en.vivaHub.askPlaceholder));
+    expect(mockNavigate).toHaveBeenLastCalledWith("ChatWithVivaAI", { entry: "type" });
+    fireEvent.press(getByText(en.vivaHub.askQuestion));
+    expect(mockNavigate).toHaveBeenLastCalledWith("ChatWithVivaAI", { entry: undefined });
   });
 });
 

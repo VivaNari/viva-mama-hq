@@ -72,7 +72,9 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { useTranslation } from 'react-i18next';
 import { useScreenEdges } from '../hooks/useScreenEdges';
 import { useChatAttachments } from '../hooks/useChatAttachments';
+import { useChatEntry } from '../hooks/useChatEntry';
 import { useReadAloud } from '../hooks/useReadAloud';
+import { useSpokenReplyAutoplay } from '../hooks/useSpokenReplyAutoplay';
 import { useSpeechToText } from '../hooks/useSpeechToText';
 import { speechLangForAppLanguage } from '../utils/messageHelpers';
 import { useSubscriptionContext } from '../context/SubscriptionContext';
@@ -412,20 +414,41 @@ const ChatWithVivaAI: React.FC = () => {
     // was when she tapped the mic, not on a stale render's copy.
     const inputTextRef = useRef(state.inputText);
     inputTextRef.current = state.inputText;
+    const spokenReply = useSpokenReplyAutoplay({
+        inputText: state.inputText,
+        lastMessage,
+        play: readAloud.toggle,
+    });
     const speechToText = useSpeechToText({
         lang: speechLangForAppLanguage(i18n.language),
         getBaseText: useCallback(() => inputTextRef.current, []),
         onTranscript: useCallback(
-            (text: string) => dispatch({ type: 'SET_INPUT_TEXT', payload: text }),
-            [dispatch],
+            (text: string) => {
+                spokenReply.markSpoken();
+                dispatch({ type: 'SET_INPUT_TEXT', payload: text });
+            },
+            [dispatch, spokenReply.markSpoken],
         ),
         // The mic would otherwise hear Viva reading her own reply.
-        onBeforeStart: readAloud.stop,
+        onBeforeStart: useCallback(() => {
+            spokenReply.cancel();
+            readAloud.stop();
+        }, [spokenReply.cancel, readAloud.stop]),
+    });
+    const chatEntry = useChatEntry({
+        entry: isChatbotFlow ? route.params?.entry : undefined,
+        inputMode,
+        isAnimating: !!state.animatingMessageId,
+        canAsk: aiQuota.allowed,
+        skipAnimation: () => dispatch({ type: 'SET_ANIMATING_MESSAGE_ID', payload: null }),
+        startListening: speechToText.start,
     });
     const stopVoice = useRef(() => {});
     stopVoice.current = () => {
         speechToText.abort();
         readAloud.stop();
+        spokenReply.cancel();
+        chatEntry.cancel();
     };
 
     // Leaving the screen (another tab, a pushed screen) or the app silences both.
@@ -551,11 +574,13 @@ const ChatWithVivaAI: React.FC = () => {
         stopVoice.current();
         if (isChatbotFlow && attachments.enabled && attachments.hasReady) {
             if (attachments.blocking) return;
+            spokenReply.noteSent();
             handleTextSubmit(state.inputText, attachments.takeReady());
             return;
         }
+        spokenReply.noteSent();
         handleTextSubmit(state.inputText);
-    }, [handleTextSubmit, state.inputText, isChatbotFlow, attachments]);
+    }, [handleTextSubmit, state.inputText, isChatbotFlow, attachments, spokenReply.noteSent]);
 
     const handleDatePickerOpen = useCallback(() => {
         setIsLmpDatePicker(false);
@@ -1036,6 +1061,7 @@ const ChatWithVivaAI: React.FC = () => {
                                     onFlagPress={handleFlagPress}
                                     onSpeakPress={isChatbotFlow ? readAloud.toggle : undefined}
                                     isSpeaking={readAloud.speakingId === msg.id}
+                                    isPreparingSpeech={readAloud.preparingId === msg.id}
                                     isBookmarked={
                                         isAiMessage(msg)
                                             ? state.bookMarkedMessages.includes(msg.id)
@@ -1129,6 +1155,7 @@ const ChatWithVivaAI: React.FC = () => {
                             blocking: attachments.blocking,
                             full: attachments.full,
                         } : undefined}
+                        autoFocus={chatEntry.autoFocus}
                         voice={isChatbotFlow ? {
                             isListening: speechToText.isListening,
                             onMicPress: speechToText.toggle,

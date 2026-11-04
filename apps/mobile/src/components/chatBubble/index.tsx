@@ -31,6 +31,7 @@ export const ChatBubble: React.FC<Props> = ({
 	onConnectExpert,
 	onSpeakPress,
 	isSpeaking,
+	isPreparingSpeech,
 }) => {
 	if (shouldAnimate && isAiMessage(message) && onAnimationComplete) {
 		return (
@@ -46,6 +47,9 @@ export const ChatBubble: React.FC<Props> = ({
 				onConsultExpert={onConsultExpert}
 				onChatWithViva={onChatWithViva}
 				onConnectExpert={onConnectExpert}
+				onSpeakPress={onSpeakPress}
+				isSpeaking={isSpeaking}
+				isPreparingSpeech={isPreparingSpeech}
 			/>
 		);
 	}
@@ -71,6 +75,7 @@ export const ChatBubble: React.FC<Props> = ({
 			onConnectExpert={onConnectExpert}
 			onSpeakPress={onSpeakPress}
 			isSpeaking={isSpeaking}
+			isPreparingSpeech={isPreparingSpeech}
 		/>
 	);
 };

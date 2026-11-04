@@ -77,6 +77,9 @@ export type THealthSummaryPayload = {
  */
 const CHAT_TIMEOUT_MS = 150_000;
 
+/** Longer than the chatbot's 30 s limit on the same call, for the same reason. */
+const SPEECH_TEXT_TIMEOUT_MS = 35_000;
+
 class LLMService {
     private axiosInstance: AxiosInstance;
 
@@ -161,6 +164,29 @@ class LLMService {
             "Health summary built",
         );
         return data;
+    };
+
+    /**
+     * Devanagari copy of a Hinglish reply, for the phone's Hindi voice. Metadata only in
+     * logs: the text is what she was told about her health.
+     */
+    transliterateForSpeech = async (text: string, userId: string): Promise<string> => {
+        const startedAt = Date.now();
+        const { data } = await this.axiosInstance.post(
+            "/v1/speech/transliterate",
+            { text },
+            { timeout: SPEECH_TEXT_TIMEOUT_MS },
+        );
+        log.info(
+            {
+                userId,
+                chars: text.length,
+                requestId: data?.request_id,
+                latencyMs: Date.now() - startedAt,
+            },
+            "Reply transliterated for speech",
+        );
+        return data.text;
     };
 
     sendNameQuery = async (

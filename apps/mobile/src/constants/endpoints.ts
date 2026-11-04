@@ -33,6 +33,8 @@ export const API_VERIFY_OTP = `${API_VERSION_URL}/auth/verify-otp`;
 
 // Chat endpoints
 export const CHAT_FLOW_ANSWER = `${API_VERSION_URL}/chat-flow/answer`;
+/** A Devanagari copy of a Hinglish reply, for reading it aloud. */
+export const CHAT_SPEECH_TEXT = `${API_VERSION_URL}/chat-flow/speech-text`;
 /** The reply to a chatbot turn, for when the stream did not deliver it. */
 export const CHAT_FLOW_REPLY = `${API_VERSION_URL}/chat-flow/reply`;
 export const CHAT_ATTACHMENTS = `${API_VERSION_URL}/chat/attachments`;

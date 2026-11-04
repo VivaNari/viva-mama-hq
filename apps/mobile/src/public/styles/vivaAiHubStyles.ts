@@ -76,12 +76,8 @@ export const vivaAiHubStyles = StyleSheet.create({
     gap: 10,
   },
   askText: {
-    flex: 1,
     fontSize: 13,
     color: colors.vivaHeroText,
-  },
-  askTextListening: {
-    color: colors.white,
   },
   micButton: {
     width: 36,
@@ -90,10 +86,6 @@ export const vivaAiHubStyles = StyleSheet.create({
     backgroundColor: colors.white,
     alignItems: "center",
     justifyContent: "center",
-  },
-  micButtonListening: {
-    borderWidth: 3,
-    borderColor: colors.vivaHeroRing,
   },
   sectionLabel: {
     fontSize: 12,

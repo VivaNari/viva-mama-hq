@@ -98,6 +98,10 @@ def _build_vertex(model: str, temperature: float, role: str) -> BaseChatModel:
     elif role == "summarizer":
         # Overall health summary: a JSON object of short points across her records.
         kwargs["max_output_tokens"] = 3072
+    elif role == "transliterator":
+        # A whole reply rewritten in Devanagari, which takes more tokens than Roman
+        # text. Cut short, the reply would be read aloud with its end missing.
+        kwargs["max_output_tokens"] = 8192
     else:
         # Main generation / translation: generous cap so structured, formatted
         # answers (bullets, product/expert sections) complete in full.
@@ -120,6 +124,7 @@ def get_llm(
     vision_classifier: bool = False,
     analyzer: bool = False,
     summarizer: bool = False,
+    transliterator: bool = False,
 ) -> BaseChatModel:
     """Return a chat model for `model` (default: settings.llm_model).
 
@@ -143,9 +148,12 @@ def get_llm(
 
     `summarizer=True` is the text-only role that turns her stored per-record
     summaries into one overall health summary (JSON).
+
+    `transliterator=True` rewrites a Hinglish reply in Devanagari for read-aloud:
+    deterministic, with room for a whole reply.
     """
     resolved = model or settings.llm_model
-    if classifier or extractor or vision_classifier:
+    if classifier or extractor or vision_classifier or transliterator:
         temperature = _CLASSIFIER_TEMPERATURE
     elif analyzer:
         temperature = _ANALYZER_TEMPERATURE
@@ -165,6 +173,8 @@ def get_llm(
         role = "analyzer"
     elif summarizer:
         role = "summarizer"
+    elif transliterator:
+        role = "transliterator"
     else:
         role = "main"
     cache_key = f"{provider}:{resolved}:{temperature}:{role}"

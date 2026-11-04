@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Image, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Text, TouchableOpacity, View } from 'react-native';
 
 import { globalStyles } from '../../public/styles/globalStyles';
 import {
@@ -19,6 +19,7 @@ import { bubbleStyles } from './styles';
 import { ConnectExpertButton } from './ConnectExpertButton';
 import { LogProposalCard } from './LogProposalCard';
 import { MarkdownText } from './MarkdownText';
+import { SpeakingWave } from './SpeakingWave';
 import AttachmentBubbleContent from '../chatAttachments/AttachmentBubbleContent';
 import { useAttachmentViewer } from '../chatAttachments/AttachmentViewerContext';
 import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
@@ -50,6 +51,7 @@ interface StaticBubbleProps {
     /** Read this reply aloud. Optional for the same reason as onFlagPress. */
     onSpeakPress?: (id: string, text: string) => void;
     isSpeaking?: boolean;
+    isPreparingSpeech?: boolean;
 }
 
 export const StaticBubble: React.FC<StaticBubbleProps> = ({
@@ -72,6 +74,7 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
     onConnectExpert,
     onSpeakPress,
     isSpeaking,
+    isPreparingSpeech,
 }) => {
     const { t } = useTranslation();
     const attachmentViewer = useAttachmentViewer();
@@ -297,13 +300,20 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                             activeOpacity={0.2}
                             hitSlop={8}
                             accessibilityRole="button"
-                            accessibilityLabel={t(isSpeaking ? 'chat.voice.stopA11y' : 'chat.voice.playA11y')}
+                            accessibilityLabel={t(isSpeaking || isPreparingSpeech ? 'chat.voice.stopA11y' : 'chat.voice.playA11y')}
+                            accessibilityState={{ busy: !!isPreparingSpeech }}
+                            style={{ flexDirection: 'row', alignItems: 'center' }}
                         >
-                            <MaterialDesignIcons
-                                name={isSpeaking ? 'stop-circle-outline' : 'volume-high'}
-                                size={20}
-                                color={colors.darkPurple}
-                            />
+                            {isPreparingSpeech ? (
+                                <ActivityIndicator size={20} color={colors.darkPurple} />
+                            ) : (
+                                <MaterialDesignIcons
+                                    name={isSpeaking ? 'stop-circle-outline' : 'volume-high'}
+                                    size={20}
+                                    color={colors.darkPurple}
+                                />
+                            )}
+                            {isSpeaking ? <SpeakingWave /> : null}
                         </TouchableOpacity>
                     ) : null}
 

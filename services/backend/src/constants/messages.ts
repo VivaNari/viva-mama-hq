@@ -164,6 +164,8 @@ export const messages = {
     CHAT_REPLY_PENDING: "Viva is still working on this",
     CHAT_REPLY_FOUND: "Reply fetched successfully",
     CHAT_REPLY_NOT_FOUND: "Message not found",
+    CHAT_SPEECH_TEXT_FOUND: "Speech text created successfully",
+    CHAT_SPEECH_TEXT_FAILED: "Could not prepare this reply to be read aloud",
     REMINDER_FETCH_SUCCESS: "Reminders fetched successfully",
     REMINDER_SAVED_SUCCESS: "Reminder set successfully",
     REMINDER_DELETED_SUCCESS: "Reminder removed",

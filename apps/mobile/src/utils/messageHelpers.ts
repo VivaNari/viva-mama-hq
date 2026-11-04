@@ -326,6 +326,27 @@ const DEVANAGARI_RE = /[ऀ-ॿ]/;
 export const detectSpeechLang = (text: string): SpeechLang =>
   DEVANAGARI_RE.test(text) ? 'hi-IN' : 'en-IN';
 
+// Common Hindi words that are not also English words. "main", "to", "din" and "agar"
+// are left out on purpose: each reads as ordinary English in a health answer.
+const HINGLISH_MARKERS = new Set([
+  'aap', 'aapka', 'aapke', 'aapki', 'aapko', 'aapne', 'abhi', 'apna', 'apne', 'apni',
+  'aur', 'bahut', 'chahiye', 'haan', 'hai', 'hain', 'hoga', 'hogi', 'hota', 'hoti',
+  'hote', 'jaise', 'kaise', 'kar', 'kare', 'karein', 'karen', 'karna', 'karte', 'karti',
+  'kya', 'kyun', 'kyunki', 'lekin', 'liye', 'mein', 'mujhe', 'nahi', 'nahin', 'raha',
+  'rahe', 'rahi', 'sakta', 'sakte', 'sakti', 'theek', 'thoda', 'toh', 'yeh', 'zaroor',
+]);
+
+/**
+ * Whether a reply is Hindi written in English letters. Two different markers, so that
+ * one name or borrowed word in an English reply doesn't send it for conversion.
+ */
+export const isLikelyHinglish = (text: string): boolean => {
+  if (DEVANAGARI_RE.test(text)) return false;
+  const words = text.toLowerCase().match(/[a-z]+/g) ?? [];
+  const found = new Set(words.filter((word) => HINGLISH_MARKERS.has(word)));
+  return found.size >= 2;
+};
+
 /** The language the mic listens in: the app's language, as the replies are. */
 export const speechLangForAppLanguage = (appLanguage: string | undefined): SpeechLang =>
   appLanguage?.startsWith('hi') ? 'hi-IN' : 'en-IN';

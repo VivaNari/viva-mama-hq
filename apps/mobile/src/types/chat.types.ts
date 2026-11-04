@@ -238,9 +238,13 @@ export type ChatAction =
 // Navigation Types
 // ============================================
 
+/** What she tapped on the Viva AI hub to get here: its text box, or its mic. */
+export type ChatEntry = "type" | "voice";
+
 export type ChatRouteParams = {
   ChatWithVivaAI: {
     flowSlug?: string;
+    entry?: ChatEntry;
     /**
      * Per-child flows only. Omit when adding a new baby — the server resolves an
      * in-flight run or creates a draft child. Pass it to target an existing child.
@@ -300,6 +304,8 @@ export interface ChatBubbleProps {
   onSpeakPress?: (id: string, text: string) => void;
   /** This reply is the one currently being read aloud. */
   isSpeaking?: boolean;
+  /** This reply is being prepared and will start playing shortly. */
+  isPreparingSpeech?: boolean;
 }
 
 export interface ChatInputBarProps {

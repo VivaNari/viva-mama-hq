@@ -78,9 +78,7 @@ export const colors = {
   vivaDangerBG: "#fff2f2",
   vivaDangerBorder: "#f4d3d1",
   vivaDangerText: "#c0392b",
-  vivaMicActive: "#d64545",
   vivaHeroGlass: "rgba(255,255,255,0.16)",
   vivaHeroIcon: "rgba(255,255,255,0.18)",
   vivaHeroText: "rgba(255,255,255,0.85)",
-  vivaHeroRing: "rgba(255,255,255,0.35)",
 };

@@ -56,6 +56,8 @@ interface ChatInputBarProps {
         isListening: boolean;
         onMicPress: () => void;
     };
+    /** Open the keyboard as soon as the box appears. */
+    autoFocus?: boolean;
 }
 
 /** The mic, pulsing while it listens so she can see it is hearing her. */
@@ -114,6 +116,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     validationError = null,
     attachments,
     voice,
+    autoFocus = false,
 }) => {
     const { t } = useTranslation();
     // Multi-select submit bar
@@ -204,6 +207,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
                             hasError && styles.inputError,
                         ]}
                         value={inputText}
+                        autoFocus={autoFocus}
                         onChangeText={onInputChange}
                         placeholder={placeholder}
                         placeholderTextColor={colors.gray}

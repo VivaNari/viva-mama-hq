@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,6 +11,7 @@ import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
 import { logsStyles } from '../public/styles/logsStyles';
 import { vivaAiHubStyles as styles } from '../public/styles/vivaAiHubStyles';
+import { ChatEntry } from '../types/chat.types';
 
 /**
  * The Viva AI tab. It used to open the chat straight away; it is now a hub that sends
@@ -20,10 +21,9 @@ const VivaAIHub: React.FC = () => {
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
     const edges = useScreenEdges();
-    // Voice input is not wired yet; the mic only shows its listening state.
-    const [listening, setListening] = useState(false);
 
-    const openChat = () => navigation.navigate('ChatWithVivaAI');
+    // All typing and recording happens in chat, so there is one place to review a question.
+    const openChat = (entry?: ChatEntry) => navigation.navigate('ChatWithVivaAI', { entry });
 
     return (
         <SafeAreaView style={logsStyles.screen} edges={edges}>
@@ -49,28 +49,22 @@ const VivaAIHub: React.FC = () => {
                     <Text style={[styles.heroBody, globalStyles.fontRegular]}>{t('vivaHub.heroBody')}</Text>
 
                     <View style={styles.askBar}>
-                        <TouchableOpacity style={{ flex: 1 }} onPress={openChat} accessibilityRole="button">
-                            <Text
-                                style={[
-                                    styles.askText,
-                                    listening && styles.askTextListening,
-                                    listening ? globalStyles.fontSemiBold : globalStyles.fontRegular,
-                                ]}
-                            >
-                                {listening ? t('vivaHub.listening') : t('vivaHub.askPlaceholder')}
+                        <TouchableOpacity
+                            style={{ flex: 1 }}
+                            onPress={() => openChat('type')}
+                            accessibilityRole="button"
+                        >
+                            <Text style={[styles.askText, globalStyles.fontRegular]}>
+                                {t('vivaHub.askPlaceholder')}
                             </Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            onPress={() => setListening(prev => !prev)}
+                            onPress={() => openChat('voice')}
                             accessibilityRole="button"
                             accessibilityLabel={t('vivaHub.askByVoice')}
-                            style={[styles.micButton, listening && styles.micButtonListening]}
+                            style={styles.micButton}
                         >
-                            <Lucide
-                                name="mic"
-                                size={16}
-                                color={listening ? colors.vivaMicActive : colors.darkPurple}
-                            />
+                            <Lucide name="mic" size={16} color={colors.darkPurple} />
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -78,7 +72,7 @@ const VivaAIHub: React.FC = () => {
                 <Text style={[styles.sectionLabel, globalStyles.fontBold]}>{t('vivaHub.canHelpWith')}</Text>
 
                 <View style={logsStyles.tileGrid}>
-                    <OptionTile icon="message-square-more" label={t('vivaHub.askQuestion')} onPress={openChat} />
+                    <OptionTile icon="message-square-more" label={t('vivaHub.askQuestion')} onPress={() => openChat()} />
                     <OptionTile
                         icon="pencil-line"
                         label={t('vivaHub.logSomething')}

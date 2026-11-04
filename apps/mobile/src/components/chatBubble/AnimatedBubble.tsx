@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { ActivityIndicator, View, Text, TouchableOpacity, Image } from 'react-native';
+import MaterialDesignIcons from '@react-native-vector-icons/material-design-icons';
 
+import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles/globalStyles';
 import {
     IChatMessage,
@@ -19,6 +21,7 @@ import { bubbleStyles } from './styles';
 import { ConnectExpertButton } from './ConnectExpertButton';
 import { LogProposalCard } from './LogProposalCard';
 import { MarkdownText } from './MarkdownText';
+import { SpeakingWave } from './SpeakingWave';
 
 interface AnimatedBubbleProps {
     message: IChatMessage;
@@ -32,6 +35,9 @@ interface AnimatedBubbleProps {
     onConsultExpert: () => void;
     onChatWithViva: () => void;
     onConnectExpert?: (expertId: string) => void;
+    onSpeakPress?: (id: string, text: string) => void;
+    isSpeaking?: boolean;
+    isPreparingSpeech?: boolean;
 }
 
 export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
@@ -46,6 +52,9 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
     onConsultExpert,
     onChatWithViva,
     onConnectExpert,
+    onSpeakPress,
+    isSpeaking,
+    isPreparingSpeech,
 }) => {
     const { t } = useTranslation();
     const [displayedText, setDisplayedText] = useState('');
@@ -53,6 +62,7 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
     const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
     const isAi = isAiMessage(message);
+    const messageId = message.id;
     const isTextInput = isAi && isTextInputMessage(message);
     const isMultiSelect = isAi && isMultiSelectMessage(message);
     const isDeliveryDate = isAi && isDeliveryDateNode(message);
@@ -240,6 +250,30 @@ export const AnimatedBubble: React.FC<AnimatedBubbleProps> = ({
                     )}
 
                 </View>
+                {/* A reply to a spoken question starts talking while it is still typing,
+                    which can last most of a minute. She must be able to stop it. */}
+                {messageId && onSpeakPress && (isSpeaking || isPreparingSpeech) ? (
+                    <TouchableOpacity
+                        onPress={() => onSpeakPress(messageId, message.text ?? '')}
+                        activeOpacity={0.2}
+                        hitSlop={8}
+                        style={{ paddingVertical: 8, alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center' }}
+                        accessibilityRole="button"
+                        accessibilityLabel={t('chat.voice.stopA11y')}
+                        accessibilityState={{ busy: !!isPreparingSpeech }}
+                    >
+                        {isPreparingSpeech ? (
+                            <ActivityIndicator size={20} color={colors.darkPurple} />
+                        ) : (
+                            <MaterialDesignIcons
+                                name="stop-circle-outline"
+                                size={20}
+                                color={colors.darkPurple}
+                            />
+                        )}
+                        {isSpeaking ? <SpeakingWave /> : null}
+                    </TouchableOpacity>
+                ) : null}
                 {showOptions && isAi && (
                     <ConnectExpertButton
                         suggestedExperts={message.suggestedExperts}

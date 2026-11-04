@@ -19,6 +19,7 @@ from app.records.schemas import (
     RecordAnalyzeResponse,
 )
 from app.settings import settings
+from app.speech.transliterate import TransliterationError, transliterate_to_devanagari
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -442,6 +443,40 @@ async def chat_once_name_detector_endpoint(
         )
 
         raise HTTPException(status_code=500, detail="An error occurred processing your request.")
+
+
+class SpeechTextRequest(BaseModel):
+    """A Hinglish reply to be read aloud."""
+
+    text: str = Field(..., min_length=1, max_length=10000)
+
+
+class SpeechTextResponse(BaseModel):
+    request_id: str
+    text: str
+
+
+@app.post("/v1/speech/transliterate", response_model=SpeechTextResponse, tags=["speech"])
+@limiter.limit("60/minute")
+async def speech_transliterate_endpoint(
+    req: SpeechTextRequest, request: Request, ok: bool = Depends(require_api_key)
+):
+    """Devanagari copy of a Hinglish reply, for the phone's Hindi voice."""
+    request_id = str(uuid.uuid4())
+    start = time.time()
+    try:
+        text = await transliterate_to_devanagari(req.text)
+    except TransliterationError as e:
+        # The reason names a check, never the reply: it is about her health.
+        logger.warning(f"[{request_id}] Transliteration rejected: {e}")
+        raise HTTPException(status_code=502, detail="TRANSLITERATION_FAILED")
+    except Exception as e:
+        logger.error(f"[{request_id}] Transliteration error: {type(e).__name__}")
+        raise HTTPException(status_code=500, detail="An error occurred processing your request.")
+    logger.info(
+        f"[{request_id}] Transliterated chars={len(req.text)} latency={time.time() - start:.3f}s"
+    )
+    return SpeechTextResponse(request_id=request_id, text=text)
 
 
 @app.post("/v1/records/analyze", response_model=RecordAnalyzeResponse, tags=["records"])

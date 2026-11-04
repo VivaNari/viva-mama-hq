@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import { messages } from "../../../../constants/messages";
 import ChatFlowAIService from "../../../../services/chat-system/chat-flow-ai.service";
 import ChatFlowService from "../../../../services/chat-system/chat-flow.service";
+import LLMService from "../../../../services/llm/llm.service";
 import { AuthenticatedRequest, FlowType, FlowTypeEnum } from "../../../../types/chat.types";
 import sendResponse from "../../../../utils/commonFunctions/sendResponse";
 import { ECapability } from "../../../../services/entitlements/entitlement.config";
@@ -27,10 +28,12 @@ const log = createModuleLogger(logger, "chat-flow-controller");
 class ChatFlowController {
     private chatFlowService: ChatFlowService;
     private chatFlowAIService: ChatFlowAIService;
+    private llmService: LLMService;
 
     constructor() {
         this.chatFlowService = new ChatFlowService();
         this.chatFlowAIService = new ChatFlowAIService();
+        this.llmService = new LLMService();
     }
 
     handleSseConnection = (request: Request, response: Response, next: NextFunction) => {
@@ -118,6 +121,30 @@ class ChatFlowController {
             });
         } catch (err) {
             next(err);
+        }
+    };
+
+    getSpeechText = async (request: Request, response: Response) => {
+        const userId = String((request as AuthenticatedRequest).user._id);
+        try {
+            const text = await this.llmService.transliterateForSpeech(request.body.text, userId);
+            return sendResponse({
+                data: { text },
+                message: messages.CHAT_SPEECH_TEXT_FOUND,
+                success: true,
+                statusCode: StatusCodes.OK,
+                response,
+            });
+        } catch (err: any) {
+            // Status only: an axios error carries the request body, which is her reply.
+            log.warn({ userId, status: err?.response?.status }, "Speech text failed");
+            return sendResponse({
+                data: null,
+                message: messages.CHAT_SPEECH_TEXT_FAILED,
+                success: false,
+                statusCode: StatusCodes.BAD_GATEWAY,
+                response,
+            });
         }
     };
 
