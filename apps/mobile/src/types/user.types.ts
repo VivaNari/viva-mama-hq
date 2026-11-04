@@ -85,12 +85,21 @@ export interface IUser {
     parity: ParityEnum | null;
     /**
      * Where she is taking care: sets the public (government) or private route for logs
-     * and reminders. Not asked at onboarding yet, so absent and null both mean "not
-     * known" and the app falls back to the public route.
+     * and reminders. Absent and null both mean "not known". The app never assumes a
+     * route for her: it asks her to add it in Edit Profile.
      */
     care_model?: CareModelEnum | null;
     /** Height in cm, for BMI. Asked at onboarding; editable in Edit Profile. */
     height_cm?: number | null;
+    /** Last four digits of her ABHA number. The number itself never reaches the app. */
+    abha_number_last4?: string | null;
+    /** The health record holding her ABHA card photo, when she added one. */
+    abha_record_id?: string | null;
+    care_facility?: string | null;
+    health_history?: string[];
+    /** Counting the current pregnancy. */
+    pregnancies_count?: number | null;
+    living_children_count?: number | null;
     onboarded_at: Date | null;
   };
   subscription: {

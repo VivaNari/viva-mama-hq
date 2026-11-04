@@ -38,7 +38,7 @@ export type TAppendLogType = (typeof APPEND_LOG_TYPES)[number];
 export type TDailyLogType = (typeof DAILY_LOG_TYPES)[number];
 export type TMotherLogType = (typeof MOTHER_LOG_TYPES)[number];
 
-export const LOG_SOURCES = ["manual", "chat"] as const;
+export const LOG_SOURCES = ["manual", "chat", "onboarding"] as const;
 export type TLogSource = (typeof LOG_SOURCES)[number];
 
 export const SUGAR_TIMINGS = ["fasting", "post_meal"] as const;

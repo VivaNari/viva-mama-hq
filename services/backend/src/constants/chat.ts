@@ -61,7 +61,42 @@ export const NN_WOMEN_INDICATORS = [
     "Feeding Method",
     "Social Support",
     "Parity",
+    "Care Facility",
+    "Health History",
+    "Pregnancy Count",
+    "Living Children",
 ];
+
+/**
+ * Onboarding questions that only follow from an earlier answer. Both engines use this:
+ * FlowService by way of checkNodeEligibility, and ChatFlowService.findNextValidNode.
+ * Indicators not listed here are unaffected, including every weekly check-in question.
+ */
+export const isOnboardingNodeUnlocked = (
+    indicator: string,
+    data:
+        | {
+              parity?: string | null;
+              abha_status?: string | null;
+              abha_capture_method?: string | null;
+          }
+        | null
+        | undefined,
+): boolean => {
+    switch (indicator) {
+        case "Pregnancy Count":
+        case "Living Children":
+            return data?.parity === "multiparous";
+        case "ABHA Method":
+            return data?.abha_status === "yes";
+        case "ABHA Number":
+            return data?.abha_status === "yes" && data?.abha_capture_method === "type";
+        case "ABHA Card":
+            return data?.abha_status === "yes" && data?.abha_capture_method === "upload";
+        default:
+            return true;
+    }
+};
 
 export const STOPPED_BREASTFEEDING_SCORE = -1;
 
@@ -161,7 +196,7 @@ export const FLOW_COMPLETION_MESSAGES_I18N: Record<
 > = {
     en: {
         ONBOARDING:
-            "Thank you! That gives me a clear picture of your health, support, and daily life. I will now build your personalised recovery journey and connect you with the right support.",
+            "This gives me a clear picture. Viva is personalising your 1,000-day journey, from pregnancy through your baby's first two years.",
         CHECK_IN:
             "Thank you for completing your check-in! Your score is being generated. Please check the dashboard.",
         BABY_ONBOARDING:
@@ -169,7 +204,7 @@ export const FLOW_COMPLETION_MESSAGES_I18N: Record<
     },
     hi: {
         ONBOARDING:
-            "धन्यवाद, अब मुझे आपकी सेहत, सहारे और रोज़मर्रा की ज़िंदगी की स्पष्ट तस्वीर मिल गई है। मैं अब आपकी journey personalise करूँगी। हर रिकवरी अलग होती है, और मैं हर कोमल दिन आपके साथ चलूँगी।",
+            "अब मुझे आपकी स्पष्ट तस्वीर मिल गई है। Viva आपकी 1,000 दिनों की यात्रा को आपके लिए तैयार कर रही है, गर्भावस्था से लेकर आपके शिशु के पहले दो वर्षों तक।",
         CHECK_IN:
             "आपकी जाँच पूरी करने के लिए धन्यवाद! आपका स्कोर तैयार किया जा रहा है। कृपया डैशबोर्ड देखें।",
         BABY_ONBOARDING:

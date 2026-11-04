@@ -17,6 +17,8 @@ interface Props {
   value: AnswerValue;
   onChange: (value: string | string[]) => void;
   disabled?: boolean;
+  /** For a free-text question that holds a number. */
+  keyboardType?: "default" | "number-pad";
 }
 
 const NONE_VALUES = NONE_OPTION_VALUES as readonly string[];
@@ -32,6 +34,7 @@ const OnboardingAnswerInput: React.FC<Props> = ({
   value,
   onChange,
   disabled,
+  keyboardType = "default",
 }) => {
   const { t } = useTranslation();
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -48,6 +51,7 @@ const OnboardingAnswerInput: React.FC<Props> = ({
           value={typeof value === "string" ? value : ""}
           onChangeText={onChange}
           editable={!disabled}
+          keyboardType={keyboardType}
         />
       </View>
     );

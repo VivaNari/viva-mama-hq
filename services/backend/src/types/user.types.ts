@@ -187,6 +187,25 @@ export interface IUser {
         care_model?: ECareModel | null;
         /** Height in cm, for BMI. Null until onboarding or Edit Profile records it. */
         height_cm?: number | null;
+        /** Her answer to "Do you have an ABHA ID number?". Null means never asked. */
+        abha_status?: EAbhaStatus | null;
+        /** How she chose to give it. Decides which follow-up question she sees. */
+        abha_capture_method?: EAbhaCaptureMethod | null;
+        /** Encrypted, and `select: false`. Never send this to a client. */
+        abha_number?: string | null;
+        /** Last four digits, for showing the number masked. */
+        abha_number_last4?: string | null;
+        /** The health record holding the card photo, when she uploaded one. */
+        abha_record_id?: Schema.Types.ObjectId | null;
+        /** Name of the hospital she takes care from. Optional. */
+        care_facility?: string | null;
+        /** Conditions she has been told about at any time, for high-risk tagging. */
+        health_history?: HealthHistoryEnum[];
+        /** Counting the current pregnancy. Only asked when this is not her first. */
+        pregnancies_count?: number | null;
+        living_children_count?: number | null;
+        /** Derived, and `select: false`. Not shown in the app or passed to the chatbot. */
+        risk_flags?: IRiskFlags | null;
         onboarded_at: Date | null;
     };
     subscription: IUserSubscriptionSnapshot;
@@ -302,4 +321,32 @@ export enum SocialSupportEnum {
 export enum ParityEnum {
     FIRST_TIME = "first_time",
     MULTIPAROUS = "multiparous",
+}
+
+export enum EAbhaStatus {
+    YES = "yes",
+    NO = "no",
+    SKIPPED = "skip",
+}
+
+export enum EAbhaCaptureMethod {
+    TYPE = "type",
+    UPLOAD = "upload",
+}
+
+export enum HealthHistoryEnum {
+    PRIOR_GDM = "prior_gdm",
+    HIGH_BP = "chronic_or_past_high_bp",
+    PRE_ECLAMPSIA = "pre_eclampsia",
+    ANAEMIA = "anaemia_or_low_hb",
+    NONE = "history_conditions_none",
+}
+
+export interface IRiskFlags {
+    prior_gdm: boolean;
+    pregnancy_hypertension: boolean;
+    anaemia_history: boolean;
+    previous_loss: boolean;
+    age_risk: boolean;
+    high_parity: boolean;
 }

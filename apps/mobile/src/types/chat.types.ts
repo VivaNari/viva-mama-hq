@@ -186,7 +186,13 @@ export type InputMode =
    * Free text constrained to a number. The flow engine has no numeric node type, so the
    * baby birth measurements arrive as QUESTION_FREE_TEXT and are recognised by node id.
    */
-  | "number";
+  | "number"
+  /** Weight in kg or lb, sent to the server in kg. */
+  | "weight"
+  /** Height in cm or ft + in, sent to the server in cm. */
+  | "height"
+  /** A photo of her ABHA card, from the camera or gallery. */
+  | "abhaCard";
 
 export interface ChatState {
   messages: IChatMessage[];

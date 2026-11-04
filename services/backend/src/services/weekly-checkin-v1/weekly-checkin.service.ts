@@ -51,7 +51,9 @@ import NotificationService from "./notification.service";
 
 import { getUuid } from "../../utils/commonFunctions/uuid";
 import logger, { createModuleLogger } from "../../utils/logger";
+import { freeTextForStorage } from "../../constants/onboarding";
 import ChatFlowService from "../chat-system/chat-flow.service";
+import { refreshRiskFlags } from "../users/risk-flags.service";
 import { getOrCreateFlowConversation } from "../chat-system/flow-conversation.service";
 
 const log = createModuleLogger(logger, "weekly-checkin.service");
@@ -403,7 +405,7 @@ class WeeklyCheckinService {
                 {
                     selectedKeys,
                     selectedValues,
-                    freeText,
+                    freeText: freeTextForStorage(currentNode.id, freeText),
                     idempotencyKey,
                 },
             );
@@ -796,6 +798,7 @@ class WeeklyCheckinService {
                     "onboarding_data.onboarded_at": new Date(),
                 },
             });
+            await refreshRiskFlags(userId);
         }
 
         return {
@@ -859,6 +862,7 @@ class WeeklyCheckinService {
                 "subscription.currentPeriodEnd": null,
             },
         });
+        await refreshRiskFlags(userId);
 
         log.info(
             { userId, week, flowInstanceId: flowInstance._id },

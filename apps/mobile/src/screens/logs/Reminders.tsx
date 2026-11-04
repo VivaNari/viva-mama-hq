@@ -10,6 +10,7 @@ import CustomDatePicker from '../../components/CustomDatePicker';
 import { PrimaryButton, SecondaryButton } from '../../components/logs/Buttons';
 import Chip from '../../components/logs/Chip';
 import LogScreen from '../../components/logs/LogScreen';
+import CareModelPrompt from '../../components/logs/CareModelPrompt';
 import { useCareContext } from '../../hooks/useCareContext';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
@@ -68,7 +69,7 @@ interface Draft {
  */
 const Reminders: React.FC = () => {
     const { t, i18n } = useTranslation();
-    const { careModel } = useCareContext();
+    const { careModel, loading: careLoading } = useCareContext();
 
     const newDraft = (): Draft => ({
         category: 'medicine',
@@ -141,7 +142,12 @@ const Reminders: React.FC = () => {
         ].join(' · ');
     };
 
-    const routeLabel = careModel === CareModelEnum.PRIVATE ? t('logs.reminders.private') : t('logs.reminders.public');
+    const routeLabel =
+        careModel === CareModelEnum.PRIVATE
+            ? t('logs.reminders.private')
+            : careModel === CareModelEnum.PUBLIC
+              ? t('logs.reminders.public')
+              : null;
     // A one-time reminder for a moment already gone would never send.
     const oncePast =
         draft.frequency === 'once' &&
@@ -228,6 +234,7 @@ const Reminders: React.FC = () => {
         <LogScreen title={t('logs.reminders.title')} subtitle={subtitle} contentStyle={{ paddingTop: 18, gap: 16 }}>
             {step === 'list' ? (
                 <>
+                    {!careLoading && !careModel ? <CareModelPrompt /> : null}
                     <Text style={[logsStyles.mutedLabel, { fontSize: 11, lineHeight: 16 }, globalStyles.fontRegular]}>
                         {t('logs.reminders.notifyHint')}
                     </Text>
@@ -501,7 +508,7 @@ const Reminders: React.FC = () => {
                     <View style={[logsStyles.itemCard, { flexDirection: 'column', alignItems: 'stretch', padding: 16, gap: 10 }]}>
                         {[
                             ['reminder', detailOf(draft)],
-                            ['care', routeLabel],
+                            ...(routeLabel ? [['care', routeLabel]] : []),
                             ['time', formatReminderTime(draft.time)],
                             ['frequency', frequencyLabel(draft.frequency, draft.weekdays)],
                             ['duration', durationOf(draft)],

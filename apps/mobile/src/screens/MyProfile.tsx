@@ -209,6 +209,8 @@ const MyProfile = () => {
                                 onAction={(action) => {
                                     if (action === 'CHANGE_LANGUAGE') {
                                         navigation.navigate('LanguageSelection', { mode: 'settings' });
+                                    } else if (action === 'REFERRAL_CODE') {
+                                        navigation.navigate('ReferralCode', { mode: 'settings' });
                                     } else if (action === 'DELETE_ACCOUNT') {
                                         setShowDeleteModal(true);
                                     }

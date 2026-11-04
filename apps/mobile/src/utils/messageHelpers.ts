@@ -7,14 +7,20 @@ import {
   InputMode,
 } from "../types/chat.types";
 import {
+  ABHA_CARD_NODE_ID,
+  ABHA_NUMBER_NODE_ID,
   CHILD_DOB_NODE_ID,
   DELIVERY_DATE_NODE_ID,
   DOB_NODE_ID,
+  HEIGHT_NODE_ID,
   MAX_CHILD_AGE_YEARS,
   MEASUREMENT_NODE_BOUNDS,
   MIN_AGE_YEARS,
   NONE_OPTION_VALUES,
+  SKIPPABLE_NODE_IDS,
   STILL_BIRTH_NODE_ID,
+  WEIGHT_NODE_ID,
+  normalizeAbhaNumber,
 } from "../constants/chat";
 
 /**
@@ -105,6 +111,10 @@ export const getDateBoundsForNode = (
   return { maximumDate: getMaxDateOfBirth() };
 };
 
+/** Check if this free-text question is optional, and so gets a Skip chip. */
+export const isSkippableNode = (message: IChatMessage | undefined): boolean =>
+  !!message && isAiMessage(message) && SKIPPABLE_NODE_IDS.includes(message.id);
+
 /**
  * Validate a typed birth measurement against the node's range.
  *
@@ -124,12 +134,23 @@ export const validateMeasurement = (
 ): string | null => {
   if (!message || !isAiMessage(message)) return null;
 
+  if (message.id === ABHA_NUMBER_NODE_ID) {
+    return normalizeAbhaNumber(raw) ? null : t("chat.abha.invalidNumber");
+  }
+
   const bounds = MEASUREMENT_NODE_BOUNDS[message.id];
   if (!bounds) return null;
 
   const value = Number.parseFloat(raw.trim());
   if (!Number.isFinite(value)) {
     return t("infant.editChild.notANumber");
+  }
+
+  // A count has no unit, and has to be a whole number.
+  if (!bounds.unit) {
+    return Number.isInteger(value) && value >= bounds.min && value <= bounds.max
+      ? null
+      : t("chat.countOutOfRange", { min: bounds.min, max: bounds.max });
   }
 
   if (value < bounds.min || value > bounds.max) {
@@ -182,9 +203,13 @@ export const determineInputMode = (
 
   // Before the generic text branch: measurements are free-text nodes, so the plain
   // handler would claim them and hand the user an alphabetic keyboard.
-  if (isMeasurementNode(lastMessage)) {
+  if (isMeasurementNode(lastMessage) || lastMessage.id === ABHA_NUMBER_NODE_ID) {
     return "number";
   }
+
+  if (lastMessage.id === WEIGHT_NODE_ID) return "weight";
+  if (lastMessage.id === HEIGHT_NODE_ID) return "height";
+  if (lastMessage.id === ABHA_CARD_NODE_ID) return "abhaCard";
 
   if (
     isTextInputMessage(lastMessage) &&

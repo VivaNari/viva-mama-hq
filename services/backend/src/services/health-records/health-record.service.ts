@@ -17,7 +17,7 @@ import {
     IHealthRecord,
     IHealthRecordFile,
 } from "../../types/health-record.types";
-import { EChildOnboardingStatus, IChild } from "../../types/user.types";
+import { EAbhaStatus, EChildOnboardingStatus, IChild } from "../../types/user.types";
 import logger, { createModuleLogger } from "../../utils/logger";
 import { processAttachment } from "../chat-system/attachment-processing.service";
 import { ChildNotFoundError, getOwnedChild } from "../childs/child-ownership";
@@ -353,6 +353,38 @@ class HealthRecordService {
         }
         if (record.files.length === 0) {
             throw new HealthRecordError(EHealthRecordError.NO_FILES, 400);
+        }
+
+        // An ABHA card is only filed. It is never read by the AI and spends no upload
+        // quota, which matters because she may have no plan yet during onboarding.
+        if (record.category === EHealthRecordCategory.ABHA_CARD) {
+            const filed = await healthRecordModel.findOneAndUpdate(
+                { _id: recordId, userId, deletedAt: null, status: EHealthRecordStatus.DRAFT },
+                {
+                    $set: {
+                        status: EHealthRecordStatus.READY,
+                        submittedAt: new Date(),
+                        recordDate: getISTCalendarDate(),
+                        lang,
+                    },
+                },
+                { new: true },
+            );
+            // The same card can also be added later from Edit Profile, so the link to it
+            // is kept here rather than only through the onboarding answer.
+            await UserModel.updateOne(
+                { _id: userId },
+                {
+                    $set: {
+                        "onboarding_data.abha_record_id": recordId,
+                        "onboarding_data.abha_status": EAbhaStatus.YES,
+                    },
+                },
+            );
+            return {
+                record: filed ?? (await this.getOwned(userId, recordId)),
+                quota: await entitlementService.peekQuota(userId, ECapability.RECORDS_UPLOAD),
+            };
         }
 
         const quota = await entitlementService.consumeCapability(
@@ -694,10 +726,12 @@ class HealthRecordService {
 
     /** How many READY records she has, for the summary button. */
     async readyCount(userId: string): Promise<number> {
+        // Counts what an overall summary can use, so the ABHA card stays out of it.
         return healthRecordModel.countDocuments({
             userId,
             deletedAt: null,
             status: EHealthRecordStatus.READY,
+            category: { $ne: EHealthRecordCategory.ABHA_CARD },
         });
     }
 
@@ -772,6 +806,11 @@ class HealthRecordService {
         await healthRecordModel.updateMany(
             { _id: { $in: recordIds }, userId },
             { $set: { deletedAt: new Date() } },
+        );
+        // If this was her ABHA card, her profile must stop pointing at it.
+        await UserModel.updateOne(
+            { _id: userId, "onboarding_data.abha_record_id": { $in: recordIds } },
+            { $set: { "onboarding_data.abha_record_id": null } },
         );
         for (const r of records) {
             await this.purgeObjects(userId, String(r._id), r.bucket);

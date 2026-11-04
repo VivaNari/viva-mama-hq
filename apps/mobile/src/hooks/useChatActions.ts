@@ -12,7 +12,13 @@ import {
   IPendingAttachment,
   IUserMessage,
 } from "../types/chat.types";
-import { LMP_DATE_PREFIX, NOT_PREGNANT_VALUE } from "../constants/chat";
+import {
+  ABHA_NUMBER_NODE_ID,
+  LMP_DATE_PREFIX,
+  NOT_PREGNANT_VALUE,
+  maskAbhaNumber,
+  normalizeAbhaNumber,
+} from "../constants/chat";
 import {
   formatDateForApi,
   getSelectedLabels,
@@ -290,7 +296,11 @@ export const useChatActions = ({
         return;
       }
 
-      await saveUserMessage(trimmedText, lastAi.id);
+      // The chat history on the phone keeps what it is given, so her ABHA number goes in
+      // masked. The server masks its own copies too.
+      const abhaDigits =
+        lastAi.id === ABHA_NUMBER_NODE_ID ? normalizeAbhaNumber(trimmedText) : null;
+      await saveUserMessage(abhaDigits ? maskAbhaNumber(abhaDigits) : trimmedText, lastAi.id);
       dispatch({ type: "SET_INPUT_TEXT", payload: "" });
 
       if (submitGuidedAnswer) {
@@ -311,6 +321,28 @@ export const useChatActions = ({
       onTurnSent,
       onSendFailed,
     ],
+  );
+
+  /**
+   * Answer a guided question where the chat shows one thing and the server gets another:
+   * "62 kg" and 62, or "Skip" and the skip marker.
+   */
+  const handleGuidedAnswer = useCallback(
+    async (display: string, freeText: string) => {
+      const lastAi = await getLastAiMessage();
+      if (!lastAi) {
+        chatLogger.error("No AI message to respond to");
+        return;
+      }
+
+      await saveUserMessage(display, lastAi.id);
+      dispatch({ type: "SET_INPUT_TEXT", payload: "" });
+
+      if (isGuidedFlow && submitGuidedAnswer) {
+        await submitGuidedAnswer({ nodeId: lastAi.id, freeText });
+      }
+    },
+    [getLastAiMessage, saveUserMessage, dispatch, isGuidedFlow, submitGuidedAnswer],
   );
 
   /**
@@ -387,6 +419,7 @@ export const useChatActions = ({
     handleOptionSelect,
     handleMultiSelectSubmit,
     handleTextSubmit,
+    handleGuidedAnswer,
     handleDateSelect,
     handleLmpDateSelect,
     handleNotPregnantSelect,

@@ -15,9 +15,73 @@ import recommendationHistoryModel from "../../../../models/recommendation-histor
 import { resolveLanguage } from "../../../../utils/i18n/localizeFlowDefinition";
 import { localizeRecommendationHistory } from "../../../../utils/i18n/localizeRecommendationHistory";
 import { buildEmergencyAlert } from "../../../../utils/buildEmergencyAlert";
-import { ECareModel, EUserCategory } from "../../../../types/user.types";
+import { ECareModel, EUserCategory, HealthHistoryEnum } from "../../../../types/user.types";
 import { EAccessDenial } from "../../../../types/auth.types";
 import { calculatePostpartumState } from "../../../../utils/functions/postpartumWeek";
+import {
+    CARE_FACILITY_MAX_LENGTH,
+    LIVING_CHILDREN_BOUNDS,
+    PREGNANCIES_BOUNDS,
+    normalizeAbhaNumber,
+} from "../../../../constants/onboarding";
+import { encryptField } from "../../../../services/crypto/field-encryption.service";
+import { refreshRiskFlags } from "../../../../services/users/risk-flags.service";
+
+/**
+ * Clean the PRD section 1 fields in an Edit Profile patch, in place. This endpoint writes
+ * without schema validators, so the checks have to live here. Returns an error message,
+ * or null when the patch is safe to write.
+ */
+export const sanitizeOnboardingPatch = (patch: Record<string, any> | undefined): string | null => {
+    if (!patch) return null;
+
+    // Server-owned: derived, or only ever set from a verified answer or record.
+    delete patch.risk_flags;
+    delete patch.abha_number_last4;
+    delete patch.abha_record_id;
+
+    if (patch.abha_number !== undefined) {
+        if (patch.abha_number === null || patch.abha_number === "") {
+            patch.abha_number = null;
+            patch.abha_number_last4 = null;
+        } else {
+            const digits = normalizeAbhaNumber(patch.abha_number);
+            if (!digits) return messages.USER_ABHA_INVALID;
+            patch.abha_number = encryptField(digits);
+            patch.abha_number_last4 = digits.slice(-4);
+            patch.abha_status = "yes";
+        }
+    }
+
+    if (patch.care_facility !== undefined && patch.care_facility !== null) {
+        if (typeof patch.care_facility !== "string") return messages.USER_FACILITY_INVALID;
+        const facility = patch.care_facility.trim();
+        if (facility.length > CARE_FACILITY_MAX_LENGTH) return messages.USER_FACILITY_INVALID;
+        patch.care_facility = facility || null;
+    }
+
+    if (patch.health_history !== undefined) {
+        const allowed = Object.values(HealthHistoryEnum) as string[];
+        const history = patch.health_history ?? [];
+        if (!Array.isArray(history) || history.some((value) => !allowed.includes(value))) {
+            return messages.USER_HISTORY_INVALID;
+        }
+        patch.health_history = history;
+    }
+
+    const countIsBad = (value: unknown, bounds: { min: number; max: number }) =>
+        value !== undefined &&
+        value !== null &&
+        (!Number.isInteger(value) || (value as number) < bounds.min || (value as number) > bounds.max);
+    if (
+        countIsBad(patch.pregnancies_count, PREGNANCIES_BOUNDS) ||
+        countIsBad(patch.living_children_count, LIVING_CHILDREN_BOUNDS)
+    ) {
+        return messages.USER_COUNT_INVALID;
+    }
+
+    return null;
+};
 
 // Fields a client is allowed to change through the generic update endpoint.
 // Anything else in the payload is dropped to prevent arbitrary field injection.
@@ -269,6 +333,18 @@ export default class UserController {
                 return;
             }
 
+            const onboardingError = sanitizeOnboardingPatch(payload.onboarding_data);
+            if (onboardingError) {
+                sendResponse({
+                    data: null,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    success: false,
+                    message: onboardingError,
+                    response: res,
+                });
+                return;
+            }
+
             // Contact fields (email / mobile_number): allow only null -> value, and
             // reject values already used by another user.
             for (const field of CONTACT_FIELDS) {
@@ -342,6 +418,9 @@ export default class UserController {
                 _id: req.user._id,
                 payload,
             });
+            if (payload.onboarding_data || payload.user_category) {
+                await refreshRiskFlags(String(req.user._id));
+            }
             sendResponse({
                 data: updatedUser,
                 statusCode: StatusCodes.OK,

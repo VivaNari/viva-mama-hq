@@ -27,6 +27,8 @@ import { MODELS } from '../components/ModelSelector';
 
 import { ChatBubble } from '../components/chatBubble';
 import { ChatInputBar } from '../components/ChatInputBar';
+import AbhaCardInput from '../components/onboarding/AbhaCardInput';
+import MeasurementUnitInput from '../components/onboarding/MeasurementUnitInput';
 import { TypingIndicator } from '../components/TypingIndicator';
 import { useChatActions } from '../hooks/useChatActions';
 import { useChatMessages } from '../hooks/useChatMessages';
@@ -50,6 +52,7 @@ import { useCapability } from '../context/SubscriptionContext';
 import { Capability } from '../types/entitlements.types';
 import {
     determineInputMode,
+    isSkippableNode,
     getDateBoundsForNode,
     isAiMessage,
     isChildDobNode,
@@ -57,7 +60,7 @@ import {
     getMaxDateOfBirth,
     validateMeasurement,
 } from '../utils/messageHelpers';
-import { MIN_AGE_YEARS } from '../constants/chat';
+import { MIN_AGE_YEARS, SKIP_ANSWER } from '../constants/chat';
 import { chatLogger } from '../utils/logger';
 import { globalStyles } from '../public/styles';
 import { syncUserData } from '../utils/syncUserData';
@@ -542,6 +545,7 @@ const ChatWithVivaAI: React.FC = () => {
         handleOptionSelect,
         handleMultiSelectSubmit,
         handleTextSubmit,
+        handleGuidedAnswer,
         handleDateSelect,
         handleLmpDateSelect,
         handleNotPregnantSelect,
@@ -1138,6 +1142,29 @@ const ChatWithVivaAI: React.FC = () => {
                             onRemove={attachments.remove}
                             onRetry={attachments.retry}
                         />
+                    ) : null}
+                    {inputMode === 'weight' || inputMode === 'height' ? (
+                        <MeasurementUnitInput
+                            key={inputMode}
+                            kind={inputMode}
+                            disabled={state.isLoading}
+                            onSubmit={handleGuidedAnswer}
+                        />
+                    ) : null}
+                    {inputMode === 'abhaCard' ? (
+                        <AbhaCardInput disabled={state.isLoading} onSubmit={handleGuidedAnswer} />
+                    ) : null}
+                    {inputMode === 'text' && isSkippableNode(lastMessage) ? (
+                        <TouchableOpacity
+                            style={{ alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16 }}
+                            disabled={state.isLoading}
+                            onPress={() => handleGuidedAnswer(t('chat.skip'), SKIP_ANSWER)}
+                            accessibilityRole="button"
+                        >
+                            <Text style={[globalStyles.fontSemiBold, { color: colors.darkPurple, fontSize: 13 }]}>
+                                {t('chat.skip')}
+                            </Text>
+                        </TouchableOpacity>
                     ) : null}
                     <ChatInputBar
                         inputMode={inputMode}

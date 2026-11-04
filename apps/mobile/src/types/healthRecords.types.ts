@@ -1,6 +1,6 @@
 import { AttachmentKind } from './chat.types';
 
-export type RecordCategory = 'scan' | 'lab' | 'prescription' | 'mch';
+export type RecordCategory = 'scan' | 'lab' | 'prescription' | 'mch' | 'abha_card';
 export type ScanType = 'dating' | 'anomaly' | 'growth';
 export type RecordSubjectType = 'MOTHER' | 'CHILD';
 export type RecordStatus = 'DRAFT' | 'PROCESSING' | 'READY' | 'REJECTED' | 'FAILED';

@@ -25,9 +25,47 @@ import {
 import { transformFlowResponsesToIndicators } from "../../utils/transform-indicators.util";
 import redisPublisherService from "../redis/redis-publisher.service";
 // import { v4 as uuidv4 } from "uuid";
-import { NAME_QUERY, getFlowCompletionMessage } from "../../constants/chat";
+import {
+    NAME_QUERY,
+    getFlowCompletionMessage,
+    isOnboardingNodeUnlocked,
+} from "../../constants/chat";
 import { ONBOARDING_SLUG } from "../../constants/conversationSlugs";
+import {
+    ABHA_CARD_NODE_ID,
+    ABHA_METHOD_NODE_ID,
+    ABHA_NODE_ID,
+    ABHA_NUMBER_NODE_ID,
+    ABHA_RECORD_PREFIX,
+    CARE_FACILITY_MAX_LENGTH,
+    CARE_FACILITY_NODE_ID,
+    CARE_MODEL_NODE_ID,
+    HEALTH_HISTORY_NODE_ID,
+    HEIGHT_CM_BOUNDS,
+    HEIGHT_NODE_ID,
+    LIVING_CHILDREN_BOUNDS,
+    LIVING_CHILDREN_NODE_ID,
+    PREGNANCIES_BOUNDS,
+    PREGNANCIES_NODE_ID,
+    SKIP_ANSWER,
+    WEIGHT_KG_BOUNDS,
+    WEIGHT_NODE_ID,
+    freeTextForStorage,
+    normalizeAbhaNumber,
+    parseBoundedNumber,
+} from "../../constants/onboarding";
+import healthRecordModel from "../../models/health-record.model";
 import UserModel from "../../models/user.model";
+import { EHealthRecordCategory } from "../../types/health-record.types";
+import {
+    EAbhaCaptureMethod,
+    EAbhaStatus,
+    ECareModel,
+    HealthHistoryEnum,
+} from "../../types/user.types";
+import { encryptField } from "../crypto/field-encryption.service";
+import MotherLogService from "../mother-log/mother-log.service";
+import { refreshRiskFlags } from "../users/risk-flags.service";
 import {
     AlcoholUseEnum,
     ConceptionMethod,
@@ -778,9 +816,12 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             }
 
             const answerData: any = { type: answerType };
+            // Responses and messages keep what they are given, so a sensitive answer is
+            // masked here. updateOnboardingData below still gets the real value.
+            const storedFreeText = freeTextForStorage(nodeId, freeText);
 
-            if (freeText) {
-                answerData.freeText = freeText;
+            if (storedFreeText) {
+                answerData.freeText = storedFreeText;
             } else {
                 answerData.selectedKeys = selectedKeys;
             }
@@ -796,7 +837,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             console.log(`Answer saved to FlowResponse`);
 
             const userAnswerText =
-                freeText ||
+                storedFreeText ||
                 currentNode.options
                     .filter((opt) => selectedKeys?.includes(opt.score!))
                     .map((o) => o.label)
@@ -814,7 +855,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                 guided: {
                     flowInstanceId: flowInstance._id,
                     nodeId: nodeId,
-                    optionKey: freeText || selectedKeys?.join(","),
+                    optionKey: storedFreeText || selectedKeys?.join(","),
                 },
             }).save();
 
@@ -952,6 +993,7 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                             is_subscription_completed: user?.is_onboarded.is_subscription_completed,
                         },
                     });
+                    await refreshRiskFlags(String(userId));
                 }
 
                 if (userConnection) {
@@ -1216,6 +1258,121 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                     }
                     break;
 
+                case ABHA_NODE_ID: {
+                    const [status] = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
+                    if (status) user.onboarding_data.abha_status = status as EAbhaStatus;
+                    break;
+                }
+
+                case ABHA_METHOD_NODE_ID: {
+                    const [method] = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
+                    if (method) {
+                        user.onboarding_data.abha_capture_method = method as EAbhaCaptureMethod;
+                    }
+                    break;
+                }
+
+                case ABHA_NUMBER_NODE_ID:
+                    this.saveAbhaNumber(user, freeText);
+                    break;
+
+                case ABHA_CARD_NODE_ID: {
+                    // If the upload does not work for her, she can type the number here.
+                    this.saveAbhaNumber(user, freeText);
+                    const recordId = freeText?.startsWith(ABHA_RECORD_PREFIX)
+                        ? freeText.slice(ABHA_RECORD_PREFIX.length)
+                        : null;
+                    // Only ever link her own card: the id comes from the client.
+                    if (recordId && Types.ObjectId.isValid(recordId)) {
+                        const card = await healthRecordModel.exists({
+                            _id: recordId,
+                            userId,
+                            category: EHealthRecordCategory.ABHA_CARD,
+                            deletedAt: null,
+                        });
+                        if (card) {
+                            user.onboarding_data.abha_record_id = recordId as any;
+                        }
+                    }
+                    break;
+                }
+
+                case WEIGHT_NODE_ID: {
+                    const weightKg = parseBoundedNumber(freeText, WEIGHT_KG_BOUNDS);
+                    if (weightKg !== null) {
+                        const motherLogs = new MotherLogService();
+                        // Her weight belongs in the weight log, so it starts her trend.
+                        await motherLogs.append({
+                            userId,
+                            logType: "weight",
+                            fields: { weightKg: Math.round(weightKg * 10) / 10 },
+                            loggedAt: new Date(),
+                            source: "onboarding",
+                            context: await motherLogs.getContext(userId),
+                        });
+                    }
+                    break;
+                }
+
+                case HEIGHT_NODE_ID: {
+                    const heightCm = parseBoundedNumber(freeText, HEIGHT_CM_BOUNDS);
+                    if (heightCm !== null) {
+                        user.onboarding_data.height_cm = Math.round(heightCm);
+                    }
+                    break;
+                }
+
+                case CARE_MODEL_NODE_ID: {
+                    const [careModel] = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    );
+                    if (careModel) user.onboarding_data.care_model = careModel as ECareModel;
+                    break;
+                }
+
+                case CARE_FACILITY_NODE_ID: {
+                    const facility = freeText?.trim();
+                    user.onboarding_data.care_facility =
+                        facility && facility !== SKIP_ANSWER
+                            ? facility.slice(0, CARE_FACILITY_MAX_LENGTH)
+                            : null;
+                    break;
+                }
+
+                case HEALTH_HISTORY_NODE_ID:
+                    user.onboarding_data.health_history = this.getSelectedOptionValues(
+                        node,
+                        selectedKeys,
+                        selectedValues,
+                    ) as HealthHistoryEnum[];
+                    break;
+
+                case PREGNANCIES_NODE_ID: {
+                    const pregnancies = parseBoundedNumber(freeText, PREGNANCIES_BOUNDS);
+                    if (pregnancies !== null) {
+                        user.onboarding_data.pregnancies_count = Math.trunc(pregnancies);
+                    }
+                    break;
+                }
+
+                case LIVING_CHILDREN_NODE_ID: {
+                    const living = parseBoundedNumber(freeText, LIVING_CHILDREN_BOUNDS);
+                    if (living !== null) {
+                        user.onboarding_data.living_children_count = Math.trunc(living);
+                    }
+                    break;
+                }
+
                 case "wrap_up":
                     user.is_onboarded.is_questionnaire_completed = true;
                     user.onboarding_data.onboarded_at = new Date();
@@ -1227,6 +1384,22 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         } catch (error) {
             console.error(`Error updating onboarding data for nodeId ${nodeId}:`, error);
             throw error;
+        }
+    }
+
+    /**
+     * Keep a valid ABHA number encrypted, with only the last four readable. Never logged.
+     * An encryption failure must not trap her in onboarding, so she can add it later in
+     * Edit Profile instead.
+     */
+    private saveAbhaNumber(user: IUser, freeText: string | undefined): void {
+        const abhaNumber = normalizeAbhaNumber(freeText);
+        if (!abhaNumber) return;
+        try {
+            user.onboarding_data.abha_number = encryptField(abhaNumber);
+            user.onboarding_data.abha_number_last4 = abhaNumber.slice(-4);
+        } catch (error) {
+            console.error("Could not encrypt the ABHA number", (error as Error)?.message);
         }
     }
 
@@ -1321,6 +1494,12 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
                 continue;
             }
 
+            if (!isOnboardingNodeUnlocked(node.indicator, user?.onboarding_data)) {
+                console.log(`Skipping node: ${node.id} (earlier answer does not lead here)`);
+                currentNodeId = node.next;
+                continue;
+            }
+
             if (!isNotPregnantYet && this.isFutureDeliveryRalatedNode(node.id)) {
                 const deliveryDate = user?.onboarding_data?.delivery_date;
                 if (deliveryDate) {
@@ -1363,6 +1542,10 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
             // what make "feeding" postpartum-only. This one hides it from NN.
             "feeding",
             "parity",
+            CARE_FACILITY_NODE_ID,
+            HEALTH_HISTORY_NODE_ID,
+            PREGNANCIES_NODE_ID,
+            LIVING_CHILDREN_NODE_ID,
         ];
 
         return pregnancyRelatedNodes.includes(nodeId);

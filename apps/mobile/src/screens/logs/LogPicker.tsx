@@ -3,6 +3,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 
+import CareModelPrompt from '../../components/logs/CareModelPrompt';
 import LogScreen from '../../components/logs/LogScreen';
 import OptionTile from '../../components/logs/OptionTile';
 import { getMainTiles, LogTile, PRIVATE_ALSO_TRACK_TILES } from '../../data/logPickerData';
@@ -39,6 +40,8 @@ const LogPicker: React.FC = () => {
         <LogScreen title={t('logs.picker.title')}>
             {loading ? (
                 <ActivityIndicator color={colors.darkPurple} style={{ marginTop: 40 }} />
+            ) : careModel === null ? (
+                <CareModelPrompt />
             ) : (
                 <>
                     {isPublic ? (

@@ -14,6 +14,7 @@ import ArticleContent from '../../screens/ArticleContent';
 import ArticleDetails from '../../screens/ArticleDetails';
 import CategoryArticles from '../../screens/CategoryArticles';
 import CreatePost from '../../screens/CreatePost';
+import ReferralCode from '../../screens/ReferralCode';
 import EditProfile from '../../screens/EditProfile';
 import ExpertDetails from '../../screens/ExpertDetails';
 import EditChild from '../../screens/EditChild';
@@ -278,6 +279,14 @@ const AppStack = () => {
                 }}
                 name="EditProfile"
                 component={EditProfile}
+            />
+            <Stack.Screen
+                options={{
+                    headerShown: true,
+                    title: t('menu.referralCode'),
+                }}
+                name="ReferralCode"
+                component={ReferralCode}
             />
             <Stack.Screen
                 options={{

@@ -7,6 +7,7 @@ import motherMedicineModel from "../../models/mother-medicine.model";
 import UserModel from "../../models/user.model";
 import {
     EHealthRecordError,
+    EHealthRecordCategory,
     EHealthRecordStatus,
     EHealthSummaryStatus,
     ERecordSubject,
@@ -95,7 +96,13 @@ class HealthSummaryService {
     private llm = new LLMService();
 
     private liveReady(userId: string) {
-        return { userId, deletedAt: null, status: EHealthRecordStatus.READY };
+        // An ABHA card is an identity document, not health information to summarise.
+        return {
+            userId,
+            deletedAt: null,
+            status: EHealthRecordStatus.READY,
+            category: { $ne: EHealthRecordCategory.ABHA_CARD },
+        };
     }
 
     /**

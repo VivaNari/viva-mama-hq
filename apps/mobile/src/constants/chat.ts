@@ -45,7 +45,38 @@ export const MEASUREMENT_NODE_BOUNDS: Record<
   child_birth_head_circumference: { min: 20, max: 60, unit: "cm" },
   child_birth_length: { min: 30, max: 100, unit: "cm" },
   child_birth_weight: { min: 500, max: 8000, unit: "g" },
+  // Mirrored in services/backend/src/constants/onboarding.ts. Whole numbers, no unit.
+  pregnancies: { min: 2, max: 20, unit: "" },
+  living_children: { min: 0, max: 20, unit: "" },
 };
+
+// ============================================
+// PRD section 1 onboarding nodes
+// ============================================
+
+export const ABHA_NUMBER_NODE_ID = "abha_number";
+export const ABHA_CARD_NODE_ID = "abha_card";
+export const WEIGHT_NODE_ID = "weight";
+export const HEIGHT_NODE_ID = "height";
+export const CARE_FACILITY_NODE_ID = "care_facility";
+
+/** Optional free-text questions, which get a Skip chip that sends SKIP_ANSWER. */
+export const SKIPPABLE_NODE_IDS: readonly string[] = [CARE_FACILITY_NODE_ID];
+export const SKIP_ANSWER = "__skip__";
+
+/** How `abha_card` is answered once the photo is saved as a health record. */
+export const ABHA_RECORD_PREFIX = "record:";
+export const ABHA_NUMBER_LENGTH = 14;
+
+/** Her ABHA number's digits, or null when it is not 14 digits. Allows hyphens and spaces. */
+export const normalizeAbhaNumber = (raw: string): string | null => {
+  const digits = raw.replace(/[\s-]/g, "");
+  return /^\d{14}$/.test(digits) ? digits : null;
+};
+
+/** What the chat shows and keeps on the phone in place of her ABHA number. */
+export const maskAbhaNumber = (digits: string): string =>
+  `**********${digits.slice(-4)}`;
 
 // Synthetic node id for the grief-sensitive acknowledgement message shown when a
 // user reports a stillbirth. Distinct from the real "delivery_outcome" node so
@@ -77,6 +108,7 @@ export const NONE_OPTION_VALUES = [
   "none",
   "history_none",
   "meds_none",
+  "history_conditions_none",
 ] as const;
 
 // ============================================

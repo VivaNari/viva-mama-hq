@@ -91,7 +91,8 @@ const RecordSummarySheet = ({ record, onClose, onViewFile, onDelete, onRetry }: 
                 ) : null}
                 {full && !full.summary ? (
                     <Text style={[styles.message, globalStyles.fontRegular]}>
-                        {full.message ||
+                        {(full.category === 'abha_card' ? t('healthRecords.abhaCardNoSummary') : null) ||
+                            full.message ||
                             t(full.status === 'PROCESSING' ? 'healthRecords.stillReading' : 'healthRecords.failedBody')}
                     </Text>
                 ) : null}

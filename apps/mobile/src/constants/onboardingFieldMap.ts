@@ -29,4 +29,25 @@ export const NODE_ID_TO_ONBOARDING_FIELD: Record<
   alcohol: "alcohol_use",
   support: "social_support",
   parity: "parity",
+  care_facility: "care_facility",
+  health_history: "health_history",
+  pregnancies: "pregnancies_count",
+  living_children: "living_children_count",
+};
+
+/**
+ * Questions not-pregnant women are not asked, so Edit Profile does not show them either.
+ * Mirrors NN_WOMEN_INDICATORS in services/backend/src/constants/chat.ts.
+ */
+export const HIDDEN_FOR_NOT_PREGNANT: readonly string[] = [
+  "care_facility",
+  "health_history",
+  "pregnancies_count",
+  "living_children_count",
+];
+
+/** Only asked when this is not her first pregnancy. Stored as numbers, edited as text. */
+export const COUNT_FIELD_BOUNDS: Record<string, { min: number; max: number }> = {
+  pregnancies_count: { min: 2, max: 20 },
+  living_children_count: { min: 0, max: 20 },
 };

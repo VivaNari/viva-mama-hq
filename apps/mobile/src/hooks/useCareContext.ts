@@ -6,8 +6,8 @@ import { chatDB } from '../db/sqlite';
 import { CareModelEnum, UserCategoryEnum } from '../types/user.types';
 
 export interface CareContext {
-    /** Public (government) or private care route. Unknown falls back to public. */
-    careModel: CareModelEnum;
+    /** Public (government) or private care route. Null means she has not told us yet. */
+    careModel: CareModelEnum | null;
     /** NP pregnant, PP postpartum, NN neither. Null until the cached user has loaded. */
     category: UserCategoryEnum | null;
     /** Her height for BMI, or null when not recorded yet. */
@@ -31,7 +31,7 @@ export interface CareContext {
 export const useCareContext = (): CareContext => {
     const { userId } = useAuth();
     const [state, setState] = useState<CareContext>({
-        careModel: CareModelEnum.PUBLIC,
+        careModel: null,
         category: null,
         heightCm: null,
         pregnancyWeek: null,
@@ -49,10 +49,7 @@ export const useCareContext = (): CareContext => {
                     if (cancelled) return;
 
                     setState({
-                        careModel:
-                            user?.onboarding_data?.care_model === CareModelEnum.PRIVATE
-                                ? CareModelEnum.PRIVATE
-                                : CareModelEnum.PUBLIC,
+                        careModel: user?.onboarding_data?.care_model ?? null,
                         category: user?.user_category ?? null,
                         heightCm: user?.onboarding_data?.height_cm ?? null,
                         pregnancyWeek:

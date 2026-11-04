@@ -1,5 +1,12 @@
 import mongoose, { Schema } from "mongoose";
 import {
+    CARE_FACILITY_MAX_LENGTH,
+    LIVING_CHILDREN_BOUNDS,
+    PREGNANCIES_BOUNDS,
+} from "../../constants/onboarding";
+import {
+    EAbhaCaptureMethod,
+    EAbhaStatus,
     ECareModel,
     EChildOnboardingStatus,
     ESex,
@@ -334,6 +341,71 @@ const userSchema = new Schema<IUser>(
                 min: 100,
                 max: 220,
                 default: null,
+            },
+            abha_status: {
+                type: String,
+                enum: [...Object.values(EAbhaStatus), null],
+                default: null,
+            },
+            abha_capture_method: {
+                type: String,
+                enum: [...Object.values(EAbhaCaptureMethod), null],
+                default: null,
+            },
+            // Encrypted with field-encryption.service. `select: false` keeps it out of
+            // every read that does not ask for it by name, including API responses.
+            abha_number: {
+                type: String,
+                default: null,
+                select: false,
+            },
+            abha_number_last4: {
+                type: String,
+                default: null,
+            },
+            abha_record_id: {
+                type: Schema.Types.ObjectId,
+                ref: "health_records",
+                default: null,
+            },
+            care_facility: {
+                type: String,
+                trim: true,
+                maxlength: CARE_FACILITY_MAX_LENGTH,
+                default: null,
+            },
+            health_history: {
+                type: [String],
+                default: [],
+            },
+            pregnancies_count: {
+                type: Number,
+                min: PREGNANCIES_BOUNDS.min,
+                max: PREGNANCIES_BOUNDS.max,
+                default: null,
+            },
+            living_children_count: {
+                type: Number,
+                min: LIVING_CHILDREN_BOUNDS.min,
+                max: LIVING_CHILDREN_BOUNDS.max,
+                default: null,
+            },
+            // Derived by deriveRiskFlags. `previous_loss` is a quiet signal the PRD says
+            // to store and never show, so none of this leaves the server by default.
+            risk_flags: {
+                type: new Schema(
+                    {
+                        prior_gdm: Boolean,
+                        pregnancy_hypertension: Boolean,
+                        anaemia_history: Boolean,
+                        previous_loss: Boolean,
+                        age_risk: Boolean,
+                        high_parity: Boolean,
+                    },
+                    { _id: false },
+                ),
+                default: null,
+                select: false,
             },
             onboarded_at: {
                 type: Date,

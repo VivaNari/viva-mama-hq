@@ -30,6 +30,7 @@ import { migrate as backfillReferralRedemptions } from "./steps/backfill-referra
 import { migrate as addPlayProductIds } from "./steps/add-play-product-ids.step";
 import { migrate as addOnboardingFeedingNode } from "./steps/add-onboarding-feeding-node.step";
 import { migrate as rebrandPerinatalFlowCopy } from "./steps/rebrand-perinatal-flow-copy.step";
+import { migrate as updateOnboardingPrdSection1 } from "./steps/update-onboarding-prd-section1.step";
 import { migrate as resolveFlowInstanceDuplicates } from "./steps/resolve-flow-instance-duplicates.step";
 import { migrate as reindexFlowInstancesSubject } from "./steps/reindex-flow-instances-subject.step";
 import { migrate as seedBabyOnboardingFlow } from "./steps/seed-baby-onboarding-flow.step";
@@ -101,6 +102,8 @@ const STEPS: Array<{ name: string; fn: () => Promise<unknown> }> = [
     // Also after add-hindi-translations, for the same reason: that step rewrites
     // `translations.hi` wholesale, so anything asserting Hindi has to follow it.
     { name: "rebrand-perinatal-flow-copy", fn: rebrandPerinatalFlowCopy },
+    // After both of the above: it sets the final intro copy and re-asserts its Hindi.
+    { name: "update-onboarding-prd-section1", fn: updateOnboardingPrdSection1 },
     // Baby onboarding. The reindex goes first and the ordering is load-bearing: until the
     // old three-field unique index on flow_instances is dropped, a mother adding a second
     // child fails on a duplicate key, so seeding the flow before widening the index would

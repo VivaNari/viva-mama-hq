@@ -36,6 +36,13 @@ export const settingsMenu: ISettingsMenu[] = [
     descriptionKey: "menu.mySubscriptionDesc",
   },
   {
+    titleKey: "menu.referralCode",
+    icon: "ticket",
+    componentName: "",
+    action: "REFERRAL_CODE",
+    descriptionKey: "menu.referralCodeDesc",
+  },
+  {
     titleKey: "menu.language",
     icon: "languages",
     componentName: "",

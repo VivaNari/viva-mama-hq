@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import Toast from 'react-native-toast-message';
 import { colors } from '../public/assets/colors';
 import { globalStyles } from '../public/styles';
@@ -24,10 +24,15 @@ import { syncUserData } from '../utils/syncUserData';
  *   skip     → carry on to the plan catalog
  *
  * `data.grant != null` is the whole contract with the server.
+ *
+ * From My Profile (`mode: 'settings'`) she has already finished onboarding, so whatever
+ * happens she simply returns to her profile.
  */
 const ReferralCode: React.FC = () => {
   const { t } = useTranslation();
   const navigation = useNavigation();
+  const route = useRoute();
+  const inSettings = (route.params as { mode?: string } | undefined)?.mode === 'settings';
   const { completeOnboarding, userToken } = useAuth();
   const { refresh } = useSubscriptionContext();
 
@@ -40,6 +45,10 @@ const ReferralCode: React.FC = () => {
   };
 
   const handleSkip = () => {
+    if (inSettings) {
+      navigation.goBack();
+      return;
+    }
     goToPlans();
   };
 
@@ -72,6 +81,11 @@ const ReferralCode: React.FC = () => {
           : t('referralCode.successMessage'),
         position: 'bottom',
       });
+
+      if (inSettings) {
+        navigation.goBack();
+        return;
+      }
 
       if (grant) {
         // The server has already marked the subscription step complete; there is
@@ -135,7 +149,7 @@ const ReferralCode: React.FC = () => {
             disabled={loading}
           >
             <Text style={[globalStyles.fontRegular, styles.secondaryButtonText]}>
-              {t('referralCode.skip')}
+              {t(inSettings ? 'common.cancel' : 'referralCode.skip')}
             </Text>
           </TouchableOpacity>
         </View>

@@ -18,6 +18,7 @@ import {
     WEEKLY_CHECKIN_SLUG,
     NP_WOMEN_INDICATORS,
     NN_WOMEN_INDICATORS,
+    isOnboardingNodeUnlocked,
 } from "../../constants/chat";
 import logger, { createModuleLogger } from "../../utils/logger";
 
@@ -268,6 +269,14 @@ class FlowService {
         );
         if (!nnWomenResult.isEligible) {
             return nnWomenResult;
+        }
+
+        // 6. Check the earlier onboarding answer this question depends on
+        if (!isOnboardingNodeUnlocked(node.indicator, user.onboarding_data)) {
+            return {
+                isEligible: false,
+                reason: `Earlier answer does not lead here (indicator: ${node.indicator})`,
+            };
         }
 
         return { isEligible: true };

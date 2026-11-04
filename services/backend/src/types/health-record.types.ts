@@ -27,6 +27,8 @@ export enum EHealthRecordCategory {
     LAB = "lab",
     PRESCRIPTION = "prescription",
     MCH = "mch",
+    /** Filed for her only: never analysed by the AI or included in a summary. */
+    ABHA_CARD = "abha_card",
 }
 
 export enum EScanType {

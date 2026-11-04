@@ -8,6 +8,7 @@ import { PrimaryButton } from '../../components/logs/Buttons';
 import { DoneState } from '../../components/logs/Feedback';
 import LogScreen from '../../components/logs/LogScreen';
 import SegmentedToggle from '../../components/logs/SegmentedToggle';
+import CareModelPrompt from '../../components/logs/CareModelPrompt';
 import { useCareContext } from '../../hooks/useCareContext';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
@@ -42,7 +43,7 @@ const SCHEDULES: Record<CareModelEnum, { group: string; items: string[] }[]> = {
 const AncCheckup: React.FC = () => {
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
-    const { careModel, pregnancyWeek } = useCareContext();
+    const { careModel, pregnancyWeek, loading: careLoading } = useCareContext();
     const [tab, setTab] = useState<'log' | 'schedule'>('log');
     const [checks, setChecks] = useState<Set<Check>>(new Set());
     const [done, setDone] = useState(false);
@@ -85,7 +86,7 @@ const AncCheckup: React.FC = () => {
     };
 
     const route = careModel === CareModelEnum.PRIVATE ? 'private' : 'public';
-    const schedule = SCHEDULES[careModel];
+    const schedule = careModel ? SCHEDULES[careModel] : [];
     const allIds = schedule.flatMap(g => g.items);
     const doneCount = allIds.filter(id => doneIds.has(id)).length;
 
@@ -161,11 +162,13 @@ const AncCheckup: React.FC = () => {
                 </>
             ) : null}
 
-            {tab === 'schedule' && scheduleLoading ? (
+            {tab === 'schedule' && scheduleLoading && careModel ? (
                 <ActivityIndicator color={colors.darkPurple} style={{ marginTop: 40 }} />
             ) : null}
 
-            {tab === 'schedule' && !scheduleLoading ? (
+            {tab === 'schedule' && !careLoading && !careModel ? <CareModelPrompt /> : null}
+
+            {tab === 'schedule' && !scheduleLoading && careModel ? (
                 <>
                     <View style={[logsStyles.listRow]}>
                         <Text style={[logsStyles.mutedLabel, globalStyles.fontRegular]}>{t('logs.anc.checkedOff')}</Text>

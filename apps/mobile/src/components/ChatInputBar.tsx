@@ -146,7 +146,14 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     }
 
     // Don't show input for other modes
-    if (inputMode === 'none' || inputMode === 'multiSelect' || inputMode === 'deliveryDate') {
+    if (
+        inputMode === 'none' ||
+        inputMode === 'multiSelect' ||
+        inputMode === 'deliveryDate' ||
+        inputMode === 'weight' ||
+        inputMode === 'height' ||
+        inputMode === 'abhaCard'
+    ) {
         return null;
     }
 

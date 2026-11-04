@@ -18,7 +18,7 @@ import { colors } from "../public/assets/colors";
 import { globalStyles } from "../public/styles";
 import { styles } from "../public/styles/profileStyles";
 import { IUserAllData } from "../types/dashboard.types";
-import { UserCategoryEnum } from "../types/user.types";
+import { CareModelEnum, UserCategoryEnum } from "../types/user.types";
 import { syncUserData } from "../utils/syncUserData";
 import {
     OnboardingDataPatch,
@@ -26,12 +26,21 @@ import {
     updateUserData,
 } from "../api/updateuserData";
 import { getFlowDefinition, IFlowDefinitionNode } from "../api/flowDefinition.api";
-import { NODE_ID_TO_ONBOARDING_FIELD } from "../constants/onboardingFieldMap";
+import { addMotherLog, getMotherLogs } from "../api/motherLogs.api";
 import {
+    COUNT_FIELD_BOUNDS,
+    HIDDEN_FOR_NOT_PREGNANT,
+    NODE_ID_TO_ONBOARDING_FIELD,
+} from "../constants/onboardingFieldMap";
+import {
+    ABHA_NUMBER_LENGTH,
     DELIVERY_DATE_NODE_ID,
     FLOW_SLUGS,
     STILL_BIRTH_TERMINATION,
+    normalizeAbhaNumber,
 } from "../constants/chat";
+import AbhaCardInput from "../components/onboarding/AbhaCardInput";
+import { WEIGHT_KG_BOUNDS } from "../utils/measurementUnits";
 import { FlowType } from "../types/chat.types";
 import OnboardingAnswerInput from "../components/profile/OnboardingAnswerInput";
 import StillBirthSupportModal from "../components/profile/StillBirthSupportModal";
@@ -61,17 +70,37 @@ const EditProfile = () => {
     const [loadError, setLoadError] = useState(false);
     const [saving, setSaving] = useState(false);
     const [showStillBirthSupport, setShowStillBirthSupport] = useState(false);
-    // Height has no onboarding question yet, so it is edited here as its own field rather
-    // than through a flow node. Once onboarding asks it, map the node in
-    // onboardingFieldMap and drop this field so it is not shown twice.
+    // These are edited as their own fields rather than through flow nodes, and their nodes
+    // stay out of onboardingFieldMap so they are not shown twice:
+    //  - Height and weight are typed here in cm and kg, with no unit toggle.
+    //  - Care model has to work before the onboarding migration has run, because the logs
+    //    screens send her here to set it.
     const [heightInput, setHeightInput] = useState("");
+    const [weightInput, setWeightInput] = useState("");
+    const [savedWeight, setSavedWeight] = useState("");
+    const [careModel, setCareModel] = useState<string | null>(null);
+    const [abhaInput, setAbhaInput] = useState("");
+    const [showAbhaCard, setShowAbhaCard] = useState(false);
 
     const user = userData?.user;
 
     useEffect(() => {
         const stored = user?.onboarding_data?.height_cm;
         setHeightInput(stored ? String(stored) : "");
+        setCareModel(user?.onboarding_data?.care_model ?? null);
     }, [user]);
+
+    // Her latest weight lives in the weight log. Only a change adds a new entry.
+    useEffect(() => {
+        getMotherLogs({ types: ["weight"], limit: 1 })
+            .then(([latest]) => {
+                const kg = latest?.fields?.weightKg;
+                const text = kg ? String(kg) : "";
+                setWeightInput(text);
+                setSavedWeight(text);
+            })
+            .catch(error => recordError(error, "EditProfile.loadWeight"));
+    }, []);
 
     // Contact fields are shown read-only, and only when a value exists.
     const hasEmail = !!user?.email;
@@ -93,6 +122,22 @@ const EditProfile = () => {
      * she was never asked and has no baby to answer it about.
      */
     const isPostpartum = user?.user_category === UserCategoryEnum.PP;
+    const isNotPregnant = user?.user_category === UserCategoryEnum.NN;
+
+    /** Fields hidden for her right now, which must also stay out of the save. */
+    const isFieldHidden = (field: string): boolean => {
+        if (field === "feeding_method" && !isPostpartum) return true;
+        if (isNotPregnant && HIDDEN_FOR_NOT_PREGNANT.includes(field)) return true;
+        return !!COUNT_FIELD_BOUNDS[field] && answers.parity !== "multiparous";
+    };
+
+    const showError = (key: string) =>
+        Toast.show({
+            type: "error",
+            text1: t("common.error"),
+            text2: t(key),
+            position: "bottom",
+        });
 
     /**
      * Tracks the date being edited rather than the stored one, so the dependent
@@ -152,7 +197,10 @@ const EditProfile = () => {
             const field = NODE_ID_TO_ONBOARDING_FIELD[node.id];
             if (!field) continue;
             const current = onboarding[field] as unknown;
-            seeded[field] = (current ?? null) as AnswerValue;
+            // The counts are numbers, but the form edits them as text.
+            seeded[field] = (
+                COUNT_FIELD_BOUNDS[field] && current != null ? String(current) : (current ?? null)
+            ) as AnswerValue;
         }
         setAnswers(seeded);
     }, [user, nodes]);
@@ -193,8 +241,51 @@ const EditProfile = () => {
             if (field === "delivery_date" && !deliveryEditable) continue;
             // Never send a field the form did not render — an NP/NN save would
             // otherwise null out a value she was never shown.
-            if (field === "feeding_method" && !isPostpartum) continue;
+            if (isFieldHidden(field)) continue;
+
+            const bounds = COUNT_FIELD_BOUNDS[field];
+            if (bounds) {
+                const typed = String(answers[field] ?? "").trim();
+                const count = typed ? Number(typed) : null;
+                if (
+                    count !== null &&
+                    (!Number.isInteger(count) || count < bounds.min || count > bounds.max)
+                ) {
+                    showError("editProfile.countInvalid");
+                    return;
+                }
+                (onboardingPatch as Record<string, number | null>)[field] = count;
+                continue;
+            }
+
             (onboardingPatch as Record<string, AnswerValue>)[field] = answers[field] ?? null;
+        }
+
+        if (careModel) {
+            onboardingPatch.care_model = careModel as CareModelEnum;
+        }
+
+        // Blank leaves her number as it is. The server encrypts whatever is sent.
+        if (abhaInput.trim()) {
+            const digits = normalizeAbhaNumber(abhaInput);
+            if (!digits) {
+                showError("chat.abha.invalidNumber");
+                return;
+            }
+            (onboardingPatch as Record<string, string>).abha_number = digits;
+        }
+
+        const trimmedWeight = weightInput.trim();
+        const weightChanged = trimmedWeight !== "" && trimmedWeight !== savedWeight;
+        const weightKg = Number(trimmedWeight);
+        if (
+            weightChanged &&
+            (!Number.isFinite(weightKg) ||
+                weightKg < WEIGHT_KG_BOUNDS.min ||
+                weightKg > WEIGHT_KG_BOUNDS.max)
+        ) {
+            showError("editProfile.weightInvalid");
+            return;
         }
 
         // Blank clears it; anything else must be a whole height the backend accepts.
@@ -225,6 +316,11 @@ const EditProfile = () => {
             setSaving(true);
             const response = await updateUserData(payload);
             if (response.success) {
+                if (weightChanged) {
+                    await addMotherLog("weight", { weightKg: Math.round(weightKg * 10) / 10 });
+                    setSavedWeight(trimmedWeight);
+                }
+                setAbhaInput("");
                 await syncUserData(userToken);
 
                 // Refresh the local copy so `hadStillBirth` reflects the write on any
@@ -295,6 +391,17 @@ const EditProfile = () => {
         );
     }
 
+    // Built here rather than read from the flow, so it works before the migration has run.
+    const careModelNode = {
+        id: "care_model",
+        nodeType: "QUESTION_SINGLE",
+        text: t("editProfile.careModel"),
+        options: [
+            { label: t("editProfile.careModelPublic"), value: CareModelEnum.PUBLIC },
+            { label: t("editProfile.careModelPrivate"), value: CareModelEnum.PRIVATE },
+        ],
+    } as unknown as IFlowDefinitionNode;
+
     const renderReadOnlyContact = (label: string, value: string) => (
         <View style={styles.fieldBlock}>
             <Text style={[styles.questionLabel, globalStyles.fontSemiBold]}>{label}</Text>
@@ -338,7 +445,7 @@ const EditProfile = () => {
                     {nodes.map(node => {
                         const field = NODE_ID_TO_ONBOARDING_FIELD[node.id];
                         if (!field) return null;
-                        if (field === "feeding_method" && !isPostpartum) return null;
+                        if (isFieldHidden(field)) return null;
 
                         const isDelivery = node.id === DELIVERY_DATE_NODE_ID;
                         if (isDelivery && !deliveryEditable) {
@@ -385,6 +492,9 @@ const EditProfile = () => {
                                         value={answers[field] ?? null}
                                         onChange={value => updateAnswer(field, value)}
                                         disabled={lockedUntilBirth}
+                                        keyboardType={
+                                            COUNT_FIELD_BOUNDS[field] ? "number-pad" : "default"
+                                        }
                                     />
                                 </View>
                                 {lockedUntilBirth && (
@@ -416,6 +526,96 @@ const EditProfile = () => {
                                 maxLength={3}
                             />
                         </View>
+                    </View>
+
+                    <View style={styles.fieldBlock}>
+                        <Text style={[styles.questionLabel, globalStyles.fontSemiBold]}>
+                            {t("editProfile.weight")}
+                        </Text>
+                        <View style={styles.input}>
+                            <TextInput
+                                placeholderTextColor={colors.gray}
+                                style={[styles.inputFocusedValue, globalStyles.fontRegular]}
+                                placeholder={t("editProfile.weightPlaceholder")}
+                                value={weightInput}
+                                onChangeText={text => setWeightInput(text.replace(/[^0-9.]/g, ""))}
+                                keyboardType="decimal-pad"
+                                maxLength={5}
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.fieldBlock}>
+                        <Text style={[styles.questionLabel, globalStyles.fontSemiBold]}>
+                            {t("editProfile.careModel")}
+                        </Text>
+                        <OnboardingAnswerInput
+                            node={careModelNode}
+                            value={careModel}
+                            onChange={value => setCareModel(value as string)}
+                        />
+                        {!careModel && (
+                            <Text style={[styles.helperText, globalStyles.fontRegular]}>
+                                {t("editProfile.careModelNeeded")}
+                            </Text>
+                        )}
+                    </View>
+
+                    <View style={styles.fieldBlock}>
+                        <Text style={[styles.questionLabel, globalStyles.fontSemiBold]}>
+                            {t("editProfile.abhaNumber")}
+                        </Text>
+                        <View style={styles.input}>
+                            <TextInput
+                                placeholderTextColor={colors.gray}
+                                style={[styles.inputFocusedValue, globalStyles.fontRegular]}
+                                placeholder={
+                                    user?.onboarding_data?.abha_number_last4
+                                        ? `**********${user.onboarding_data.abha_number_last4}`
+                                        : t("chat.abha.numberPlaceholder")
+                                }
+                                value={abhaInput}
+                                onChangeText={setAbhaInput}
+                                keyboardType="number-pad"
+                                maxLength={ABHA_NUMBER_LENGTH + 3}
+                            />
+                        </View>
+                        {user?.onboarding_data?.abha_record_id && !showAbhaCard ? (
+                            <Text style={[styles.helperText, globalStyles.fontRegular]}>
+                                {t("editProfile.abhaCardSaved")}
+                            </Text>
+                        ) : null}
+                        {showAbhaCard ? (
+                            <AbhaCardInput
+                                allowAlternatives={false}
+                                onSubmit={async () => {
+                                    setShowAbhaCard(false);
+                                    if (userToken) await syncUserData(userToken);
+                                    const refreshed = await chatDB.getUserData(userId as string);
+                                    if (refreshed) setUserData(refreshed.data);
+                                    Toast.show({
+                                        type: "success",
+                                        text1: t("common.success"),
+                                        text2: t("chat.abha.cardAdded"),
+                                        position: "bottom",
+                                    });
+                                }}
+                            />
+                        ) : (
+                            <TouchableOpacity
+                                onPress={() => setShowAbhaCard(true)}
+                                accessibilityRole="button"
+                            >
+                                <Text
+                                    style={[
+                                        globalStyles.fontSemiBold,
+                                        { color: colors.darkPurple, marginTop: 8 },
+                                    ]}
+                                >
+                                    {t("editProfile.abhaCardUpload")}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
                     </View>
                 </View>
 

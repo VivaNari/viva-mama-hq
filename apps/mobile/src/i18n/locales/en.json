@@ -187,7 +187,18 @@
     "deliveryDetailsRequired": "Please select your delivery outcome and delivery type before saving",
     "height": "Your height (cm)",
     "heightPlaceholder": "e.g. 160",
-    "heightInvalid": "Height must be between 100 and 220 cm"
+    "heightInvalid": "Height must be between 100 and 220 cm",
+    "weight": "Weight (kg)",
+    "weightPlaceholder": "Enter your weight in kg",
+    "weightInvalid": "Please enter a weight between 30 and 200 kg.",
+    "countInvalid": "Please check the number of pregnancies and children.",
+    "careModel": "Where are you seeking care?",
+    "careModelPublic": "Public / Govt Hospital",
+    "careModelPrivate": "Private Hospital",
+    "careModelNeeded": "Please choose one, so we can show you the right logs and schedule.",
+    "abhaNumber": "ABHA ID number",
+    "abhaCardSaved": "Your ABHA card is saved in My records.",
+    "abhaCardUpload": "Add a photo of your ABHA card"
   },
   "aboutScore": {
     "whatIs": "What is the Viva Recovery Score?",
@@ -634,6 +645,31 @@
         "sharedPhoto": "Photo you shared, {{index}} of {{total}}",
         "photoYouShared": "Photo you shared"
       }
+    },
+    "skip": "Skip",
+    "send": "Send",
+    "countOutOfRange": "Please enter a whole number between {{min}} and {{max}}.",
+    "heightFeetOutOfRange": "Please enter a height between 3 ft 4 in and 7 ft 2 in.",
+    "weightA11y": "Your weight",
+    "heightA11y": "Your height",
+    "inchesA11y": "Inches",
+    "abha": {
+      "cardAdded": "ABHA card added",
+      "uploadFailed": "We couldn't save your card. Please try again, type the number, or skip.",
+      "uploadUnavailable": "Card upload isn't available right now. You can type the number or skip.",
+      "invalidNumber": "Please enter all 14 digits of your ABHA number.",
+      "numberPlaceholder": "14-digit ABHA number",
+      "typeInstead": "Type the number instead",
+      "uploadInstead": "Upload a photo instead",
+      "consent": {
+        "title": "Before you add your ABHA card",
+        "purpose": "Your card is saved in My records, so you can find it easily.",
+        "storage": "The file is stored privately and securely. Only you can see it.",
+        "deletion": "It is kept until you delete it. Deleting it, or your account, removes the file.",
+        "notDiagnosis": "Viva does not read your ABHA card. By agreeing, you also allow Viva to read health records you add later, to summarise them for you.",
+        "accept": "I agree",
+        "decline": "Not now"
+      }
     }
   },
   "subscription": {
@@ -858,7 +894,9 @@
     "deleteAccount": "Delete my account",
     "deleteAccountDesc": "Permanently erase your account and your data",
     "mySubscription": "My Subscription",
-    "mySubscriptionDesc": "View your plan, credits and cancel anytime"
+    "mySubscriptionDesc": "View your plan, credits and cancel anytime",
+    "referralCode": "Referral code",
+    "referralCodeDesc": "Add a code from your doctor, clinic or programme"
   },
   "notificationPermission": {
     "title": "Turn on notifications",
@@ -1617,7 +1655,8 @@
         "scan": "Scan",
         "lab": "Lab report",
         "prescription": "Prescription",
-        "mch": "MCH card"
+        "mch": "MCH card",
+        "abha_card": "ABHA card"
       },
       "mchNote": "Your Mother and Child Protection card. Photograph each filled page — Viva summarises it and adds it to your shareable health summary.",
       "whichScan": "Which scan?",
@@ -1927,6 +1966,11 @@
       "sent": "Sent",
       "inPast": "That time has already passed. Choose a later time.",
       "limit": "You have the maximum number of reminders. Remove one to add another."
+    },
+    "careModelPrompt": {
+      "title": "Tell us where you are seeking care",
+      "body": "Public and private care follow different schedules. Add this in your profile so we can show you the right logs and visits.",
+      "action": "Add in Edit Profile"
     }
   },
   "chatLogs": {
@@ -2042,7 +2086,8 @@
       "HEALTH_SUMMARY_NO_RECORDS": "Add a record first to create your health summary.",
       "HEALTH_SUMMARY_IN_PROGRESS": "Your health summary is still being created.",
       "HEALTH_RECORD_STORAGE_UNAVAILABLE": "Records are unavailable right now. Please try again later."
-    }
+    },
+    "abhaCardNoSummary": "This is your ABHA card. It is saved here for you and is not read by Viva."
   },
   "healthSummary": {
     "title": "Health summary",
