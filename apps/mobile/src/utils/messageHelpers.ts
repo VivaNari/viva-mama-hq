@@ -308,3 +308,83 @@ export const getSelectedValues = (
 ): string[] => {
   return getSelectedOptions(selectedIds, options).map(opt => opt.value);
 };
+
+// ---------------------------------------------------------------------------
+// Voice: read-aloud and speech input
+// ---------------------------------------------------------------------------
+
+/** BCP-47 tags the voice features use. Indian English, not en-US, so names and
+ *  units are pronounced the way she would say them. */
+export type SpeechLang = 'hi-IN' | 'en-IN';
+
+const DEVANAGARI_RE = /[ऀ-ॿ]/;
+
+/**
+ * Which voice should read this text. Decided from the text itself rather than the
+ * app language: a reply may be in Hindi while the app is in English, or the reverse.
+ */
+export const detectSpeechLang = (text: string): SpeechLang =>
+  DEVANAGARI_RE.test(text) ? 'hi-IN' : 'en-IN';
+
+/** The language the mic listens in: the app's language, as the replies are. */
+export const speechLangForAppLanguage = (appLanguage: string | undefined): SpeechLang =>
+  appLanguage?.startsWith('hi') ? 'hi-IN' : 'en-IN';
+
+// Pictographs, dingbats, variation selectors and joiners. A voice reads an emoji's
+// name aloud ("smiling face with heart eyes"), which is noise in a health answer.
+// Explicit ranges rather than \p{Extended_Pictographic}, which not every Hermes build
+// accepts.
+const EMOJI_RE =
+  /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}\u{20E3}]/gu;
+
+/**
+ * Turn a Markdown reply into text a voice can read: without this the speech engine
+ * says "asterisk asterisk" for bold and reads URLs out character by character.
+ * Mirrors what MarkdownText renders, so she hears what she sees.
+ */
+export const toSpeakableText = (markdown: string): string =>
+  markdown
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s*>\s?/gm, '')
+    .replace(/^\s*(?:[*+-]|\d+[.)])\s+/gm, '')
+    .replace(/(\*\*|__)(.+?)\1/g, '$2')
+    .replace(/(\*|_)(\S(?:.*?\S)?)\1/g, '$2')
+    .replace(EMOJI_RE, '')
+    // A line break is a pause; end the line as a sentence if it doesn't already.
+    .replace(/([^.!?।:;,\s])\s*\n+/g, '$1. ')
+    .replace(/\s*\n+\s*/g, ' ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+
+/**
+ * Split long text into sentence-sized pieces no longer than `maxLength`.
+ * Speech engines cap a single utterance (Android at ~4000 chars); splitting on
+ * sentence ends (including the Hindi danda, ।) keeps the pauses natural.
+ */
+export const chunkForSpeech = (text: string, maxLength: number): string[] => {
+  if (text.length <= maxLength) return text ? [text] : [];
+  const sentences = text.match(/[^.!?।]+[.!?।]*\s*/g) ?? [text];
+  const chunks: string[] = [];
+  let current = '';
+  for (const sentence of sentences) {
+    if ((current + sentence).length > maxLength && current) {
+      chunks.push(current.trim());
+      current = '';
+    }
+    if (sentence.length > maxLength) {
+      // One enormous "sentence": fall back to hard slices.
+      for (let i = 0; i < sentence.length; i += maxLength) {
+        chunks.push(sentence.slice(i, i + maxLength).trim());
+      }
+      continue;
+    }
+    current += sentence;
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks.filter(Boolean);
+};

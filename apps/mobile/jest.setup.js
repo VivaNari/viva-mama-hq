@@ -150,3 +150,36 @@ jest.mock('@react-native-google-signin/google-signin', () => ({
 // Linking mock
 // -----------------------------
 Linking.openURL = jest.fn();
+
+// -----------------------------
+// Voice (native-only): expo-speech reads replies aloud, expo-speech-recognition types
+// what she says. Recognition events are captured per name so a test can fire them with
+// `require('expo-speech-recognition').__emit('result', {...})`.
+// -----------------------------
+jest.mock('expo-speech', () => ({
+  speak: jest.fn(),
+  stop: jest.fn(() => Promise.resolve()),
+  getAvailableVoicesAsync: jest.fn(() => Promise.resolve([])),
+  isSpeakingAsync: jest.fn(() => Promise.resolve(false)),
+  maxSpeechInputLength: 4000,
+}));
+
+jest.mock('expo-speech-recognition', () => {
+  const listeners = {};
+  return {
+    ExpoSpeechRecognitionModule: {
+      start: jest.fn(),
+      stop: jest.fn(),
+      abort: jest.fn(),
+      isRecognitionAvailable: jest.fn(() => true),
+      requestPermissionsAsync: jest.fn(() =>
+        Promise.resolve({ granted: true, canAskAgain: true, status: 'granted', expires: 'never' }),
+      ),
+      getSpeechRecognitionServices: jest.fn(() => []),
+    },
+    useSpeechRecognitionEvent: (name, handler) => {
+      listeners[name] = handler;
+    },
+    __emit: (name, event) => listeners[name] && listeners[name](event),
+  };
+});

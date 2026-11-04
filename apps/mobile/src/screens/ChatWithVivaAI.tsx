@@ -72,6 +72,9 @@ import Lucide from '@react-native-vector-icons/lucide';
 import { useTranslation } from 'react-i18next';
 import { useScreenEdges } from '../hooks/useScreenEdges';
 import { useChatAttachments } from '../hooks/useChatAttachments';
+import { useReadAloud } from '../hooks/useReadAloud';
+import { useSpeechToText } from '../hooks/useSpeechToText';
+import { speechLangForAppLanguage } from '../utils/messageHelpers';
 import { useSubscriptionContext } from '../context/SubscriptionContext';
 import { getAttachmentUrl, getChatReply } from '../api/chatAttachments.api';
 import AttachmentPreviewTray from '../components/chatAttachments/AttachmentPreviewTray';
@@ -93,7 +96,7 @@ const REPLY_POLL_EVERY_MS = 5_000;
 const REPLY_GIVE_UP_AFTER_MS = 180_000;
 
 const ChatWithVivaAI: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     // Headerless in both registrations (the screen draws its own), so the top is always
     // ours; the bottom is only ours in the stack, where there is no tab bar.
     const edges = useScreenEdges(false);
@@ -401,6 +404,39 @@ const ChatWithVivaAI: React.FC = () => {
     });
     const [viewer, setViewer] = useState<{ images: IMessageAttachment[]; index: number } | null>(null);
 
+    // ============================================
+    // Voice (Viva AI): speak into the box, hear replies read aloud
+    // ============================================
+    const readAloud = useReadAloud();
+    // Read through a ref so a result arriving mid-sentence builds on the box text as it
+    // was when she tapped the mic, not on a stale render's copy.
+    const inputTextRef = useRef(state.inputText);
+    inputTextRef.current = state.inputText;
+    const speechToText = useSpeechToText({
+        lang: speechLangForAppLanguage(i18n.language),
+        getBaseText: useCallback(() => inputTextRef.current, []),
+        onTranscript: useCallback(
+            (text: string) => dispatch({ type: 'SET_INPUT_TEXT', payload: text }),
+            [dispatch],
+        ),
+        // The mic would otherwise hear Viva reading her own reply.
+        onBeforeStart: readAloud.stop,
+    });
+    const stopVoice = useRef(() => {});
+    stopVoice.current = () => {
+        speechToText.abort();
+        readAloud.stop();
+    };
+
+    // Leaving the screen (another tab, a pushed screen) or the app silences both.
+    useFocusEffect(useCallback(() => () => stopVoice.current(), []));
+    useEffect(() => {
+        const sub = AppState.addEventListener('change', (next) => {
+            if (next !== 'active') stopVoice.current();
+        });
+        return () => sub.remove();
+    }, []);
+
     const attachmentViewer = useMemo<IAttachmentViewer>(() => ({
         openImages: (images, index) => setViewer({ images, index }),
         // The phone's own viewer, through a link that works for a few minutes.
@@ -511,6 +547,8 @@ const ChatWithVivaAI: React.FC = () => {
     );
 
     const handleSend = useCallback(() => {
+        // What she sends is what is in the box now; a late result must not refill it.
+        stopVoice.current();
         if (isChatbotFlow && attachments.enabled && attachments.hasReady) {
             if (attachments.blocking) return;
             handleTextSubmit(state.inputText, attachments.takeReady());
@@ -996,6 +1034,8 @@ const ChatWithVivaAI: React.FC = () => {
                                     onConnectExpert={handleConnectExpert}
                                     onBookmarkPress={handleBookmarkPress}
                                     onFlagPress={handleFlagPress}
+                                    onSpeakPress={isChatbotFlow ? readAloud.toggle : undefined}
+                                    isSpeaking={readAloud.speakingId === msg.id}
                                     isBookmarked={
                                         isAiMessage(msg)
                                             ? state.bookMarkedMessages.includes(msg.id)
@@ -1088,6 +1128,10 @@ const ChatWithVivaAI: React.FC = () => {
                             hasReady: attachments.hasReady,
                             blocking: attachments.blocking,
                             full: attachments.full,
+                        } : undefined}
+                        voice={isChatbotFlow ? {
+                            isListening: speechToText.isListening,
+                            onMicPress: speechToText.toggle,
                         } : undefined}
                     />
                     <Text style={[globalStyles.fontRegular, { fontSize: 10, color: colors.gray, textAlign: 'center', paddingBottom: 10, paddingTop: 5, paddingHorizontal: 10 }]}>

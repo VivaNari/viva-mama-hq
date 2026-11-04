@@ -542,6 +542,22 @@
     "babyOnboardingCompleteTitle": "Baby added",
     "babyOnboardingComplete": "You can now track growth, feeding, diapers, vaccinations and milestones from the Infant tab.",
     "measurementOutOfRange": "Please enter a value between {{min}} and {{max}} {{unit}}.",
+    "voice": {
+      "micA11y": "Speak your message",
+      "stopMicA11y": "Stop listening",
+      "listening": "Listening… speak now",
+      "playA11y": "Read this reply aloud",
+      "stopA11y": "Stop reading",
+      "permissionTitle": "Microphone is off",
+      "permissionDenied": "Allow microphone access in Settings to speak your message.",
+      "openSettings": "Open Settings",
+      "noSpeech": "Didn't catch that. Tap the mic and try again.",
+      "networkError": "Voice typing needs an internet connection. Please try again.",
+      "recognitionUnavailable": "Voice typing isn't available on this phone.",
+      "languageUnavailable": "Voice typing in this language isn't available on this phone yet.",
+      "unavailable": "A voice for this language isn't installed on your phone.",
+      "speakFailed": "Couldn't read this reply aloud. Please try again."
+    },
     "attachments": {
       "sheetTitle": "Share a report",
       "sheetSubtitle": "Lab reports, scan reports or prescriptions for you or your baby. Viva explains them in simple words.",

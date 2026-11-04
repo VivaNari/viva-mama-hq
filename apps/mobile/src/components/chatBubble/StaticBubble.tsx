@@ -47,6 +47,9 @@ interface StaticBubbleProps {
      */
     onFlagPress?: (id: string) => void;
     onConnectExpert?: (expertId: string) => void;
+    /** Read this reply aloud. Optional for the same reason as onFlagPress. */
+    onSpeakPress?: (id: string, text: string) => void;
+    isSpeaking?: boolean;
 }
 
 export const StaticBubble: React.FC<StaticBubbleProps> = ({
@@ -67,6 +70,8 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
     isBookmarked,
     onFlagPress,
     onConnectExpert,
+    onSpeakPress,
+    isSpeaking,
 }) => {
     const { t } = useTranslation();
     const attachmentViewer = useAttachmentViewer();
@@ -285,6 +290,22 @@ export const StaticBubble: React.FC<StaticBubbleProps> = ({
                             )
                         }
                     </TouchableOpacity>
+
+                    {onSpeakPress && message.text?.trim() ? (
+                        <TouchableOpacity
+                            onPress={() => onSpeakPress(message.id, message.text)}
+                            activeOpacity={0.2}
+                            hitSlop={8}
+                            accessibilityRole="button"
+                            accessibilityLabel={t(isSpeaking ? 'chat.voice.stopA11y' : 'chat.voice.playA11y')}
+                        >
+                            <MaterialDesignIcons
+                                name={isSpeaking ? 'stop-circle-outline' : 'volume-high'}
+                                size={20}
+                                color={colors.darkPurple}
+                            />
+                        </TouchableOpacity>
+                    ) : null}
 
                     {/* Play's AI-Generated Content policy requires flagging offensive
                         model output to be reachable without leaving the app. Sits beside

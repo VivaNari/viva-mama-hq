@@ -37,10 +37,27 @@
            request first. Keep it out.
          - PDFs come through the Storage Access Framework (@react-native-documents/picker).
          The <queries> entry lets the app see the camera app at targetSdk 30+. -->
+    <!-- Viva AI voice typing (expo-speech-recognition). RECORD_AUDIO is requested at
+         runtime only when she taps the mic in Viva AI chat, never at launch. The app does not
+         store or upload the audio itself, but the phone's recognizer (normally Google's)
+         usually processes it on its own servers, so account for that on the Data Safety
+         form rather than describing it as on-device. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
     <queries>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
+        <!-- Package visibility at targetSdk 30+: without these the speech recognizer
+             (Google's, the Gboard voice-typing engine) and the text-to-speech engine used
+             to read replies aloud are invisible to the app, and both report "unavailable". -->
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+        <package android:name="com.google.android.googlequicksearchbox" />
     </queries>
 
     <!-- enableOnBackInvokedCallback defaults to TRUE at targetSdk 36. Pinned false so

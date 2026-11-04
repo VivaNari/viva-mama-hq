@@ -29,6 +29,8 @@ export const ChatBubble: React.FC<Props> = ({
 	isBookmarked,
 	onFlagPress,
 	onConnectExpert,
+	onSpeakPress,
+	isSpeaking,
 }) => {
 	if (shouldAnimate && isAiMessage(message) && onAnimationComplete) {
 		return (
@@ -67,6 +69,8 @@ export const ChatBubble: React.FC<Props> = ({
 			isBookmarked={isBookmarked}
 			onFlagPress={onFlagPress}
 			onConnectExpert={onConnectExpert}
+			onSpeakPress={onSpeakPress}
+			isSpeaking={isSpeaking}
 		/>
 	);
 };

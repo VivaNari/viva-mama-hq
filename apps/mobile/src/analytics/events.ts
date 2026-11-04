@@ -68,6 +68,10 @@ export const AnalyticsEvent = {
   CHAT_ATTACHMENT_UPLOAD_FAILED: 'chat_attachment_upload_failed',
   CHAT_ATTACHMENT_SENT: 'chat_attachment_sent',
   CHAT_ATTACHMENT_REJECTED: 'chat_attachment_rejected',
+  // Voice: the language and how it ended, never a word of what was said or read.
+  CHAT_VOICE_INPUT_STARTED: 'chat_voice_input_started',
+  CHAT_VOICE_INPUT_ENDED: 'chat_voice_input_ended',
+  CHAT_READ_ALOUD_PLAYED: 'chat_read_aloud_played',
   // Health records: category, verdict and counts only, never what a record says.
   RECORD_UPLOAD_STARTED: 'record_upload_started',
   RECORD_SAVED: 'record_saved',
@@ -301,6 +305,13 @@ export interface EventParams {
     has_caption: boolean;
   };
   [AnalyticsEvent.CHAT_ATTACHMENT_REJECTED]: { reason_code: string };
+  [AnalyticsEvent.CHAT_VOICE_INPUT_STARTED]: { lang: string };
+  [AnalyticsEvent.CHAT_VOICE_INPUT_ENDED]: {
+    lang: string;
+    /** 'text' when words reached the box, else the recognizer's error code. */
+    outcome: string;
+  };
+  [AnalyticsEvent.CHAT_READ_ALOUD_PLAYED]: { lang: string };
   [AnalyticsEvent.RECORD_UPLOAD_STARTED]: {
     category: string;
     source: 'camera' | 'gallery' | 'pdf';

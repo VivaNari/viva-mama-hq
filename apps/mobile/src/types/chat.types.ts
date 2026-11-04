@@ -296,6 +296,10 @@ export interface ChatBubbleProps {
   onFlagPress?: (id: string) => void;
   /** Opens the recommended expert's details screen. Omit to hide the button. */
   onConnectExpert?: (expertId: string) => void;
+  /** Read this AI reply aloud, or stop it. Omit to hide the speaker button. */
+  onSpeakPress?: (id: string, text: string) => void;
+  /** This reply is the one currently being read aloud. */
+  isSpeaking?: boolean;
 }
 
 export interface ChatInputBarProps {

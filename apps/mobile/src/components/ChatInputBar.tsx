@@ -1,5 +1,12 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import Animated, {
+    cancelAnimation,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from 'react-native-reanimated';
 import {
     View,
     TextInput,
@@ -41,7 +48,59 @@ interface ChatInputBarProps {
         /** No more files can be added to this message. */
         full: boolean;
     };
+    /**
+     * Viva AI only: a mic that types what she says into the box (speech-to-text).
+     * Absent for guided check-ins.
+     */
+    voice?: {
+        isListening: boolean;
+        onMicPress: () => void;
+    };
 }
+
+/** The mic, pulsing while it listens so she can see it is hearing her. */
+const MicButton: React.FC<{ isListening: boolean; disabled: boolean; onPress: () => void }> = ({
+    isListening,
+    disabled,
+    onPress,
+}) => {
+    const { t } = useTranslation();
+    const pulse = useSharedValue(1);
+
+    useEffect(() => {
+        if (isListening) {
+            pulse.value = withRepeat(withTiming(1.12, { duration: 600 }), -1, true);
+        } else {
+            cancelAnimation(pulse);
+            pulse.value = withTiming(1, { duration: 150 });
+        }
+    }, [isListening, pulse]);
+
+    const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }));
+
+    return (
+        <Animated.View style={animatedStyle}>
+            <TouchableOpacity
+                style={[
+                    styles.micButton,
+                    isListening && styles.micButtonListening,
+                    disabled && styles.attachButtonDisabled,
+                ]}
+                onPress={onPress}
+                disabled={disabled}
+                accessibilityRole="button"
+                accessibilityLabel={t(isListening ? 'chat.voice.stopMicA11y' : 'chat.voice.micA11y')}
+                accessibilityState={{ disabled, busy: isListening }}
+            >
+                <MaterialDesignIcons
+                    name={isListening ? 'stop' : 'microphone'}
+                    size={22}
+                    color={isListening ? colors.white : colors.darkPurple}
+                />
+            </TouchableOpacity>
+        </Animated.View>
+    );
+};
 
 export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     inputMode,
@@ -54,6 +113,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     onMultiSelectSubmit,
     validationError = null,
     attachments,
+    voice,
 }) => {
     const { t } = useTranslation();
     // Multi-select submit bar
@@ -91,6 +151,8 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     const isNumberMode = inputMode === 'number';
     const hasError = isNumberMode && inputText.trim().length > 0 && !!validationError;
     const showAttach = !!attachments && inputMode === 'text';
+    const showMic = !!voice && inputMode === 'text';
+    const isListening = showMic && voice!.isListening;
     const hasText = inputText.trim().length > 0;
     // A message may be only files; it may not leave while one is still uploading.
     const isSendDisabled =
@@ -98,7 +160,9 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
         (isNumberMode && !!validationError) ||
         (showAttach && attachments!.blocking) ||
         (!hasText && !(showAttach && attachments!.hasReady));
-    const placeholder = isDateMode
+    const placeholder = isListening
+        ? t('chat.voice.listening')
+        : isDateMode
         ? t('chat.selectADate')
         : isNumberMode
             ? t('chat.enterNumber')
@@ -153,6 +217,15 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
                         accessibilityLabel={placeholder}
                     />
                 </TouchableOpacity>
+
+                {showMic && (
+                    <MicButton
+                        isListening={isListening}
+                        // She may stop a recording at any time, even while Viva is replying.
+                        disabled={isLoading && !isListening}
+                        onPress={voice!.onMicPress}
+                    />
+                )}
 
                 <TouchableOpacity
                     style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled, { backgroundColor: colors.darkPurple }]}
@@ -229,6 +302,19 @@ const styles = StyleSheet.create({
 
     attachButtonDisabled: {
         opacity: 0.4,
+    },
+
+    micButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.lightPurple,
+    },
+
+    micButtonListening: {
+        backgroundColor: colors.redBadgeText,
     },
 
     sendButton: {
