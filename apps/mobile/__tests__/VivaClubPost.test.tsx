@@ -35,6 +35,11 @@ jest.mock("@react-navigation/native", () => {
     };
 });
 
+// ---- The real hook loads the tab navigator, which the navigation mock above can't support ----
+jest.mock("../src/hooks/useScreenEdges", () => ({
+    useScreenEdges: () => ["left", "right"],
+}));
+
 // ---- safe-area-context: passthrough so SafeAreaView renders without a provider ----
 jest.mock("react-native-safe-area-context", () => {
     const { View } = require("react-native");

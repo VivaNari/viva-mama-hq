@@ -106,7 +106,7 @@ export const STOPPED_BREASTFEEDING_SCORE = -1;
 
 export const WEEKLY_CHECKIN_MESSAGES = {
     THANK_YOU:
-        "Thank you for completing your check-in! Your score is being generated. Please check the dashboard.",
+        "Thank you for completing your check-in! Your score is being generated. Please check your score in the app.",
     ALREADY_COMPLETED: "You have already completed the check-in for this week.",
     NOT_TRIGGERED: "Weekly check-in has not been triggered for this week yet.",
     EXPIRED: "This weekly check-in has expired.",
@@ -184,7 +184,12 @@ export const WEEKLY_CHECKIN_NOTIFICATIONS = WEEKLY_CHECKIN_NOTIFICATIONS_I18N.en
 // Flow completion ("thank you") messages
 // ============================================
 
-type FlowCompletionKey = "ONBOARDING" | "CHECK_IN" | "BABY_ONBOARDING";
+/**
+ * ONBOARDING_LEGACY ends the frozen onboarding-flow-v2, which the Play Store build runs.
+ * Check-ins and baby onboarding are one flow for every app build, so their text must not
+ * name a screen that only some builds have.
+ */
+type FlowCompletionKey = "ONBOARDING" | "ONBOARDING_LEGACY" | "CHECK_IN" | "BABY_ONBOARDING";
 
 /**
  * Localized end-of-flow messages shown when onboarding or a weekly check-in
@@ -197,18 +202,22 @@ export const FLOW_COMPLETION_MESSAGES_I18N: Record<
     en: {
         ONBOARDING:
             "This gives me a clear picture. Viva is personalising your 1,000-day journey, from pregnancy through your baby's first two years.",
+        ONBOARDING_LEGACY:
+            "Thank you! That gives me a clear picture of your health, support, and daily life. I will now build your personalised recovery journey and connect you with the right support.",
         CHECK_IN:
-            "Thank you for completing your check-in! Your score is being generated. Please check the dashboard.",
+            "Thank you for completing your check-in! Your score is being generated. Please check your score in the app.",
         BABY_ONBOARDING:
-            "All set! I've added your little one. You can now track growth, feeding, diapers, vaccinations and milestones from the Infant tab on your dashboard.",
+            "All set! I've added your little one. You can now track growth, feeding, diapers, vaccinations and milestones from the Infant tab in the app.",
     },
     hi: {
         ONBOARDING:
             "अब मुझे आपकी स्पष्ट तस्वीर मिल गई है। Viva आपकी 1,000 दिनों की यात्रा को आपके लिए तैयार कर रही है, गर्भावस्था से लेकर आपके शिशु के पहले दो वर्षों तक।",
+        ONBOARDING_LEGACY:
+            "धन्यवाद, अब मुझे आपकी सेहत, सहारे और रोज़मर्रा की ज़िंदगी की स्पष्ट तस्वीर मिल गई है। मैं अब आपकी journey personalise करूँगी। हर रिकवरी अलग होती है, और मैं हर कोमल दिन आपके साथ चलूँगी।",
         CHECK_IN:
-            "आपकी जाँच पूरी करने के लिए धन्यवाद! आपका स्कोर तैयार किया जा रहा है। कृपया डैशबोर्ड देखें।",
+            "आपकी जाँच पूरी करने के लिए धन्यवाद! आपका स्कोर तैयार किया जा रहा है। कृपया ऐप में अपना स्कोर देखें।",
         BABY_ONBOARDING:
-            "हो गया! मैंने आपके नन्हे को जोड़ दिया है। अब आप अपने डैशबोर्ड के Infant टैब से ग्रोथ, फीडिंग, डायपर, टीकाकरण और माइलस्टोन ट्रैक कर सकती हैं।",
+            "हो गया! मैंने आपके नन्हे को जोड़ दिया है। अब आप ऐप के Infant टैब से ग्रोथ, फीडिंग, डायपर, टीकाकरण और माइलस्टोन ट्रैक कर सकती हैं।",
     },
 };
 

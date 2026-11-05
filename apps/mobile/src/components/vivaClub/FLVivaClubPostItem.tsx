@@ -11,14 +11,12 @@ import ContentModerationButton from "./ContentModerationButton"
 import { TContentAction } from "./ContentActionsMenu"
 
 const FLVivaClubPostItem = ({
-    isFromCommunityScreen = false,
     isFromDetials = false,
     bgColor = 'rgba(255, 250, 250, 1)',
     item,
     navigation,
     onModerated
 }: {
-    isFromCommunityScreen?: boolean,
     isFromDetials?: boolean,
     bgColor?: string,
     item: IVivaClubPost,
@@ -153,7 +151,6 @@ const FLVivaClubPostItem = ({
                         color: isFromDetials ? colors.text : colors.black,
                         lineHeight: isFromDetials ? 23 : 18
                     }, globalStyles.fontRegular]}
-                    numberOfLines={isFromCommunityScreen ? 3 : undefined}
                 >
                     {item.content}
                 </Text>

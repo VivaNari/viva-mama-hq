@@ -13,15 +13,15 @@ import {
 } from "../src/utils/flowTypeResolver";
 
 describe("onboarding flow config (FLOW_SLUGS + flowTypeResolver)", () => {
-  it("maps FlowType.ONBOARDING to onboarding-flow-v2", () => {
-    expect(FLOW_SLUGS[FlowType.ONBOARDING]).toBe("onboarding-flow-v2");
+  it("maps FlowType.ONBOARDING to onboarding-flow-v3", () => {
+    expect(FLOW_SLUGS[FlowType.ONBOARDING]).toBe("onboarding-flow-v3");
   });
 
   it("resolves onboarding for ChatWithVivaAI when there is no route slug and user is not fully onboarded", () => {
     const config = resolveFlowConfig(undefined, false);
     expect(config).toEqual({
       flowType: FlowType.ONBOARDING,
-      flowSlug: "onboarding-flow-v2",
+      flowSlug: "onboarding-flow-v3",
     });
   });
 

@@ -77,7 +77,7 @@ const CreatePost = () => {
             });
             // That a post was made, never what it said.
             track(AnalyticsEvent.COMMUNITY_POST_CREATED);
-            navigation.navigate("VivaClub");
+            navigation.navigate("DashboardTabNavigator", { screen: "Community" });
         } catch (error) {
             console.error("Failed to create post", error);
             const denial = (error as any)?.response?.data?.data?.code;

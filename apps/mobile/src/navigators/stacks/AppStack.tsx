@@ -30,7 +30,6 @@ import VaccinationLog from '../../screens/VaccinationLog'
 import GrowthLog from '../../screens/GrowthLog';
 import DiaperLog from '../../screens/DiaperLog';
 import MilestoneLog from '../../screens/MilestoneLog';
-import VivaClubPost from '../../screens/VivaClubPost';
 import VivaClubPostDetails from '../../screens/VivaClubPostDetails';
 import { DashboardTabs } from '../tabs/DashboardTabs';
 import ChatWithVivaAi from '../../screens/ChatWithVivaAI';
@@ -190,15 +189,7 @@ const AppStack = () => {
                 name="BookmarkedMessages"
                 component={BookmarkedMessages}
             />
-            <Stack.Screen
-                options={{
-                    headerShown: true,
-                    title: t('nav.vivaClub'),
-                }}
-                name="VivaClub"
-                component={VivaClubPost}
-            />
-            <Stack.Screen
+<Stack.Screen
                 options={{
                     // The screen renders its own header so the comment box can sit inside a
                     // KeyboardAvoidingView that spans the full window (same as ChatWithVivaAI).

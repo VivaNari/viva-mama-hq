@@ -6,13 +6,11 @@ import { Image, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
-import ArticleContent from '../../screens/ArticleContent';
 import Dashboard from '../../screens/Dashboard';
 import Experts from '../../screens/Experts';
-import Products from '../../screens/Products';
+import Library from '../../screens/Library';
 import VivaAIHub from '../../screens/VivaAIHub';
-import { useCapability } from '../../context/SubscriptionContext';
-import { Capability } from '../../types/entitlements.types';
+import VivaClubPost from '../../screens/VivaClubPost';
 
 const Tab = createBottomTabNavigator();
 
@@ -20,8 +18,6 @@ export const DashboardTabs = () => {
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
     const insets = useSafeAreaInsets()
-    // Safe here: RootNavigator is mounted inside SubscriptionProvider.
-    const productsLocked = useCapability(Capability.PRODUCTS_VIEW).locked;
 
     return (
         <Tab.Navigator
@@ -102,18 +98,19 @@ export const DashboardTabs = () => {
                 )
             }}
         >
+            {/* Shown as Journey. The route keeps its name, so existing navigation still works. */}
             <Tab.Screen
                 name="Dashboard"
                 component={Dashboard}
                 options={{
                     tabBarIcon: ({ color }) => (
                         <Lucide
-                            name="layout-dashboard"
+                            name="map-pin"
                             size={25}
                             color={color}
                         />
                     ),
-                    title: t('nav.tabHome')
+                    title: t('nav.tabJourney')
                 }}
             />
             {/* <Tab.Screen
@@ -160,34 +157,27 @@ export const DashboardTabs = () => {
                     ),
                 }}
             />
-            {/* Some referral programs suppress products entirely for the mothers they
-                refer. The server is the enforcement — it returns an empty list — but a
-                tab that only ever shows "nothing here" reads as a broken app, so the
-                tab goes too.
-
-                The conditional has to sit directly inside Tab.Navigator: wrapping it in
-                a fragment breaks React Navigation's child inspection. */}
-            {!productsLocked && (
-                <Tab.Screen
-                    name="Products"
-                    component={Products}
-                    options={{
-                        title: t('nav.tabProducts'),
-                        tabBarIcon: ({ color }) => (
-                            <Lucide
-                                name="shopping-cart"
-                                size={25}
-                                color={color}
-                            />
-                        ),
-                    }}
-                />
-            )}
             <Tab.Screen
-                name="Services"
-                component={ArticleContent}
+                name="Community"
+                component={VivaClubPost}
                 options={{
-                    title: t('nav.tabContents'),
+                    title: t('nav.tabCommunity'),
+                    tabBarIcon: ({ color }) => (
+                        <Lucide
+                            name="heart-handshake"
+                            size={25}
+                            color={color}
+                        />
+                    ),
+                }}
+            />
+            {/* Not named "Services": that is the plan catalog's route in AppStack, and a tab
+                with the same name would catch navigate("Services") from inside the tabs. */}
+            <Tab.Screen
+                name="Library"
+                component={Library}
+                options={{
+                    title: t('nav.tabLibrary'),
                     tabBarIcon: ({ color }) => (
                         <Lucide
                             name="book-open-text"

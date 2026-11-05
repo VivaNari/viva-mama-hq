@@ -102,7 +102,8 @@ const STEPS: Array<{ name: string; fn: () => Promise<unknown> }> = [
     // Also after add-hindi-translations, for the same reason: that step rewrites
     // `translations.hi` wholesale, so anything asserting Hindi has to follow it.
     { name: "rebrand-perinatal-flow-copy", fn: rebrandPerinatalFlowCopy },
-    // After both of the above: it sets the final intro copy and re-asserts its Hindi.
+    // After both of the above: it copies v2 into onboarding-flow-v3, so the copy starts
+    // from their final text, then sets v3's intro and re-asserts its Hindi. Never writes to v2.
     { name: "update-onboarding-prd-section1", fn: updateOnboardingPrdSection1 },
     // Baby onboarding. The reindex goes first and the ordering is load-bearing: until the
     // old three-field unique index on flow_instances is dropped, a mother adding a second

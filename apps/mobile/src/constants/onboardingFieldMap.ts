@@ -3,7 +3,7 @@ import { IUser } from "../types/user.types";
 type OnboardingData = IUser["onboarding_data"];
 
 /**
- * Maps an onboarding-flow-v2 node `id` to the `onboarding_data` field it fills.
+ * Maps an onboarding-flow-v3 node `id` to the `onboarding_data` field it fills.
  * Mirrors the backend switch in chat-flow.service.ts (updateOnboardingData).
  *
  * Only editable question nodes are listed. Nodes absent from this map

@@ -47,6 +47,7 @@
         "migrate:baby-onboarding": "npm run migrate:reindex-flow-instances-subject && npm run migrate:seed-baby-onboarding-flow",
         "migrate:consultation-video-booking": "npm run migrate:add-consultant-contact-whatsapp && npm run migrate:add-care-manager-remuneration && npm run migrate:consultation-order-to-consultant-ref",
         "migrate:update-onboarding-prd-section1": "ts-node scripts/update-onboarding-prd-section1.ts",
+        "migrate:restore-onboarding-v2": "ts-node scripts/restore-onboarding-v2.ts",
         "migrate:flow-copy": "npm run migrate:add-onboarding-feeding-node && npm run migrate:rebrand-perinatal-flow-copy && npm run migrate:update-onboarding-prd-section1",
         "start": "node build/index.js",
         "typecheck": "tsc --noEmit",

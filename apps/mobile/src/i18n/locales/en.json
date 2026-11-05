@@ -6,7 +6,6 @@
     "suggestedProducts": "Suggested Products",
     "content": "Content",
     "bookmarkedMessages": "Bookmarked Messages",
-    "vivaClub": "Viva Circle",
     "vivaClubPost": "Viva Circle Post",
     "createPost": "Create Post",
     "articles": "Articles",
@@ -22,11 +21,12 @@
     "consultationRating": "Consultation Rating",
     "aboutRecoveryScore": "About Viva Recovery Score",
     "moodLog": "Mood Log",
-    "tabHome": "Home",
+    "tabJourney": "Journey",
     "tabVivaAi": "Viva AI",
     "tabExperts": "Experts",
     "tabProducts": "Products",
-    "tabContents": "Contents",
+    "tabLibrary": "Library",
+    "tabCommunity": "Community",
     "myConsultations": "My Consultations",
     "mySubscription": "My Subscription",
     "growthLog": "Growth Log",
@@ -212,16 +212,16 @@
   "vivaScore": {
     "howGeneratedTitle": "How your Viva Score is created",
     "howGeneratedSubtitle": "Four simple steps, every week, to track your recovery.",
-    "howGeneratedBody": "Your Viva Score comes from your weekly check-ins with Viva. Based on your answers, a trained algorithm calculates your score and updates it on your dashboard. These regular updates help you <bold>monitor your progress, notice patterns, and make informed choices</bold> about your recovery.",
+    "howGeneratedBody": "Your Viva Score comes from your weekly check-ins with Viva. Based on your answers, a trained algorithm calculates your score and updates it on your Journey screen. These regular updates help you <bold>monitor your progress, notice patterns, and make informed choices</bold> about your recovery.",
     "steps": {
       "step1Title": "Weekly check-in",
-      "step1Body": "Tap Check In on your dashboard each week.",
+      "step1Body": "Tap Check In on your Journey screen each week.",
       "step2Title": "Chat with Viva",
       "step2Body": "Viva asks a few gentle questions about how you are feeling and recovering.",
       "step3Title": "Get your score",
       "step3Body": "A trained algorithm turns your answers into your Viva Score.",
       "step4Title": "See your results",
-      "step4Body": "Your score updates on your dashboard, so you can track your progress over time.",
+      "step4Body": "Your score updates on your Journey screen, so you can track your progress over time.",
       "stepLabel": "STEP"
     },
     "aboutTitle": "About your Viva Recovery Score",
@@ -296,11 +296,8 @@
   "content": {
     "noContentsFound": "No Contents Found!",
     "articleDisclaimer": "This article is for educational purposes only. It is not medical advice. Always consult a qualified healthcare professional for medical advice, diagnosis, or treatment.",
-    "communityFeed": "Viva Circle",
-    "viewAllPosts": "View All Viva Circle Posts",
-    "noCommunityPost": "No Viva Circle post is available for you",
-    "createCommunityPost": "Create a Viva Circle Post",
-    "healthConcernsDisclaimer": "If you have any concerns about your health or your baby's health, please consult a qualified healthcare professional. In an emergency, contact your doctor or local emergency services."
+    "healthConcernsDisclaimer": "If you have any concerns about your health or your baby's health, please consult a qualified healthcare professional. In an emergency, contact your doctor or local emergency services.",
+    "libraryArticles": "Articles"
   },
   "vivaClub": {
     "anonymous": "Anonymous",
@@ -542,7 +539,7 @@
     "vivaThinking": "Viva is thinking...",
     "completeTitle": "Complete",
     "onboardingComplete": "Your onboarding questionnaire is completed! You will be redirected soon",
-    "checkinComplete": "Weekly Check-In Completed! Redirecting to dashboard...",
+    "checkinComplete": "Weekly Check-In Completed! Redirecting to Journey...",
     "flowComplete": "Flow completed successfully",
     "reportAccessibility": "Report this reply",
     "reportSubject": "Viva AI reply",
@@ -917,7 +914,7 @@
       "unhandled": "Did not happen"
     },
     "empty": {
-      "upcoming": "You have no upcoming consultations. Book one from your dashboard whenever you need support.",
+      "upcoming": "You have no upcoming consultations. Book one from your Journey screen whenever you need support.",
       "ongoing": "Nothing in progress right now.",
       "past": "Your finished consultations will appear here."
     },

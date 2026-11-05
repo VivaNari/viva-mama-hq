@@ -1,5 +1,5 @@
 import conversationModel from "../../models/conversation.model";
-import { ONBOARDING_SLUG } from "../../constants/conversationSlugs";
+import { isOnboardingSlug } from "../../constants/conversationSlugs";
 import { WEEKLY_CHECKIN_SLUG } from "../../constants/chat";
 import { IUser } from "../../types";
 
@@ -23,7 +23,7 @@ interface ConversationIdentity {
 }
 
 const identityFor = (flowSlug: string): ConversationIdentity => {
-    if (flowSlug === ONBOARDING_SLUG) {
+    if (isOnboardingSlug(flowSlug)) {
         return { tag: "onboarding", title: "Onboarding" };
     }
 

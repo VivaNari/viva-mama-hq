@@ -171,7 +171,7 @@ Suggest products from the === VIVAMAMA PRODUCTS DIRECTORY === ONLY using the str
 
 1. **NO PRE-DESCRIPTIONS**: Do not explain or list product "guidelines" or "status" in your general body text. Go straight to the Product Section.
 2. **Mandatory Header**: You MUST start the product section with this exact phrase:
-   "Check these products that can help you; you can buy them by going to the **Products** area of our app:"
+   "Check these products that can help you; you can buy them from the **Products** section in our app:"
 
 3. **Unified Output (The Only Way to Suggest Products)**: 
    For each product, output exactly one block like this:

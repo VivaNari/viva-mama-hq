@@ -1,13 +1,12 @@
 /**
- * Bring the published onboarding flow up to PRD section 1: new intro, name and parity
- * wording, plus the ABHA, weight, height, care model, care facility, health history and
- * pregnancy count questions.
+ * Create onboarding-flow-v3 from onboarding-flow-v2 and bring it up to PRD section 1: new
+ * intro, name and parity wording, plus the ABHA, weight, height, care model, care facility,
+ * health history and pregnancy count questions. Never writes to v2, which the Play Store
+ * build keeps running.
  *
- * Run this only after the app build that understands these nodes has been adopted. An
- * older build shows them as plain text boxes with no units, upload or Skip.
+ * Run this before the app build that asks for v3 ships.
  *
- * Idempotent — safe to re-run. Run it AFTER add-hindi-translations, which rewrites
- * `translations.hi` wholesale. See the step's doc comment.
+ * Idempotent — safe to re-run. See the step's doc comment.
  *
  * Run:  npm run migrate:update-onboarding-prd-section1
  */

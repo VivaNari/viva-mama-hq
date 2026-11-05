@@ -32,6 +32,7 @@ jest.mock(require.resolve("../src/api/v1/controllers/chat-system/chat-flow.contr
     __esModule: true,
     default: class {
         getReply() {}
+        getSpeechText() {}
         handleSseConnection(req: any, res: any) {
             const slug = req.params.slug;
             if (!slug) return res.status(400).json({ error: "Invalid slug" });

@@ -51,6 +51,7 @@ import NotificationService from "./notification.service";
 
 import { getUuid } from "../../utils/commonFunctions/uuid";
 import logger, { createModuleLogger } from "../../utils/logger";
+import { ONBOARDING_SLUG } from "../../constants/conversationSlugs";
 import { freeTextForStorage } from "../../constants/onboarding";
 import ChatFlowService from "../chat-system/chat-flow.service";
 import { refreshRiskFlags } from "../users/risk-flags.service";
@@ -719,7 +720,9 @@ class WeeklyCheckinService {
                 ? "CHECK_IN"
                 : flowInstance.flowSlug === BABY_ONBOARDING_SLUG
                   ? "BABY_ONBOARDING"
-                  : "ONBOARDING";
+                  : flowInstance.flowSlug === ONBOARDING_SLUG
+                    ? "ONBOARDING_LEGACY"
+                    : "ONBOARDING";
         const thankYouText = getFlowCompletionMessage(completionKey, lang);
 
         // 1. Update flow instance state

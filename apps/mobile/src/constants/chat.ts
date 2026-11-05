@@ -1,7 +1,7 @@
 import { FlowType } from "../types/chat.types";
 
 export const FLOW_SLUGS: Record<FlowType, string> = {
-  [FlowType.ONBOARDING]: "onboarding-flow-v2",
+  [FlowType.ONBOARDING]: "onboarding-flow-v3",
   [FlowType.CHECKIN]: "weekly-checkin-v1",
   [FlowType.CHATBOT]: "chatbot-flow",
   [FlowType.BABY_ONBOARDING]: "baby-onboarding-v1",

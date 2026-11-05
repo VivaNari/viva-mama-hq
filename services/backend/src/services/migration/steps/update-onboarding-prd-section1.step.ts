@@ -1,18 +1,19 @@
 /**
  * Migration step: update-onboarding-prd-section1.step.ts
  *
- * Brings the published onboarding flow up to PRD section 1: new intro, name and parity
- * wording, and the ABHA, weight, height, care model, care facility, health history and
- * pregnancy count questions.
+ * Creates onboarding-flow-v3, a copy of onboarding-flow-v2 brought up to PRD section 1:
+ * new intro, name and parity wording, and the ABHA, weight, height, care model, care
+ * facility, health history and pregnancy count questions.
  *
- * RELEASE ORDER: run this only after the app build that understands these nodes has been
- * adopted. An older build shows them as plain text boxes with no units, upload or Skip.
+ * NEVER WRITES TO V2. The Play Store build runs v2 and shows these questions as plain text
+ * boxes with no units, upload or Skip. Newer builds ask for v3 by slug, so both run at once.
  *
- * Follows add-onboarding-feeding-node.step.ts:
- *  - The document is edited in place. A version bump would strand onboardings in progress.
+ * RELEASE ORDER: run this before the app build that asks for v3 ships, or that build gets
+ * "flow not found".
+ *
  *  - Idempotent, because the runner has no ledger and re-runs every step on each run-all.
- *  - Hindi is re-applied on every run, and this step must run after add-hindi-translations,
- *    which replaces `translations.hi` wholesale.
+ *  - The first run must follow add-hindi-translations, so the copy has v2's Hindi. That
+ *    step only writes to v2, so later runs of it leave v3 alone.
  *
  * Who sees each question is decided in code, not here: NN_WOMEN_INDICATORS and
  * isOnboardingNodeUnlocked in constants/chat.ts, plus the id list in ChatFlowService. Those
@@ -21,9 +22,10 @@
  * Care model and facility sit before `delivery_outcome` on purpose. A stillbirth answer
  * ends the flow there, and she would otherwise never be asked for her care route.
  */
-import flowDefinitionModel from "../../../models/flowDefinition.model";
+import { Types } from "mongoose";
 
-const ONBOARDING_SLUG = "onboarding-flow-v2";
+import { ONBOARDING_SLUG, ONBOARDING_SLUG_V3 } from "../../../constants/conversationSlugs";
+import flowDefinitionModel from "../../../models/flowDefinition.model";
 
 const INTRO_TEXT = `Hi, I'm Viva, your pregnancy and postpartum care guide.
 I'll walk the whole journey with you, from pregnancy to your baby turning two.
@@ -254,6 +256,11 @@ const NEW_NODE_GROUPS: { after: string; nodes: TNewNode[] }[] = [
     },
 ];
 
+/** Every node this step adds, which is what must never appear in v2. */
+export const PRD_SECTION1_NODE_IDS: readonly string[] = NEW_NODE_GROUPS.flatMap((group) =>
+    group.nodes.map((node) => node.id),
+);
+
 const toStoredNode = (node: TNewNode, next: string | null) => ({
     id: node.id,
     categoryId: null,
@@ -286,15 +293,39 @@ const hiUpdates = (existingHi: Record<string, any>): Record<string, unknown> => 
     return update;
 };
 
-export async function migrate(): Promise<{ insertedNodes: number; reworded: number }> {
-    console.log("Starting migration to bring onboarding up to PRD section 1...");
+const findPublished = (slug: string) =>
+    flowDefinitionModel.findOne({ slug, status: "PUBLISHED" }).sort({ version: -1, createdAt: -1 });
 
-    const onboarding = await flowDefinitionModel
-        .findOne({ slug: ONBOARDING_SLUG, status: "PUBLISHED" })
-        .sort({ version: -1, createdAt: -1 });
+/**
+ * v3 if it exists, otherwise a copy of v2. Inserted through the driver so the copy keeps
+ * exactly what v2 has stored, including anything the schema does not declare.
+ */
+const findOrCreateV3 = async () => {
+    const existing = await findPublished(ONBOARDING_SLUG_V3);
+    if (existing) return existing;
+
+    const v2 = await findPublished(ONBOARDING_SLUG).lean();
+    if (!v2) return null;
+
+    const { _id, __v, ...copy } = v2 as any;
+    const now = new Date();
+    await flowDefinitionModel.collection.insertOne({
+        ...copy,
+        _id: new Types.ObjectId(),
+        slug: ONBOARDING_SLUG_V3,
+        createdAt: now,
+        updatedAt: now,
+    });
+    return findPublished(ONBOARDING_SLUG_V3);
+};
+
+export async function migrate(): Promise<{ insertedNodes: number; reworded: number }> {
+    console.log(`Starting migration to bring ${ONBOARDING_SLUG_V3} up to PRD section 1...`);
+
+    const onboarding = await findOrCreateV3();
 
     if (!onboarding) {
-        console.warn(`No PUBLISHED "${ONBOARDING_SLUG}" found — skipping.`);
+        console.warn(`No PUBLISHED "${ONBOARDING_SLUG}" to copy — skipping.`);
         return { insertedNodes: 0, reworded: 0 };
     }
 
@@ -330,7 +361,9 @@ export async function migrate(): Promise<{ insertedNodes: number; reworded: numb
 
         const anchorIndex = nodes.findIndex((node) => node.id === group.after);
         if (anchorIndex === -1) {
-            console.warn(`"${group.after}" not found in ${ONBOARDING_SLUG} — skipping its nodes.`);
+            console.warn(
+                `"${group.after}" not found in ${ONBOARDING_SLUG_V3} — skipping its nodes.`,
+            );
             continue;
         }
 

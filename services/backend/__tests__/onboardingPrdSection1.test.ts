@@ -40,6 +40,7 @@ import { deriveRiskFlags } from "../src/utils/functions/deriveRiskFlags";
 jest.setTimeout(120000);
 
 const ONBOARDING_SLUG = "onboarding-flow-v2";
+const ONBOARDING_SLUG_V3 = "onboarding-flow-v3";
 const ABHA = "12345678901234";
 
 const stubNode = (id: string, next: string | null, overrides: Record<string, unknown> = {}) => ({
@@ -119,7 +120,7 @@ describe("PRD section 1 onboarding", () => {
             await seedFlow();
             await migrate();
 
-            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG }).lean();
+            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG_V3 }).lean();
             expect(chainFrom(flow!.nodes as any[], "intro")).toEqual([
                 "intro",
                 "name",
@@ -146,7 +147,7 @@ describe("PRD section 1 onboarding", () => {
             await seedFlow();
             await migrate();
 
-            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG }).lean();
+            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG_V3 }).lean();
             const nodes = flow!.nodes as any[];
             const parity = nodes.find((node) => node.id === "parity");
 
@@ -162,11 +163,11 @@ describe("PRD section 1 onboarding", () => {
         it("changes nothing on a second run", async () => {
             await seedFlow();
             await migrate();
-            const first = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG }).lean();
+            const first = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG_V3 }).lean();
 
             await expect(migrate()).resolves.toEqual({ insertedNodes: 0, reworded: 0 });
 
-            const second = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG }).lean();
+            const second = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG_V3 }).lean();
             expect(second!.nodes).toEqual(first!.nodes);
         });
 
@@ -174,13 +175,13 @@ describe("PRD section 1 onboarding", () => {
             await seedFlow();
             await migrate();
             await flowDefinitionModel.updateOne(
-                { slug: ONBOARDING_SLUG },
+                { slug: ONBOARDING_SLUG_V3 },
                 { $set: { "translations.hi": { name: "hi", nodes: {} } } },
             );
 
             await migrate();
 
-            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG }).lean();
+            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG_V3 }).lean();
             const hi = (flow as any).translations.hi.nodes;
             expect(hi.care_model.options.private).toBe("निजी अस्पताल");
             expect(hi.intro.text).toContain("नमस्ते, मैं Viva हूँ");
@@ -190,7 +191,7 @@ describe("PRD section 1 onboarding", () => {
             await seedFlow();
             await migrate();
 
-            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG }).lean();
+            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG_V3 }).lean();
             const hi = (flow as any).translations.hi.nodes;
             expect(hi.name.whyThisMatters).toBe("keep me");
             expect(hi.name.text).toBe("आपका नाम क्या है?");
@@ -201,7 +202,7 @@ describe("PRD section 1 onboarding", () => {
         const setup = async () => {
             await seedFlow();
             await migrate();
-            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG }).lean();
+            const flow = await flowDefinitionModel.findOne({ slug: ONBOARDING_SLUG_V3 }).lean();
             const user = await UserModel.create({ user_category: EUserCategory.NP });
             return { flow, userId: String(user._id) };
         };
@@ -429,7 +430,7 @@ describe("PRD section 1 onboarding", () => {
             await seedLiveFlow();
             await migrate();
             const flow = (await flowDefinitionModel
-                .findOne({ slug: ONBOARDING_SLUG })
+                .findOne({ slug: ONBOARDING_SLUG_V3 })
                 .lean()) as any;
             const engine = new FlowService();
             const asked: string[] = [];

@@ -81,4 +81,10 @@ export const colors = {
   vivaHeroGlass: "rgba(255,255,255,0.16)",
   vivaHeroIcon: "rgba(255,255,255,0.18)",
   vivaHeroText: "rgba(255,255,255,0.85)",
+  // Journey snapshot (1000-day design).
+  journeyTeal: "#2f8f86",
+  journeyTealBG: "#e5f4f0",
+  journeyAmber: "#b07a12",
+  journeyAmberBG: "#f8efda",
+  journeyStageDot: "#ddd3ea",
 };

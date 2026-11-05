@@ -12,10 +12,12 @@ import { API_VIVA_CLUB_POSTS } from '../constants/endpoints'
 import { IVivaClubPost } from '../types/vivaClub.types'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { AnalyticsEvent, recordError, track } from '../analytics'
+import { useScreenEdges } from '../hooks/useScreenEdges'
 
 const VivaClubPost = () => {
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
+    const edges = useScreenEdges(true);
     const [posts, setPosts] = useState<IVivaClubPost[]>([]);
     const [loading, setLoading] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
@@ -82,8 +84,8 @@ const VivaClubPost = () => {
     return (
         <SafeAreaView
             style={[globalStyles.container, { position: 'relative', paddingVertical: 5 }]}
-            // Registered as the "VivaClub" stack screen with `headerShown: true`.
-            edges={['bottom', 'left', 'right']}
+            // The Community tab: its header and tab bar already take the top and bottom.
+            edges={edges}
         >
             <FlatList
                 keyExtractor={(item) => item._id}

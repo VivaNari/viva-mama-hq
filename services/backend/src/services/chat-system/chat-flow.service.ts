@@ -1775,7 +1775,11 @@ class ChatFlowService extends BaseService<IFlowDefinition> {
         const user = await UserModel.findById(userId);
         const resolvedLang = resolveLanguage(lang, user?.preferred_language);
         const text = getFlowCompletionMessage(
-            flowType === "ONBOARDING" ? "ONBOARDING" : "CHECK_IN",
+            flowType !== "ONBOARDING"
+                ? "CHECK_IN"
+                : flowInstance.flowSlug === ONBOARDING_SLUG
+                  ? "ONBOARDING_LEGACY"
+                  : "ONBOARDING",
             resolvedLang,
         );
 
