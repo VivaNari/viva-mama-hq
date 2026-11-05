@@ -25,7 +25,7 @@ faiss-cpu==1.14.2
 
 # Downloads the embedding model from GCS at container boot (model is no longer
 # baked into the runtime image; see app/rag/model_provisioner.py).
-google-cloud-storage==3.13.1
+google-cloud-storage==3.17.1
 
 # (Optional) If you later use FastAPI service:
 # fastapi
