@@ -22,6 +22,7 @@ import {
   isLikelyHinglish,
   speechLangForAppLanguage,
   toSpeakableText,
+  withBrandPronunciation,
 } from "../src/utils/messageHelpers";
 import en from "../src/i18n/locales/en.json";
 import hi from "../src/i18n/locales/hi.json";
@@ -195,6 +196,39 @@ describe("useSpeechToText", () => {
     emit("result", result("late"));
     expect(onTranscript).not.toHaveBeenCalled();
     expect(ExpoSpeechRecognitionModule.abort).toHaveBeenCalled();
+  });
+});
+
+describe("brand pronunciation", () => {
+  it.each([
+    ["VivaMama can help", "Veevamama can help"],
+    ["Welcome to Vivamama.", "Welcome to Veevamama."],
+    ["Viva Mama and viva-mama", "Veevamama and Veevamama"],
+    ["I am Viva, and this is Viva's plan", "I am Veeva, and this is Veeva's plan"],
+  ])("respells %s for the English voice", (written, spoken) => {
+    expect(withBrandPronunciation(written, "en-IN")).toBe(spoken);
+  });
+
+  it("uses Devanagari for the Hindi voice", () => {
+    expect(withBrandPronunciation("VivaMama और Viva", "hi-IN")).toBe("वीवामामा और वीवा");
+  });
+
+  it("leaves words that only contain the name alone", () => {
+    expect(withBrandPronunciation("Survival and revival", "en-IN")).toBe("Survival and revival");
+  });
+
+  it("changes what is spoken, not the reply itself", async () => {
+    const { result: hook } = renderHook(() => useReadAloud());
+    const reply = "**VivaMama** is with you";
+
+    await act(() => hook.current.toggle("m1", reply));
+
+    await waitFor(() => expect(Speech.speak).toHaveBeenCalled());
+    expect(Speech.speak).toHaveBeenCalledWith(
+      "Veevamama is with you",
+      expect.objectContaining({ language: "en-IN" }),
+    );
+    expect(reply).toBe("**VivaMama** is with you");
   });
 });
 

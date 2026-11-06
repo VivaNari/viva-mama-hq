@@ -66,6 +66,10 @@ class TestEndpoint(unittest.TestCase):
             "/v1/speech/transliterate", json={"text": text}, headers=self.headers
         )
 
+    def test_the_prompt_says_how_our_name_is_pronounced(self) -> None:
+        self.assertIn("Viva -> वीवा", tr._PROMPT)
+        self.assertIn("VivaMama -> वीवामामा", tr._PROMPT)
+
     def test_returns_the_devanagari_copy(self) -> None:
         with mock.patch.object(tr, "get_llm", return_value=_llm(GOOD)) as get_llm:
             res = self._post()

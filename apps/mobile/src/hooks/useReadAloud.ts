@@ -12,6 +12,7 @@ import {
   detectSpeechLang,
   isLikelyHinglish,
   toSpeakableText,
+  withBrandPronunciation,
 } from "../utils/messageHelpers";
 
 /** Below the smallest engine limit we know of, in case the reported one is wrong. */
@@ -112,7 +113,10 @@ export function useReadAloud() {
       }
 
       const max = Speech.maxSpeechInputLength > 0 ? Speech.maxSpeechInputLength : FALLBACK_MAX_LENGTH;
-      const chunks = chunkForSpeech(spoken, Math.min(max, FALLBACK_MAX_LENGTH));
+      const chunks = chunkForSpeech(
+        withBrandPronunciation(spoken, language),
+        Math.min(max, FALLBACK_MAX_LENGTH),
+      );
       // "Speaking" means sound is coming out, not that the engine was asked: it can take
       // a while to start, or fail, when the voice has to come over the network.
       setPreparingId(id);

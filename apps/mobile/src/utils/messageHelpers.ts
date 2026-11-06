@@ -408,6 +408,17 @@ export const toSpeakableText = (markdown: string): string =>
     .trim();
 
 /**
+ * Spell our name the way it should sound, because a phone's English voice otherwise says
+ * "Vai-va". For the voice only: the chat keeps showing what Viva wrote.
+ */
+export const withBrandPronunciation = (text: string, language: SpeechLang): string => {
+  const [viva, mama] = language === 'hi-IN' ? ['वीवा', 'मामा'] : ['Veeva', 'mama'];
+  return text
+    .replace(/\bviva[\s-]*mama\b/gi, `${viva}${mama}`)
+    .replace(/\bviva\b/gi, viva);
+};
+
+/**
  * Split long text into sentence-sized pieces no longer than `maxLength`.
  * Speech engines cap a single utterance (Android at ~4000 chars); splitting on
  * sentence ends (including the Hindi danda, ।) keeps the pauses natural.
