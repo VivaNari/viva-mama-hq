@@ -1,6 +1,7 @@
 import { BABY_ROWS, MOTHER_ROWS } from '../src/data/journey/journeyRows';
 import { JourneyHelpSet } from '../src/data/journey/journeyTypes';
 import content from '../src/i18n/locales/journey/en.json';
+import contentHi from '../src/i18n/locales/journey/hi.json';
 import en from '../src/i18n/locales/en.json';
 import hi from '../src/i18n/locales/hi.json';
 
@@ -51,6 +52,35 @@ describe('the generated Journey content', () => {
     ['VivaScore', 'V5 recovery', 'EPDS', 'PHQ-2', 'GAD-2', 'Weekly wellness check-in'].forEach(word =>
       expect(text).not.toContain(word),
     );
+  });
+});
+
+describe('the Hindi Journey content', () => {
+  const hiCopy = contentHi as any;
+
+  it('has every line the English has', () => {
+    expect(keysOf(hiCopy).sort()).toEqual(keysOf(copy).sort());
+  });
+
+  it('has no line left in English', () => {
+    const lines = keysOf(copy).filter(key => !key.includes('dial'));
+    const at = (root: any, key: string) => key.split('.').filter(Boolean).reduce((node, part) => node[part], root);
+    // Vaccine names such as MMR-1 stay as they are.
+    const allowed = /^[A-Z0-9, -]+$/;
+    lines.forEach(key => {
+      const english = at(copy, key);
+      if (!allowed.test(english)) expect(at(hiCopy, key)).not.toEqual(english);
+    });
+  });
+
+  it('keeps the numbers to call exactly as they are', () => {
+    expect(hiCopy.help.numbers.map((entry: any) => entry.dial)).toEqual(copy.help.numbers.map((entry: any) => entry.dial));
+  });
+
+  it('gives every danger-sign list the same number of signs', () => {
+    Object.keys(copy.help.sets).forEach(set => {
+      expect(hiCopy.help.sets[set]).toHaveLength(copy.help.sets[set].length);
+    });
   });
 });
 

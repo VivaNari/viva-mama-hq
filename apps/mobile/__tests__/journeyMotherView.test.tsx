@@ -20,11 +20,10 @@ jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (effect: () => void | (() => void)) => require('react').useEffect(effect, [effect]),
 }));
 jest.mock('../src/analytics', () => ({ recordError: jest.fn() }));
-jest.mock('../src/context/AuthContext', () => ({ useAuth: () => ({ userId: 'u1' }) }));
 jest.mock('../src/hooks/useDailyCounter', () => ({
   useDailyCounter: () => ({ value: 3, loading: false, increment: jest.fn(), decrement: jest.fn() }),
 }));
-jest.mock('../src/utils/motherLogHelpers', () => ({ showLogError: jest.fn(), todayKey: () => '2026-11-06' }));
+jest.mock('../src/utils/motherLogHelpers', () => ({ showLogError: jest.fn() }));
 jest.mock('../src/api/journey.api', () => ({ recordBabyArrived: jest.fn(), recordLabourStarted: jest.fn() }));
 
 const mockGetCareSchedule = jest.fn();
@@ -137,6 +136,22 @@ describe('at week 28', () => {
     expect(mockNavigate).toHaveBeenCalledWith('MedicineLog');
   });
 
+  it('shows Remember as plain rows, with no checkboxes or counter', async () => {
+    const screen = show(userAt(UserCategoryEnum.NP, daysFromNow(84), CareModelEnum.PUBLIC));
+    await settled();
+
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    expect(screen.queryByText(/of 3/)).toBeNull();
+  });
+
+  it('leaves a note with nothing to open as text, not a button', async () => {
+    const screen = show(userAt(UserCategoryEnum.NP, daysFromNow(84), CareModelEnum.PUBLIC));
+    await settled();
+
+    fireEvent.press(screen.getByText('Take your MCP card and show your logs at the visit'));
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it('has no delivery buttons yet', async () => {
     const screen = show(userAt(UserCategoryEnum.NP, daysFromNow(84), CareModelEnum.PUBLIC));
     await settled();
@@ -193,13 +208,15 @@ describe('where no stage applies', () => {
 });
 
 describe('in Hindi', () => {
-  it('shows Hindi UI strings, with the content in English until it is approved', async () => {
+  it('shows both the UI strings and the content in Hindi', async () => {
     await i18n.changeLanguage('hi');
     const screen = show(userAt(UserCategoryEnum.NP, daysFromNow(84), CareModelEnum.PUBLIC));
     await settled();
 
     expect(screen.getByText('आज याद रखें')).toBeTruthy();
-    expect(screen.getByText('Third trimester: count the kicks')).toBeTruthy();
+    expect(screen.getByText('तीसरी तिमाही: किक गिनें')).toBeTruthy();
+    expect(screen.getByText('अपना MCP कार्ड ले जाएँ और विज़िट में अपने लॉग दिखाएँ')).toBeTruthy();
     expect(screen.getByText('मदद कब लें')).toBeTruthy();
+    expect(screen.queryByText('Third trimester: count the kicks')).toBeNull();
   });
 });

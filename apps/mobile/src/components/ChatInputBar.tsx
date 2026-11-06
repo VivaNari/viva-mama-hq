@@ -170,6 +170,13 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
         (isNumberMode && !!validationError) ||
         (showAttach && attachments!.blocking) ||
         (!hasText && !(showAttach && attachments!.hasReady));
+    // One button at a time, as in WhatsApp: the mic on an empty box, send once there is
+    // something to send. A picked file counts, or a file with no words could never leave.
+    const hasContent = hasText || (showAttach && (attachments!.hasReady || attachments!.blocking));
+    // Dictation types into the box as she speaks, so the mic stays to let her stop it.
+    const showMicButton = showMic && (isListening || !hasContent);
+    // Without a mic (guided check-ins, numbers, dates) send is the only way to answer.
+    const showSendButton = !showMic || hasContent;
     const placeholder = isListening
         ? t('chat.voice.listening')
         : isDateMode
@@ -229,7 +236,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
                     />
                 </TouchableOpacity>
 
-                {showMic && (
+                {showMicButton && (
                     <MicButton
                         isListening={isListening}
                         // She may stop a recording at any time, even while Viva is replying.
@@ -238,20 +245,22 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
                     />
                 )}
 
-                <TouchableOpacity
-                    style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled, { backgroundColor: colors.darkPurple }]}
-                    onPress={onSend}
-                    disabled={isSendDisabled}
-                    accessibilityRole="button"
-                    accessibilityLabel="Send message"
-                >
-                    <MaterialDesignIcons
-                        name="send-outline"
-                        size={20}
-                        color={colors.white}
-                        style={styles.sendIcon}
-                    />
-                </TouchableOpacity>
+                {showSendButton && (
+                    <TouchableOpacity
+                        style={[styles.sendButton, isSendDisabled && styles.sendButtonDisabled, { backgroundColor: colors.darkPurple }]}
+                        onPress={onSend}
+                        disabled={isSendDisabled}
+                        accessibilityRole="button"
+                        accessibilityLabel="Send message"
+                    >
+                        <MaterialDesignIcons
+                            name="send-outline"
+                            size={20}
+                            color={colors.white}
+                            style={styles.sendIcon}
+                        />
+                    </TouchableOpacity>
+                )}
             </View>
         </View>
     );

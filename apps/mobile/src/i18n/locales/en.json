@@ -2462,7 +2462,6 @@
     "remember": {
       "title": "Remember today",
       "heading": "Three small things",
-      "count": "{{done}} of {{total}}",
       "tapEachKick": "Tap the circle each time",
       "logKick": "Log a kick"
     },

@@ -2462,7 +2462,6 @@
     "remember": {
       "title": "आज याद रखें",
       "heading": "तीन छोटे काम",
-      "count": "{{total}} में से {{done}}",
       "tapEachKick": "हर बार गोले पर टैप करें",
       "logKick": "किक लॉग करें"
     },

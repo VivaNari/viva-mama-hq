@@ -129,6 +129,85 @@ describe("ChatInputBar mic", () => {
     fireEvent.press(getByLabelText(en.chat.voice.stopMicA11y));
     expect(onMicPress).toHaveBeenCalled();
   });
+
+  describe("swapping with the send button", () => {
+    const voice = { isListening: false, onMicPress: jest.fn() };
+    const SEND = "Send message";
+    const files = (over: object) => ({
+      onAttachPress: jest.fn(),
+      hasReady: false,
+      blocking: false,
+      full: false,
+      ...over,
+    });
+
+    it("shows only the mic on an empty box", () => {
+      const { getByLabelText, queryByLabelText } = render(<ChatInputBar {...base} voice={voice} />);
+      expect(getByLabelText(en.chat.voice.micA11y)).toBeTruthy();
+      expect(queryByLabelText(SEND)).toBeNull();
+    });
+
+    it("shows only send as soon as something is written, and swaps back", () => {
+      const { getByLabelText, queryByLabelText, rerender } = render(
+        <ChatInputBar {...base} inputText="h" voice={voice} />,
+      );
+      expect(getByLabelText(SEND)).toBeTruthy();
+      expect(queryByLabelText(en.chat.voice.micA11y)).toBeNull();
+
+      rerender(<ChatInputBar {...base} inputText="" voice={voice} />);
+      expect(getByLabelText(en.chat.voice.micA11y)).toBeTruthy();
+      expect(queryByLabelText(SEND)).toBeNull();
+    });
+
+    it("keeps the mic for spaces alone, which cannot be sent", () => {
+      const { getByLabelText, queryByLabelText } = render(<ChatInputBar {...base} inputText="   " voice={voice} />);
+      expect(getByLabelText(en.chat.voice.micA11y)).toBeTruthy();
+      expect(queryByLabelText(SEND)).toBeNull();
+    });
+
+    it("lets a file with no words be sent", () => {
+      const onSend = jest.fn();
+      const { getByLabelText, queryByLabelText } = render(
+        <ChatInputBar {...base} onSend={onSend} voice={voice} attachments={files({ hasReady: true })} />,
+      );
+      expect(queryByLabelText(en.chat.voice.micA11y)).toBeNull();
+      fireEvent.press(getByLabelText(SEND));
+      expect(onSend).toHaveBeenCalled();
+    });
+
+    it("shows send, held back, while a file is still uploading", () => {
+      const onSend = jest.fn();
+      const { getByLabelText } = render(
+        <ChatInputBar {...base} onSend={onSend} voice={voice} attachments={files({ blocking: true })} />,
+      );
+      fireEvent.press(getByLabelText(SEND));
+      expect(onSend).not.toHaveBeenCalled();
+    });
+
+    it("keeps stop on screen while dictation fills the box", () => {
+      const { getByLabelText } = render(
+        <ChatInputBar {...base} inputText="my back hurts" voice={{ ...voice, isListening: true }} />,
+      );
+      expect(getByLabelText(en.chat.voice.stopMicA11y)).toBeTruthy();
+      expect(getByLabelText(SEND)).toBeTruthy();
+    });
+
+    it("shows only stop while listening before any words arrive", () => {
+      const { getByLabelText, queryByLabelText } = render(
+        <ChatInputBar {...base} voice={{ ...voice, isListening: true }} />,
+      );
+      expect(getByLabelText(en.chat.voice.stopMicA11y)).toBeTruthy();
+      expect(queryByLabelText(SEND)).toBeNull();
+    });
+
+    it("keeps send on screens with no mic", () => {
+      const withoutVoice = render(<ChatInputBar {...base} />);
+      expect(withoutVoice.getByLabelText(SEND)).toBeTruthy();
+
+      const numberAnswer = render(<ChatInputBar {...base} inputMode="number" voice={voice} />);
+      expect(numberAnswer.getByLabelText(SEND)).toBeTruthy();
+    });
+  });
 });
 
 describe("useSpeechToText", () => {

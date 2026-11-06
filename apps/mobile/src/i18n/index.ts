@@ -17,7 +17,8 @@ import journeyHi from './locales/journey/hi.json';
  * When adding a new language, import its JSON and add it here.
  *
  * `journeyContent` is the week-by-week Journey content, generated from the content workbook
- * and kept out of the UI strings. A missing Hindi entry falls back to English.
+ * and kept out of the UI strings. Its Hindi is a draft awaiting clinical review, and a
+ * missing Hindi entry falls back to English.
  */
 type LanguageBundle = { translation: object; journeyContent: object };
 

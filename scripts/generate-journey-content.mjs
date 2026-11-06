@@ -12,8 +12,9 @@
  *                                                        what each Card 3 tile opens
  *   apps/mobile/src/i18n/locales/journey/en.json         the words, by row id
  *
- * Hindi lives beside en.json in hi.json and is not touched here. The workbook is English
- * until the translation is approved, and until then Hindi falls back to English.
+ * Hindi lives beside en.json in hi.json and is not touched here, because the workbook is
+ * English only. hi.json is a draft awaiting clinical review. After a workbook change, add
+ * any new or reworded line to it; until then that line shows in English.
  *
  * Left out on purpose: Wellness check-in, Ask Viva prompt and Milestone, which this screen
  * does not use; Mother's Card 2, because Coming up reads from the ANC and PNC schedules; and

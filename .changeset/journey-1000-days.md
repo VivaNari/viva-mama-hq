@@ -16,4 +16,4 @@ from the birth to 24 months (`GET`/`PUT /mother-logs/pnc-schedule`, log types `p
 The due-date job now marks the date as estimated, and it stays correctable until she confirms it.
 
 **Content.** `scripts/generate-journey-content.mjs` builds the Journey data from the workbook in
-`content/journey`. Clinical content is a draft awaiting sign-off, and Hindi falls back to English.
+`content/journey`. Clinical content and its Hindi translation are drafts awaiting sign-off.

@@ -84,7 +84,6 @@ export const colors = {
   // Journey tab (1000-day design).
   journeyHappeningBG: "#eee2ff",
   journeyRememberBG: "#fff3c4",
-  journeyRememberBorder: "#e8d9a8",
   journeyRememberText: "#8a5a10",
   journeyTealText: "#1f6b63",
   journeyBadgeBG: "#ffde59",
