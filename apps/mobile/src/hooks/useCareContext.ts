@@ -3,7 +3,13 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { useAuth } from '../context/AuthContext';
 import { chatDB } from '../db/sqlite';
-import { CareModelEnum, UserCategoryEnum } from '../types/user.types';
+import {
+    CareModelEnum,
+    DeliveryOutcomeEnum,
+    DeliveryTypeEnum,
+    UserCategoryEnum,
+} from '../types/user.types';
+import { hasGestationalDiabetes } from '../utils/careSchedule';
 
 export interface CareContext {
     /** Public (government) or private care route. Null means she has not told us yet. */
@@ -13,10 +19,16 @@ export interface CareContext {
     /** Her height for BMI, or null when not recorded yet. */
     heightCm: number | null;
     /**
-     * Her pregnancy week (the `np_weeks` the Dashboard shows), or null when she is not
-     * pregnant or the week is not known yet.
+     * Her gestational week, or null when she is not pregnant or it is not known yet. Not
+     * `np_weeks`, which counts the weeks remaining until her due date.
      */
     pregnancyWeek: number | null;
+    /** Her week since the birth, delivery day being week 1; null unless postpartum. */
+    postpartumWeek: number | null;
+    deliveryType: DeliveryTypeEnum | null;
+    deliveryOutcome: DeliveryOutcomeEnum | null;
+    /** Gestational diabetes, in this pregnancy or a past one. */
+    hasGdm: boolean;
     loading: boolean;
 }
 
@@ -35,6 +47,10 @@ export const useCareContext = (): CareContext => {
         category: null,
         heightCm: null,
         pregnancyWeek: null,
+        postpartumWeek: null,
+        deliveryType: null,
+        deliveryOutcome: null,
+        hasGdm: false,
         loading: true,
     });
 
@@ -48,14 +64,17 @@ export const useCareContext = (): CareContext => {
                     const user = cached?.data?.user;
                     if (cancelled) return;
 
+                    const weeks = user?.current_weekdays?.weeks ?? 0;
+
                     setState({
                         careModel: user?.onboarding_data?.care_model ?? null,
                         category: user?.user_category ?? null,
                         heightCm: user?.onboarding_data?.height_cm ?? null,
-                        pregnancyWeek:
-                            user?.user_category === UserCategoryEnum.NP && user?.np_weeks > 0
-                                ? user.np_weeks
-                                : null,
+                        pregnancyWeek: user?.user_category === UserCategoryEnum.NP && weeks > 0 ? weeks : null,
+                        postpartumWeek: user?.user_category === UserCategoryEnum.PP && weeks > 0 ? weeks : null,
+                        deliveryType: user?.onboarding_data?.delivery_type ?? null,
+                        deliveryOutcome: user?.onboarding_data?.delivery_outcome ?? null,
+                        hasGdm: hasGestationalDiabetes(user?.onboarding_data),
                         loading: false,
                     });
                 } catch {

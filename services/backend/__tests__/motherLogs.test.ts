@@ -70,6 +70,7 @@ describe("the request validators", () => {
         pumping: { side: "both", minutes: 15, ml: 60 },
         meal: { mealTime: "lunch", foods: ["dal", "roti"] },
         anc_visit: { checks: ["bp", "hb"] },
+        pnc_visit: { checks: ["bleeding", "wound"] },
     };
 
     it.each(Object.entries(VALID))("accepts a valid %s entry", (logType, fields) => {
@@ -338,6 +339,34 @@ describe("the ANC schedule", () => {
     it("refuses an item that is not on either schedule", async () => {
         const userId = await createMother();
         expect((await tick(userId, "x9z", true)).status).toHaveBeenCalledWith(400);
+    });
+});
+
+describe("the PNC schedule", () => {
+    const tick = (userId: string, itemId: string, done: boolean) =>
+        run(logs.setPncScheduleItem, { params: { itemId }, body: { done }, user: { _id: userId } });
+
+    it("ticks an item once and keeps it apart from the ANC ticks", async () => {
+        const userId = await createMother();
+        await tick(userId, "n2a", true);
+        const res = await tick(userId, "n2a", true);
+        expect(payload(res).doneItemIds).toEqual(["n2a"]);
+        expect(await motherLogModel.countDocuments({ userId, logType: "pnc_schedule_item" })).toBe(1);
+
+        const anc = await run(logs.getAncSchedule, { user: { _id: userId } });
+        expect(payload(anc).doneItemIds).toEqual([]);
+    });
+
+    it("refuses an ANC item on the PNC schedule, and the reverse", async () => {
+        const userId = await createMother();
+        expect((await tick(userId, "g1a", true)).status).toHaveBeenCalledWith(400);
+
+        const res = await run(logs.setAncScheduleItem, {
+            params: { itemId: "n2a" },
+            body: { done: true },
+            user: { _id: userId },
+        });
+        expect(res.status).toHaveBeenCalledWith(400);
     });
 });
 

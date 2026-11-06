@@ -7,7 +7,7 @@ import MotherLogController from "../../controllers/mother-log/mother-log.control
 import MotherMedicineController from "../../controllers/mother-log/mother-medicine.controller";
 import MotherReminderController from "../../controllers/mother-log/mother-reminder.controller";
 import {
-    ancScheduleItemValidator,
+    careScheduleItemValidator,
     chatLogConfirmValidator,
     motherLogCreateValidator,
     motherLogDailyValidator,
@@ -25,9 +25,10 @@ const motherReminderController = new MotherReminderController();
 /**
  * The mother's own logs (the Viva AI "Log something" screens), one engine for every
  * type. Appended types are a POST each; the tap counters (water, kicks) PUT a running
- * daily total; medicine doses and ANC schedule ticks are toggles with their own routes.
+ * daily total; medicine doses and ANC and PNC schedule ticks are toggles with their own
+ * routes.
  *
- * Static paths are declared before `/:id` so "daily" and "anc-schedule" are never read
+ * Static paths are declared before `/:id` so "daily" and the schedule paths are never read
  * as an id.
  */
 motherLogRouter.get("/mother-logs", authMiddleware("header"), motherLogController.getLogs);
@@ -55,8 +56,21 @@ motherLogRouter.get(
 motherLogRouter.put(
     "/mother-logs/anc-schedule/:itemId",
     authMiddleware("header"),
-    requestValidator(ancScheduleItemValidator),
+    requestValidator(careScheduleItemValidator),
     motherLogController.setAncScheduleItem,
+);
+
+motherLogRouter.get(
+    "/mother-logs/pnc-schedule",
+    authMiddleware("header"),
+    motherLogController.getPncSchedule,
+);
+
+motherLogRouter.put(
+    "/mother-logs/pnc-schedule/:itemId",
+    authMiddleware("header"),
+    requestValidator(careScheduleItemValidator),
+    motherLogController.setPncScheduleItem,
 );
 
 motherLogRouter.delete("/mother-logs/:id", authMiddleware("header"), motherLogController.deleteLog);

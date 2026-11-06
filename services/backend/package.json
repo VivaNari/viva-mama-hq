@@ -89,6 +89,7 @@
         "@vivamama/contracts": "workspace:*",
         "@vivamama/growth-standards": "workspace:*",
         "@vivamama/infant-schedules": "workspace:*",
+        "@vivamama/care-schedules": "workspace:*",
         "axios": "^1.13.2",
         "bcryptjs": "^3.0.3",
         "cors": "^2.8.5",

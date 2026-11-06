@@ -9,19 +9,26 @@ import {
 
 import en from './locales/en.json';
 import hi from './locales/hi.json';
+import journeyEn from './locales/journey/en.json';
+import journeyHi from './locales/journey/hi.json';
 
 /**
  * Map every supported language code to its translation bundle.
  * When adding a new language, import its JSON and add it here.
+ *
+ * `journeyContent` is the week-by-week Journey content, generated from the content workbook
+ * and kept out of the UI strings. A missing Hindi entry falls back to English.
  */
-const translations: Record<string, { translation: object }> = {
-  en: { translation: en },
-  hi: { translation: hi },
+type LanguageBundle = { translation: object; journeyContent: object };
+
+const translations: Record<string, LanguageBundle> = {
+  en: { translation: en, journeyContent: journeyEn },
+  hi: { translation: hi, journeyContent: journeyHi },
 };
 
 // Build i18next `resources` from the supported-languages config so we never
 // register a language in the picker that has no translation bundle.
-const resources = SUPPORTED_LANGUAGES.reduce<Record<string, { translation: object }>>(
+const resources = SUPPORTED_LANGUAGES.reduce<Record<string, LanguageBundle>>(
   (acc, { code }) => {
     if (translations[code]) {
       acc[code] = translations[code];
@@ -33,6 +40,8 @@ const resources = SUPPORTED_LANGUAGES.reduce<Record<string, { translation: objec
 
 i18n.use(initReactI18next).init({
   resources,
+  ns: ['translation', 'journeyContent'],
+  defaultNS: 'translation',
   lng: DEFAULT_LANGUAGE,
   fallbackLng: DEFAULT_LANGUAGE, // missing Hindi key -> show English
   compatibilityJSON: 'v4',

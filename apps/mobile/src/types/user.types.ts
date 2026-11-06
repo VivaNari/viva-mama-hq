@@ -67,6 +67,10 @@ export interface IUser {
     location: string | null;
     is_not_pragnant_yet: boolean | null;
     delivery_date: Date | null;
+    /** True while `delivery_date` is only her due date, moved past by the nightly job. */
+    delivery_date_estimated?: boolean;
+    /** When she tapped "My labour has started". */
+    labour_started_at?: string | null;
     conception_method: ConceptionMethod | null;
     pregnancy_conditions: PregnancyConditionEnum[] | [];
     delivery_type: DeliveryTypeEnum | null;

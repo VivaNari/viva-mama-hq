@@ -334,7 +334,10 @@ describe("pregnancyTransition", () => {
         const result = await pregnancyTransition(NOW);
 
         expect(result.transitioned).toBe(1);
-        expect((await UserModel.findById(user._id).lean())!.user_category).toBe(EUserCategory.PP);
+        const moved = await UserModel.findById(user._id).lean();
+        expect(moved!.user_category).toBe(EUserCategory.PP);
+        // Only her due date is known, so the date stays open for her to confirm.
+        expect(moved!.onboarding_data?.delivery_date_estimated).toBe(true);
     });
 
     /**

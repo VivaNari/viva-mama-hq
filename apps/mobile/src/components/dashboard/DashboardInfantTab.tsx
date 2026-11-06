@@ -21,6 +21,10 @@ import { IUserAllData } from '../../types/dashboard.types';
 import { InfantLogRouteParams } from '../../types/infantLog.types';
 import { getVisibleChildren } from '../../utils/childAge';
 import { getAgeInMonths, istDateKey } from '../../utils/infantLogHelpers';
+import { BabyGrowingCard } from '../journey/BabyCards';
+import WhenToGetHelp from '../journey/WhenToGetHelp';
+import { careRoute } from '../../utils/careSchedule';
+import { babyRowFromBirth, istDaysBetween } from '../../utils/journeyPosition';
 import DashboardCard from './DashboardCard';
 import ChildAvatarStrip from './ChildAvatarStrip';
 import FLInfantCheckInOptions from './FLInfantCheckInOptions';
@@ -28,9 +32,14 @@ import GradientButtonWithSlightRadius from '../GradientButtonWithSlightRadius';
 
 interface DashboardInfantTabProps {
     userData: IUserAllData | undefined;
+    /**
+     * Her days since the birth, for the Journey card before her baby has been added. Null
+     * when she has no birth on record; a selected child's own date takes over otherwise.
+     */
+    birthDay?: number | null;
 }
 
-const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => {
+const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData, birthDay = null }) => {
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
 
@@ -194,8 +203,16 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
         });
     };
 
+    const route = careRoute(userData?.user?.onboarding_data?.care_model ?? null);
+    const babyDay = selectedChild?.date_of_birth
+        ? istDaysBetween(new Date(selectedChild.date_of_birth), new Date())
+        : birthDay;
+    const babyRow = babyDay === null ? null : babyRowFromBirth(babyDay);
+
     if (children.length === 0) {
         return (
+            <View>
+            {babyRow ? <BabyGrowingCard row={babyRow} route={route} logParams={null} /> : null}
             <DashboardCard style={styles.emptyCard}>
                 <Text style={[styles.emptyTitle, globalStyles.fontBold]}>
                     {t('infant.emptyTitle')}
@@ -216,6 +233,8 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                     {t('infant.emptyCaption')}
                 </Text>
             </DashboardCard>
+            {babyRow ? <WhenToGetHelp helpSet={babyRow.helpSet} /> : null}
+            </View>
         );
     }
 
@@ -330,6 +349,8 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                 </TouchableOpacity>
             )}
 
+            {babyRow ? <BabyGrowingCard row={babyRow} route={route} logParams={logParams} /> : null}
+
             {/*
               Above the chart on purpose: the answer to "is my baby OK?" should not be
               something a mother has to scroll past a graph to reach.
@@ -400,6 +421,8 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData }) => 
                     </View>
                 ))}
             </View>
+
+            {babyRow ? <WhenToGetHelp helpSet={babyRow.helpSet} /> : null}
         </View>
     );
 };

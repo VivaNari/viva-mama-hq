@@ -2,6 +2,7 @@ import { Router } from "express";
 import requestValidator from "../../../../middlewares/requestValidator.middleware";
 import InfantWellbeingController from "../../controllers/dashboard/infant-wellbeing.controller";
 import UserController from "../../controllers/users/user.controller";
+import { babyArrivedValidator } from "../../validators/users/delivery.validator";
 import googleAuthValidator from "../../validators/users/googleAuth.validator";
 import { sentOTPValidator, verifyOTPValidator } from "../../validators/users/otp.validator";
 import authMiddleware from "../../../../middlewares/authorization.middleware";
@@ -49,6 +50,16 @@ userRouter.get(
 );
 
 userRouter.put("/user/update-user-data", authMiddleware("header"), userController.updateUserData);
+
+// The Journey tab's two delivery buttons.
+userRouter.post("/user/labour-started", authMiddleware("header"), userController.labourStarted);
+userRouter.post(
+    "/user/baby-arrived",
+    authMiddleware("header"),
+    requestValidator(babyArrivedValidator),
+    userController.babyArrived,
+);
+
 // POST /user/map-expert-referral was removed. It resolved codes against
 // `experts.referralCode`, which made that field a second source of truth alongside
 // `referral_programs.code` — two codes could exist for one doctor, only one of which

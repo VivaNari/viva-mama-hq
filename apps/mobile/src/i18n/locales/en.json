@@ -1566,7 +1566,8 @@
       "water": "Water",
       "bpSugarWeight": "BP / Sugar / Weight",
       "medicines": "Medicines",
-      "moodCheckIn": "Mood check-in"
+      "moodCheckIn": "Mood check-in",
+      "pncCheckup": "PNC checkup"
     },
     "kicks": {
       "title": "Baby movement counter",
@@ -1780,7 +1781,27 @@
             "label": "Position check & birth preparedness",
             "timing": "36+ weeks"
           },
-          "footnote": "Based on India's minimum government ANC guideline (4 visits). Your actual PHC/CHC or PMSMA camp schedule may vary slightly."
+          "footnote": "Based on India's minimum government ANC guideline (4 visits). Your actual PHC/CHC or PMSMA camp schedule may vary slightly.",
+          "g1d": {
+            "label": "Dating scan",
+            "timing": "6–9 weeks"
+          },
+          "g1e": {
+            "label": "Sugar test (DIPSI 75 g)",
+            "timing": "At registration"
+          },
+          "g2e": {
+            "label": "Repeat sugar test (DIPSI 75 g)",
+            "timing": "24–28 weeks"
+          },
+          "g3c": {
+            "label": "Growth scan",
+            "timing": "28–32 weeks"
+          },
+          "pmsma": {
+            "label": "PMSMA free specialist check",
+            "timing": "9th of every month, 13–40 weeks"
+          }
         },
         "private": {
           "groups": {
@@ -1968,6 +1989,238 @@
       "title": "Tell us where you are seeking care",
       "body": "Public and private care follow different schedules. Add this in your profile so we can show you the right logs and visits.",
       "action": "Add in Edit Profile"
+    },
+    "pnc": {
+      "title": "PNC checkup",
+      "weekToday": "Week {{week}} after birth · today's visit",
+      "visitToday": "Today's visit",
+      "logVisit": "Log a visit",
+      "recommendedSchedule": "Recommended schedule",
+      "whichChecks": "Which checks were done today? (select all)",
+      "checks": {
+        "bp": "BP check",
+        "temperature": "Temperature",
+        "bleeding": "Bleeding",
+        "womb": "Womb check",
+        "breasts": "Breast check",
+        "wound": "Stitches or wound",
+        "hb": "Hb check"
+      },
+      "nextVisitHint": "Your recommended schedule shows when your next postnatal check is due.",
+      "logged": "PNC visit logged",
+      "checksRecorded": "{{count}} checks recorded",
+      "checksRecorded_one": "{{count}} check recorded",
+      "checksRecorded_other": "{{count}} checks recorded",
+      "checkedOff": "Checked off",
+      "progress": "{{count}} of {{total}}",
+      "done": "Done ✓",
+      "markDone": "Mark done",
+      "schedule": {
+        "public": {
+          "groups": {
+            "n1": "STAY AFTER BIRTH · FIRST 48 HOURS",
+            "n2": "ASHA HOME VISITS · DAYS 3 TO 28",
+            "n3": "6-WEEK CHECK · DAY 42",
+            "n4": "TABLETS · UP TO 6 MONTHS",
+            "n5": "YOUR OWN HEALTH · UP TO 2 YEARS"
+          },
+          "n1a": {
+            "label": "BP, temperature & pallor check",
+            "timing": "Within 24 hours"
+          },
+          "n1b": {
+            "label": "Bleeding & womb check",
+            "timing": "Within 24 hours"
+          },
+          "n1c": {
+            "label": "Breast & feeding check",
+            "timing": "Within 24 hours"
+          },
+          "n1d": {
+            "label": "Stitches or wound, bladder & bowel check",
+            "timing": "Within 24 hours"
+          },
+          "n2a": {
+            "label": "ASHA home visit",
+            "timing": "Day 3"
+          },
+          "n2b": {
+            "label": "ASHA home visit",
+            "timing": "Day 7"
+          },
+          "n2c": {
+            "label": "ASHA home visit",
+            "timing": "Day 14"
+          },
+          "n2d": {
+            "label": "ASHA home visit",
+            "timing": "Day 21"
+          },
+          "n2e": {
+            "label": "ASHA home visit",
+            "timing": "Day 28"
+          },
+          "n3a": {
+            "label": "Womb, bleeding & healing check",
+            "timing": "About 6 weeks"
+          },
+          "n3b": {
+            "label": "Hb check for anaemia",
+            "timing": "About 6 weeks"
+          },
+          "n3c": {
+            "label": "Breast check",
+            "timing": "About 6 weeks"
+          },
+          "n3d": {
+            "label": "Mood & wellbeing check",
+            "timing": "About 6 weeks"
+          },
+          "n3e": {
+            "label": "Contraception advice",
+            "timing": "About 6 weeks"
+          },
+          "n3f": {
+            "label": "ASHA home visit",
+            "timing": "Day 42"
+          },
+          "n3g": {
+            "label": "Sugar test (OGTT), as you had diabetes in pregnancy",
+            "timing": "About 6 weeks"
+          },
+          "n4a": {
+            "label": "IFA tablets for 180 days",
+            "timing": "Up to 180 days"
+          },
+          "n4b": {
+            "label": "Calcium tablets for 6 months",
+            "timing": "Up to 6 months"
+          },
+          "n5a": {
+            "label": "Family planning advice from your ASHA",
+            "timing": "From 9 weeks"
+          },
+          "n5b": {
+            "label": "Hb test, if you feel tired all the time",
+            "timing": "About 6 months"
+          },
+          "n5c": {
+            "label": "Health check at your Ayushman Arogya Mandir",
+            "timing": "About 12 months"
+          },
+          "n5d": {
+            "label": "Screening at your health centre, if due",
+            "timing": "About 15 months"
+          },
+          "n5e": {
+            "label": "Family planning choices from your ASHA",
+            "timing": "About 18 months"
+          },
+          "n5f": {
+            "label": "Annual health check",
+            "timing": "About 24 months"
+          },
+          "footnote": "Based on India's government postnatal care: a check after birth, ASHA home visits and a 6-week check. Always follow your health worker's advice."
+        },
+        "private": {
+          "groups": {
+            "m1": "HOSPITAL STAY · FIRST 48 HOURS",
+            "m2": "CLINIC FOLLOW-UP · FIRST 2 WEEKS",
+            "m3": "6-WEEK CHECK",
+            "m4": "TABLETS · UP TO 6 MONTHS",
+            "m5": "YOUR OWN HEALTH · UP TO 2 YEARS"
+          },
+          "m1a": {
+            "label": "BP check",
+            "timing": "Before you go home"
+          },
+          "m1b": {
+            "label": "Bleeding & womb check",
+            "timing": "Before you go home"
+          },
+          "m1c": {
+            "label": "Breast & feeding check",
+            "timing": "Before you go home"
+          },
+          "m1d": {
+            "label": "Stitches or wound check",
+            "timing": "Before you go home"
+          },
+          "m2a": {
+            "label": "Postnatal check with your doctor",
+            "timing": "About day 7"
+          },
+          "m2b": {
+            "label": "C-section wound review",
+            "timing": "First 2 weeks"
+          },
+          "m3a": {
+            "label": "Womb, bleeding & healing check",
+            "timing": "About 6 weeks"
+          },
+          "m3b": {
+            "label": "Hb check for anaemia",
+            "timing": "About 6 weeks"
+          },
+          "m3c": {
+            "label": "Breast check",
+            "timing": "About 6 weeks"
+          },
+          "m3d": {
+            "label": "Mood & wellbeing check",
+            "timing": "About 6 weeks"
+          },
+          "m3e": {
+            "label": "Contraception advice",
+            "timing": "About 6 weeks"
+          },
+          "m3g": {
+            "label": "OGTT & HbA1c, as you had diabetes in pregnancy",
+            "timing": "About 6 weeks"
+          },
+          "m4a": {
+            "label": "IFA tablets for 180 days",
+            "timing": "Up to 180 days"
+          },
+          "m4b": {
+            "label": "Calcium tablets for 6 months",
+            "timing": "Up to 6 months"
+          },
+          "m5a": {
+            "label": "Follow-up & contraception review",
+            "timing": "About 10 weeks"
+          },
+          "m5b": {
+            "label": "Contraception & return to work",
+            "timing": "About 14 weeks"
+          },
+          "m5c": {
+            "label": "Hb test, if you feel tired all the time",
+            "timing": "About 6 months"
+          },
+          "m5d": {
+            "label": "Talk to your doctor about spacing",
+            "timing": "About 9 months"
+          },
+          "m5e": {
+            "label": "Annual check with your doctor",
+            "timing": "About 12 months"
+          },
+          "m5f": {
+            "label": "Your own check-up",
+            "timing": "About 15 months"
+          },
+          "m5g": {
+            "label": "Pre-pregnancy advice from your gynaecologist",
+            "timing": "About 18 months"
+          },
+          "m5h": {
+            "label": "Annual health check",
+            "timing": "About 24 months"
+          },
+          "footnote": "A commonly followed private postnatal schedule. Exact checks vary by clinic. Always follow your own care team's advice."
+        }
+      }
     }
   },
   "chatLogs": {
@@ -2148,6 +2401,113 @@
       "high": "higher than the range",
       "borderline": "at the edge of the range",
       "critical": "far outside the range"
+    }
+  },
+  "journey": {
+    "tabMother": "Mother",
+    "tabBaby": "Baby",
+    "barCaption": "YOU AND YOUR BABY, 1000 DAYS",
+    "stages": {
+      "pregnancy": "Pregnancy",
+      "delivery": "Delivery",
+      "acutePostpartum": "Acute postpartum",
+      "latePostpartum": "Late postpartum",
+      "motherhood": "Motherhood"
+    },
+    "where": {
+      "week": "Week {{week}}",
+      "labour": "Labour",
+      "birthDay": "The day of birth",
+      "goingHome": "Going home",
+      "weekAfterBirth": "Week {{week}} after birth",
+      "monthsAfterBirth": "{{months}} months after birth",
+      "pastDue": "Past your due date"
+    },
+    "trimester": {
+      "first": "First trimester",
+      "second": "Second trimester",
+      "third": "Third trimester"
+    },
+    "happening": "Happening",
+    "learnMore": "Learn more",
+    "showLess": "Show less",
+    "comingUp": {
+      "title": "Coming up",
+      "weeksToDue": "{{count}} weeks to your due date",
+      "weeksToDue_one": "{{count}} week to your due date",
+      "weeksToDue_other": "{{count}} weeks to your due date",
+      "dueSoon": "Your due date is close",
+      "pastDue": "Your due date has passed",
+      "afterBirth": "After your baby arrives",
+      "postnatal": "Your postnatal checks",
+      "now": "Now",
+      "inDays": "In {{count}} days",
+      "inDays_one": "In {{count}} day",
+      "inDays_other": "In {{count}} days",
+      "inWeeks": "In {{count}} wks",
+      "inWeeks_one": "In {{count}} wk",
+      "inWeeks_other": "In {{count}} wks",
+      "inMonths": "In {{count}} mths",
+      "inMonths_one": "In {{count}} mth",
+      "inMonths_other": "In {{count}} mths",
+      "dayOfMonth": "{{day}}th",
+      "ofMonth": "of month",
+      "remindMe": "Remind me",
+      "reminderSet": "Reminder set",
+      "fullSchedule": "See full schedule",
+      "fullScheduleMore": "See full schedule, {{count}} more",
+      "allDoneTitle": "You are up to date",
+      "allDoneBody": "Nothing else is due on your schedule right now."
+    },
+    "remember": {
+      "title": "Remember today",
+      "heading": "Three small things",
+      "count": "{{done}} of {{total}}",
+      "tapEachKick": "Tap the circle each time",
+      "logKick": "Log a kick"
+    },
+    "help": {
+      "link": "When to get help",
+      "hide": "Hide when to get help",
+      "heading": "Go to hospital or call 108 if",
+      "call": "Call {{number}}"
+    },
+    "baby": {
+      "weekLabel": "Your baby, week {{week}}",
+      "babiesVary": "Babies vary",
+      "askViva": "Ask Viva for more",
+      "openLog": "Open the log"
+    },
+    "delivery": {
+      "labourStarted": "My labour has started",
+      "babyHere": "My baby is here",
+      "arrivedTitle": "Has your baby arrived?",
+      "arrivedBody": "Your due date has passed. Tell us when your baby comes, so your care plan starts from the right day.",
+      "sheetTitle": "Tell us about the birth",
+      "dateLabel": "Date of birth",
+      "chooseDate": "Choose a date",
+      "typeLabel": "How was the delivery?",
+      "typeVaginal": "Normal delivery",
+      "typeCSection": "Caesarean (C-section)",
+      "outcomeLabel": "Birth outcome",
+      "outcomeLive": "Live birth",
+      "outcomeStill": "Stillbirth",
+      "save": "Save",
+      "cancel": "Cancel",
+      "welcomeTitle": "Congratulations",
+      "welcomeBody": "Your postnatal plan starts today. Add your baby's details to see their schedule too.",
+      "addBaby": "Add my baby's details",
+      "later": "Later",
+      "saveError": "That did not save. Please try again."
+    },
+    "notice": {
+      "lossTitle": "We are here with you",
+      "lossBody": "There is nothing you need to do here. Take the time you need. Viva and our experts are here whenever you want to talk.",
+      "notPregnantTitle": "Your journey starts when you are ready",
+      "notPregnantBody": "When you are pregnant, add your due date in your profile and your 1000-day journey will appear here.",
+      "noDatesTitle": "Add your dates",
+      "noDatesBody": "Add your due date or your baby's birth date in your profile, so we can show where you are.",
+      "editProfile": "Go to my profile"
     }
   }
 }

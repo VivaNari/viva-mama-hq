@@ -1,7 +1,9 @@
+import { CareKind } from '@vivamama/care-schedules';
+
 import {
   API_MOTHER_LOGS,
-  API_MOTHER_LOGS_ANC_SCHEDULE,
   API_MOTHER_LOGS_DAILY,
+  API_MOTHER_LOGS_SCHEDULE,
   API_MOTHER_MEDICINES,
 } from '../constants/endpoints';
 import { ApiEnvelope } from '../types/moodLog.types';
@@ -66,16 +68,20 @@ export const setDailyMotherLog = async (
   return res.data.data;
 };
 
-export const getAncSchedule = async (): Promise<string[]> => {
+export const getCareSchedule = async (kind: CareKind): Promise<string[]> => {
   const res = await apiClientInterceptor().get<ApiEnvelope<{ doneItemIds: string[] }>>(
-    API_MOTHER_LOGS_ANC_SCHEDULE,
+    API_MOTHER_LOGS_SCHEDULE[kind],
   );
   return res.data.data?.doneItemIds ?? [];
 };
 
-export const setAncScheduleItem = async (itemId: string, done: boolean): Promise<string[]> => {
+export const setCareScheduleItem = async (
+  kind: CareKind,
+  itemId: string,
+  done: boolean,
+): Promise<string[]> => {
   const res = await apiClientInterceptor().put<ApiEnvelope<{ doneItemIds: string[] }>>(
-    `${API_MOTHER_LOGS_ANC_SCHEDULE}/${itemId}`,
+    `${API_MOTHER_LOGS_SCHEDULE[kind]}/${itemId}`,
     { done },
   );
   return res.data.data?.doneItemIds ?? [];

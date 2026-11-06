@@ -95,4 +95,15 @@ motherLogSchema.index(
     },
 );
 
+// The same for a PNC item. A separate index rather than widening the one above, so that one
+// is not rebuilt on a live collection.
+motherLogSchema.index(
+    { userId: 1, "fields.itemId": 1 },
+    {
+        unique: true,
+        partialFilterExpression: { logType: "pnc_schedule_item" },
+        name: "one_tick_per_pnc_schedule_item",
+    },
+);
+
 export default motherLogSchema;

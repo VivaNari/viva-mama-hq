@@ -164,6 +164,10 @@ export interface IUser {
         location: string | null;
         is_not_pragnant_yet: boolean | null;
         delivery_date: Date | null;
+        /** Moved to postpartum by the due-date job; she has not confirmed the birth date. */
+        delivery_date_estimated?: boolean;
+        /** When she tapped "My labour has started". */
+        labour_started_at?: Date | null;
         conception_method: ConceptionMethod | null;
         pregnancy_conditions: PregnancyConditionEnum[] | [];
         delivery_type: DeliveryTypeEnum | null;

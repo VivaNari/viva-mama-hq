@@ -17,7 +17,12 @@ import { localizeRecommendationHistory } from "../../../../utils/i18n/localizeRe
 import { buildEmergencyAlert } from "../../../../utils/buildEmergencyAlert";
 import { ECareModel, EUserCategory, HealthHistoryEnum } from "../../../../types/user.types";
 import { EAccessDenial } from "../../../../types/auth.types";
-import { calculatePostpartumState } from "../../../../utils/functions/postpartumWeek";
+import {
+    calculatePostpartumState,
+    istCalendarDaysBetween,
+    toCurrentWeekdaysUpdate,
+} from "../../../../utils/functions/postpartumWeek";
+import { parseISODateToStartOfDay } from "../../../../services/date/date.service";
 import {
     CARE_FACILITY_MAX_LENGTH,
     LIVING_CHILDREN_BOUNDS,
@@ -37,6 +42,8 @@ export const sanitizeOnboardingPatch = (patch: Record<string, any> | undefined):
 
     // Server-owned: derived, or only ever set from a verified answer or record.
     delete patch.risk_flags;
+    delete patch.delivery_date_estimated;
+    delete patch.labour_started_at;
     delete patch.abha_number_last4;
     delete patch.abha_record_id;
 
@@ -434,4 +441,112 @@ export default class UserController {
         }
     };
 
+    /**
+     * "My labour has started" on the Journey tab. Open to a pregnant woman, and to one the
+     * due-date job moved on who has not confirmed a birth, because she may simply be late.
+     */
+    labourStarted = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const result = await UserModel.updateOne(
+                {
+                    _id: req.user._id,
+                    $or: [
+                        { user_category: EUserCategory.NP },
+                        { "onboarding_data.delivery_date_estimated": true },
+                    ],
+                },
+                { $set: { "onboarding_data.labour_started_at": new Date() } },
+            );
+
+            if (result.matchedCount === 0) {
+                sendResponse({
+                    data: null,
+                    statusCode: StatusCodes.CONFLICT,
+                    success: false,
+                    message: messages.LABOUR_NOT_PREGNANT,
+                    response: res,
+                });
+                return;
+            }
+
+            sendResponse({
+                data: null,
+                statusCode: StatusCodes.OK,
+                success: true,
+                message: messages.LABOUR_RECORDED,
+                response: res,
+            });
+        } catch (err) {
+            next(err);
+        }
+    };
+
+    /**
+     * "My baby is here" on the Journey tab: the real birth date, with the two answers the
+     * app branches on. Open while pregnant or while the date is only an estimate. Once
+     * confirmed, the date is locked as for every other postpartum user.
+     */
+    babyArrived = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { delivery_date, delivery_type, delivery_outcome } = req.body;
+
+            const deliveryDate = parseISODateToStartOfDay(delivery_date);
+            if (!deliveryDate || istCalendarDaysBetween(deliveryDate, new Date()) < 0) {
+                sendResponse({
+                    data: null,
+                    statusCode: StatusCodes.BAD_REQUEST,
+                    success: false,
+                    message: messages.DELIVERY_DATE_INVALID,
+                    response: res,
+                });
+                return;
+            }
+
+            const result = await UserModel.updateOne(
+                {
+                    _id: req.user._id,
+                    $or: [
+                        { user_category: EUserCategory.NP },
+                        { "onboarding_data.delivery_date_estimated": true },
+                    ],
+                },
+                {
+                    $set: {
+                        user_category: EUserCategory.PP,
+                        "onboarding_data.delivery_date": deliveryDate,
+                        "onboarding_data.delivery_date_estimated": false,
+                        "onboarding_data.delivery_type": delivery_type,
+                        "onboarding_data.delivery_outcome": delivery_outcome,
+                        "onboarding_data.is_not_pragnant_yet": false,
+                        ...toCurrentWeekdaysUpdate(calculatePostpartumState(deliveryDate)),
+                    },
+                },
+            );
+
+            if (result.matchedCount === 0) {
+                sendResponse({
+                    // The code keeps this 403 from reading as an expired token, as in
+                    // updateUserData above.
+                    data: { code: EAccessDenial.DELIVERY_DATE_LOCKED },
+                    statusCode: StatusCodes.FORBIDDEN,
+                    success: false,
+                    message: messages.DELIVERY_DATE_LOCKED,
+                    response: res,
+                });
+                return;
+            }
+
+            await refreshRiskFlags(String(req.user._id));
+
+            sendResponse({
+                data: null,
+                statusCode: StatusCodes.OK,
+                success: true,
+                message: messages.DELIVERY_RECORDED,
+                response: res,
+            });
+        } catch (err) {
+            next(err);
+        }
+    };
 }

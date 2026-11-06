@@ -1,7 +1,7 @@
+import { ANC_CHECKS, PNC_CHECKS } from "@vivamama/care-schedules";
 import Joi from "joi";
 
 import {
-    ANC_CHECKS,
     APPEND_LOG_TYPES,
     DAILY_LOG_TYPES,
     LOG_SOURCES,
@@ -64,6 +64,13 @@ const FIELD_SCHEMAS: Record<TAppendLogType | TDailyLogType, Joi.ObjectSchema> = 
     anc_visit: Joi.object({
         checks: Joi.array()
             .items(Joi.string().valid(...ANC_CHECKS))
+            .unique()
+            .min(1)
+            .required(),
+    }),
+    pnc_visit: Joi.object({
+        checks: Joi.array()
+            .items(Joi.string().valid(...PNC_CHECKS))
             .unique()
             .min(1)
             .required(),
@@ -185,8 +192,8 @@ export const chatLogConfirmValidator = Joi.object({
     accept: Joi.boolean().required(),
 });
 
-/** PUT /mother-logs/anc-schedule/:itemId */
-export const ancScheduleItemValidator = Joi.object({
+/** PUT /mother-logs/anc-schedule/:itemId and /mother-logs/pnc-schedule/:itemId */
+export const careScheduleItemValidator = Joi.object({
     done: Joi.boolean().required(),
 });
 

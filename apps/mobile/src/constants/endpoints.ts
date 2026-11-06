@@ -155,7 +155,13 @@ export const API_MOOD_LOGS = `${API_VERSION_URL}/mood-logs`;
 // The mother's own logs (Viva AI "Log something") and her medicine list.
 export const API_MOTHER_LOGS = `${API_VERSION_URL}/mother-logs`;
 export const API_MOTHER_LOGS_DAILY = `${API_VERSION_URL}/mother-logs/daily`;
-export const API_MOTHER_LOGS_ANC_SCHEDULE = `${API_VERSION_URL}/mother-logs/anc-schedule`;
+export const API_MOTHER_LOGS_SCHEDULE = {
+  anc: `${API_VERSION_URL}/mother-logs/anc-schedule`,
+  pnc: `${API_VERSION_URL}/mother-logs/pnc-schedule`,
+};
+// The Journey tab's two delivery buttons.
+export const API_LABOUR_STARTED = `${API_VERSION_URL}/user/labour-started`;
+export const API_BABY_ARRIVED = `${API_VERSION_URL}/user/baby-arrived`;
 export const API_MOTHER_MEDICINES = `${API_VERSION_URL}/mother-medicines`;
 // Her reminders; the server pushes each one at its time of day.
 export const API_MOTHER_REMINDERS = `${API_VERSION_URL}/mother-reminders`;

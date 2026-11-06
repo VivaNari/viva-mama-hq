@@ -21,6 +21,8 @@ interface SegmentedToggleProps<K extends string> {
     variant?: 'pill' | 'tab';
     /** Overrides the label size; the readings tabs run smaller to fit four. */
     fontSize?: number;
+    /** Overrides the selected pill's colour, per option key. */
+    activeColors?: Partial<Record<K, string>>;
 }
 
 function SegmentedToggle<K extends string>({
@@ -29,6 +31,7 @@ function SegmentedToggle<K extends string>({
     onChange,
     variant = 'pill',
     fontSize,
+    activeColors,
 }: SegmentedToggleProps<K>) {
     const isTab = variant === 'tab';
 
@@ -47,6 +50,9 @@ function SegmentedToggle<K extends string>({
                         style={[
                             isTab ? logsStyles.tabOption : logsStyles.toggleOption,
                             active && (isTab ? logsStyles.tabOptionActive : logsStyles.toggleOptionActive),
+                            active && activeColors?.[option.key]
+                                ? { backgroundColor: activeColors[option.key] }
+                                : null,
                         ]}
                     >
                         <Text

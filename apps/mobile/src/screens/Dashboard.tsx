@@ -1,6 +1,6 @@
 import Lucide from '@react-native-vector-icons/lucide'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 // import { FlatList, ScrollView, Text, TouchableOpacity, View, StyleSheet, RefreshControl } from 'react-native'
 import { ScrollView, Text, TouchableOpacity, View, StyleSheet, RefreshControl } from 'react-native'
@@ -21,6 +21,12 @@ import { globalStyles } from '../public/styles'
 import { IUserAllData } from '../types/dashboard.types'
 // import { IUserProduct, IUserProductResponse } from '../types/product.types'
 import { syncUserData } from '../utils/syncUserData'
+import { careRoute } from '../utils/careSchedule'
+import { babyRowBeforeBirth, journeyPosition } from '../utils/journeyPosition'
+import { getVisibleChildren } from '../utils/childAge'
+import SegmentedToggle from '../components/logs/SegmentedToggle'
+import { BabyWeekCard } from '../components/journey/BabyCards'
+import WhenToGetHelp from '../components/journey/WhenToGetHelp'
 import { useCareManagerBooking } from '../hooks/useCareManagerBooking'
 import ConsultationBookingSheet from '../components/consultation/ConsultationBookingSheet'
 import BookingConfirmedModal from '../components/consultation/BookingConfirmedModal'
@@ -119,6 +125,10 @@ const Dashboard = () => {
 
 
 
+    const position = useMemo(() => journeyPosition(userData?.user), [userData]);
+    const showBabyView =
+        position.kind !== 'loss' || getVisibleChildren(userData?.user?.childs).length > 0;
+
     const username = userData?.user.onboarding_data.preferred_name ?
         userData.user.onboarding_data.preferred_name.split(" ")[0] :
         'User';
@@ -152,51 +162,41 @@ const Dashboard = () => {
                 >
                     <View>
                         {/*
-                          Mother / Infant segmented control. Selection is component state
-                          only — it is a view preference, not something the server or the
-                          next session needs to know.
+                          Which view is local state only: it is a preference for this screen,
+                          not something the server or the next session needs. Hidden after a
+                          loss when she has no other child, because there is no baby view to offer.
                         */}
-                        <View style={styles.segmented}>
-                            {([
-                                { key: 'mother', label: t('infant.tabMother') },
-                                { key: 'infant', label: t('infant.tabInfant') },
-                            ] as const).map(({ key, label }) => {
-                                const isActive =
-                                    (key === 'mother') === isMotherTab;
+                        {showBabyView ? (
+                            <View style={styles.viewToggle}>
+                                <SegmentedToggle
+                                    value={isMotherTab ? 'mother' : 'baby'}
+                                    onChange={key => setIsMotherTab(key === 'mother')}
+                                    activeColors={{ baby: colors.journeyTeal }}
+                                    options={[
+                                        { key: 'mother', label: t('journey.tabMother') },
+                                        { key: 'baby', label: t('journey.tabBaby') },
+                                    ]}
+                                />
+                            </View>
+                        ) : null}
 
-                                return (
-                                    <TouchableOpacity
-                                        key={key}
-                                        activeOpacity={0.8}
-                                        onPress={() => setIsMotherTab(key === 'mother')}
-                                        style={[
-                                            styles.segment,
-                                            isActive && styles.segmentActive,
-                                        ]}
-                                        accessibilityRole="tab"
-                                        accessibilityState={{ selected: isActive }}
-                                    >
-                                        <Text
-                                            style={[
-                                                styles.segmentText,
-                                                isActive
-                                                    ? globalStyles.fontSemiBold
-                                                    : globalStyles.fontRegular,
-                                                isActive && styles.segmentTextActive,
-                                            ]}
-                                        >
-                                            {label}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-
-                        {isMotherTab ? (
-                            // <DashboardMotherTab userData={userData as IUserAllData} userActiveConsultationsData={userActiveConsultationsData} />
-                            <DashboardMotherTab />
+                        {isMotherTab || !showBabyView ? (
+                            <DashboardMotherTab
+                                position={position}
+                                userData={userData}
+                                onChanged={fetchDashboardData}
+                            />
+                        ) : position.kind === 'pregnant' ? (
+                            <View>
+                                <BabyWeekCard
+                                    row={babyRowBeforeBirth(position.week)}
+                                    route={careRoute(userData?.user?.onboarding_data?.care_model ?? null)}
+                                    week={position.week}
+                                />
+                                <WhenToGetHelp helpSet={babyRowBeforeBirth(position.week).helpSet} />
+                            </View>
                         ) : (
-                            <DashboardInfantTab userData={userData} />
+                            <DashboardInfantTab userData={userData} birthDay={position.kind === 'postpartum' ? position.day : null} />
                         )}
 
                     </View>
@@ -479,34 +479,8 @@ const styles = StyleSheet.create({
         color: colors.darkGray,
     },
 
-    segmented: {
-        flexDirection: 'row',
-        backgroundColor: colors.lightPurple,
-        borderRadius: 30,
-        padding: 4,
-        marginTop: 12,
-        marginBottom: 4,
-    },
-
-    segment: {
-        flex: 1,
-        paddingVertical: 10,
-        borderRadius: 26,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-
-    segmentActive: {
-        backgroundColor: colors.darkPurple,
-    },
-
-    segmentText: {
-        fontSize: 16,
-        color: colors.darkPurple,
-    },
-
-    segmentTextActive: {
-        color: colors.white,
+    viewToggle: {
+        marginBottom: 14,
     },
 });
 

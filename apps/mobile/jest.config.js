@@ -32,6 +32,8 @@ module.exports = {
     // This also means `npx jest` works without a prior `turbo build`.
     '^@vivamama/growth-standards$':
       '<rootDir>/../../packages/growth-standards/src/index.ts',
+    '^@vivamama/care-schedules$':
+      '<rootDir>/../../packages/care-schedules/src/index.ts',
   },
 
   // Transpile ESM packages inside node_modules

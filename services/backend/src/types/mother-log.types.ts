@@ -20,13 +20,14 @@ export const APPEND_LOG_TYPES = [
     "pumping",
     "meal",
     "anc_visit",
+    "pnc_visit",
 ] as const;
 
 /** One running total per day, overwritten on each save (tap counters). */
 export const DAILY_LOG_TYPES = ["water", "kicks"] as const;
 
-/** Written only through their own endpoints (medicines, ANC schedule). */
-export const TOGGLE_LOG_TYPES = ["medicine_dose", "anc_schedule_item"] as const;
+/** Written only through their own endpoints (medicines, ANC and PNC schedules). */
+export const TOGGLE_LOG_TYPES = ["medicine_dose", "anc_schedule_item", "pnc_schedule_item"] as const;
 
 export const MOTHER_LOG_TYPES = [
     ...APPEND_LOG_TYPES,
@@ -57,19 +58,6 @@ export const MEAL_FOODS = [
     "poha",
     "nuts",
 ] as const;
-export const ANC_CHECKS = ["bp", "weight", "abdominal", "hb", "urine", "fetal_heartbeat"] as const;
-
-/** Item ids of the two recommended ANC schedules (public: g*, private: p*). */
-export const ANC_SCHEDULE_ITEMS = [
-    "g1a", "g1b", "g1c",
-    "g2a", "g2b", "g2c", "g2d",
-    "g3a", "g3b",
-    "g4a", "g4b",
-    "p1a", "p1b", "p1c",
-    "p2a", "p2b", "p2c", "p2d",
-    "p3a", "p3b", "p3c", "p3d",
-] as const;
-
 /** Kicks counted to this number complete the day's session. */
 export const KICK_GOAL = 10;
 

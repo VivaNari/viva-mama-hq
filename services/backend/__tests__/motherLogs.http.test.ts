@@ -94,6 +94,21 @@ describe("mother log routes", () => {
         expect(schedule.body.data.doneItemIds).toEqual(["g2b"]);
     });
 
+    it("routes the PNC schedule paths, not /:id", async () => {
+        const { auth } = await signedInMother();
+
+        const tick = await request(app)
+            .put(`${API}/mother-logs/pnc-schedule/m3a`)
+            .set("Authorization", auth)
+            .send({ done: true });
+        expect(tick.status).toBe(200);
+
+        const schedule = await request(app)
+            .get(`${API}/mother-logs/pnc-schedule`)
+            .set("Authorization", auth);
+        expect(schedule.body.data.doneItemIds).toEqual(["m3a"]);
+    });
+
     it("removes an entry by id", async () => {
         const { auth } = await signedInMother();
         const created = await request(app)
@@ -125,6 +140,85 @@ describe("mother log routes", () => {
             .send({ taken: true });
         expect(taken.status).toBe(200);
         expect(taken.body.data.medicines[0].takenToday).toBe(true);
+    });
+});
+
+describe("the Journey delivery buttons", () => {
+    const makeMother = async (fields: object) => {
+        const { userId, auth } = await signedInMother();
+        await UserModel.updateOne({ _id: userId }, { $set: fields });
+        return { userId, auth };
+    };
+    const arrived = (auth: string, delivery_date: string) =>
+        request(app)
+            .post(`${API}/user/baby-arrived`)
+            .set("Authorization", auth)
+            .send({ delivery_date, delivery_type: "vaginal", delivery_outcome: "live_birth" });
+    const daysAgo = (days: number) =>
+        new Date(Date.now() - days * 86_400_000).toISOString().slice(0, 10);
+
+    it("records labour for a pregnant woman", async () => {
+        const { userId, auth } = await makeMother({ user_category: EUserCategory.NP });
+        const res = await request(app).post(`${API}/user/labour-started`).set("Authorization", auth);
+        expect(res.status).toBe(200);
+        const user = await UserModel.findById(userId).lean();
+        expect(user?.onboarding_data?.labour_started_at).toBeTruthy();
+    });
+
+    it("refuses labour once the birth is confirmed", async () => {
+        const { auth } = await makeMother({ user_category: EUserCategory.PP });
+        const res = await request(app).post(`${API}/user/labour-started`).set("Authorization", auth);
+        expect(res.status).toBe(409);
+    });
+
+    it("moves a pregnant woman to postpartum on the real date", async () => {
+        const { userId, auth } = await makeMother({ user_category: EUserCategory.NP });
+        expect((await arrived(auth, daysAgo(1))).status).toBe(200);
+
+        const user = await UserModel.findById(userId).lean();
+        expect(user?.user_category).toBe(EUserCategory.PP);
+        expect(user?.onboarding_data?.delivery_date?.toISOString().slice(0, 10)).toBe(daysAgo(1));
+        expect(user?.onboarding_data?.delivery_type).toBe("vaginal");
+        expect(user?.current_weekdays?.weeks).toBe(1);
+    });
+
+    it("lets her correct a date the due-date job only estimated, then locks it", async () => {
+        const { userId, auth } = await makeMother({
+            user_category: EUserCategory.PP,
+            "onboarding_data.delivery_date": new Date(daysAgo(5)),
+            "onboarding_data.delivery_date_estimated": true,
+        });
+
+        expect((await arrived(auth, daysAgo(0))).status).toBe(200);
+        const user = await UserModel.findById(userId).lean();
+        expect(user?.onboarding_data?.delivery_date_estimated).toBe(false);
+        expect(user?.onboarding_data?.delivery_date?.toISOString().slice(0, 10)).toBe(daysAgo(0));
+
+        expect((await arrived(auth, daysAgo(1))).status).toBe(403);
+    });
+
+    it("stays locked for a postpartum user with no estimated flag", async () => {
+        const { auth } = await makeMother({ user_category: EUserCategory.PP });
+        const res = await arrived(auth, daysAgo(1));
+        expect(res.status).toBe(403);
+        expect(res.body.data.code).toBeDefined();
+    });
+
+    it("refuses a future date and a malformed one", async () => {
+        const { auth } = await makeMother({ user_category: EUserCategory.NP });
+        const tomorrow = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+        expect((await arrived(auth, tomorrow)).status).toBe(400);
+        expect((await arrived(auth, "yesterday")).status).toBe(400);
+    });
+
+    it("does not let the profile endpoint write the server-owned fields", async () => {
+        const { userId, auth } = await makeMother({ user_category: EUserCategory.PP });
+        await request(app)
+            .put(`${API}/user/update-user-data`)
+            .set("Authorization", auth)
+            .send({ onboarding_data: { delivery_date_estimated: true } });
+        const user = await UserModel.findById(userId).lean();
+        expect(user?.onboarding_data?.delivery_date_estimated).not.toBe(true);
     });
 });
 

@@ -48,6 +48,7 @@ import AboutRecoveryScore from '../../screens/AboutRecoveryScore';
 import MoodLog from '../../screens/MoodLog';
 import AncCheckup from '../../screens/logs/AncCheckup';
 import KickCounter from '../../screens/logs/KickCounter';
+import PncCheckup from '../../screens/logs/PncCheckup';
 import LogPicker from '../../screens/logs/LogPicker';
 import MealsLog from '../../screens/logs/MealsLog';
 import MedicineLog from '../../screens/logs/MedicineLog';
@@ -71,6 +72,7 @@ const VIVA_LOG_SCREENS = [
     { name: 'HealthSummary', component: HealthSummary },
     { name: 'ReadingsLog', component: ReadingsLog },
     { name: 'AncCheckup', component: AncCheckup },
+    { name: 'PncCheckup', component: PncCheckup },
     { name: 'WeightBmiLog', component: WeightBmiLog },
     { name: 'PumpingLog', component: PumpingLog },
     { name: 'MealsLog', component: MealsLog },

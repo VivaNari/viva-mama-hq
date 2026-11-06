@@ -1,3 +1,4 @@
+import { CareKind } from "@vivamama/care-schedules";
 import { Types } from "mongoose";
 
 import motherLogModel from "../../models/mother-log.model";
@@ -232,28 +233,31 @@ class MotherLogService extends BaseService<IMotherLog> {
     deleteById = async (userId: string, id: string) =>
         motherLogModel.deleteOne({ _id: id, userId });
 
-    // ── ANC schedule ────────────────────────────────────────────────────────────
+    // ── ANC and PNC schedules ───────────────────────────────────────────────────
 
-    ancScheduleDone = async (userId: string): Promise<string[]> => {
+    scheduleDone = async (userId: string, kind: CareKind): Promise<string[]> => {
         const ticks = await motherLogModel
-            .find({ userId, logType: "anc_schedule_item" })
+            .find({ userId, logType: `${kind}_schedule_item` })
             .select("fields.itemId")
             .lean();
         return ticks.map((tick) => tick.fields.itemId as string);
     };
 
     setScheduleItem = async ({
+        kind,
         userId,
         itemId,
         done,
         context,
     }: {
+        kind: CareKind;
         userId: string;
         itemId: string;
         done: boolean;
         context: MotherContext;
     }) => {
-        const filter = { userId, logType: "anc_schedule_item", "fields.itemId": itemId };
+        const logType = `${kind}_schedule_item`;
+        const filter = { userId, logType, "fields.itemId": itemId };
 
         if (!done) {
             await motherLogModel.deleteOne(filter);
@@ -268,7 +272,7 @@ class MotherLogService extends BaseService<IMotherLog> {
                     // `fields.itemId` comes from the filter's equality on insert.
                     $setOnInsert: {
                         userId,
-                        logType: "anc_schedule_item",
+                        logType,
                         loggedAt: now,
                         logDate: getISTCalendarDate(now),
                         source: "manual",

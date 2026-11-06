@@ -1,3 +1,4 @@
+import { CareKind, isCareScheduleItem } from "@vivamama/care-schedules";
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
 import { isValidObjectId } from "mongoose";
@@ -10,7 +11,6 @@ import {
 } from "../../../../services/date/date.service";
 import MotherLogService, { bmiFor } from "../../../../services/mother-log/mother-log.service";
 import {
-    ANC_SCHEDULE_ITEMS,
     APPEND_LOG_TYPES,
     DAILY_LOG_TYPES,
     IMotherLog,
@@ -33,7 +33,7 @@ const MAX_LIMIT = 200;
 const READABLE_TYPES: readonly string[] = [...APPEND_LOG_TYPES, ...DAILY_LOG_TYPES];
 
 /**
- * The mother's logs: readings, kicks, water, meals, pumping and ANC visits.
+ * The mother's logs: readings, kicks, water, meals, pumping, and ANC and PNC visits.
  *
  * Writes are today-only. The screens have no date picker, and a past day that could
  * still change would make every trend and summary built from it unreliable. Today's
@@ -210,9 +210,9 @@ export default class MotherLogController {
         }
     };
 
-    getAncSchedule = async (req: Request, res: Response, next: NextFunction) => {
+    private getSchedule = (kind: CareKind) => async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const doneItemIds = await this.service.ancScheduleDone(req.user._id);
+            const doneItemIds = await this.service.scheduleDone(req.user._id, kind);
             sendResponse({
                 data: { doneItemIds },
                 statusCode: StatusCodes.OK,
@@ -225,21 +225,22 @@ export default class MotherLogController {
         }
     };
 
-    setAncScheduleItem = async (req: Request, res: Response, next: NextFunction) => {
+    private setScheduleItem = (kind: CareKind) => async (req: Request, res: Response, next: NextFunction) => {
         try {
             const itemId = req.params.itemId as string;
-            if (!(ANC_SCHEDULE_ITEMS as readonly string[]).includes(itemId)) {
+            if (!isCareScheduleItem(kind, itemId)) {
                 return this.badRequest(res, messages.MOTHER_LOG_SCHEDULE_ITEM_INVALID);
             }
 
             const context = await this.service.getContext(req.user._id);
             await this.service.setScheduleItem({
+                kind,
                 userId: req.user._id,
                 itemId,
                 done: req.body.done,
                 context,
             });
-            const doneItemIds = await this.service.ancScheduleDone(req.user._id);
+            const doneItemIds = await this.service.scheduleDone(req.user._id, kind);
 
             sendResponse({
                 data: { doneItemIds },
@@ -252,4 +253,9 @@ export default class MotherLogController {
             next(err);
         }
     };
+
+    getAncSchedule = this.getSchedule("anc");
+    setAncScheduleItem = this.setScheduleItem("anc");
+    getPncSchedule = this.getSchedule("pnc");
+    setPncScheduleItem = this.setScheduleItem("pnc");
 }

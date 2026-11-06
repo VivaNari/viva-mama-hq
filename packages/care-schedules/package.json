@@ -1,0 +1,31 @@
+{
+  "name": "@vivamama/care-schedules",
+  "version": "0.1.0",
+  "description": "The recommended ANC and PNC checkup schedules (structure and timing windows), shared by the VivaMama backend and mobile app so the item ids and the windows live in one place.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "react-native": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src",
+    "test": "echo \"(no unit tests in @vivamama/care-schedules: this is data, checked by the backend and mobile suites that consume it)\" && exit 0",
+    "clean": "rimraf dist"
+  },
+  "devDependencies": {
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.2"
+  }
+}

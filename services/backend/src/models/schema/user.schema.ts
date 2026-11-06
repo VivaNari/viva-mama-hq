@@ -291,6 +291,17 @@ const userSchema = new Schema<IUser>(
                 type: Date,
                 default: null,
             },
+            // True from the night the due-date job moves her to postpartum until she confirms
+            // the real birth date. While true, `delivery_date` is still only her due date.
+            delivery_date_estimated: {
+                type: Boolean,
+                default: false,
+            },
+            // When she tapped "My labour has started". Kept after the birth as history.
+            labour_started_at: {
+                type: Date,
+                default: null,
+            },
             delivery_type: {
                 type: String,
                 default: null,

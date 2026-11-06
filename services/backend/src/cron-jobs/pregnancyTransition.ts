@@ -38,7 +38,13 @@ export const pregnancyTransition = async (
                 user_category: EUserCategory.NP,
                 "onboarding_data.delivery_date": { $ne: null, $lt: endOfToday },
             },
-            { $set: { user_category: EUserCategory.PP } },
+            // The due date is all we know here, so the date stays open for her to correct.
+            {
+                $set: {
+                    user_category: EUserCategory.PP,
+                    "onboarding_data.delivery_date_estimated": true,
+                },
+            },
         );
 
         const transitioned = result.modifiedCount ?? 0;

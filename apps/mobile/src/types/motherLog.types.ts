@@ -13,7 +13,8 @@ export type AppendLogType =
   | 'fetal_heart_rate'
   | 'pumping'
   | 'meal'
-  | 'anc_visit';
+  | 'anc_visit'
+  | 'pnc_visit';
 
 export type DailyLogType = 'water' | 'kicks';
 
@@ -32,7 +33,6 @@ export type MealFood =
   | 'khichdi'
   | 'poha'
   | 'nuts';
-export type AncCheck = 'bp' | 'weight' | 'abdominal' | 'hb' | 'urine' | 'fetal_heartbeat';
 
 export type MedicinePreset = 'iron_folic_acid' | 'calcium' | 'vitamin_d' | 'insulin';
 export type MedicineFrequency = 'once_a_day' | 'sos' | 'twice_a_day' | 'thrice_a_day';

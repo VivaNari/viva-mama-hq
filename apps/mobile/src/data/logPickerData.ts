@@ -26,6 +26,9 @@ const PUBLIC_TILES: LogTile[] = [
     { key: 'upload', labelKey: 'uploadCardOrReport', icon: 'upload', screen: 'RecordsUpload' },
 ];
 
+const ANC_TILE: LogTile = { key: 'anc', labelKey: 'ancCheckup', icon: 'calendar', screen: 'AncCheckup' };
+const PNC_TILE: LogTile = { key: 'pnc', labelKey: 'pncCheckup', icon: 'calendar', screen: 'PncCheckup' };
+
 const PUBLIC_READING_TILE: LogTile = {
     key: 'reading',
     labelKey: 'aReading',
@@ -38,7 +41,7 @@ const PUBLIC_READING_TILE: LogTile = {
 
 const PRIVATE_PREGNANCY_TILES: LogTile[] = [
     { key: 'kicks', labelKey: 'babyMovementKicks', icon: 'heart', screen: 'KickCounter' },
-    { key: 'anc', labelKey: 'ancCheckup', icon: 'calendar', screen: 'AncCheckup' },
+    ANC_TILE,
     { key: 'scans', labelKey: 'scansReports', icon: 'scan-line', screen: 'RecordsUpload' },
     { key: 'weight', labelKey: 'weightBmi', icon: 'scale', screen: 'WeightBmiLog' },
 ];
@@ -71,11 +74,13 @@ export const getMainTiles = (
         const tiles = PUBLIC_TILES.filter(
             tile => tile.key !== 'babyMoved' || category === UserCategoryEnum.NP,
         );
+        if (category === UserCategoryEnum.NP) tiles.push(ANC_TILE);
+        if (category === UserCategoryEnum.PP) tiles.push(PNC_TILE);
         return [...fillGrid(tiles), PUBLIC_READING_TILE];
     }
 
     if (category === UserCategoryEnum.NP) return PRIVATE_PREGNANCY_TILES;
-    if (category === UserCategoryEnum.PP) return PRIVATE_POSTPARTUM_TILES;
+    if (category === UserCategoryEnum.PP) return fillGrid([...PRIVATE_POSTPARTUM_TILES, PNC_TILE]);
 
     // Neither pregnant nor postpartum: the postpartum set without pumping.
     return fillGrid(PRIVATE_POSTPARTUM_TILES.filter(tile => tile.key !== 'pumping'));

@@ -1,0 +1,2570 @@
+{
+  "mother": {
+    "M-P04": {
+      "happening": {
+        "headline": "It begins, quietly",
+        "line": "Hormones are rising and your period may be late.",
+        "chips": [
+          "Late period",
+          "Tiredness",
+          "Mild cramps"
+        ]
+      },
+      "learnMore": {
+        "title": "Eating for two? Not yet",
+        "govt": "You need no extra food yet. Focus on folic acid, green leaves and dal.",
+        "private": "You need no extra food yet. Focus on folic acid, green leaves and dal."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Set a daily folic acid reminder"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Set a daily folic acid reminder"
+        ]
+      }
+    },
+    "M-P05": {
+      "happening": {
+        "headline": "Your body is making room",
+        "line": "Breasts may feel sore and heavy.",
+        "chips": [
+          "Sore breasts",
+          "Passing urine often",
+          "Sleepy by evening"
+        ]
+      },
+      "learnMore": {
+        "title": "Foods to be careful with",
+        "govt": "Skip raw papaya, unboiled milk, alcohol and tobacco. Keep tea or coffee to two cups a day.",
+        "private": "Skip raw papaya, unboiled milk, alcohol and tobacco. Keep tea or coffee to two cups a day."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Ask Viva which foods are safe now"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Ask Viva which foods are safe now"
+        ]
+      }
+    },
+    "M-P06": {
+      "happening": {
+        "headline": "Nausea may arrive",
+        "line": "Nausea, food dislikes and a strong sense of smell are common.",
+        "chips": [
+          "Nausea",
+          "Strong sense of smell",
+          "Food dislikes"
+        ]
+      },
+      "learnMore": {
+        "title": "Easing nausea",
+        "govt": "Dry toast or khakhra before getting up, small meals often, ginger and nimbu pani.",
+        "private": "Dry toast or khakhra before getting up, small meals often, ginger and nimbu pani."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Ask Viva for nausea tips"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Ask Viva for nausea tips"
+        ]
+      }
+    },
+    "M-P07": {
+      "happening": {
+        "headline": "Tired is normal",
+        "line": "Your body is building a placenta and more blood, so tiredness can be deep.",
+        "chips": [
+          "Deep tiredness",
+          "Constipation",
+          "Bloating"
+        ]
+      },
+      "learnMore": {
+        "title": "Questions for your first visit",
+        "govt": "Ask about your due date, which tests you need, your tablets and the danger signs.",
+        "private": "Ask about your due date, which tests you need, your tablets and the danger signs."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Upload your first test reports"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Upload your first test reports"
+        ]
+      }
+    },
+    "M-P08": {
+      "happening": {
+        "headline": "Inside, a lot is changing",
+        "line": "Your womb has grown to about the size of an orange.",
+        "chips": [
+          "Tight waistbands",
+          "Bloating",
+          "Spotting worries"
+        ]
+      },
+      "learnMore": {
+        "title": "Your benefits",
+        "govt": "Register early to get JSY and PMMVY cash support. Your ASHA helps with the forms.",
+        "private": "Under the Maternity Benefit Act, most employers give 26 weeks of paid leave for your first two children."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Set a reminder for your first ANC visit"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Set a reminder for your first ANC visit"
+        ]
+      }
+    },
+    "M-P09": {
+      "happening": {
+        "headline": "Hold on, it gets easier",
+        "line": "Nausea often peaks around now.",
+        "chips": [
+          "Nausea at its peak",
+          "Vomiting",
+          "Low appetite"
+        ]
+      },
+      "learnMore": {
+        "title": "When vomiting is too much",
+        "govt": "Cannot keep water down for a day, very little urine, or dizziness: go to hospital.",
+        "private": "Cannot keep water down for a day, very little urine, or dizziness: go to hospital."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Ask Viva how much vomiting is too much"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Ask Viva how much vomiting is too much"
+        ]
+      }
+    },
+    "M-P10": {
+      "happening": {
+        "headline": "Your blood is increasing",
+        "line": "Your blood volume is rising, so you may see veins on your breasts and belly and feel warmer than others.",
+        "chips": [
+          "Visible veins",
+          "Feeling warm",
+          "Mild headaches"
+        ]
+      },
+      "learnMore": {
+        "title": "Iron for two",
+        "govt": "Eat iron foods with lemon or amla. Keep tea away from meals.",
+        "private": "Eat iron foods with lemon or amla. Keep tea away from meals."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Read: iron-rich foods (Library)"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Read: iron-rich foods (Library)"
+        ]
+      }
+    },
+    "M-P11": {
+      "happening": {
+        "headline": "Steadier days ahead",
+        "line": "Your appetite may start to return.",
+        "chips": [
+          "Appetite returning",
+          "Darker skin patches",
+          "A line on your belly"
+        ]
+      },
+      "learnMore": {
+        "title": "Tired is not lazy",
+        "govt": "Your body is building the placenta. A short rest in the day helps.",
+        "private": "Your body is building the placenta. A short rest in the day helps."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Ask Viva what happens at your ANC visit"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Ask Viva what the NT scan checks"
+        ]
+      }
+    },
+    "M-P12": {
+      "happening": {
+        "headline": "End of the first trimester",
+        "line": "The risk of miscarriage drops a lot.",
+        "chips": [
+          "Less urge to pass urine",
+          "More energy",
+          "Nausea easing"
+        ]
+      },
+      "learnMore": {
+        "title": "Telling your family",
+        "govt": "Share when you are ready, and ask for one clear kind of help, like cooking twice a week.",
+        "private": "Share when you are ready, and ask for one clear kind of help, like cooking twice a week."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Upload your scan or ANC report"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Upload your scan or ANC report"
+        ]
+      }
+    },
+    "M-P13": {
+      "happening": {
+        "headline": "Welcome to the second trimester",
+        "line": "Energy often returns.",
+        "chips": [
+          "Energy returning",
+          "A small bump",
+          "Fewer food dislikes"
+        ]
+      },
+      "learnMore": {
+        "title": "Moving safely",
+        "govt": "Walking, stretching and pregnancy yoga are safe for most women. Stop if you feel pain or dizzy.",
+        "private": "Walking, stretching and pregnancy yoga are safe for most women. Stop if you feel pain or dizzy."
+      },
+      "remember": {
+        "govt": [
+          "Take folic acid",
+          "Log your mood",
+          "Read: safe exercise in pregnancy (Library)"
+        ],
+        "private": [
+          "Take folic acid",
+          "Log your mood",
+          "Read: safe exercise in pregnancy (Library)"
+        ]
+      }
+    },
+    "M-P14": {
+      "happening": {
+        "headline": "Iron and calcium start now",
+        "line": "Your body now needs more iron and calcium for the baby's bones and your blood.",
+        "chips": [
+          "Bigger appetite",
+          "Stomach upset from tablets",
+          "More energy"
+        ]
+      },
+      "learnMore": {
+        "title": "Making tablets a habit",
+        "govt": "Take iron at night with water, not tea or milk. Take calcium at a different time.",
+        "private": "Take iron at night with water, not tea or milk. Take calcium at a different time."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Set iron and calcium reminders"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Set iron and calcium reminders"
+        ]
+      }
+    },
+    "M-P15": {
+      "happening": {
+        "headline": "Your heart is working harder",
+        "line": "Blood flow is up, so stuffy nose or bleeding gums are common.",
+        "chips": [
+          "Stuffy nose",
+          "Bleeding gums",
+          "Feeling warm"
+        ]
+      },
+      "learnMore": {
+        "title": "Healthy teeth",
+        "govt": "Bleeding gums are common now. Brush twice a day; dental check-ups are safe.",
+        "private": "Bleeding gums are common now. Brush twice a day; dental check-ups are safe."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Take your MCP card and show your logs at the visit"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Share your summary before your ANC 2 visit"
+        ]
+      }
+    },
+    "M-P16": {
+      "happening": {
+        "headline": "Your bump becomes visible",
+        "line": "Your belly grows steadily.",
+        "chips": [
+          "Growing belly",
+          "Back or hip ache",
+          "Better sleep"
+        ]
+      },
+      "learnMore": {
+        "title": "Sleeping well",
+        "govt": "Sleep on your side, left is best, with a pillow between your knees.",
+        "private": "Sleep on your side, left is best, with a pillow between your knees."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: sleeping positions (Library)"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: sleeping positions (Library)"
+        ]
+      }
+    },
+    "M-P17": {
+      "happening": {
+        "headline": "Making space for two",
+        "line": "Appetite grows.",
+        "chips": [
+          "Feeling hungrier",
+          "Heartburn",
+          "Leg cramps"
+        ]
+      },
+      "learnMore": {
+        "title": "Your free tests",
+        "govt": "Hb, urine, sugar, HIV, syphilis, hepatitis B and an ultrasound are free at your health centre and PMSMA.",
+        "private": "The anomaly scan between 18 and 22 weeks checks your baby's organs. Ask if anything is unclear."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Set a reminder for your PMSMA ultrasound"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Set a reminder for your anomaly scan"
+        ]
+      }
+    },
+    "M-P18": {
+      "happening": {
+        "headline": "You may feel a flutter",
+        "line": "Some women feel first movements around now, like bubbles or flutters.",
+        "chips": [
+          "First flutters",
+          "Round ligament twinges",
+          "Dizzy if you stand fast"
+        ]
+      },
+      "learnMore": {
+        "title": "What a flutter feels like",
+        "govt": "Like bubbles, a light tap or a fish turning. If this is not your first baby, you may feel it earlier.",
+        "private": "Like bubbles, a light tap or a fish turning. If this is not your first baby, you may feel it earlier."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva when you will feel the baby move"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva when you will feel the baby move"
+        ]
+      }
+    },
+    "M-P19": {
+      "happening": {
+        "headline": "Skin and stretch",
+        "line": "Skin may itch or show stretch marks.",
+        "chips": [
+          "Itchy belly",
+          "Stretch marks",
+          "Faster hair and nail growth"
+        ]
+      },
+      "learnMore": {
+        "title": "Itching to watch",
+        "govt": "Severe itching on the palms and soles needs a blood test. Tell your doctor.",
+        "private": "Severe itching on the palms and soles needs a blood test. Tell your doctor."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva about itchy skin"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva about itchy skin"
+        ]
+      }
+    },
+    "M-P20": {
+      "happening": {
+        "headline": "Halfway there",
+        "line": "Your womb has reached your belly button.",
+        "chips": [
+          "Bump at your belly button",
+          "Dizzy lying flat",
+          "More energy"
+        ]
+      },
+      "learnMore": {
+        "title": "Halfway check-in",
+        "govt": "What has helped you so far, and what worries you? Tell Viva.",
+        "private": "What has helped you so far, and what worries you? Tell Viva."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Upload your anomaly scan report"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Upload your anomaly scan report"
+        ]
+      }
+    },
+    "M-P21": {
+      "happening": {
+        "headline": "Moving more",
+        "line": "Movements become clearer.",
+        "chips": [
+          "Clearer kicks",
+          "Leg cramps at night",
+          "Heartburn"
+        ]
+      },
+      "learnMore": {
+        "title": "Cash support",
+        "govt": "PMMVY gives cash in instalments for your first child, and for a second child if she is a girl. Ask your ASHA.",
+        "private": "Plan your maternity leave dates with your employer now."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: maternity leave rights (Library)"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: maternity leave rights (Library)"
+        ]
+      }
+    },
+    "M-P22": {
+      "happening": {
+        "headline": "Your shape is shifting",
+        "line": "Your centre of balance changes.",
+        "chips": [
+          "Changed balance",
+          "Swollen feet by evening",
+          "Backache"
+        ]
+      },
+      "learnMore": {
+        "title": "Bring your partner in",
+        "govt": "Invite them to a visit and share this week's card with them.",
+        "private": "Invite them to a visit and share this week's card with them."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Set a reminder for your sugar test"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Set a reminder for your sugar test"
+        ]
+      }
+    },
+    "M-P23": {
+      "happening": {
+        "headline": "Swelling may start",
+        "line": "Mild swelling of feet by evening is common.",
+        "chips": [
+          "Mild swelling of feet",
+          "Stretching skin",
+          "Practice tightenings"
+        ]
+      },
+      "learnMore": {
+        "title": "Swelling: normal or not",
+        "govt": "Swollen feet by evening are normal. Sudden swelling of the face or hands, with headache, is not.",
+        "private": "Swollen feet by evening are normal. Sudden swelling of the face or hands, with headache, is not."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva when swelling is serious"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva when swelling is serious"
+        ]
+      }
+    },
+    "M-P24": {
+      "happening": {
+        "headline": "The sugar test",
+        "line": "Your body handles sugar differently in pregnancy.",
+        "chips": [
+          "Thirst",
+          "Tiredness after meals",
+          "Nothing at all"
+        ]
+      },
+      "learnMore": {
+        "title": "About pregnancy diabetes",
+        "govt": "It is common and often managed with food changes. It usually goes away after birth.",
+        "private": "It is common and often managed with food changes. It usually goes away after birth."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Upload your sugar test report"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Upload your sugar test report"
+        ]
+      }
+    },
+    "M-P25": {
+      "happening": {
+        "headline": "Rest is part of the work",
+        "line": "Heartburn, back pain and poor sleep may grow.",
+        "chips": [
+          "Heartburn",
+          "Back pain",
+          "Broken sleep"
+        ]
+      },
+      "learnMore": {
+        "title": "Better sleep",
+        "govt": "Use pillows, eat dinner early and light, and take a short evening walk.",
+        "private": "Use pillows, eat dinner early and light, and take a short evening walk."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva for better sleep tips"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva for better sleep tips"
+        ]
+      }
+    },
+    "M-P26": {
+      "happening": {
+        "headline": "Learning the baby's rhythm",
+        "line": "You may notice the baby has active and quiet times, often active when you lie down.",
+        "chips": [
+          "Active times when you lie down",
+          "Quiet times",
+          "Hiccup-like jerks"
+        ]
+      },
+      "learnMore": {
+        "title": "Learn your baby's pattern",
+        "govt": "A change in your baby's usual pattern matters more than any number.",
+        "private": "A change in your baby's usual pattern matters more than any number."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: your baby's movement pattern (Library)"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: your baby's movement pattern (Library)"
+        ]
+      }
+    },
+    "M-P27": {
+      "happening": {
+        "headline": "Third trimester starts next week",
+        "line": "Breathlessness on stairs and frequent urination return as the womb grows.",
+        "chips": [
+          "Breathless on stairs",
+          "Passing urine often",
+          "Swollen feet"
+        ]
+      },
+      "learnMore": {
+        "title": "Your birth plan",
+        "govt": "Decide where you will go, who comes with you, transport, money and documents.",
+        "private": "Decide where you will go, who comes with you, transport, money and documents."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva what a birth plan includes"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva what a birth plan includes"
+        ]
+      }
+    },
+    "M-P28": {
+      "happening": {
+        "headline": "Third trimester: count the kicks",
+        "line": "From now, notice the baby's movements every day.",
+        "chips": [
+          "Strong kicks",
+          "Breathlessness",
+          "Trouble sleeping"
+        ]
+      },
+      "learnMore": {
+        "title": "How to count kicks",
+        "govt": "Lie on your left side after a meal and count every kick, roll or flutter. Most babies reach 10 within 2 hours.",
+        "private": "Lie on your left side after a meal and count every kick, roll or flutter. Most babies reach 10 within 2 hours."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Take your MCP card and show your logs at the visit"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Share your summary before your ANC 3 visit"
+        ]
+      }
+    },
+    "M-P29": {
+      "happening": {
+        "headline": "Your blood needs more iron",
+        "line": "Anaemia is common in late pregnancy.",
+        "chips": [
+          "Tiredness",
+          "Breathlessness",
+          "Pale nails"
+        ]
+      },
+      "learnMore": {
+        "title": "Signs of anaemia",
+        "govt": "Tiredness, breathlessness and pale nails. Ask for an Hb test.",
+        "private": "Tiredness, breathlessness and pale nails. Ask for an Hb test."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Upload your latest Hb report"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Upload your latest Hb report"
+        ]
+      }
+    },
+    "M-P30": {
+      "happening": {
+        "headline": "Preparing your body for feeding",
+        "line": "Breasts may leak a little yellow milk called colostrum.",
+        "chips": [
+          "A little yellow milk",
+          "Heartburn",
+          "Swollen feet"
+        ]
+      },
+      "learnMore": {
+        "title": "Getting ready to breastfeed",
+        "govt": "Colostrum is enough at first. Your baby needs no ghutti, honey or water.",
+        "private": "Colostrum is enough at first. Your baby needs no ghutti, honey or water."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Ask Viva how to prepare to breastfeed"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Book a lactation session before birth"
+        ]
+      }
+    },
+    "M-P31": {
+      "happening": {
+        "headline": "Practice contractions",
+        "line": "You may feel your belly tighten for a minute and relax.",
+        "chips": [
+          "Practice tightenings",
+          "Pelvic pressure",
+          "Clumsiness"
+        ]
+      },
+      "learnMore": {
+        "title": "Practice or real?",
+        "govt": "Practice tightenings are irregular and ease with rest. Labour gets regular and stronger.",
+        "private": "Practice tightenings are irregular and ease with rest. Labour gets regular and stronger."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Ask Viva: practice tightening or labour?"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Ask Viva: practice tightening or labour?"
+        ]
+      }
+    },
+    "M-P32": {
+      "happening": {
+        "headline": "Getting ready together",
+        "line": "Heartburn and breathlessness peak as the womb presses up.",
+        "chips": [
+          "Breathlessness",
+          "Heartburn",
+          "Passing urine often"
+        ]
+      },
+      "learnMore": {
+        "title": "Help after birth",
+        "govt": "Decide who cooks, who helps at night and who takes you for check-ups.",
+        "private": "Decide who cooks, who helps at night and who takes you for check-ups."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Ask Viva what to pack for the hospital"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Ask Viva what to pack for the hospital"
+        ]
+      }
+    },
+    "M-P33": {
+      "happening": {
+        "headline": "Packing the bag",
+        "line": "Pelvic pressure grows and walking may feel heavier.",
+        "chips": [
+          "Heavier walking",
+          "Pelvic pressure",
+          "Poor sleep"
+        ]
+      },
+      "learnMore": {
+        "title": "Free delivery",
+        "govt": "Under JSSK, delivery, medicines, food and transport by 102 or 108 are free at government hospitals.",
+        "private": "Confirm your room, insurance or cashless approval, and who to call when labour starts."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Upload your MCP card and reports"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Upload your MCP card and reports"
+        ]
+      }
+    },
+    "M-P34": {
+      "happening": {
+        "headline": "The final stretch",
+        "line": "You may feel clumsy and tired again.",
+        "chips": [
+          "Tiredness",
+          "Clumsiness",
+          "Swelling by evening"
+        ]
+      },
+      "learnMore": {
+        "title": "Signs of labour",
+        "govt": "Regular painful tightenings, water leaking, or a blood-stained show.",
+        "private": "Regular painful tightenings, water leaking, or a blood-stained show."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Read: signs of labour (Library)"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Read: signs of labour (Library)"
+        ]
+      }
+    },
+    "M-P35": {
+      "happening": {
+        "headline": "The baby is settling down",
+        "line": "The baby may drop lower into your pelvis, which eases breathing but adds pressure on the bladder.",
+        "chips": [
+          "Easier breathing",
+          "More bladder pressure",
+          "Pelvic ache"
+        ]
+      },
+      "learnMore": {
+        "title": "The first hour",
+        "govt": "Ask for skin to skin and a first feed within an hour, even after a caesarean.",
+        "private": "Ask for skin to skin and a first feed within an hour, even after a caesarean."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Ask Viva if walking helps before delivery"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Ask Viva if walking helps before delivery"
+        ]
+      }
+    },
+    "M-P36": {
+      "happening": {
+        "headline": "Weekly checks begin",
+        "line": "Your body is getting ready for birth.",
+        "chips": [
+          "More discharge",
+          "Irregular tightenings",
+          "Restless nights"
+        ]
+      },
+      "learnMore": {
+        "title": "Know the danger signs",
+        "govt": "Can you name three for yourself and three for your baby? Try it with Viva.",
+        "private": "Can you name three for yourself and three for your baby? Try it with Viva."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Take your MCP card and show your logs at the visit"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Share your summary at your ANC 4 visit"
+        ]
+      }
+    },
+    "M-P37": {
+      "happening": {
+        "headline": "Early term",
+        "line": "From now, the baby is considered early term.",
+        "chips": [
+          "Baby drops lower",
+          "Back pain",
+          "Nesting urge"
+        ]
+      },
+      "learnMore": {
+        "title": "A birth companion",
+        "govt": "Government hospitals allow a woman of your choice to stay with you in labour.",
+        "private": "Ask your hospital who can stay with you in labour."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Ask Viva when to leave for hospital"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Ask Viva when to leave for hospital"
+        ]
+      }
+    },
+    "M-P38": {
+      "happening": {
+        "headline": "Waiting well",
+        "line": "Sleep may be hard.",
+        "chips": [
+          "Broken sleep",
+          "Pressure low down",
+          "Mucus discharge"
+        ]
+      },
+      "learnMore": {
+        "title": "Staying calm",
+        "govt": "Slow breathing, a short walk or music you like can help.",
+        "private": "Slow breathing, a short walk or music you like can help."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Read: staying calm before birth (Library)"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Read: staying calm before birth (Library)"
+        ]
+      }
+    },
+    "M-P39": {
+      "happening": {
+        "headline": "Full term",
+        "line": "Your cervix is softening.",
+        "chips": [
+          "Mucus plug",
+          "Stronger tightenings",
+          "Low back ache"
+        ]
+      },
+      "learnMore": {
+        "title": "Normal or caesarean",
+        "govt": "Both are birth. Recovery is different, and both need rest and support.",
+        "private": "Both are birth. Recovery is different, and both need rest and support."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Ask Viva about normal and caesarean recovery"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Ask Viva about normal and caesarean recovery"
+        ]
+      }
+    },
+    "M-P40": {
+      "happening": {
+        "headline": "Your due date",
+        "line": "Only a few babies arrive on the exact due date.",
+        "chips": [
+          "Impatience",
+          "Tiredness",
+          "Stronger tightenings"
+        ]
+      },
+      "learnMore": {
+        "title": "Past your due date",
+        "govt": "Most babies arrive by 42 weeks. Checks keep you and your baby safe.",
+        "private": "Most babies arrive by 42 weeks. Checks keep you and your baby safe."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Ask Viva what happens past your due date"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Ask Viva what happens past your due date"
+        ]
+      }
+    },
+    "M-P41": {
+      "happening": {
+        "headline": "Past your due date",
+        "line": "Your doctor will check you and the baby more often now.",
+        "chips": [
+          "Tired of waiting",
+          "Pressure",
+          "Anxiety"
+        ]
+      },
+      "learnMore": {
+        "title": "About induction",
+        "govt": "Medicines can help labour start. Ask why, how, and what happens next.",
+        "private": "Medicines can help labour start. Ask why, how, and what happens next."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log baby moved",
+          "Ask Viva what induction means"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log 10 kicks",
+          "Ask Viva what induction means"
+        ]
+      }
+    },
+    "M-D1": {
+      "happening": {
+        "headline": "Labour has started",
+        "line": "Regular tightenings, water leaking or a show mean labour may have begun.",
+        "chips": [
+          "Fear and excitement together",
+          "Tightenings coming closer"
+        ]
+      },
+      "learnMore": {
+        "title": "What to carry",
+        "govt": "MCP card, reports, ID, clothes, pads and baby clothes. Call 102 or 108.",
+        "private": "Reports, ID, insurance papers, clothes, pads and baby clothes."
+      },
+      "remember": {
+        "govt": [
+          "Reminder: carry MCP card and reports",
+          "Call 102 or 108 when tightenings are regular",
+          "Ask Viva: is this labour?"
+        ],
+        "private": [
+          "Reminder: carry MCP card and reports",
+          "Log when tightenings start",
+          "Ask Viva: is this labour?"
+        ]
+      }
+    },
+    "M-D2": {
+      "happening": {
+        "headline": "The first hours",
+        "line": "Your baby goes skin to skin on your chest and breastfeeding starts within the first hour.",
+        "chips": [
+          "Instant love, or numb and tired: both normal"
+        ]
+      },
+      "learnMore": {
+        "title": "The golden hour",
+        "govt": "Skin to skin and the first feed in the first hour help your milk and your baby's warmth.",
+        "private": "Skin to skin and the first feed in the first hour help your milk and your baby's warmth."
+      },
+      "remember": {
+        "govt": [
+          "Reminder: first feed within an hour",
+          "Log the first feed",
+          "Ask Viva about the first feed"
+        ],
+        "private": [
+          "Reminder: first feed within an hour",
+          "Log the first feed",
+          "Ask Viva about the first feed"
+        ]
+      }
+    },
+    "M-D3": {
+      "happening": {
+        "headline": "Going home",
+        "line": "You are going home with your baby. Viva and your health worker are a tap away.",
+        "chips": [
+          "Nervous without nurses",
+          "Very tired"
+        ]
+      },
+      "learnMore": {
+        "title": "Before you leave",
+        "govt": "Ask for the birth certificate form and your JSY payment details.",
+        "private": "Collect your discharge summary, follow-up dates and the birth certificate form."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Upload your discharge summary"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Upload your discharge summary"
+        ]
+      }
+    },
+    "M-PP1": {
+      "happening": {
+        "headline": "The first week: your body is healing",
+        "line": "Bleeding (lochia) is heavy and red at first.",
+        "chips": [
+          "Heavy red bleeding",
+          "Cramps while feeding",
+          "Stitch pain"
+        ]
+      },
+      "learnMore": {
+        "title": "How bleeding should change",
+        "govt": "Red for a few days, then pink, brown and finally yellow-white over the weeks.",
+        "private": "Red for a few days, then pink, brown and finally yellow-white over the weeks."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Wellness check-in: how is your first week going?"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Wellness check-in: how is your first week going?"
+        ]
+      }
+    },
+    "M-PP2": {
+      "happening": {
+        "headline": "Milk is settling in",
+        "line": "Breasts may feel full and hard as milk comes in.",
+        "chips": [
+          "Full, hard breasts",
+          "Lighter bleeding",
+          "Night sweats"
+        ]
+      },
+      "learnMore": {
+        "title": "A good latch",
+        "govt": "Baby's mouth wide open, chin touching the breast, more of the dark area below the lip.",
+        "private": "Baby's mouth wide open, chin touching the breast, more of the dark area below the lip."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask your ASHA to check the latch at her visit"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Book a lactation session if feeding hurts"
+        ]
+      }
+    },
+    "M-PP3": {
+      "happening": {
+        "headline": "Finding a rhythm",
+        "line": "Your energy is still low.",
+        "chips": [
+          "Low energy",
+          "Hungry and thirsty while feeding",
+          "Sore back"
+        ]
+      },
+      "learnMore": {
+        "title": "How was your birth?",
+        "govt": "Feelings about your birth matter. You can talk them through with Viva or a counsellor.",
+        "private": "Feelings about your birth matter. You can talk them through with Viva or a counsellor."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva what to eat while breastfeeding"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva what to eat while breastfeeding"
+        ]
+      }
+    },
+    "M-PP4": {
+      "happening": {
+        "headline": "Your body, one month on",
+        "line": "Bleeding usually stops by four to six weeks.",
+        "chips": [
+          "Bleeding slowing",
+          "Leaking urine on coughing",
+          "More strength"
+        ]
+      },
+      "learnMore": {
+        "title": "Stitches and bowels",
+        "govt": "Drink water, eat fibre and do not strain. Most stitches heal in two to three weeks.",
+        "private": "Drink water, eat fibre and do not strain. Most stitches heal in two to three weeks."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: pelvic floor exercises (Library)"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: pelvic floor exercises (Library)"
+        ]
+      }
+    },
+    "M-PP5": {
+      "happening": {
+        "headline": "Looking ahead to six weeks",
+        "line": "You may feel more like yourself, or still very tired.",
+        "chips": [
+          "Still tired",
+          "Hair starting to fall",
+          "Changing appetite"
+        ]
+      },
+      "learnMore": {
+        "title": "When can I get pregnant again?",
+        "govt": "Before your period returns. Breastfeeding protects you only if feeding only breast milk, baby under 6 months and no period yet.",
+        "private": "Before your period returns. Breastfeeding protects you only if feeding only breast milk, baby under 6 months and no period yet."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva which contraception is safe while breastfeeding"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva which contraception is safe while breastfeeding"
+        ]
+      }
+    },
+    "M-PP6": {
+      "happening": {
+        "headline": "Six weeks: a check for both of you",
+        "line": "Your 6-week check looks at your BP, wound, bleeding, breasts, mood and contraception.",
+        "chips": [
+          "Bleeding finished",
+          "Wound healed",
+          "Questions about sex or work"
+        ]
+      },
+      "learnMore": {
+        "title": "Your family planning choices",
+        "govt": "PPIUCD, Antara injection, Chhaya pills and condoms are free at your health centre.",
+        "private": "Ask at your 6-week check about contraception, sex, exercise and how you are feeling."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Take your MCP card and show your logs at the visit"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Share your summary at your 6-week check"
+        ]
+      }
+    },
+    "M-T10w": {
+      "happening": {
+        "headline": "Smiles and sleepless nights",
+        "line": "Most women feel stronger by now, though sleep is still broken.",
+        "chips": [
+          "Still tired",
+          "Hair fall starting"
+        ]
+      },
+      "learnMore": {
+        "title": "Only breast milk to 6 months",
+        "govt": "No water, honey or ghutti, even in summer. Breast milk is enough.",
+        "private": "Going back to work? Start expressing 2 to 3 weeks before. Milk keeps 4 hours at room temperature, up to 4 days in a clean fridge."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva about storing breast milk"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Ask Viva about storing breast milk"
+        ]
+      }
+    },
+    "M-T14w": {
+      "happening": {
+        "headline": "Getting your strength back",
+        "line": "Hair fall is common now and grows back within months.",
+        "chips": [
+          "Hair fall",
+          "Back and wrist ache"
+        ]
+      },
+      "learnMore": {
+        "title": "Pelvic floor and tummy",
+        "govt": "Leaking urine or a bulge down your tummy is common. Daily exercises help; tell your ASHA if not better.",
+        "private": "Leaking urine or a bulge down your tummy is common. Daily exercises help; ask for physiotherapy if not better."
+      },
+      "remember": {
+        "govt": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: only breast milk to 6 months (Library)"
+        ],
+        "private": [
+          "Take iron and calcium",
+          "Log your mood",
+          "Read: going back to work while breastfeeding (Library)"
+        ]
+      }
+    },
+    "M-T6m": {
+      "happening": {
+        "headline": "Six months together",
+        "line": "Your milk is still the main food as solids begin.",
+        "chips": [
+          "Periods may return",
+          "Tired some days"
+        ]
+      },
+      "learnMore": {
+        "title": "Periods and pregnancy",
+        "govt": "Your period may return. You can get pregnant before your first period.",
+        "private": "Your period may return. You can get pregnant before your first period."
+      },
+      "remember": {
+        "govt": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Ask Viva about first foods for your baby"
+        ],
+        "private": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Ask Viva about first foods for your baby"
+        ]
+      }
+    },
+    "M-T9m": {
+      "happening": {
+        "headline": "Thinking about spacing",
+        "line": "A gap of at least three years before the next pregnancy is healthiest.",
+        "chips": [
+          "Thinking ahead",
+          "More energy"
+        ]
+      },
+      "learnMore": {
+        "title": "Spacing your next baby",
+        "govt": "Waiting at least two years before the next pregnancy is healthiest for you and your baby.",
+        "private": "Waiting at least two years before the next pregnancy is healthiest for you and your baby."
+      },
+      "remember": {
+        "govt": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Ask Viva about safe contraception"
+        ],
+        "private": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Ask Viva about safe contraception"
+        ]
+      }
+    },
+    "M-T12m": {
+      "happening": {
+        "headline": "A year of you",
+        "line": "Plan a check for yourself: BP, Hb and sugar.",
+        "chips": [
+          "Proud and tired",
+          "Periods regular again"
+        ]
+      },
+      "learnMore": {
+        "title": "A check for you",
+        "govt": "From age 30, free BP, sugar and cancer screening at your Ayushman Arogya Mandir.",
+        "private": "Check your BP, Hb and sugar, every year if you had high BP or sugar in pregnancy."
+      },
+      "remember": {
+        "govt": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Set a reminder for your own health check"
+        ],
+        "private": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Set a reminder for your own health check"
+        ]
+      }
+    },
+    "M-T15m": {
+      "happening": {
+        "headline": "Your health matters too",
+        "line": "Keep your own appointments, not just your baby's.",
+        "chips": [
+          "Energy returning",
+          "Back strain from lifting"
+        ]
+      },
+      "learnMore": {
+        "title": "Your body now",
+        "govt": "Your body did something huge. Be kind to it, and talk to Viva if it is getting you down.",
+        "private": "Your body did something huge. Be kind to it, and talk to Viva if it is getting you down."
+      },
+      "remember": {
+        "govt": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Tell your ASHA if something has been bothering you"
+        ],
+        "private": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Book an expert if something has been bothering you"
+        ]
+      }
+    },
+    "M-T18m": {
+      "happening": {
+        "headline": "Planning ahead",
+        "line": "If you want another baby, talk to your doctor first about timing and folic acid.",
+        "chips": [
+          "Thinking about the next stage"
+        ]
+      },
+      "learnMore": {
+        "title": "Planning another baby?",
+        "govt": "Start folic acid three months before trying, and talk to your ASHA.",
+        "private": "Start folic acid three months before trying, and talk to your doctor."
+      },
+      "remember": {
+        "govt": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Ask Viva about planning another pregnancy"
+        ],
+        "private": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Ask Viva about planning another pregnancy"
+        ]
+      }
+    },
+    "M-T24m": {
+      "happening": {
+        "headline": "Your first 1,000 days, complete",
+        "line": "Your health and well-being are worth tracking for yourself now.",
+        "chips": [
+          "Proud",
+          "Ready for what is next"
+        ]
+      },
+      "learnMore": {
+        "title": "What comes next",
+        "govt": "Track your periods and your health. VivaMama stays with you for the next stage.",
+        "private": "Track your periods and your health. VivaMama stays with you for the next stage."
+      },
+      "remember": {
+        "govt": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Set a reminder for your annual check"
+        ],
+        "private": [
+          "Reminder: your own check-up",
+          "Log your mood",
+          "Set a reminder for your annual check"
+        ]
+      }
+    }
+  },
+  "baby": {
+    "B-P04": {
+      "card1": {
+        "title": "This week",
+        "text": "A tiny ball of cells is settling into the lining of your womb and starting to make the placenta."
+      },
+      "size": "about the size of a poppy seed (khus khus)",
+      "card2": {
+        "title": "Next week",
+        "govt": "The neural tube, which becomes the brain and spine, is forming.",
+        "private": "The neural tube, which becomes the brain and spine, is forming."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Say hello. Some mothers start a small diary for their baby from today.",
+        "private": "Say hello. Some mothers start a small diary for their baby from today."
+      }
+    },
+    "B-P05": {
+      "card1": {
+        "title": "This week",
+        "text": "The neural tube, which becomes the brain and spine, is forming."
+      },
+      "size": "about the size of a sesame seed (til)",
+      "card2": {
+        "title": "Next week",
+        "govt": "A tiny heart has started beating, and buds for arms and legs appear.",
+        "private": "A tiny heart has started beating, and buds for arms and legs appear."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Your baby's brain is forming. Every folic acid tablet is a gift to them.",
+        "private": "Your baby's brain is forming. Every folic acid tablet is a gift to them."
+      }
+    },
+    "B-P06": {
+      "card1": {
+        "title": "This week",
+        "text": "A tiny heart has started beating, and buds for arms and legs appear."
+      },
+      "size": "about the size of a masoor dal grain",
+      "card2": {
+        "title": "Next week",
+        "govt": "The face is forming, with small dips where eyes and ears will be.",
+        "private": "The face is forming, with small dips where eyes and ears will be."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "A heartbeat has begun. Take a quiet minute to picture it.",
+        "private": "A heartbeat has begun. Take a quiet minute to picture it."
+      }
+    },
+    "B-P07": {
+      "card1": {
+        "title": "This week",
+        "text": "The face is forming, with small dips where eyes and ears will be."
+      },
+      "size": "about the size of a jamun",
+      "card2": {
+        "title": "Next week",
+        "govt": "Fingers and toes are starting to form, and the baby makes tiny movements you cannot feel yet.",
+        "private": "Fingers and toes are starting to form, and the baby makes tiny movements you cannot feel yet."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Rest when you are tired. Resting is how you care for your baby now.",
+        "private": "Rest when you are tired. Resting is how you care for your baby now."
+      }
+    },
+    "B-P08": {
+      "card1": {
+        "title": "This week",
+        "text": "Fingers and toes are starting to form, and the baby makes tiny movements you cannot feel yet."
+      },
+      "size": "about the size of a rajma bean",
+      "card2": {
+        "title": "Next week",
+        "govt": "All the main organs have started forming.",
+        "private": "All the main organs have started forming."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Choose a pet name to call your baby until birth.",
+        "private": "Choose a pet name to call your baby until birth."
+      }
+    },
+    "B-P09": {
+      "card1": {
+        "title": "This week",
+        "text": "All the main organs have started forming."
+      },
+      "size": "about the size of a grape (angoor)",
+      "card2": {
+        "title": "Next week",
+        "govt": "Tiny nails and tooth buds are forming.",
+        "private": "Tiny nails and tooth buds are forming."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Eat one meal today slowly and calmly, for both of you.",
+        "private": "Eat one meal today slowly and calmly, for both of you."
+      }
+    },
+    "B-P10": {
+      "card1": {
+        "title": "This week",
+        "text": "Tiny nails and tooth buds are forming."
+      },
+      "size": "about the size of a ber",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby can open and close its hands and has taken on a human shape.",
+        "private": "The baby can open and close its hands and has taken on a human shape."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Share your news with someone you trust, when you feel ready.",
+        "private": "Share your news with someone you trust, when you feel ready."
+      }
+    },
+    "B-P11": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby can open and close its hands and has taken on a human shape."
+      },
+      "size": "about the size of an anjeer (fig)",
+      "card2": {
+        "title": "Next week",
+        "govt": "Reflexes are developing.",
+        "private": "Reflexes are developing."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Start a bump photo in the same spot every month.",
+        "private": "Start a bump photo in the same spot every month."
+      }
+    },
+    "B-P12": {
+      "card1": {
+        "title": "This week",
+        "text": "Reflexes are developing."
+      },
+      "size": "about the size of a nimbu",
+      "card2": {
+        "title": "Next week",
+        "govt": "Vocal cords and bones are forming, and fingerprints are taking shape.",
+        "private": "Vocal cords and bones are forming, and fingerprints are taking shape."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "If you have a scan, keep the picture with your records.",
+        "private": "If you have a scan, keep the picture with your records."
+      }
+    },
+    "B-P13": {
+      "card1": {
+        "title": "This week",
+        "text": "Vocal cords and bones are forming, and fingerprints are taking shape."
+      },
+      "size": "about the size of a matar pod",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby can squint, frown and make faces, and its neck is getting longer.",
+        "private": "The baby can squint, frown and make faces, and its neck is getting longer."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Take a 15-minute walk. Gentle movement soothes your baby too.",
+        "private": "Take a 15-minute walk. Gentle movement soothes your baby too."
+      }
+    },
+    "B-P14": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby can squint, frown and make faces, and its neck is getting longer."
+      },
+      "size": "about the size of a chikoo",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby moves a lot and bones are hardening.",
+        "private": "The baby moves a lot and bones are hardening."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Your baby can move their face now. Your calm reaches them.",
+        "private": "Your baby can move their face now. Your calm reaches them."
+      }
+    },
+    "B-P15": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby moves a lot and bones are hardening."
+      },
+      "size": "about the size of a seb (apple)",
+      "card2": {
+        "title": "Next week",
+        "govt": "The eyes can move slowly and the baby may sense light through your belly.",
+        "private": "The eyes can move slowly and the baby may sense light through your belly."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Play soft music while you rest.",
+        "private": "Play soft music while you rest."
+      }
+    },
+    "B-P16": {
+      "card1": {
+        "title": "This week",
+        "text": "The eyes can move slowly and the baby may sense light through your belly."
+      },
+      "size": "about the size of an amrood (guava)",
+      "card2": {
+        "title": "Next week",
+        "govt": "Fat begins to form under the skin and the cord is getting thicker and stronger.",
+        "private": "Fat begins to form under the skin and the cord is getting thicker and stronger."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Your baby may sense light. Rest a hand on your bump in the sun.",
+        "private": "Your baby may sense light. Rest a hand on your bump in the sun."
+      }
+    },
+    "B-P17": {
+      "card1": {
+        "title": "This week",
+        "text": "Fat begins to form under the skin and the cord is getting thicker and stronger."
+      },
+      "size": "about the size of an anaar",
+      "card2": {
+        "title": "Next week",
+        "govt": "The ears are in place and the baby may hear muffled sounds, including your heartbeat.",
+        "private": "The ears are in place and the baby may hear muffled sounds, including your heartbeat."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Tell your baby about your day, out loud.",
+        "private": "Tell your baby about your day, out loud."
+      }
+    },
+    "B-P18": {
+      "card1": {
+        "title": "This week",
+        "text": "The ears are in place and the baby may hear muffled sounds, including your heartbeat."
+      },
+      "size": "about the size of a shakarkandi",
+      "card2": {
+        "title": "Next week",
+        "govt": "A protective white coating called vernix covers the skin.",
+        "private": "A protective white coating called vernix covers the skin."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Lie still for five minutes and notice any flutter.",
+        "private": "Lie still for five minutes and notice any flutter."
+      }
+    },
+    "B-P19": {
+      "card1": {
+        "title": "This week",
+        "text": "A protective white coating called vernix covers the skin."
+      },
+      "size": "about the size of an aam (mango)",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby swallows fluid and is practising for life outside.",
+        "private": "The baby swallows fluid and is practising for life outside."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Ask your partner to talk to the bump each night.",
+        "private": "Ask your partner to talk to the bump each night."
+      }
+    },
+    "B-P20": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby swallows fluid and is practising for life outside."
+      },
+      "size": "about the length of a kela, around 300 g",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby's movements are getting stronger and more coordinated.",
+        "private": "The baby's movements are getting stronger and more coordinated."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Halfway. Write one wish for your baby.",
+        "private": "Halfway. Write one wish for your baby."
+      }
+    },
+    "B-P21": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby's movements are getting stronger and more coordinated."
+      },
+      "size": "about the length of a gajar, around 360 g",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby can grip and feel touch.",
+        "private": "The baby can grip and feel touch."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Notice when your baby moves most. Their routine is forming.",
+        "private": "Notice when your baby moves most. Their routine is forming."
+      }
+    },
+    "B-P22": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby can grip and feel touch."
+      },
+      "size": "about the size of a bhutta, around 430 g",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby can hear your voice.",
+        "private": "The baby can hear your voice."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Your baby feels touch. Stroke your bump slowly in circles.",
+        "private": "Your baby feels touch. Stroke your bump slowly in circles."
+      }
+    },
+    "B-P23": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby can hear your voice."
+      },
+      "size": "about the size of a big aam, around 500 g",
+      "card2": {
+        "title": "Next week",
+        "govt": "The lungs are building branches.",
+        "private": "The lungs are building branches."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Your baby can hear you. Pick one song and sing it every night.",
+        "private": "Your baby can hear you. Pick one song and sing it every night."
+      }
+    },
+    "B-P24": {
+      "card1": {
+        "title": "This week",
+        "text": "The lungs are building branches."
+      },
+      "size": "about the length of a small lauki, around 600 g",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby is gaining fat, so the skin is less wrinkled.",
+        "private": "The baby is gaining fat, so the skin is less wrinkled."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Read a short story aloud. The rhythm of your voice calms them.",
+        "private": "Read a short story aloud. The rhythm of your voice calms them."
+      }
+    },
+    "B-P25": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby is gaining fat, so the skin is less wrinkled."
+      },
+      "size": "about the size of a phool gobhi, around 660 g",
+      "card2": {
+        "title": "Next week",
+        "govt": "The eyes begin to open.",
+        "private": "The eyes begin to open."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Press your bump gently and see if your baby pushes back.",
+        "private": "Press your bump gently and see if your baby pushes back."
+      }
+    },
+    "B-P26": {
+      "card1": {
+        "title": "This week",
+        "text": "The eyes begin to open."
+      },
+      "size": "about the size of a baingan, around 760 g",
+      "card2": {
+        "title": "Next week",
+        "govt": "The brain is very active and the baby has regular sleep cycles.",
+        "private": "The brain is very active and the baby has regular sleep cycles."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Ask a family member to rest a hand on the bump at kick time.",
+        "private": "Ask a family member to rest a hand on the bump at kick time."
+      }
+    },
+    "B-P27": {
+      "card1": {
+        "title": "This week",
+        "text": "The brain is very active and the baby has regular sleep cycles."
+      },
+      "size": "about the size of a patta gobhi, around 900 g",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby can blink and is gaining weight quickly.",
+        "private": "The baby can blink and is gaining weight quickly."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Use your baby's pet name often. They are learning your voice.",
+        "private": "Use your baby's pet name often. They are learning your voice."
+      }
+    },
+    "B-P28": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby can blink and is gaining weight quickly."
+      },
+      "size": "about the length of a big baingan, around 1 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "Bones are fully formed but still soft.",
+        "private": "Bones are fully formed but still soft."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Sing your song during kick count. Your baby knows your voice now.",
+        "private": "Sing your song during kick count. Your baby knows your voice now."
+      }
+    },
+    "B-P29": {
+      "card1": {
+        "title": "This week",
+        "text": "Bones are fully formed but still soft."
+      },
+      "size": "about the size of a small kaddu, around 1.15 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby is turning head-down in many pregnancies; there is still time if not.",
+        "private": "The baby is turning head-down in many pregnancies; there is still time if not."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Notice small rhythmic jumps. Those are your baby's hiccups.",
+        "private": "Notice small rhythmic jumps. Those are your baby's hiccups."
+      }
+    },
+    "B-P30": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby is turning head-down in many pregnancies; there is still time if not."
+      },
+      "size": "about the length of a big kheera, around 1.3 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby's brain is growing fast and it can turn its head.",
+        "private": "The baby's brain is growing fast and it can turn its head."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Keep a soft cloth close to you, to wrap your baby after birth.",
+        "private": "Keep a soft cloth close to you, to wrap your baby after birth."
+      }
+    },
+    "B-P31": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby's brain is growing fast and it can turn its head."
+      },
+      "size": "about the size of a nariyal, around 1.5 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "Toenails and fingernails have grown.",
+        "private": "Toenails and fingernails have grown."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Play the same music each evening. It may soothe your baby after birth.",
+        "private": "Play the same music each evening. It may soothe your baby after birth."
+      }
+    },
+    "B-P32": {
+      "card1": {
+        "title": "This week",
+        "text": "Toenails and fingernails have grown."
+      },
+      "size": "about the size of an ananas, around 1.7 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The bones are hardening, except the skull, which stays soft for birth.",
+        "private": "The bones are hardening, except the skull, which stays soft for birth."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Start a voice note to your baby, one line a week, to keep.",
+        "private": "Start a voice note to your baby, one line a week, to keep."
+      }
+    },
+    "B-P33": {
+      "card1": {
+        "title": "This week",
+        "text": "The bones are hardening, except the skull, which stays soft for birth."
+      },
+      "size": "about the length of a turai, around 1.9 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The lungs are maturing.",
+        "private": "The lungs are maturing."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Wash and fold your baby's first clothes with your family.",
+        "private": "Wash and fold your baby's first clothes with your family."
+      }
+    },
+    "B-P34": {
+      "card1": {
+        "title": "This week",
+        "text": "The lungs are maturing."
+      },
+      "size": "about the size of a kharbooja, around 2.1 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby is putting on about 200 g a week, mostly fat.",
+        "private": "The baby is putting on about 200 g a week, mostly fat."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Practise a feeding position with a pillow so it feels familiar.",
+        "private": "Practise a feeding position with a pillow so it feels familiar."
+      }
+    },
+    "B-P35": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby is putting on about 200 g a week, mostly fat."
+      },
+      "size": "about the size of a big papita, around 2.4 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "Most babies are head-down now.",
+        "private": "Most babies are head-down now."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Your baby is settling head-down. Tell them about the day you will meet.",
+        "private": "Your baby is settling head-down. Tell them about the day you will meet."
+      }
+    },
+    "B-P36": {
+      "card1": {
+        "title": "This week",
+        "text": "Most babies are head-down now."
+      },
+      "size": "about the length of a lauki, around 2.6 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby is practising breathing, sucking and grasping.",
+        "private": "The baby is practising breathing, sucking and grasping."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Decide who will hold your baby first after you.",
+        "private": "Decide who will hold your baby first after you."
+      }
+    },
+    "B-P37": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby is practising breathing, sucking and grasping."
+      },
+      "size": "about the size of a petha, around 2.9 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby's organs are ready for life outside.",
+        "private": "The baby's organs are ready for life outside."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Count kicks together with your partner tonight.",
+        "private": "Count kicks together with your partner tonight."
+      }
+    },
+    "B-P38": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby's organs are ready for life outside."
+      },
+      "size": "about the size of a kaddu, around 3.1 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby has a firm grip and its lungs are making surfactant, needed to breathe.",
+        "private": "The baby has a firm grip and its lungs are making surfactant, needed to breathe."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Write down three things you want your baby to know.",
+        "private": "Write down three things you want your baby to know."
+      }
+    },
+    "B-P39": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby has a firm grip and its lungs are making surfactant, needed to breathe."
+      },
+      "size": "about the size of a small tarbooz, around 3.3 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby is ready to meet you.",
+        "private": "The baby is ready to meet you."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Rest and play your song. Your baby hears it with you.",
+        "private": "Rest and play your song. Your baby hears it with you."
+      }
+    },
+    "B-P40": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby is ready to meet you."
+      },
+      "size": "about the size of a tarbooz, around 3.4 kg",
+      "card2": {
+        "title": "Next week",
+        "govt": "The baby keeps growing.",
+        "private": "The baby keeps growing."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Any day now. Tell your baby you are ready.",
+        "private": "Any day now. Tell your baby you are ready."
+      }
+    },
+    "B-P41": {
+      "card1": {
+        "title": "This week",
+        "text": "The baby keeps growing."
+      },
+      "card2": {
+        "title": "Next week",
+        "govt": "Your baby is ready to meet you.",
+        "private": "Your baby is ready to meet you."
+      },
+      "card3": {
+        "title": "Bond with your baby",
+        "govt": "Keep counting kicks. Your baby is still growing and moving.",
+        "private": "Keep counting kicks. Your baby is still growing and moving."
+      }
+    },
+    "B-BIRTH": {
+      "card1": {
+        "title": "Welcome, little one",
+        "text": "Skin to skin and a first feed within an hour. Weight is recorded."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "Free at the hospital: BCG, OPV-0, hepatitis B-1; vitamin K",
+        "private": "Birth vaccines: BCG, OPV-0, hepatitis B; vitamin K"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log the first feed and birth weight",
+        "private": "Log the first feed and birth weight"
+      },
+      "learnMore": {
+        "title": "Keeping baby warm",
+        "text": "Skin to skin, a cap and socks. Delay the first bath by at least a day."
+      }
+    },
+    "B-NB1": {
+      "card1": {
+        "title": "Growing",
+        "text": "Feeds 8 to 12 times a day; cord stays clean and dry."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "ASHA visits on day 3 and day 7",
+        "private": "Paediatrician check in the first week, including jaundice"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log feeds",
+        "private": "Log feeds and wet nappies"
+      },
+      "learnMore": {
+        "title": "Enough milk?",
+        "text": "Six or more wet nappies a day and steady weight gain."
+      }
+    },
+    "B-NB2": {
+      "card1": {
+        "title": "Growing",
+        "text": "Back to birth weight by about two weeks."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "ASHA visit on day 14",
+        "private": "Weight check if advised"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log the weight from the day-14 check",
+        "private": "Log the weight from the day-14 check"
+      },
+      "learnMore": {
+        "title": "Safe sleep",
+        "text": "On the back, on a flat surface of their own, near you."
+      }
+    },
+    "B-NB3": {
+      "card1": {
+        "title": "Growing",
+        "text": "Focuses on faces 20 to 30 cm away."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "ASHA visit on day 21",
+        "private": "Call if feeding or jaundice worries you"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log feeds, and count them over 24 hours",
+        "private": "Log feeds, and count them over 24 hours"
+      },
+      "learnMore": {
+        "title": "Cord care",
+        "text": "Keep it clean and dry. Nothing on it, no oil or powder."
+      }
+    },
+    "B-NB4": {
+      "card1": {
+        "title": "Growing",
+        "text": "Lifts head briefly during tummy time."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "ASHA visit on day 28",
+        "private": "Book the 6-week vaccines"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log a milestone: first head lift",
+        "private": "Log tummy time"
+      },
+      "learnMore": {
+        "title": "Tummy time",
+        "text": "A few minutes on the tummy while awake, several times a day."
+      }
+    },
+    "B-NB5": {
+      "card1": {
+        "title": "Growing",
+        "text": "Social smiles may appear soon."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "6-week vaccines next week",
+        "private": "6-week vaccines next week"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log a first smile when you see it",
+        "private": "Log a first smile when you see it"
+      },
+      "learnMore": {
+        "title": "Crying",
+        "text": "All babies cry. Very weak crying, or crying with fever, needs a check."
+      }
+    },
+    "B-NB6": {
+      "card1": {
+        "title": "Growing",
+        "text": "Follows you with their eyes and coos."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "Free at your health centre: DTP-1, Hib-1 and hepatitis B-2 (as Pentavalent-1), IPV-1 (fIPV), Rotavirus-1, PCV-1, OPV-1",
+        "private": "6 weeks: DTP-1, IPV-1, Hib-1, hepatitis B-2, Rotavirus-1, PCV-1"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log the vaccines given",
+        "private": "Log the vaccines given"
+      },
+      "learnMore": {
+        "title": "Vaccine day",
+        "text": "Feed during or after. Mild fever and fussiness for a day are common."
+      }
+    },
+    "B-10w": {
+      "card1": {
+        "title": "Growing",
+        "text": "Smiles and coos; holds head up longer."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "Free at your health centre: DTP-2, Hib-2 and hepatitis B-3 (as Pentavalent-2), Rotavirus-2, OPV-2. IPV-2 and PCV-2 are given later under UIP",
+        "private": "DTP-2, IPV-2, Hib-2, hepatitis B-3, Rotavirus-2, PCV-2"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log the 10-week vaccines and weight; show your logs to the ASHA or ANM at the visit",
+        "private": "Log the 10-week vaccines and weight; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "Talk and sing",
+        "text": "Your voice is how your baby learns language."
+      }
+    },
+    "B-14w": {
+      "card1": {
+        "title": "Growing",
+        "text": "Holds head steady and laughs."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "Free at your health centre: DTP-3, Hib-3 and hepatitis B-4 (as Pentavalent-3), IPV-2 (fIPV), Rotavirus-3, PCV-2, OPV-3; HBYC visit at 3 months",
+        "private": "DTP-3, IPV-3, Hib-3, hepatitis B-4, Rotavirus-3, PCV-3"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log the 14-week vaccines and weight; show your logs to the ASHA or ANM at the visit",
+        "private": "Log the 14-week vaccines and weight; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "Play idea",
+        "text": "Move a rattle slowly side to side for your baby to follow."
+      }
+    },
+    "B-6m": {
+      "card1": {
+        "title": "Growing",
+        "text": "Sits with support; ready for first foods alongside breastfeeding."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "HBYC visit; start complementary feeding. Influenza and typhoid vaccines are not free under UIP: ask your doctor",
+        "private": "Influenza dose 1; typhoid conjugate (6 to 9 months)"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log feeds, including first foods; show your logs to the ASHA or ANM at the visit",
+        "private": "Log first foods; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "First foods",
+        "text": "Thick mashed dal, khichdi or banana. Start with 2 to 3 spoons and build up."
+      }
+    },
+    "B-9m": {
+      "card1": {
+        "title": "Growing",
+        "text": "Babbles, crawls, may be shy with strangers."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "Free at your health centre: measles-rubella (MR-1, in place of MMR-1), PCV booster, IPV-3 (fIPV), JE-1 where given, vitamin A; HBYC visit",
+        "private": "MMR-1"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log the first crawl or first babble; show your logs to the ASHA or ANM at the visit",
+        "private": "Log the first crawl or first babble; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "Finger foods",
+        "text": "Soft pieces your baby can pick up. Add an iron food every day."
+      }
+    },
+    "B-12m": {
+      "card1": {
+        "title": "Growing",
+        "text": "First words and steps may come."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "HBYC visit. Hepatitis A is not free under UIP: ask your doctor",
+        "private": "Hepatitis A dose 1"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log weight and length; show your logs to the ASHA or ANM at the visit",
+        "private": "Log weight and length; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "Family food",
+        "text": "Same food as the family, with less salt and spice. 3 meals and 2 snacks."
+      }
+    },
+    "B-15m": {
+      "card1": {
+        "title": "Growing",
+        "text": "Walks, scribbles, says a few words."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "HBYC visit. MR-2 comes at 16 to 24 months; varicella is not free under UIP",
+        "private": "MMR-2, varicella-1, PCV booster"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log a milestone; show your logs to the ASHA or ANM at the visit",
+        "private": "Log new words; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "Words grow",
+        "text": "Name things around you and look at picture books together."
+      }
+    },
+    "B-16-18m": {
+      "card1": {
+        "title": "Growing",
+        "text": "Points, feeds self, knows about 10 words."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "Free at your health centre: MR-2, DTP booster-1, OPV booster, JE-2 where given, vitamin A",
+        "private": "DTP, IPV and Hib boosters"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log vaccines given; show your logs to the ASHA or ANM at the visit",
+        "private": "Log vaccines given; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "Loose motions at home",
+        "text": "Give ORS and zinc and keep feeding. Sunken eyes or no urine: go to hospital."
+      }
+    },
+    "B-18-19m": {
+      "card1": {
+        "title": "Growing",
+        "text": "Runs and climbs; strong likes and dislikes."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "Vitamin A every 6 months; deworming as advised",
+        "private": "Hepatitis A dose 2; varicella-2"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log weight; show your logs to the ASHA or ANM at the visit",
+        "private": "Log weight; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "Big feelings",
+        "text": "Stay calm and name the feeling. Tantrums pass."
+      }
+    },
+    "B-24m": {
+      "card1": {
+        "title": "Growing",
+        "text": "Two-word phrases; plays alongside other children."
+      },
+      "card2": {
+        "title": "Coming up",
+        "govt": "Vitamin A every 6 months until age 5",
+        "private": "Annual influenza; paediatrician check"
+      },
+      "card3": {
+        "title": "Today's log",
+        "govt": "Log the first two-word phrase; show your logs to the ASHA or ANM at the visit",
+        "private": "Log the first two-word phrase; share baby's summary at the visit"
+      },
+      "learnMore": {
+        "title": "Ready for two",
+        "text": "Play with other children and keep screen time very short."
+      }
+    }
+  },
+  "help": {
+    "sets": {
+      "pregnancyEarly": [
+        "Bleeding from the vagina",
+        "Severe pain in the lower belly",
+        "Vomiting so much you cannot keep water down",
+        "Fever",
+        "Fainting"
+      ],
+      "pregnancyLate": [
+        "Baby moving less than usual",
+        "Bleeding or water leaking",
+        "Severe headache, blurred vision or fits",
+        "Sudden swelling of face or hands",
+        "Fever or severe belly pain",
+        "Breathless at rest",
+        "Regular painful tightening before 37 weeks"
+      ],
+      "postpartum": [
+        "Heavy bleeding, soaking a pad in an hour",
+        "Fever or foul-smelling discharge",
+        "Severe headache, blurred vision or fits",
+        "Pain or swelling in one leg",
+        "Chest pain or breathlessness",
+        "Red, painful breast with fever",
+        "Thoughts of harming yourself or your baby"
+      ],
+      "motherLater": [
+        "Thoughts of harming yourself or your baby",
+        "Heavy or unusual bleeding",
+        "Chest pain or breathlessness"
+      ],
+      "newborn": [
+        "Not feeding well",
+        "Fever, or feels cold",
+        "Fast or difficult breathing",
+        "Fits",
+        "Yellow palms or soles",
+        "Very sleepy or limp",
+        "Redness or pus at the cord"
+      ],
+      "child": [
+        "Fever with fits or rash",
+        "Not drinking or feeding",
+        "Fast or difficult breathing",
+        "Loose motions with sunken eyes or no urine",
+        "Very sleepy",
+        "Losing a skill they had before"
+      ]
+    },
+    "numbers": [
+      {
+        "label": "Ambulance",
+        "dial": [
+          "108",
+          "102"
+        ]
+      },
+      {
+        "label": "Tele MANAS",
+        "dial": [
+          "14416"
+        ]
+      },
+      {
+        "label": "Women helpline",
+        "dial": [
+          "181"
+        ]
+      }
+    ]
+  }
+}
