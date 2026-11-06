@@ -65,6 +65,15 @@ const fillGrid = (tiles: LogTile[]): LogTile[] =>
         ? [...tiles.slice(0, -1), { ...tiles[tiles.length - 1], wide: true }]
         : tiles;
 
+/** The baby logs, for the selected child. `labelKey` is under `nav`. */
+export const BABY_LOG_TILES: LogTile[] = [
+    { key: 'growth', labelKey: 'growthLog', icon: 'ruler', screen: 'GrowthLog' },
+    { key: 'feeding', labelKey: 'feedingLog', icon: 'milk', screen: 'FeedingLog' },
+    { key: 'diaper', labelKey: 'diaperLog', icon: 'droplets', screen: 'DiaperLog' },
+    { key: 'vaccination', labelKey: 'vaccinationLog', icon: 'syringe', screen: 'VaccinationLog' },
+    { key: 'milestone', labelKey: 'milestoneLog', icon: 'footprints', screen: 'MilestoneLog', wide: true },
+];
+
 /** The main tile set for her route and stage. */
 export const getMainTiles = (
     careModel: CareModelEnum,

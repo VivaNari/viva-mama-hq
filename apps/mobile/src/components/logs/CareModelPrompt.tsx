@@ -14,7 +14,7 @@ import { PrimaryButton } from './Buttons';
  * The screen re-reads her profile on focus (useCareContext), so it updates by itself when
  * she comes back from Edit Profile.
  */
-const CareModelPrompt: React.FC = () => {
+const CareModelPrompt: React.FC<{ onLeave?: () => void }> = ({ onLeave }) => {
     const { t } = useTranslation();
     const navigation = useNavigation<any>();
 
@@ -28,7 +28,10 @@ const CareModelPrompt: React.FC = () => {
             </Text>
             <PrimaryButton
                 label={t('logs.careModelPrompt.action')}
-                onPress={() => navigation.navigate('EditProfile')}
+                onPress={() => {
+                    onLeave?.();
+                    navigation.navigate('EditProfile');
+                }}
             />
         </View>
     );

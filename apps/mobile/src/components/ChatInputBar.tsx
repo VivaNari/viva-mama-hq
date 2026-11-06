@@ -58,6 +58,11 @@ interface ChatInputBarProps {
     };
     /** Open the keyboard as soon as the box appears. */
     autoFocus?: boolean;
+    /**
+     * Viva AI only: the buttons attached above the box. Told when to hide, because they
+     * give way to what she has written in step with the mic.
+     */
+    renderTriggers?: (hidden: boolean) => React.ReactNode;
 }
 
 /** The mic, pulsing while it listens so she can see it is hearing her. */
@@ -117,6 +122,7 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     attachments,
     voice,
     autoFocus = false,
+    renderTriggers,
 }) => {
     const { t } = useTranslation();
     // Multi-select submit bar
@@ -177,18 +183,19 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
     const showMicButton = showMic && (isListening || !hasContent);
     // Without a mic (guided check-ins, numbers, dates) send is the only way to answer.
     const showSendButton = !showMic || hasContent;
+    const triggers = inputMode === 'text' ? renderTriggers?.(hasContent) : null;
     const placeholder = isListening
         ? t('chat.voice.listening')
         : isDateMode
-        ? t('chat.selectADate')
-        : isNumberMode
-            ? t('chat.enterNumber')
-            : showAttach && (attachments!.hasReady || attachments!.blocking)
-                ? t('chat.attachments.addQuestion')
-                : t('chat.typeAnswer');
+            ? t('chat.selectADate')
+            : isNumberMode
+                ? t('chat.enterNumber')
+                : showAttach && (attachments!.hasReady || attachments!.blocking)
+                    ? t('chat.attachments.addQuestion')
+                    : t('chat.typeAnswer');
 
     return (
-        <View>
+        <View style={!!triggers && styles.barWithTriggers}>
             {/* Only once she has typed something: an empty field is not yet a mistake. */}
             {hasError && (
                 <Text style={[styles.errorText, globalStyles.fontRegular]}>
@@ -196,7 +203,9 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
                 </Text>
             )}
 
-            <View style={styles.container}>
+            {triggers}
+
+            <View style={[styles.container, !!triggers && styles.containerWithTriggers]}>
                 {showAttach && (
                     <TouchableOpacity
                         style={[styles.attachButton, (isLoading || attachments!.full) && styles.attachButtonDisabled]}
@@ -220,6 +229,8 @@ export const ChatInputBar: React.FC<ChatInputBarProps> = ({
                             globalStyles.fontSemiBold,
                             hasError && styles.inputError,
                         ]}
+                        multiline
+                        numberOfLines={5}
                         value={inputText}
                         autoFocus={autoFocus}
                         onChangeText={onInputChange}
@@ -276,6 +287,17 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: colors.border,
         gap: 8,
+    },
+
+    barWithTriggers: {
+        backgroundColor: colors.white,
+        borderTopWidth: 1,
+        borderTopColor: colors.border,
+    },
+
+    // The bar's own top border moves above the buttons, so they sit on the box unbroken.
+    containerWithTriggers: {
+        borderTopWidth: 0,
     },
 
     inputWrapper: {

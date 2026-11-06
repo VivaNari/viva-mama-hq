@@ -1500,21 +1500,24 @@
     "statValue": "{{value}} {{unit}}"
   },
   "vivaHub": {
-    "title": "Viva AI",
-    "subtitle": "Your assistant · here to help",
     "heroTitle": "Hi, I'm Viva, your pregnancy and postpartum assistant.",
     "heroBody": "Please tell me how I can help you, or tap an option below.",
-    "askPlaceholder": "Type or speak your question...",
-    "askByVoice": "Ask by voice",
-    "canHelpWith": "HERE'S WHAT VIVA CAN HELP WITH",
-    "askQuestion": "Ask a question",
-    "logSomething": "Log something",
-    "bookConsult": "Book a consult",
     "uploadRecords": "Upload reports / records",
-    "setReminder": "Set a reminder",
-    "setReminderSub": "Medicines, BP/sugar checks, ANC visits",
-    "myRecords": "My records & health summary",
-    "myRecordsSub": "Every report in one place, and a summary to share"
+    "triggers": {
+      "log": "Log",
+      "reminders": "Reminders",
+      "records": "Records",
+      "experts": "Experts",
+      "recordsTitle": "Reports and records",
+      "forMe": "For me",
+      "forBaby": "For baby",
+      "babyLogsAfterBirth": "Baby logs start after your baby is born.",
+      "myReminders": "My reminders",
+      "myRemindersSub": "See or remove your active reminders",
+      "uploadSub": "Scan, lab report, prescription or MCH card",
+      "myRecordsSub": "Every report in one place",
+      "summarySub": "A summary to share"
+    }
   },
   "logs": {
     "common": {

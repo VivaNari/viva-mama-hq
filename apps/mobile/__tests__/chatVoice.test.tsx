@@ -4,7 +4,7 @@
  */
 import React from "react";
 import { act, fireEvent, render, renderHook, waitFor } from "@testing-library/react-native";
-import { Alert } from "react-native";
+import { Alert, Text } from "react-native";
 import * as Speech from "expo-speech";
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 import Toast from "react-native-toast-message";
@@ -13,7 +13,6 @@ import { ChatBubble } from "../src/components/chatBubble";
 import { ChatInputBar } from "../src/components/ChatInputBar";
 import { useChatEntry } from "../src/hooks/useChatEntry";
 import { useReadAloud } from "../src/hooks/useReadAloud";
-import VivaAIHub from "../src/screens/VivaAIHub";
 import { useSpeechToText } from "../src/hooks/useSpeechToText";
 import { useSpokenReplyAutoplay } from "../src/hooks/useSpokenReplyAutoplay";
 import {
@@ -128,6 +127,41 @@ describe("ChatInputBar mic", () => {
     rerender(<ChatInputBar {...base} isLoading voice={{ isListening: true, onMicPress }} />);
     fireEvent.press(getByLabelText(en.chat.voice.stopMicA11y));
     expect(onMicPress).toHaveBeenCalled();
+  });
+
+  describe("the buttons attached above the box", () => {
+    const voice = { isListening: false, onMicPress: jest.fn() };
+    const renderTriggers = (hidden: boolean) => (hidden ? null : <Text>triggers</Text>);
+
+    it("show on an empty box and hide as soon as something is written", () => {
+      const { queryByText, rerender } = render(
+        <ChatInputBar {...base} voice={voice} renderTriggers={renderTriggers} />,
+      );
+      expect(queryByText("triggers")).toBeTruthy();
+
+      rerender(<ChatInputBar {...base} inputText="h" voice={voice} renderTriggers={renderTriggers} />);
+      expect(queryByText("triggers")).toBeNull();
+
+      rerender(<ChatInputBar {...base} inputText="" voice={voice} renderTriggers={renderTriggers} />);
+      expect(queryByText("triggers")).toBeTruthy();
+    });
+
+    it("hide with a picked file, in step with the mic", () => {
+      const { queryByText } = render(
+        <ChatInputBar
+          {...base}
+          voice={voice}
+          renderTriggers={renderTriggers}
+          attachments={{ onAttachPress: jest.fn(), hasReady: true, blocking: false, full: false }}
+        />,
+      );
+      expect(queryByText("triggers")).toBeNull();
+    });
+
+    it("stay away from number and date answers", () => {
+      const { queryByText } = render(<ChatInputBar {...base} inputMode="number" renderTriggers={renderTriggers} />);
+      expect(queryByText("triggers")).toBeNull();
+    });
   });
 
   describe("swapping with the send button", () => {
@@ -651,16 +685,6 @@ describe("arriving from the Viva AI hub", () => {
     expect(hook.current.autoFocus).toBe(false);
     expect(skipAnimation).not.toHaveBeenCalled();
     expect(startListening).not.toHaveBeenCalled();
-  });
-
-  it("hub buttons say how she arrived", () => {
-    const { getByLabelText, getByText } = render(<VivaAIHub />);
-    fireEvent.press(getByLabelText(en.vivaHub.askByVoice));
-    expect(mockNavigate).toHaveBeenLastCalledWith("ChatWithVivaAI", { entry: "voice" });
-    fireEvent.press(getByText(en.vivaHub.askPlaceholder));
-    expect(mockNavigate).toHaveBeenLastCalledWith("ChatWithVivaAI", { entry: "type" });
-    fireEvent.press(getByText(en.vivaHub.askQuestion));
-    expect(mockNavigate).toHaveBeenLastCalledWith("ChatWithVivaAI", { entry: undefined });
   });
 });
 

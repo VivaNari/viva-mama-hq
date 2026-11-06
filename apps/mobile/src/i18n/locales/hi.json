@@ -1500,21 +1500,24 @@
     "statValue": "{{value}} {{unit}}"
   },
   "vivaHub": {
-    "title": "Viva AI",
-    "subtitle": "आपकी सहायक · मदद के लिए तैयार",
     "heroTitle": "नमस्ते, मैं Viva हूँ, आपकी गर्भावस्था और प्रसव के बाद की सहायक।",
     "heroBody": "बताइए मैं आपकी कैसे मदद करूँ, या नीचे कोई विकल्प चुनें।",
-    "askPlaceholder": "अपना सवाल लिखें या बोलें...",
-    "askByVoice": "बोलकर पूछें",
-    "canHelpWith": "VIVA इनमें आपकी मदद कर सकती है",
-    "askQuestion": "सवाल पूछें",
-    "logSomething": "कुछ लॉग करें",
-    "bookConsult": "परामर्श बुक करें",
     "uploadRecords": "रिपोर्ट / रिकॉर्ड अपलोड करें",
-    "setReminder": "रिमाइंडर सेट करें",
-    "setReminderSub": "दवाइयाँ, BP/शुगर जाँच, ANC विज़िट",
-    "myRecords": "मेरे रिकॉर्ड और स्वास्थ्य सारांश",
-    "myRecordsSub": "सारी रिपोर्ट एक जगह, और शेयर करने लायक सारांश"
+    "triggers": {
+      "log": "लॉग",
+      "reminders": "रिमाइंडर",
+      "records": "रिकॉर्ड",
+      "experts": "विशेषज्ञ",
+      "recordsTitle": "रिपोर्ट और रिकॉर्ड",
+      "forMe": "मेरे लिए",
+      "forBaby": "शिशु के लिए",
+      "babyLogsAfterBirth": "शिशु के लॉग जन्म के बाद शुरू होंगे।",
+      "myReminders": "मेरे रिमाइंडर",
+      "myRemindersSub": "अपने चालू रिमाइंडर देखें या हटाएँ",
+      "uploadSub": "स्कैन, लैब रिपोर्ट, पर्चा या MCH कार्ड",
+      "myRecordsSub": "सभी रिपोर्ट एक ही जगह",
+      "summarySub": "साझा करने के लिए सारांश"
+    }
   },
   "logs": {
     "common": {

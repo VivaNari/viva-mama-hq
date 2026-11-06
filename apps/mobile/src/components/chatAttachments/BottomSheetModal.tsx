@@ -8,6 +8,8 @@ interface IBottomSheetModalProps {
     onClose: () => void;
     children: React.ReactNode;
     accessibilityLabel?: string;
+    /** The chat trigger drawers' rounder top, more padding and larger handle. */
+    large?: boolean;
 }
 
 /**
@@ -16,7 +18,7 @@ interface IBottomSheetModalProps {
  * A plain RN Modal rather than AppBottomSheet: that provider has fixed 50%/75% snap
  * points, and these sheets should be exactly as tall as their content.
  */
-const BottomSheetModal = ({ visible, onClose, children, accessibilityLabel }: IBottomSheetModalProps) => {
+const BottomSheetModal = ({ visible, onClose, children, accessibilityLabel, large = false }: IBottomSheetModalProps) => {
     const insets = useSafeAreaInsets();
     return (
         <Modal
@@ -31,11 +33,11 @@ const BottomSheetModal = ({ visible, onClose, children, accessibilityLabel }: IB
                 <View style={styles.backdrop} />
             </TouchableWithoutFeedback>
             <View
-                style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 16) }]}
+                style={[styles.sheet, large && styles.sheetLarge, { paddingBottom: Math.max(insets.bottom, 16) }]}
                 accessibilityViewIsModal
                 accessibilityLabel={accessibilityLabel}
             >
-                <View style={styles.handle} />
+                <View style={[styles.handle, large && styles.handleLarge]} />
                 {children}
             </View>
         </Modal>
@@ -57,6 +59,16 @@ const styles = StyleSheet.create({
         borderTopRightRadius: 20,
         paddingHorizontal: 20,
         paddingTop: 8,
+    },
+    sheetLarge: {
+        borderTopLeftRadius: 28,
+        borderTopRightRadius: 28,
+        paddingTop: 12,
+    },
+    handleLarge: {
+        width: 44,
+        height: 5,
+        backgroundColor: colors.vivaMchBorder,
     },
     handle: {
         alignSelf: 'center',

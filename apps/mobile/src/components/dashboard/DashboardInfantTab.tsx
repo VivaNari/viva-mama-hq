@@ -18,8 +18,7 @@ import { FLOW_SLUGS } from '../../constants/chat';
 import { FlowType } from '../../types/chat.types';
 import { IChild } from '../../types/user.types';
 import { IUserAllData } from '../../types/dashboard.types';
-import { InfantLogRouteParams } from '../../types/infantLog.types';
-import { getVisibleChildren } from '../../utils/childAge';
+import { getVisibleChildren, infantLogParams } from '../../utils/childAge';
 import { getAgeInMonths, istDateKey } from '../../utils/infantLogHelpers';
 import { BabyGrowingCard } from '../journey/BabyCards';
 import WhenToGetHelp from '../journey/WhenToGetHelp';
@@ -282,21 +281,7 @@ const DashboardInfantTab: React.FC<DashboardInfantTabProps> = ({ userData, birth
         },
     ];
 
-    /**
-     * What every log screen is handed when a tile is tapped.
-     *
-     * Route params must stay serialisable — React Navigation persists them across a state
-     * restore — so the date of birth travels as an ISO string rather than a Date.
-     */
-    const logParams: InfantLogRouteParams = {
-        childId: selectedChild?._id,
-        childName: selectedChild?.name,
-        childDob: selectedChild?.date_of_birth
-            ? new Date(selectedChild.date_of_birth).toISOString()
-            : undefined,
-        vaccinationSector: selectedChild?.vaccination_sector,
-        childSex: selectedChild?.sex,
-    };
+    const logParams = infantLogParams(selectedChild);
 
     /**
      * A live line for a tile whose data the dashboard has loaded, or undefined to keep the

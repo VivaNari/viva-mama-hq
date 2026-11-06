@@ -85,6 +85,7 @@ export const colors = {
   journeyHappeningBG: "#eee2ff",
   journeyRememberBG: "#fff3c4",
   journeyRememberText: "#8a5a10",
+  journeyRecordsText: "#7a2a78",
   journeyTealText: "#1f6b63",
   journeyBadgeBG: "#ffde59",
   journeyBadgeText: "#350b6d",

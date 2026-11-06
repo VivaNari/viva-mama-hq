@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import { chatDB } from '../db/sqlite';
 import { colors } from '../public/assets/colors';
 import ChatDropdownMenu from '../components/ChatDropdownMenu';
+import ChatTriggers from '../components/chat/ChatTriggers';
 import { MODELS } from '../components/ModelSelector';
 
 import { ChatBubble } from '../components/chatBubble';
@@ -1037,6 +1038,16 @@ const ChatWithVivaAI: React.FC = () => {
                         }}
                         keyboardShouldPersistTaps="handled"
                     >
+                        {isChatbotFlow && state.messages.length === 0 && !state.isLoading && !state.errorMessage ? (
+                            <View style={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 10 }}>
+                                <Text style={[globalStyles.fontBold, { fontSize: 20, lineHeight: 27, color: colors.black, textAlign: 'center' }]}>
+                                    {t('vivaHub.heroTitle')}
+                                </Text>
+                                <Text style={[globalStyles.fontRegular, { fontSize: 14, lineHeight: 21, color: colors.darkGray, textAlign: 'center' }]}>
+                                    {t('vivaHub.heroBody')}
+                                </Text>
+                            </View>
+                        ) : null}
                         {state.messages.map((msg, index) => {
                             const isLast = index === state.messages.length - 1;
                             const shouldAnimate =
@@ -1183,6 +1194,7 @@ const ChatWithVivaAI: React.FC = () => {
                             full: attachments.full,
                         } : undefined}
                         autoFocus={chatEntry.autoFocus}
+                        renderTriggers={isChatbotFlow ? hidden => <ChatTriggers hidden={hidden} /> : undefined}
                         voice={isChatbotFlow ? {
                             isListening: speechToText.isListening,
                             onMicPress: speechToText.toggle,

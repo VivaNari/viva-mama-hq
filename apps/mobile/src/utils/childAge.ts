@@ -1,5 +1,6 @@
 import { TFunction } from "i18next";
 
+import { InfantLogRouteParams } from "../types/infantLog.types";
 import { IChild, EChildOnboardingStatus } from "../types/user.types";
 
 /**
@@ -60,6 +61,20 @@ export const getVisibleChildren = (children: IChild[] | undefined | null): IChil
       child.onboarding_status !== EChildOnboardingStatus.DRAFT && !!child.name,
   );
 };
+
+/**
+ * What every baby log screen is handed when it opens.
+ *
+ * Route params must stay serialisable, because React Navigation persists them across a
+ * state restore, so the date of birth travels as an ISO string rather than a Date.
+ */
+export const infantLogParams = (child: IChild | undefined): InfantLogRouteParams => ({
+  childId: child?._id,
+  childName: child?.name,
+  childDob: child?.date_of_birth ? new Date(child.date_of_birth).toISOString() : undefined,
+  vaccinationSector: child?.vaccination_sector,
+  childSex: child?.sex,
+});
 
 /** First letter for the avatar circle, with a neutral fallback for an unnamed child. */
 export const getChildInitial = (child: IChild): string => {

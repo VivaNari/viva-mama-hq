@@ -7,8 +7,10 @@ import {
     CareModelEnum,
     DeliveryOutcomeEnum,
     DeliveryTypeEnum,
+    IChild,
     UserCategoryEnum,
 } from '../types/user.types';
+import { getVisibleChildren } from '../utils/childAge';
 import { hasGestationalDiabetes } from '../utils/careSchedule';
 
 export interface CareContext {
@@ -29,6 +31,8 @@ export interface CareContext {
     deliveryOutcome: DeliveryOutcomeEnum | null;
     /** Gestational diabetes, in this pregnancy or a past one. */
     hasGdm: boolean;
+    /** Her children on record, without unfinished drafts. */
+    children: IChild[];
     loading: boolean;
 }
 
@@ -51,6 +55,7 @@ export const useCareContext = (): CareContext => {
         deliveryType: null,
         deliveryOutcome: null,
         hasGdm: false,
+        children: [],
         loading: true,
     });
 
@@ -75,6 +80,7 @@ export const useCareContext = (): CareContext => {
                         deliveryType: user?.onboarding_data?.delivery_type ?? null,
                         deliveryOutcome: user?.onboarding_data?.delivery_outcome ?? null,
                         hasGdm: hasGestationalDiabetes(user?.onboarding_data),
+                        children: getVisibleChildren(user?.childs),
                         loading: false,
                     });
                 } catch {

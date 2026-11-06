@@ -9,10 +9,11 @@ import { globalStyles } from '../../public/styles';
 import Dashboard from '../../screens/Dashboard';
 import Experts from '../../screens/Experts';
 import Library from '../../screens/Library';
-import VivaAIHub from '../../screens/VivaAIHub';
 import VivaClubPost from '../../screens/VivaClubPost';
 
 const Tab = createBottomTabNavigator();
+
+const VivaAITabPlaceholder = () => null;
 
 export const DashboardTabs = () => {
     const { t } = useTranslation();
@@ -113,24 +114,17 @@ export const DashboardTabs = () => {
                     title: t('nav.tabJourney')
                 }}
             />
-            {/* <Tab.Screen
-                name="VivaAI"
-                component={ChatWithVivaAI}
-                options={{
-                    title: "Viva AI",
-                    tabBarIcon: ({ color }) => (
-                        <MaterialDesignIcons
-                            name="message-badge-outline"
-                            size={25}
-                            color={color}
-                        />
-                    ),
-                }}
-            /> */}
-            {/* The tab is a hub now; chat opens from its "Ask a question" action. */}
+            {/* Never shown: tapping it opens chat as a full screen above the tabs, so the tab
+                bar is not on the chat screen and there is only ever one chat. */}
             <Tab.Screen
                 name="VivaAI"
-                component={VivaAIHub}
+                component={VivaAITabPlaceholder}
+                listeners={({ navigation: tabNavigation }) => ({
+                    tabPress: event => {
+                        event.preventDefault();
+                        tabNavigation.navigate('ChatWithVivaAI');
+                    },
+                })}
                 options={{
                     title: t('nav.tabVivaAi'),
                     tabBarIcon: ({ color }) => (

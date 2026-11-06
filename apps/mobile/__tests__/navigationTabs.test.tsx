@@ -10,7 +10,7 @@ import hiLocale from '../src/i18n/locales/hi.json';
 
 const mockGetContents = jest.fn();
 const mockGet = jest.fn();
-const mockScreens: { name: string; title?: string }[] = [];
+const mockScreens: { name: string; title?: string; listeners?: any }[] = [];
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -41,15 +41,14 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('@react-navigation/bottom-tabs', () => ({
   createBottomTabNavigator: () => ({
     Navigator: ({ children }: any) => <>{children}</>,
-    Screen: ({ name, options }: any) => {
-      mockScreens.push({ name, title: options?.title });
+    Screen: ({ name, options, listeners }: any) => {
+      mockScreens.push({ name, title: options?.title, listeners });
       return null;
     },
   }),
 }));
 jest.mock('../src/screens/Dashboard', () => ({ __esModule: true, default: () => null }));
 jest.mock('../src/screens/Experts', () => ({ __esModule: true, default: () => null }));
-jest.mock('../src/screens/VivaAIHub', () => ({ __esModule: true, default: () => null }));
 jest.mock('../src/screens/VivaClubPost', () => ({ __esModule: true, default: () => null }));
 jest.mock('../src/screens/Products', () => {
   const { Text } = require('react-native');
@@ -79,6 +78,18 @@ describe('bottom tabs', () => {
       'nav.tabCommunity',
       'nav.tabLibrary',
     ]);
+  });
+
+  it('opens chat above the tabs when Viva AI is tapped, so the tab bar is not on it', () => {
+    render(<DashboardTabs />);
+
+    const navigate = jest.fn();
+    const preventDefault = jest.fn();
+    const tab = mockScreens.find(screen => screen.name === 'VivaAI');
+    tab?.listeners({ navigation: { navigate } }).tabPress({ preventDefault });
+
+    expect(preventDefault).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('ChatWithVivaAI');
   });
 
   it('has no Products tab, and keeps the Dashboard route under the Journey label', () => {

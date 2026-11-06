@@ -1,6 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { Lucide } from '@react-native-vector-icons/lucide';
 import { useTranslation } from 'react-i18next';
 import Toast from 'react-native-toast-message';
@@ -11,6 +11,7 @@ import { PrimaryButton, SecondaryButton } from '../../components/logs/Buttons';
 import Chip from '../../components/logs/Chip';
 import LogScreen from '../../components/logs/LogScreen';
 import CareModelPrompt from '../../components/logs/CareModelPrompt';
+import { REMINDER_CATEGORIES } from '../../data/reminderCategories';
 import { useCareContext } from '../../hooks/useCareContext';
 import { colors } from '../../public/assets/colors';
 import { globalStyles } from '../../public/styles';
@@ -37,13 +38,6 @@ import {
 
 type Step = 'list' | 'category' | 'when' | 'dates' | 'confirm';
 
-const CATEGORIES: { key: Category; icon: string }[] = [
-    { key: 'medicine', icon: 'pill' },
-    { key: 'meals', icon: 'utensils' },
-    { key: 'exercise', icon: 'activity' },
-    { key: 'tests', icon: 'heart-pulse' },
-    { key: 'other', icon: 'plus' },
-];
 const TIMES: TimeOfDay[] = ['morning', 'afternoon', 'evening', 'night'];
 const FREQUENCIES: Frequency[] = ['daily', 'alternateDays', 'weekly', 'custom', 'once'];
 const OTHER_OPTIONS = ['doctorAppointment', 'journaling', 'restBreak', 'drinkWater'] as const;
@@ -70,9 +64,12 @@ interface Draft {
 const Reminders: React.FC = () => {
     const { t, i18n } = useTranslation();
     const { careModel, loading: careLoading } = useCareContext();
+    // The chat's Reminders drawer opens Add reminder with what she tapped already selected.
+    const { params } = useRoute<any>();
+    const startCategory: Category | undefined = params?.category;
 
     const newDraft = (): Draft => ({
-        category: 'medicine',
+        category: startCategory ?? 'medicine',
         otherDetail: t('logs.reminders.otherOptions.doctorAppointment'),
         time: REMINDER_QUICK_TIMES.morning,
         frequency: 'daily',
@@ -82,7 +79,7 @@ const Reminders: React.FC = () => {
         endWeeks: 4,
     });
 
-    const [step, setStep] = useState<Step>('list');
+    const [step, setStep] = useState<Step>(startCategory ? 'category' : 'list');
     const [reminders, setReminders] = useState<MotherReminder[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -283,7 +280,7 @@ const Reminders: React.FC = () => {
                 <>
                     {stepHeader(1, 'logs.reminders.whatReminded')}
                     <View style={[logsStyles.tileGrid, { rowGap: 10 }]}>
-                        {CATEGORIES.map(({ key, icon }) => {
+                        {REMINDER_CATEGORIES.map(({ key, icon }) => {
                             const on = draft.category === key;
                             const wide = key === 'other';
                             return (
