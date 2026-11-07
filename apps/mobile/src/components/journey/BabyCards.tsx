@@ -36,8 +36,7 @@ export const BabyWeekCard: React.FC<{ row: JourneyBabyRow; route: CareRoute; wee
     return (
         <View style={styles.babyCard}>
             <JourneyMedia
-                rowId={row.id}
-                height={200}
+                video="baby"
                 backgroundColor={colors.journeyTeal}
                 badge={content(`${base}.size`)}
                 badgeColor={colors.white}
@@ -84,8 +83,7 @@ export const BabyGrowingCard: React.FC<BabyGrowingCardProps> = ({ row, route, lo
     return (
         <View style={styles.babyCard}>
             <JourneyMedia
-                rowId={row.id}
-                height={150}
+                video="baby"
                 backgroundColor={colors.journeyTeal}
                 badgeColor={colors.white}
                 badgeTextColor={colors.journeyTealText}

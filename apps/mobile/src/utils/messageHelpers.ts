@@ -372,6 +372,26 @@ export const isLikelyHinglish = (text: string): boolean => {
   return found.size >= 2;
 };
 
+/**
+ * The Indian English voice to read English replies with, if the phone has one. Prefers
+ * the engine's default for the language ("en-IN-language" on Google's engine), so the
+ * choice doesn't depend on list order. After that a stored voice, which starts faster and
+ * works offline, comes before a network one.
+ */
+export const pickIndianEnglishVoice = (
+  voices: ReadonlyArray<{ identifier: string; language: string }>,
+): string | undefined => {
+  const rank = (identifier: string) => {
+    if (identifier.endsWith('-language')) return 0;
+    if (identifier.endsWith('-local')) return 1;
+    return identifier.endsWith('-network') ? 3 : 2;
+  };
+  return voices
+    .filter((voice) => voice.language?.toLowerCase().replace('_', '-') === 'en-in')
+    .map((voice) => voice.identifier)
+    .sort((a, b) => rank(a) - rank(b))[0];
+};
+
 /** The language the mic listens in: the app's language, as the replies are. */
 export const speechLangForAppLanguage = (appLanguage: string | undefined): SpeechLang =>
   appLanguage?.startsWith('hi') ? 'hi-IN' : 'en-IN';

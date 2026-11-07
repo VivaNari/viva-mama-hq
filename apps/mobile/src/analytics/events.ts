@@ -37,6 +37,12 @@ export const AnalyticsEvent = {
   // onboarding_step_completed they reached.
   TUTORIAL_COMPLETE: 'tutorial_complete',
   LANGUAGE_SELECTED: 'language_selected',
+  // The pre-login welcome carousel. Separate from tutorial_begin/tutorial_complete,
+  // which measure the questionnaire. Compare welcome_intro_completed with sign_up to
+  // see how many people the intro carries through to an account.
+  WELCOME_INTRO_SLIDE_VIEWED: 'welcome_intro_slide_viewed',
+  WELCOME_INTRO_SKIPPED: 'welcome_intro_skipped',
+  WELCOME_INTRO_COMPLETED: 'welcome_intro_completed',
 
   // ---- Subscription -----------------------------------------------------
   VIEW_ITEM_LIST: 'view_item_list',
@@ -233,6 +239,9 @@ export interface EventParams {
   // Completion rate comes from tutorial_begin vs tutorial_complete instead.
   [AnalyticsEvent.ONBOARDING_STEP_COMPLETED]: { step_index: number };
   [AnalyticsEvent.LANGUAGE_SELECTED]: { language_code: string };
+  // Slide numbers are 1-based, matching how the slides are referred to in the design.
+  [AnalyticsEvent.WELCOME_INTRO_SLIDE_VIEWED]: { slide_number: number };
+  [AnalyticsEvent.WELCOME_INTRO_SKIPPED]: { slide_number: number };
 
   [AnalyticsEvent.VIEW_ITEM_LIST]: { item_list_name: string };
   [AnalyticsEvent.SELECT_ITEM]: { item_id: string; item_list_name?: string };

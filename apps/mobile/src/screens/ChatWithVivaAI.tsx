@@ -447,7 +447,7 @@ const ChatWithVivaAI: React.FC = () => {
         skipAnimation: () => dispatch({ type: 'SET_ANIMATING_MESSAGE_ID', payload: null }),
         startListening: speechToText.start,
     });
-    const stopVoice = useRef(() => {});
+    const stopVoice = useRef(() => { });
     stopVoice.current = () => {
         speechToText.abort();
         readAloud.stop();
@@ -1022,105 +1022,105 @@ const ChatWithVivaAI: React.FC = () => {
                         onOptionSelect={handleMenuOptionSelect}
                     />
                     <AttachmentViewerContext.Provider value={attachmentViewer}>
-                    <ScrollView
-                        ref={scrollViewRef}
-                        style={styles.scrollView}
-                        contentContainerStyle={styles.scrollContent}
-                        refreshControl={
-                            <RefreshControl
-                                refreshing={refreshing}
-                                onRefresh={handleRefresh}
-                                tintColor={colors.darkPurple}
-                            />
-                        }
-                        onContentSizeChange={() => {
-                            scrollViewRef.current?.scrollToEnd({ animated: true });
-                        }}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        {isChatbotFlow && state.messages.length === 0 && !state.isLoading && !state.errorMessage ? (
-                            <View style={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 10 }}>
-                                <Text style={[globalStyles.fontBold, { fontSize: 20, lineHeight: 27, color: colors.black, textAlign: 'center' }]}>
-                                    {t('vivaHub.heroTitle')}
-                                </Text>
-                                <Text style={[globalStyles.fontRegular, { fontSize: 14, lineHeight: 21, color: colors.darkGray, textAlign: 'center' }]}>
-                                    {t('vivaHub.heroBody')}
-                                </Text>
-                            </View>
-                        ) : null}
-                        {state.messages.map((msg, index) => {
-                            const isLast = index === state.messages.length - 1;
-                            const shouldAnimate =
-                                isAiMessage(msg) && msg.id === state.animatingMessageId;
-
-                            return (
-                                <ChatBubble
-                                    isFirst={index === 0}
-                                    key={`${msg.type}-${msg.timestamp}-${index}`}
-                                    message={msg}
-                                    isLast={isLast}
-                                    isAnimating={!!state.animatingMessageId}
-                                    isFlowComplete={state.isFlowComplete}
-                                    shouldAnimate={shouldAnimate}
-                                    onOptionSelect={handleOptionSelect}
-                                    onMultiOptionToggle={handleMultiOptionToggle}
-                                    selectedMultiOptions={state.selectedMultiOptions}
-                                    onDatePickerOpen={handleDatePickerOpen}
-                                    onLmpDatePickerOpen={handleLmpDatePickerOpen}
-                                    onNotPregnantSelect={handleNotPregnantSelect}
-                                    onConsultExpert={handleConsultExpert}
-                                    onChatWithViva={handleChatWithViva}
-                                    onAnimationComplete={handleAnimationComplete}
-                                    onConnectExpert={handleConnectExpert}
-                                    onBookmarkPress={handleBookmarkPress}
-                                    onFlagPress={handleFlagPress}
-                                    onSpeakPress={isChatbotFlow ? readAloud.toggle : undefined}
-                                    isSpeaking={readAloud.speakingId === msg.id}
-                                    isPreparingSpeech={readAloud.preparingId === msg.id}
-                                    isBookmarked={
-                                        isAiMessage(msg)
-                                            ? state.bookMarkedMessages.includes(msg.id)
-                                            : false
-                                    }
+                        <ScrollView
+                            ref={scrollViewRef}
+                            style={styles.scrollView}
+                            contentContainerStyle={styles.scrollContent}
+                            refreshControl={
+                                <RefreshControl
+                                    refreshing={refreshing}
+                                    onRefresh={handleRefresh}
+                                    tintColor={colors.darkPurple}
                                 />
-                            );
-                        })}
+                            }
+                            onContentSizeChange={() => {
+                                scrollViewRef.current?.scrollToEnd({ animated: true });
+                            }}
+                            keyboardShouldPersistTaps="handled"
+                        >
+                            {isChatbotFlow && state.messages.length === 0 && !state.isLoading && !state.errorMessage ? (
+                                <View style={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 40, gap: 10 }}>
+                                    <Text style={[globalStyles.fontBold, { fontSize: 20, lineHeight: 27, color: colors.black, textAlign: 'center' }]}>
+                                        {t('vivaHub.heroTitle')}
+                                    </Text>
+                                    <Text style={[globalStyles.fontRegular, { fontSize: 14, lineHeight: 21, color: colors.darkGray, textAlign: 'center' }]}>
+                                        {t('vivaHub.heroBody')}
+                                    </Text>
+                                </View>
+                            ) : null}
+                            {state.messages.map((msg, index) => {
+                                const isLast = index === state.messages.length - 1;
+                                const shouldAnimate =
+                                    isAiMessage(msg) && msg.id === state.animatingMessageId;
 
-                        {state.isLoading && (
-                            <TypingIndicator
-                                label={awaitingReport ? t('chat.attachments.readingReport') : undefined}
-                            />
-                        )}
-                        {/* The message itself was never rendered — only a bare "Retry" on
+                                return (
+                                    <ChatBubble
+                                        isFirst={index === 0}
+                                        key={`${msg.type}-${msg.timestamp}-${index}`}
+                                        message={msg}
+                                        isLast={isLast}
+                                        isAnimating={!!state.animatingMessageId}
+                                        isFlowComplete={state.isFlowComplete}
+                                        shouldAnimate={shouldAnimate}
+                                        onOptionSelect={handleOptionSelect}
+                                        onMultiOptionToggle={handleMultiOptionToggle}
+                                        selectedMultiOptions={state.selectedMultiOptions}
+                                        onDatePickerOpen={handleDatePickerOpen}
+                                        onLmpDatePickerOpen={handleLmpDatePickerOpen}
+                                        onNotPregnantSelect={handleNotPregnantSelect}
+                                        onConsultExpert={handleConsultExpert}
+                                        onChatWithViva={handleChatWithViva}
+                                        onAnimationComplete={handleAnimationComplete}
+                                        onConnectExpert={handleConnectExpert}
+                                        onBookmarkPress={handleBookmarkPress}
+                                        onFlagPress={handleFlagPress}
+                                        onSpeakPress={isChatbotFlow ? readAloud.toggle : undefined}
+                                        isSpeaking={readAloud.speakingId === msg.id}
+                                        isPreparingSpeech={readAloud.preparingId === msg.id}
+                                        isBookmarked={
+                                            isAiMessage(msg)
+                                                ? state.bookMarkedMessages.includes(msg.id)
+                                                : false
+                                        }
+                                    />
+                                );
+                            })}
+
+                            {state.isLoading && (
+                                <TypingIndicator
+                                    label={awaitingReport ? t('chat.attachments.readingReport') : undefined}
+                                />
+                            )}
+                            {/* The message itself was never rendered — only a bare "Retry" on
                             an otherwise blank screen, and only when errorMessage was set,
                             which the guided-flow hook never did. */}
-                        {state.errorMessage ? (
-                            <View style={{ alignItems: 'center', paddingHorizontal: 24, paddingVertical: 32 }}>
-                                <Text style={[globalStyles.fontRegular, {
-                                    fontSize: 14,
-                                    color: colors.darkGray,
-                                    textAlign: 'center',
-                                    marginBottom: 14,
-                                }]}>
-                                    {state.errorMessage}
-                                </Text>
-                                <TouchableOpacity
-                                    onPress={handleErrorRetry}
-                                    style={{
-                                        paddingVertical: 10,
-                                        paddingHorizontal: 26,
-                                        borderRadius: 20,
-                                        borderWidth: 1.5,
-                                        borderColor: colors.purple,
-                                    }}
-                                >
-                                    <Text style={[globalStyles.fontSemiBold, { color: colors.darkPurple, fontSize: 14 }]}>
-                                        {t('common.retry')}
+                            {state.errorMessage ? (
+                                <View style={{ alignItems: 'center', paddingHorizontal: 24, paddingVertical: 32 }}>
+                                    <Text style={[globalStyles.fontRegular, {
+                                        fontSize: 14,
+                                        color: colors.darkGray,
+                                        textAlign: 'center',
+                                        marginBottom: 14,
+                                    }]}>
+                                        {state.errorMessage}
                                     </Text>
-                                </TouchableOpacity>
-                            </View>
-                        ) : null}
-                    </ScrollView>
+                                    <TouchableOpacity
+                                        onPress={handleErrorRetry}
+                                        style={{
+                                            paddingVertical: 10,
+                                            paddingHorizontal: 26,
+                                            borderRadius: 20,
+                                            borderWidth: 1.5,
+                                            borderColor: colors.purple,
+                                        }}
+                                    >
+                                        <Text style={[globalStyles.fontSemiBold, { color: colors.darkPurple, fontSize: 14 }]}>
+                                            {t('common.retry')}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </View>
+                            ) : null}
+                        </ScrollView>
                     </AttachmentViewerContext.Provider>
                 </View>
 
@@ -1273,7 +1273,7 @@ const styles = StyleSheet.create({
     vivaIntroText: {
         color: colors.darkPurple,
         textAlign: 'center',
-        fontSize: 15,
+        fontSize: 13,
         lineHeight: 20
     },
     modelPill: {

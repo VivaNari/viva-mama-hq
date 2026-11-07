@@ -4,7 +4,7 @@
  */
 import React from "react";
 import { act, fireEvent, render, renderHook, waitFor } from "@testing-library/react-native";
-import { Alert, Text } from "react-native";
+import { Alert, Platform, Text } from "react-native";
 import * as Speech from "expo-speech";
 import { ExpoSpeechRecognitionModule } from "expo-speech-recognition";
 import Toast from "react-native-toast-message";
@@ -19,6 +19,7 @@ import {
   chunkForSpeech,
   detectSpeechLang,
   isLikelyHinglish,
+  pickIndianEnglishVoice,
   speechLangForAppLanguage,
   toSpeakableText,
   withBrandPronunciation,
@@ -381,6 +382,72 @@ describe("useReadAloud", () => {
     const options = (Speech.speak as jest.Mock).mock.calls[0][1];
     act(() => options.onDone());
     expect(hook.current.speakingId).toBeNull();
+  });
+});
+
+describe("Indian English voice", () => {
+  // The voices a Poco M2 Pro running Google's engine reports, in the order it gives them.
+  const PHONE_VOICES = [
+    { identifier: "en-us-x-sfg-local", language: "en-US" },
+    { identifier: "en-in-x-ene-network", language: "en-IN" },
+    { identifier: "en-in-x-enc-local", language: "en-IN" },
+    { identifier: "en-IN-language", language: "en-IN" },
+    { identifier: "hi-in-x-hia-local", language: "hi-IN" },
+  ].map((voice) => ({ ...voice, name: voice.identifier, quality: "Enhanced" }));
+
+  const originalOS = Platform.OS;
+
+  beforeEach(() => {
+    Platform.OS = "android";
+  });
+
+  afterEach(() => {
+    Platform.OS = originalOS;
+  });
+
+  const speakAndGetOptions = async (text: string, voices = PHONE_VOICES) => {
+    (Speech.getAvailableVoicesAsync as jest.Mock).mockResolvedValueOnce(voices);
+    const { result: hook } = renderHook(() => useReadAloud());
+    await act(() => hook.current.toggle("m1", text));
+    return (Speech.speak as jest.Mock).mock.calls[0][1];
+  };
+
+  it("reads an English reply in the Indian English voice on Android", async () => {
+    const options = await speakAndGetOptions("You should rest");
+    expect(options).toEqual(expect.objectContaining({ language: "en-IN", voice: "en-IN-language" }));
+  });
+
+  it("leaves Hindi replies to the Hindi voice", async () => {
+    const options = await speakAndGetOptions("आराम करें");
+    expect(options.language).toBe("hi-IN");
+    expect(options.voice).toBeUndefined();
+  });
+
+  it("leaves iOS to the language setting, which it honours", async () => {
+    Platform.OS = "ios";
+    const options = await speakAndGetOptions("You should rest");
+    expect(options.language).toBe("en-IN");
+    expect(options.voice).toBeUndefined();
+  });
+
+  it("still reads the reply on a phone with no Indian English voice", async () => {
+    const options = await speakAndGetOptions("You should rest", [PHONE_VOICES[0]]);
+    expect(options.voice).toBeUndefined();
+    expect(Speech.speak).toHaveBeenCalled();
+  });
+
+  it("prefers a stored voice over a network one when there is no default entry", () => {
+    expect(
+      pickIndianEnglishVoice([
+        { identifier: "en-in-x-ene-network", language: "en-IN" },
+        { identifier: "en-in-x-enc-local", language: "en-IN" },
+      ]),
+    ).toBe("en-in-x-enc-local");
+  });
+
+  it("never picks a voice from another country", () => {
+    expect(pickIndianEnglishVoice([{ identifier: "en-us-x-sfg-local", language: "en-US" }])).toBeUndefined();
+    expect(pickIndianEnglishVoice([])).toBeUndefined();
   });
 });
 

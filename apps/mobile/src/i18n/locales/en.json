@@ -510,7 +510,7 @@
     "empty": "No bookmarked messages yet"
   },
   "chat": {
-    "vivaIntro": "Viva, your perinatal care guide",
+    "vivaIntro": "Viva - Pregnancy & postpartum guide",
     "typeAnswer": "Type your answer",
     "selectADate": "Select a date",
     "selectedToSubmit": "{{count}} selected, click to submit",
@@ -817,6 +817,84 @@
     "welcome": "Welcome",
     "brandTagline": "to Viva Nari",
     "multipleChoice": "(multiple choice)"
+  },
+  "welcomeIntro": {
+    "skip": "Skip",
+    "next": "Next",
+    "back": "Back",
+    "begin": "Let’s begin",
+    "slideOf": "Slide {{current}} of {{total}}",
+    "goToSlide": "Go to slide {{number}}",
+    "changeLanguage": "Change language to {{language}}",
+    "vivaImageLabel": "Viva, your AI assistant",
+    "slide1": {
+      "greeting": "Namaste,",
+      "mama": "Mama",
+      "bubbleBefore": "I’m ",
+      "bubbleName": "Viva",
+      "bubbleAfter": ", your pregnancy and postpartum care guide."
+    },
+    "slide2": {
+      "pregnancy": "Pregnancy",
+      "delivery": "Delivery",
+      "postpartum": "Postpartum & infancy",
+      "motherhood": "Motherhood & toddler",
+      "days": "1,000 days",
+      "title": "Your whole journey.\nOne place.",
+      "body": "From pregnancy to your baby’s first steps, I track how far you have come."
+    },
+    "slide3": {
+      "vivaName": "Viva",
+      "vivaRole": "Your AI assistant",
+      "time": "Today 3:12 AM",
+      "question": "It hurts every time I feed. Am I doing something wrong?",
+      "answer": "I’m sorry it hurts. This is really common, and it’s not your fault. Let’s look at your latch together.",
+      "badge": "Verified knowledge base",
+      "placeholder": "Ask Viva anything…",
+      "title": "Ask me anything, even at 3 AM.",
+      "body": "No question is too small. Simple answers from a medically verified knowledge base."
+    },
+    "slide4": {
+      "reports": "Sia’s reports",
+      "ultrasound": "Ultrasound scan",
+      "saved": "Saved",
+      "bloodTest": "Blood test report",
+      "explained": "Explained",
+      "prescription": "Prescription",
+      "summary": "My health summary",
+      "add": "Add a report",
+      "title": "Say no to files. Leave them to me.",
+      "body": "I scan every report, explain it simply, and prepare a summary for your doctor."
+    },
+    "slide5": {
+      "vitaminTime": "now",
+      "vitaminTitle": "Time for your vitamin D",
+      "vitaminDetail": "Your weekly supplement",
+      "vaccineTime": "9:00 AM",
+      "vaccineTitle": "Baby’s next vaccine",
+      "vaccineDetail": "Due next week",
+      "appointmentTime": "8:00 AM",
+      "appointmentTitle": "Doctor’s appointment",
+      "appointmentDetail": "Tomorrow, 11:30 AM",
+      "title": "Let me lighten the mental load.",
+      "body": "Log your day. I will remind you about supplements, vaccines and appointments."
+    },
+    "slide6": {
+      "sia": "Sia",
+      "doctor": "Obstetrician & Gynaecologist",
+      "counsellor": "Counsellor",
+      "book": "Book a consult",
+      "talk": "Talk it through",
+      "title": "I guide.\nYour doctor decides.",
+      "body": "Consult your doctor, or talk it through with a counsellor on the hard days."
+    },
+    "slide7": {
+      "heading": "My promise to you",
+      "private": "Private",
+      "personalised": "Personalised",
+      "nonJudgemental": "Non-judgemental",
+      "bubble": "Let’s get you set up."
+    }
   },
   "landing": {
     "welcome": "Welcome Mama",
@@ -1817,7 +1895,7 @@
             "timing": "6–8 weeks"
           },
           "p1b": {
-            "label": "Booking bloods — CBC, blood group, thyroid, HIV/HBsAg/VDRL, urine R/M",
+            "label": "Booking bloods - CBC, blood group, thyroid, HIV/HBsAg/VDRL, urine R/M",
             "timing": "8–10 weeks"
           },
           "p1c": {
@@ -2407,6 +2485,15 @@
     }
   },
   "journey": {
+    "video": {
+      "play": "Play video",
+      "pause": "Pause video",
+      "replay": "Play video again",
+      "retry": "Try again",
+      "seek": "Video position",
+      "loading": "Loading video",
+      "failed": "Couldn’t load the video"
+    },
     "tabMother": "Mother",
     "tabBaby": "Baby",
     "barCaption": "YOU AND YOUR BABY, 1000 DAYS",

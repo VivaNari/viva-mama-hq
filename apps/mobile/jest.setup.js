@@ -83,6 +83,14 @@ jest.mock('react-native-reanimated', () => {
         return {};
       }
     },
+    useAnimatedProps: (worklet) => {
+      try {
+        return worklet() || {};
+      } catch (error) {
+        return {};
+      }
+    },
+    useReducedMotion: () => false,
     useDerivedValue: (worklet) => ({ value: worklet() }),
     withTiming: passthrough,
     withSpring: passthrough,
@@ -103,6 +111,20 @@ jest.mock('react-native-reanimated', () => {
       inOut: passthrough,
     },
   };
+});
+
+// -----------------------------
+// Video player mock (native-only)
+// -----------------------------
+jest.mock('react-native-video', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+  const seek = jest.fn();
+  const Video = React.forwardRef((props, ref) => {
+    React.useImperativeHandle(ref, () => ({ seek }));
+    return React.createElement(View, { ...props, testID: 'journey-video-player' });
+  });
+  return { __esModule: true, default: Video, seek };
 });
 
 // -----------------------------

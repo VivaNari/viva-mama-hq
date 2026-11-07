@@ -22,6 +22,9 @@ export interface AuthContextType {
   isLoading: boolean;
   onboardingStatus: OnboardingStatus;
   isFullyOnboarded: () => boolean;
+  /** Whether this device has been through the first-launch welcome intro. */
+  hasSeenWelcomeIntro: boolean;
+  markWelcomeIntroSeen: () => Promise<void>;
   signInWithGoogle: (consents?: any[]) => Promise<void>;
   /**
    * Permanently deletes the account server-side, then tears down all local state.

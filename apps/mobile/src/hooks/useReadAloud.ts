@@ -11,6 +11,7 @@ import {
   chunkForSpeech,
   detectSpeechLang,
   isLikelyHinglish,
+  pickIndianEnglishVoice,
   toSpeakableText,
   withBrandPronunciation,
 } from "../utils/messageHelpers";
@@ -122,6 +123,14 @@ export function useReadAloud() {
       setPreparingId(id);
       track(AnalyticsEvent.CHAT_READ_ALOUD_PLAYED, { lang: language });
 
+      // Android only: expo-speech builds its locale with Locale("en-IN"), which isn't a
+      // valid language, so the language alone falls back to the phone's default voice.
+      // Naming a voice gets round that. iOS honours the language as it is.
+      const voice =
+        Platform.OS === "android" && language === "en-IN"
+          ? pickIndianEnglishVoice(voicesRef.current ?? [])
+          : undefined;
+
       const started = () => {
         if (session !== sessionRef.current) return;
         setPreparingId(null);
@@ -137,6 +146,7 @@ export function useReadAloud() {
         const isLast = index === chunks.length - 1;
         Speech.speak(chunk, {
           language,
+          voice,
           // iOS: speak through the synthesizer's own audio session. The app session
           // may still be in the mic's record mode, which plays speech quietly
           // through the earpiece.

@@ -37,8 +37,7 @@ const HappeningCard: React.FC<{ position: Placed; route: CareRoute }> = ({ posit
     return (
         <View style={[styles.card, { width, backgroundColor: colors.journeyHappeningBG }]}>
             <JourneyMedia
-                rowId={position.row.id}
-                height={150}
+                video="mother"
                 backgroundColor={colors.darkPurple}
                 badge={t(badgeKey(position))}
                 badgeColor={colors.journeyBadgeBG}

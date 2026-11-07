@@ -36,7 +36,14 @@ export const CURRENT_VERSIONS = {
   TERMS_OF_USE: "1.0.0",
 };
 
+/**
+ * Set once this device has been through the welcome intro. Describes the device, not
+ * an account, so it deliberately survives sign-out and account deletion.
+ */
+export const WELCOME_INTRO_STORAGE_KEY = 'hasSeenWelcomeIntro';
+
 export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [hasSeenWelcomeIntro, setHasSeenWelcomeIntro] = useState<boolean>(false);
   const [userToken, setUserToken] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -168,9 +175,40 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error('[AUTHCONTEXT] Failed to load token and onboarding data:', e);
       recordError(e, 'AuthContext.checkTokenAndOnboarding');
     }
+
+    // Read while isLoading still holds the navigator back, so Landing can't flash
+    // ahead of the intro. A failed read counts as seen: the intro must never stand
+    // between someone and login.
+    let introSeen = true;
+    try {
+      introSeen = (await AsyncStorage.getItem(WELCOME_INTRO_STORAGE_KEY)) === 'true';
+    } catch (e) {
+      recordError(e, 'AuthContext.readWelcomeIntroFlag');
+    }
+
+    setHasSeenWelcomeIntro(introSeen);
     setUserToken(token);
     setIsLoading(false);
   };
+
+  const markWelcomeIntroSeen = async () => {
+    setHasSeenWelcomeIntro(true);
+    try {
+      await AsyncStorage.setItem(WELCOME_INTRO_STORAGE_KEY, 'true');
+    } catch (e) {
+      // Worst case the intro shows once more; not worth interrupting the user.
+      recordError(e, 'AuthContext.markWelcomeIntroSeen');
+    }
+  };
+
+  // Anyone with a session is past the intro. This covers users who were already logged
+  // in when the intro shipped, and anyone logging in on a device that skipped it, so
+  // none of them meets it after a later sign-out.
+  useEffect(() => {
+    if (userToken && !hasSeenWelcomeIntro) {
+      markWelcomeIntroSeen();
+    }
+  }, [userToken, hasSeenWelcomeIntro]);
 
   /**
    * Attach the user to Analytics/Crashlytics and log the sign-in.
@@ -566,6 +604,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // The rest of the keys this app writes. `appLanguage` and `chatCounter` are included
     // because they are user state too — a fresh signup on the same device must not
     // inherit the deleted account's language or its consumed free-message count.
+    // WELCOME_INTRO_STORAGE_KEY stays: it describes the device, not the account.
     try {
       await AsyncStorage.multiRemove([
         'userToken',
@@ -604,6 +643,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     deleteAccount,
     onboardingStatus,
     isFullyOnboarded,
+    hasSeenWelcomeIntro,
+    markWelcomeIntroSeen,
     completeQuestionnaire,
     completeSubscription,
     completeOnboarding,

@@ -76,11 +76,7 @@ export const journeyStyles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
     justifyContent: "flex-start",
-  },
-  mediaImage: {
-    ...StyleSheet.absoluteFillObject,
-    width: "100%",
-    height: "100%",
+    aspectRatio: 16 / 9,
   },
   badge: {
     alignSelf: "flex-start",
