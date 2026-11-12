@@ -12,7 +12,7 @@ redis==8.0.0
 
 # LangChain core + community integrations + Groq
 langchain==1.0.3
-langchain-core==1.4.6
+langchain-core==1.7.6
 langchain-community==0.4.2
 langchain-groq==1.1.3
 # Vertex AI (Gemini) — default LLM provider; Groq kept as an env-flag fallback.
