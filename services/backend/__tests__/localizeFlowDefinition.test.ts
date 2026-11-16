@@ -42,6 +42,7 @@ const baseDef = (): IFlowDefinition =>
                 },
                 nodes: {
                     lochia_bleeding: {
+                        indicator: "लोकिया/रक्तस्राव",
                         text: "आपका रक्तस्राव कैसा है?",
                         educationalMessage: "Edu HI",
                         options: { heavy_bleeding: "तेज़" },
@@ -85,6 +86,12 @@ describe("localizeFlowDefinition", () => {
         expect(node.options[0]!.score).toBe(0);
         expect(node.options[0]!.value).toBe("heavy_bleeding");
         expect((out as any).translations).toBeUndefined();
+    });
+
+    it("keeps the English indicator for the rules and puts the Hindi one in indicatorLabel", () => {
+        const node = localizeFlowDefinition(baseDef(), FlowLanguageEnum.HI).nodes[0]!;
+        expect(node.indicator).toBe("Lochia/Bleeding");
+        expect(node.indicatorLabel).toBe("लोकिया/रक्तस्राव");
     });
 
     it("falls back to English per-field when a translation key is missing", () => {

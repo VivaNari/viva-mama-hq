@@ -423,16 +423,31 @@ describe("PRD section 1 onboarding", () => {
                 nodes: LIVE_NODES.map(([id, indicator], index) =>
                     stubNode(id, LIVE_NODES[index + 1]?.[0] ?? null, { indicator }),
                 ),
+                // Like the live v2, every node has a Hindi indicator.
+                translations: {
+                    hi: {
+                        nodes: Object.fromEntries(
+                            LIVE_NODES.map(([id, indicator]) => [
+                                id,
+                                { indicator: `हिंदी ${indicator}` },
+                            ]),
+                        ),
+                    },
+                },
             });
 
-        /** Every question she would be asked, using the engine the app runs through. */
-        const questionsFor = async (user: Record<string, unknown>) => {
+        /**
+         * Every question she would be asked, using the engine the app runs through, with
+         * the definition served in `lang` as the app's requests receive it.
+         */
+        const questionsFor = async (user: Record<string, unknown>, lang: "en" | "hi" = "en") => {
             await seedLiveFlow();
             await migrate();
-            const flow = (await flowDefinitionModel
+            const stored = (await flowDefinitionModel
                 .findOne({ slug: ONBOARDING_SLUG_V3 })
                 .lean()) as any;
             const engine = new FlowService();
+            const flow = (await engine.getFlowDefinitionById(String(stored._id), lang)) as any;
             const asked: string[] = [];
             let current: string | null = flow.startNodeId;
             while (current) {
@@ -530,6 +545,51 @@ describe("PRD section 1 onboarding", () => {
 
             expect(asked.indexOf("care_model")).toBeLessThan(asked.indexOf("delivery_outcome"));
             expect(asked.indexOf("care_facility")).toBeLessThan(asked.indexOf("delivery_outcome"));
+        });
+
+        describe("in Hindi", () => {
+            it("asks the same questions as in English", async () => {
+                const users = [
+                    {
+                        _id: "u",
+                        user_category: EUserCategory.NP,
+                        onboarding_data: { abha_status: "yes", abha_capture_method: "type" },
+                    },
+                    {
+                        _id: "u",
+                        user_category: EUserCategory.PP,
+                        onboarding_data: { abha_status: "no", parity: "first_time" },
+                    },
+                    { _id: "u", user_category: EUserCategory.NN, onboarding_data: {} },
+                ];
+                for (const user of users) {
+                    const english = await questionsFor(user, "en");
+                    await clearTestDb();
+                    const hindi = await questionsFor(user, "hi");
+                    await clearTestDb();
+                    expect(hindi).toEqual(english);
+                }
+            });
+
+            it("hides the delivery questions from a pregnant mother", async () => {
+                const asked = await questionsFor(
+                    { _id: "u", user_category: EUserCategory.NP, onboarding_data: {} },
+                    "hi",
+                );
+                for (const hidden of ["delivery_type", "delivery_outcome", "feeding"]) {
+                    expect(asked).not.toContain(hidden);
+                }
+            });
+
+            it("asks no ABHA follow-up after a No", async () => {
+                const asked = await questionsFor(
+                    { _id: "u", user_category: EUserCategory.NP, onboarding_data: { abha_status: "no" } },
+                    "hi",
+                );
+                for (const hidden of ["abha_method", "abha_number", "abha_card"]) {
+                    expect(asked).not.toContain(hidden);
+                }
+            });
         });
     });
 

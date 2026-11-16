@@ -45,7 +45,7 @@ export async function buildEmergencyAlert(
 
                 return {
                     nodeId: flag.nodeId,
-                    indicator: node.indicator,
+                    indicator: node.indicatorLabel ?? node.indicator,
                     answerLabel: option.label,
                 };
             })

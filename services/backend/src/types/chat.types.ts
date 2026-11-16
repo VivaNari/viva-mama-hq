@@ -179,7 +179,14 @@ export type FlowNodeType =
 export interface IFlowNode {
     id: string;
     categoryId: Schema.Types.ObjectId;
+    /**
+     * Always the English name. Who sees a question is decided by matching this against
+     * English lists (NP_WOMEN_INDICATORS, isOnboardingNodeUnlocked, …), so it is never
+     * translated. Show `indicatorLabel` to people instead.
+     */
     indicator: string;
+    /** The indicator in the served language, set by localizeFlowDefinition. For display only. */
+    indicatorLabel?: string;
     nodeType: FlowNodeType;
     text: string | null;
     educationalMessage: string;

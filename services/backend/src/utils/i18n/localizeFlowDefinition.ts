@@ -92,7 +92,9 @@ export function localizeFlowDefinition(
             if (tn.text != null) merged.text = tn.text;
             if (tn.educationalMessage != null) merged.educationalMessage = tn.educationalMessage;
             if (tn.whyThisMatters != null) merged.whyThisMatters = tn.whyThisMatters;
-            if (tn.indicator != null) merged.indicator = tn.indicator;
+            // Never overwrite `indicator`: the eligibility rules match it against English
+            // names, and a Hindi one would make every question look eligible.
+            if (tn.indicator != null) merged.indicatorLabel = tn.indicator;
 
             if (tn.options && Array.isArray(node.options)) {
                 merged.options = node.options.map((opt) => {
