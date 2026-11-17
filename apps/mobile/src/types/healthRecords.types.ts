@@ -88,6 +88,8 @@ export interface IHealthSummaryContent {
     stage_line: string;
     conditions: string[];
     medicines: string[];
+    /** Rows of the profile card, already in her language. Absent on summaries made before it existed. */
+    profile?: { key: string; label: string; value: string }[];
     children: { name: string; sex: string; age_text: string }[];
   };
   overview: string;

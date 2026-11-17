@@ -210,7 +210,8 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
             - delivery_type, delivery_outcome, is_breastfeeding, location,
               social_support, current_medications, past_medications,
               pregnancy_conditions, conception_method, parity, tobacco_use,
-              alcohol_use
+              alcohol_use, health_history, date_of_birth, height_cm,
+              care_model, care_facility
 
         If user not found:
             {"user_id": user_id, "found": False, "error": "..."}
@@ -317,6 +318,12 @@ def get_user_profile(user_id: str) -> Dict[str, Any]:
             # Reproductive history
             "conception_method": _text(onboarding.get("conception_method")),
             "parity": _text(onboarding.get("parity")),
+            "health_history": onboarding.get("health_history") or [],
+            # Body and care, for the profile at the top of her health summary
+            "date_of_birth": _format_date(onboarding.get("date_of_birth")) or None,
+            "height_cm": onboarding.get("height_cm"),
+            "care_model": _text(onboarding.get("care_model")),
+            "care_facility": _text(onboarding.get("care_facility")),
             # Lifestyle factors (relevant for recommendations)
             "tobacco_use": _text(onboarding.get("tobacco_use")),
             "alcohol_use": _text(onboarding.get("alcohol_use")),

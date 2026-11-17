@@ -29,6 +29,7 @@ from app.attachments.schemas import (
 from app.records.dates import format_date, parse_report_date
 from app.records.schemas import (
     BabyPoints,
+    DatedPoint,
     HealthSummaryOutput,
     HealthSummaryRequest,
     RecordAnalyzeRequest,
@@ -320,6 +321,12 @@ PROFILE = {
     "due_date": "2027-02-12",
     "pregnancy_conditions": ["anemia", "none"],
     "current_medications": ["meds_thyroid"],
+    "date_of_birth": "1998-03-20",
+    "height_cm": 158,
+    "health_history": ["pre_eclampsia"],
+    "care_model": "private",
+    "care_facility": "Apollo Cradle",
+    "conception_method": "natural",
     "children": [
         {"name": "Asha", "sex": "female", "age_days": 45, "age_text": "6 weeks old"},
         {"name": "Draft", "sex": "", "age_days": None, "age_text": ""},
@@ -363,19 +370,50 @@ def summary_req(lang: str = "en") -> HealthSummaryRequest:
                 ],
             },
         ],
-        vitals=[{"type": "bp", "value": "118/76", "unit": "mmHg", "date": "2026-10-30"}],
+        vitals=[
+            {"type": "bp", "value": "118/76", "unit": "mmHg", "date": "2026-10-30"},
+            {
+                "type": "weight",
+                "value": "63",
+                "unit": "kg",
+                "note": "BMI 25.2",
+                "date": "2026-10-01",
+            },
+            {
+                "type": "weight",
+                "value": "64",
+                "unit": "kg",
+                "note": "BMI 25.6",
+                "date": "2026-11-07",
+            },
+        ],
         medicines=[{"name": "Iron tablet", "dose": "100 mg", "frequency": "once a day"}],
     )
 
 
 SYNTHESIS = HealthSummaryOutput(
     overview="My records show a low haemoglobin in June. You have anaemia.",
-    mother_points=["My haemoglobin was below the range in June.", "Stop taking iron tablets."],
-    baby_points=[
-        BabyPoints(child_name="asha", points=["Her BCG vaccine is recorded."]),
-        BabyPoints(child_name="Ravi", points=["Invented baby."]),
+    mother_points=[
+        DatedPoint(date="2026-11-05", text="On 5 Nov 2026 my doctor prescribed iron."),
+        DatedPoint(text="Stop taking iron tablets."),
+        DatedPoint(date="not a date", text="My records are from this year."),
+        DatedPoint(date="2026-06-12", text="My haemoglobin was below the range in June."),
+        DatedPoint(date="2026-11-07", text="On 7 Nov 2026 a scan dated my pregnancy."),
     ],
-    trends=[],
+    baby_points=[
+        BabyPoints(
+            child_name="asha",
+            points=[
+                DatedPoint(date="2026-08-01", text="Her BCG vaccine is recorded."),
+                DatedPoint(date="2026-09-03", text="Her bilirubin was above the range."),
+            ],
+        ),
+        BabyPoints(child_name="Ravi", points=[DatedPoint(text="Invented baby.")]),
+    ],
+    trends=[
+        DatedPoint(date="2026-09-03", text="Weight: 60 kg (1 Jun 2026) -> 62 kg (3 Sep 2026)"),
+        DatedPoint(date="2026-11-05", text="Hb: 9.4 g/dL (23 Oct 2026) -> 9.6 g/dL (5 Nov 2026)"),
+    ],
     questions_for_doctor=["Is my haemoglobin better now?"],
 )
 
@@ -396,7 +434,7 @@ class TestHealthSummary(unittest.TestCase):
         facts = content["facts"]
         self.assertEqual(facts["name"], "Priya")
         self.assertEqual(facts["stage_line"], "Pregnant · week 24 · due 12 Feb 2027")
-        self.assertEqual(facts["conditions"], ["Anaemia"])
+        self.assertEqual(facts["conditions"], ["Anaemia", "Pre-eclampsia"])
         self.assertEqual(
             facts["medicines"], ["Thyroid medicine", "Iron tablet (100 mg, once a day)"]
         )
@@ -407,8 +445,70 @@ class TestHealthSummary(unittest.TestCase):
     def test_model_sentences_are_linted_and_unknown_babies_dropped(self) -> None:
         content, _ = self.build()
         self.assertNotIn("anaemia", content["overview"].lower())
-        self.assertEqual(content["mother_points"], ["My haemoglobin was below the range in June."])
+        self.assertNotIn("Stop taking iron tablets.", content["mother_points"])
         self.assertEqual([b["child_name"] for b in content["baby_points"]], ["Asha"])
+
+    def test_dated_lists_are_newest_first_whatever_order_the_model_used(self) -> None:
+        content, text = self.build()
+        self.assertEqual(
+            content["mother_points"],
+            [
+                "On 7 Nov 2026 a scan dated my pregnancy.",
+                "On 5 Nov 2026 my doctor prescribed iron.",
+                "My haemoglobin was below the range in June.",
+                # Undated points go last, in the order the model wrote them.
+                "My records are from this year.",
+            ],
+        )
+        self.assertEqual(
+            content["baby_points"][0]["points"],
+            ["Her bilirubin was above the range.", "Her BCG vaccine is recorded."],
+        )
+        self.assertTrue(content["trends"][0].startswith("Hb:"))
+        self.assertLess(text.index("On 7 Nov 2026"), text.index("On 5 Nov 2026"))
+
+    def test_profile_card_rows_come_from_onboarding(self) -> None:
+        with mock.patch.object(hs, "_age_years", lambda dob: 28 if dob else None):
+            content, text = self.build()
+        rows = {r["key"]: r["value"] for r in content["facts"]["profile"]}
+        self.assertEqual(
+            list(rows), ["age", "body", "conditions", "care", "conception", "medicines"]
+        )
+        self.assertEqual(rows["age"], "28 years")
+        # Her latest weight, not the first one logged.
+        self.assertEqual(rows["body"], "158 cm · 64 kg (BMI 25.6, 7 Nov 2026)")
+        self.assertEqual(rows["conditions"], "Anaemia, Pre-eclampsia")
+        self.assertEqual(rows["care"], "Private hospital · Apollo Cradle")
+        self.assertEqual(rows["conception"], "Natural")
+        self.assertIn("ABOUT ME\nPregnant · week 24 · due 12 Feb 2027\nAge: 28 years\n", text)
+        self.assertIn("Care pathway: Private hospital · Apollo Cradle", text)
+
+    def test_profile_card_says_none_reported_only_when_she_said_none(self) -> None:
+        said_none = {**PROFILE, "pregnancy_conditions": ["none"], "health_history": []}
+        content, _ = self.build(profile=said_none)
+        rows = {r["key"]: r["value"] for r in content["facts"]["profile"]}
+        self.assertEqual(rows["conditions"], "None reported")
+        never_asked = {**PROFILE, "pregnancy_conditions": [], "health_history": []}
+        content, _ = self.build(profile=never_asked)
+        self.assertNotIn("conditions", [r["key"] for r in content["facts"]["profile"]])
+
+    def test_conditions_are_not_listed_twice(self) -> None:
+        both = {
+            **PROFILE,
+            "pregnancy_conditions": ["anemia"],
+            "health_history": ["anaemia_or_low_hb", "prior_gdm"],
+        }
+        content, _ = self.build(profile=both)
+        rows = {r["key"]: r["value"] for r in content["facts"]["profile"]}
+        self.assertEqual(rows["conditions"], "Anaemia, Diabetes in an earlier pregnancy")
+
+    def test_age_from_date_of_birth(self) -> None:
+        today = date(2026, 11, 16)
+        self.assertEqual(hs._age_years("1998-11-16", today), 28)
+        self.assertEqual(hs._age_years("1998-11-17", today), 27)
+        self.assertIsNone(hs._age_years("2025-01-01", today))
+        self.assertIsNone(hs._age_years("garbage", today))
+        self.assertIsNone(hs._age_years(None, today))
 
     def test_values_to_discuss_are_from_the_records_urgent_first(self) -> None:
         content, text = self.build()

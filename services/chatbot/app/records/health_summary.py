@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
 from app.attachments.analysis import lint_text
@@ -24,6 +24,7 @@ from app.llm.factory import get_llm
 from app.mcp.tools.get_user_profile_tool import get_user_profile
 from app.records.dates import format_date
 from app.records.schemas import (
+    DatedPoint,
     HealthSummaryOutput,
     HealthSummaryRequest,
     SummaryRecordIn,
@@ -33,6 +34,7 @@ from langchain_core.messages import HumanMessage
 
 logger = logging.getLogger(__name__)
 
+IST = timezone(timedelta(hours=5, minutes=30))
 PROFILE_TIMEOUT_S = 5.0
 DIGEST_BUDGET_CHARS = 40_000
 MAX_POINTS = 6
@@ -55,6 +57,13 @@ DATA RULES
 - Use ONLY what is in the record summaries and self-logged readings. Never add
   values, ranges, dates or facts that are not there.
 
+DATES
+- Each record's header gives the day she UPLOADED it to the app. That is not when the
+  visit, scan or test happened. Use the date written inside the record (report date,
+  visit date, sample date). Use the upload day only when the record has no date in it.
+- Write dates in the text as day, month name, year, e.g. "5 Nov 2026". Never as
+  "2026-11-05".
+
 BOUNDARIES
 - Never diagnose. Never say she or her baby "has" a condition. Say a value was
   above or below the range on the report.
@@ -63,13 +72,21 @@ BOUNDARIES
 - Calm, factual, non-alarming wording.
 
 OUTPUT
-- overview: at most 3 short sentences on what her records show overall.
-- mother_points: up to {max_points} key points from HER records (newest first).
-- baby_points: for each baby that has records, up to {max_baby_points} points, with
-  child_name exactly as written in the records. Leave it empty if no baby records.
-- trends: up to {max_trends}; only a value seen on two or more dated records,
-  oldest to newest, with dates, e.g. "Haemoglobin: 9.8 g/dL (12 Jun 2026) -> 11.2
-  g/dL (3 Sep 2026)". Leave empty if there are none.
+- overview: at most 3 short sentences on what her records show overall. Do not state
+  how many weeks pregnant she is or her due date: the summary already shows both from
+  her profile, and a week read off an older scan is out of date.
+- mother_points: up to {max_points} key points from HER records. Each point is
+  {{"date": "YYYY-MM-DD", "text": "..."}}, where date is the date the point is about,
+  the same date its text states. One point per visit, scan or report, saying what it
+  showed or advised; do not split one report into a point per value (out-of-range
+  values are listed separately).
+- baby_points: for each baby that has records, up to {max_baby_points} points (same
+  {{"date", "text"}} shape), with child_name exactly as written in the records. Leave
+  it empty if no baby records.
+- trends: up to {max_trends}; only a value seen on two or more dated records. The
+  text runs oldest to newest, with dates, e.g. "Haemoglobin: 9.8 g/dL (12 Jun 2026)
+  -> 11.2 g/dL (3 Sep 2026)"; date is the date of its LATEST reading. Leave empty if
+  there are none.
 - questions_for_doctor: 2 to {max_questions} short questions she could ask.
 
 === SELF-LOGGED READINGS (last 30 days) ===
@@ -91,6 +108,18 @@ _COPY = {
         "delivered": "delivered on {date}",
         "conditions": "Health conditions noted: {items}",
         "medicines": "Current medicines: {items}",
+        "label": {
+            "age": "Age",
+            "body": "Height · weight",
+            "conditions": "Known conditions",
+            "care": "Care pathway",
+            "conception": "Conception",
+            "medicines": "Current medicines",
+        },
+        "years": "{n} years",
+        "none_reported": "None reported",
+        "care_model": {"public": "Public / Govt hospital", "private": "Private hospital"},
+        "conception": {"natural": "Natural", "ivf": "IVF"},
         "babies": "MY BABIES",
         "baby": "MY BABY",
         "overview": "OVERVIEW",
@@ -126,6 +155,18 @@ _COPY = {
         "delivered": "डिलीवरी {date}",
         "conditions": "दर्ज स्वास्थ्य स्थितियाँ: {items}",
         "medicines": "अभी की दवाइयाँ: {items}",
+        "label": {
+            "age": "उम्र",
+            "body": "लंबाई · वज़न",
+            "conditions": "स्वास्थ्य स्थितियाँ",
+            "care": "देखभाल",
+            "conception": "गर्भधारण",
+            "medicines": "अभी की दवाइयाँ",
+        },
+        "years": "{n} वर्ष",
+        "none_reported": "कुछ दर्ज नहीं",
+        "care_model": {"public": "सरकारी अस्पताल", "private": "निजी अस्पताल"},
+        "conception": {"natural": "प्राकृतिक", "ivf": "IVF"},
         "babies": "मेरे बच्चे",
         "baby": "मेरा बच्चा",
         "overview": "सारांश",
@@ -173,6 +214,29 @@ _CONDITIONS = {
         "twin": "जुड़वाँ गर्भावस्था",
     },
 }
+
+# Her answers to "Have you ever been told you have any of these?" (onboarding health_history).
+_HEALTH_HISTORY = {
+    "en": {
+        "prior_gdm": "Diabetes in an earlier pregnancy",
+        "chronic_or_past_high_bp": "High blood pressure, now or in the past",
+        "pre_eclampsia": "Pre-eclampsia",
+        "anaemia_or_low_hb": "Anaemia or low haemoglobin",
+    },
+    "hi": {
+        "prior_gdm": "पिछली गर्भावस्था में मधुमेह",
+        "chronic_or_past_high_bp": "उच्च रक्तचाप, अभी या पहले",
+        "pre_eclampsia": "प्री-एक्लेम्पसिया",
+        "anaemia_or_low_hb": "एनीमिया या कम हीमोग्लोबिन",
+    },
+}
+
+# A history answer that says the same thing as a pregnancy condition she also picked,
+# so "Anaemia" is not listed twice. Past diabetes stays: an earlier pregnancy is not this one.
+_COVERED_BY = {"anaemia_or_low_hb": "anemia", "chronic_or_past_high_bp": "high_bp"}
+
+# The "none" answers: she was asked and said none, so the card can say "None reported".
+_NONE_ANSWERS = {"none", "history_conditions_none"}
 
 _ONBOARDING_MEDS = {
     "en": {
@@ -245,11 +309,15 @@ def build_facts(profile: Dict[str, Any], req: HealthSummaryRequest, lang: str) -
                 date=format_date(profile["delivery_date"], lang)
             )
 
-    conditions = [
-        _CONDITIONS[lang][k]
-        for k in (profile.get("pregnancy_conditions") or [])
-        if k in _CONDITIONS[lang]
+    pregnancy_conditions = profile.get("pregnancy_conditions") or []
+    health_history = profile.get("health_history") or []
+    conditions = [_CONDITIONS[lang][k] for k in pregnancy_conditions if k in _CONDITIONS[lang]]
+    conditions += [
+        _HEALTH_HISTORY[lang][k]
+        for k in health_history
+        if k in _HEALTH_HISTORY[lang] and _COVERED_BY.get(k) not in pregnancy_conditions
     ]
+    answered_none = any(k in _NONE_ANSWERS for k in [*pregnancy_conditions, *health_history])
     medicines = [
         _ONBOARDING_MEDS[lang][k]
         for k in (profile.get("current_medications") or [])
@@ -274,6 +342,34 @@ def build_facts(profile: Dict[str, Any], req: HealthSummaryRequest, lang: str) -
             }
         )
 
+    # The profile card at the top: one row per onboarding fact she has given us.
+    rows: List[Tuple[str, str]] = []
+    age = _age_years(profile.get("date_of_birth")) if found else None
+    if age is not None:
+        rows.append(("age", c["years"].format(n=age)))
+    body = _body_text(profile.get("height_cm") if found else None, req, lang)
+    if body:
+        rows.append(("body", body))
+    if conditions:
+        rows.append(("conditions", ", ".join(conditions)))
+    elif found and answered_none:
+        rows.append(("conditions", c["none_reported"]))
+    care = " · ".join(
+        p
+        for p in (
+            c["care_model"].get((profile.get("care_model") or "").strip(), ""),
+            (profile.get("care_facility") or "").strip(),
+        )
+        if p
+    )
+    if found and care:
+        rows.append(("care", care))
+    conception = c["conception"].get((profile.get("conception_method") or "").strip())
+    if found and conception:
+        rows.append(("conception", conception))
+    if medicines:
+        rows.append(("medicines", "; ".join(medicines)))
+
     return {
         "name": (profile.get("preferred_name") or "").strip() if found else "",
         "stage": stage,
@@ -281,8 +377,35 @@ def build_facts(profile: Dict[str, Any], req: HealthSummaryRequest, lang: str) -
         "stage_line": stage_line,
         "conditions": conditions,
         "medicines": medicines,
+        "profile": [{"key": k, "label": c["label"][k], "value": v} for k, v in rows],
         "children": children,
     }
+
+
+def _age_years(dob: Optional[str], today: Optional[date] = None) -> Optional[int]:
+    """Whole years since her date of birth, or None when it is missing or implausible."""
+    if not dob:
+        return None
+    try:
+        born = date.fromisoformat(str(dob)[:10])
+    except ValueError:
+        return None
+    today = today or datetime.now(IST).date()
+    years = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+    return years if 10 <= years <= 70 else None
+
+
+def _body_text(height_cm: Any, req: HealthSummaryRequest, lang: str) -> str:
+    """'158 cm · 64 kg (BMI 25.6, 7 Nov 2026)': her height and her latest logged weight."""
+    parts = []
+    if isinstance(height_cm, (int, float)) and height_cm > 0:
+        parts.append(f"{round(height_cm)} cm")
+    weights = sorted((v for v in req.vitals if v.type == "weight"), key=lambda v: v.date)
+    if weights:
+        w = weights[-1]
+        detail = ", ".join(p for p in (w.note, format_date(w.date, lang)) if p)
+        parts.append(f"{w.value} {w.unit or 'kg'}" + (f" ({detail})" if detail else ""))
+    return " · ".join(parts)
 
 
 # ── Synthesis, by the model ────────────────────────────────────────────────────
@@ -314,7 +437,7 @@ def build_summary_message(req: HealthSummaryRequest, lang: str) -> HumanMessage:
             if r.subject.type == "child" and r.subject.child_name
             else ("her baby" if r.subject.type == "child" else "her")
         )
-        block = f"--- Record dated {r.record_date}, for {who} ---\n{r.digest}"
+        block = f"--- Record uploaded on {r.record_date}, for {who} ---\n{r.digest}"
         if used + len(block) > DIGEST_BUDGET_CHARS:
             break
         blocks.append(block)
@@ -372,33 +495,53 @@ def _clean_list(items: List[str], cap: int) -> Tuple[List[str], int]:
     return out[:cap], hits
 
 
+def _point_date(p: DatedPoint) -> date:
+    try:
+        return date.fromisoformat((p.date or "").strip()[:10])
+    except ValueError:
+        return date.min
+
+
+def _newest_first(points: List[DatedPoint], cap: int) -> Tuple[List[str], int]:
+    """Sort by date, newest first, then lint and cap. Undated points keep their order, last.
+
+    The model is asked for newest first, but does not always obey, so code sorts.
+    """
+    ordered = sorted(points, key=_point_date, reverse=True)
+    return _clean_list([p.text for p in ordered], cap)
+
+
 def clean_synthesis(
     out: HealthSummaryOutput, known_children: List[str]
-) -> Tuple[HealthSummaryOutput, int]:
-    """Lint every sentence, cap every list, and drop points for babies we don't know."""
+) -> Tuple[Dict[str, Any], int]:
+    """Lint every sentence, sort dated lists newest first, cap every list, and drop
+    points for babies we don't know. Returns plain lists of sentences."""
     hits = 0
-    s = out.model_copy(deep=True)
-    s.overview, h = lint_text(s.overview.strip())
+    overview, h = lint_text(out.overview.strip())
     hits += h
-    s.mother_points, h = _clean_list(s.mother_points, MAX_POINTS)
+    mother_points, h = _newest_first(out.mother_points, MAX_POINTS)
     hits += h
-    s.trends, h = _clean_list(s.trends, MAX_TRENDS)
+    trends, h = _newest_first(out.trends, MAX_TRENDS)
     hits += h
-    s.questions_for_doctor, h = _clean_list(s.questions_for_doctor, MAX_QUESTIONS)
+    questions, h = _clean_list(out.questions_for_doctor, MAX_QUESTIONS)
     hits += h
     known = {n.strip().lower(): n for n in known_children if n.strip()}
     babies = []
-    for b in s.baby_points:
+    for b in out.baby_points:
         name = known.get(b.child_name.strip().lower())
         if not name:
             continue
-        b.child_name = name
-        b.points, h = _clean_list(b.points, MAX_BABY_POINTS)
+        points, h = _newest_first(b.points, MAX_BABY_POINTS)
         hits += h
-        if b.points:
-            babies.append(b)
-    s.baby_points = babies
-    return s, hits
+        if points:
+            babies.append({"child_name": name, "points": points})
+    return {
+        "overview": overview,
+        "mother_points": mother_points,
+        "baby_points": babies,
+        "trends": trends,
+        "questions_for_doctor": questions,
+    }, hits
 
 
 # ── Values to discuss, by code ─────────────────────────────────────────────────
@@ -441,19 +584,8 @@ def render_share_text(content: Dict[str, Any], lang: str) -> str:
     out.append(title)
     out.append(c["generated"].format(date=format_date(content["generated_on"], lang)))
 
-    about = [
-        line
-        for line in (
-            facts["stage_line"],
-            c["conditions"].format(items=", ".join(facts["conditions"]))
-            if facts["conditions"]
-            else "",
-            c["medicines"].format(items="; ".join(facts["medicines"]))
-            if facts["medicines"]
-            else "",
-        )
-        if line
-    ]
+    about = [facts["stage_line"]] if facts["stage_line"] else []
+    about += [f"{row['label']}: {row['value']}" for row in facts.get("profile") or []]
     if about:
         out += ["", c["about"], *about]
 
@@ -532,11 +664,7 @@ async def build_health_summary(
         "lang": lang,
         "generated_on": datetime.now(timezone.utc).date().isoformat(),
         "facts": facts,
-        "overview": synthesis.overview,
-        "mother_points": synthesis.mother_points,
-        "baby_points": [b.model_dump() for b in synthesis.baby_points],
-        "trends": synthesis.trends,
-        "questions_for_doctor": synthesis.questions_for_doctor,
+        **synthesis,
         "values_to_discuss": values_to_discuss(req, lang),
         "vitals": [_vital_line(v, lang) for v in req.vitals],
         "records": [

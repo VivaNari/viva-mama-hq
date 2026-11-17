@@ -103,9 +103,23 @@ class HealthSummaryRequest(BaseModel):
     child_names: List[str] = Field(default_factory=list, max_length=10)
 
 
+class DatedPoint(BaseModel):
+    """A sentence and the date it is about, so code can put the newest first."""
+
+    date: str = Field(
+        "",
+        description=(
+            "YYYY-MM-DD of the date this point is about (the visit or report date written "
+            "in the record, not the upload day), the same date the text states. For a "
+            "trend, the date of its latest reading. Empty if it has no date."
+        ),
+    )
+    text: str
+
+
 class BabyPoints(BaseModel):
     child_name: str
-    points: List[str] = Field(default_factory=list)
+    points: List[DatedPoint] = Field(default_factory=list)
 
 
 class HealthSummaryOutput(BaseModel):
@@ -114,13 +128,13 @@ class HealthSummaryOutput(BaseModel):
     overview: str = Field(
         "", description="At most 3 short sentences on what her records show overall."
     )
-    mother_points: List[str] = Field(
+    mother_points: List[DatedPoint] = Field(
         default_factory=list, description="Key points from her own records, max 6."
     )
     baby_points: List[BabyPoints] = Field(
         default_factory=list, description="Key points from each baby's records, max 4 each."
     )
-    trends: List[str] = Field(
+    trends: List[DatedPoint] = Field(
         default_factory=list,
         description=(
             "A value seen on more than one dated record, oldest to newest, e.g. "

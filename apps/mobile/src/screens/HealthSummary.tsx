@@ -238,8 +238,12 @@ export const SummaryBody = ({ content }: { content: IHealthSummaryContent }) => 
 
     return (
         <View style={{ gap: 12 }}>
-            {facts.name ? <Text style={[styles.name, globalStyles.fontBold]}>{facts.name}</Text> : null}
-            {about.length ? (
+            {facts.profile ? (
+                <ProfileCard facts={facts} profile={facts.profile} />
+            ) : facts.name ? (
+                <Text style={[styles.name, globalStyles.fontBold]}>{facts.name}</Text>
+            ) : null}
+            {!facts.profile && about.length ? (
                 <Section title={t('healthSummary.aboutMe')} icon="user-round">
                     {about.map(line => (
                         <Text key={line} style={[styles.text, globalStyles.fontRegular]}>
@@ -328,6 +332,29 @@ const Section = ({ title, icon, children }: { title: string; icon: string; child
     </View>
 );
 
+type SummaryFacts = IHealthSummaryContent['facts'];
+
+/** Her profile from onboarding: name and stage, then a grid of label / value. */
+const ProfileCard = ({ facts, profile }: { facts: SummaryFacts; profile: NonNullable<SummaryFacts['profile']> }) => (
+    <View style={styles.profileCard}>
+        {facts.name ? <Text style={[styles.name, globalStyles.fontBold]}>{facts.name}</Text> : null}
+        {facts.stage_line ? <Text style={[styles.profileStage, globalStyles.fontRegular]}>{facts.stage_line}</Text> : null}
+        {profile.length ? (
+            <View style={styles.profileGrid}>
+                {profile.map(row => (
+                    <View
+                        key={row.key}
+                        style={[styles.profileCell, row.key === 'medicines' || row.key === 'conditions' ? styles.profileCellWide : null]}
+                    >
+                        <Text style={[styles.profileLabel, globalStyles.fontRegular]}>{row.label}</Text>
+                        <Text style={[styles.profileValue, globalStyles.fontSemiBold]}>{row.value}</Text>
+                    </View>
+                ))}
+            </View>
+        ) : null}
+    </View>
+);
+
 const Bullets = ({ items }: { items: string[] }) => (
     <View style={{ gap: 4 }}>
         {items.map((item, i) => (
@@ -342,6 +369,20 @@ const Bullets = ({ items }: { items: string[] }) => (
 const styles = StyleSheet.create({
     meta: { fontSize: 12.5, color: colors.vivaSubtle },
     name: { fontSize: 18, color: colors.vivaInk },
+    profileCard: {
+        backgroundColor: colors.vivaTint,
+        borderColor: colors.vivaBorder,
+        borderWidth: 1,
+        borderRadius: 14,
+        padding: 14,
+        gap: 4,
+    },
+    profileStage: { fontSize: 13, color: colors.vivaSubtle },
+    profileGrid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: 10, marginTop: 8 },
+    profileCell: { width: '50%', paddingRight: 8 },
+    profileCellWide: { width: '100%' },
+    profileLabel: { fontSize: 12, color: colors.vivaSubtle },
+    profileValue: { fontSize: 14, lineHeight: 19, color: colors.vivaTintText },
     section: { padding: 14, gap: 8 },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
     sectionTitle: { fontSize: 14, color: colors.vivaInk },
