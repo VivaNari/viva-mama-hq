@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Literal, Optional
 
 from app.attachments.schemas import AttachmentRef
 from app.chains.chat_pipeline_mcp import chat_once, chat_once_name_detector
+from app.contents.draft import DraftError, draft_content
+from app.contents.schemas import ContentDraftRequest, ContentDraftResponse
 from app.memory.redis_memory import RedisSessionMemory
 from app.records.analyze_record import analyze_record
 from app.records.health_summary import SummaryError, build_health_summary
@@ -524,3 +526,24 @@ async def records_summary_endpoint(
         logger.error(f"[{request_id}] Health summary error: {type(e).__name__}", exc_info=True)
         raise HTTPException(status_code=500, detail="An error occurred processing your request.")
     return HealthSummaryResponse(request_id=request_id, content=content, share_text=share_text)
+
+
+@app.post("/v1/contents/draft", response_model=ContentDraftResponse, tags=["contents"])
+@limiter.limit("30/minute")
+async def contents_draft_endpoint(
+    req: ContentDraftRequest, request: Request, ok: bool = Depends(require_api_key)
+):
+    """Draft a content item's search profile. An admin approves it before it is used."""
+    request_id = str(uuid.uuid4())
+    logger.info(
+        f"[{request_id}] Content draft: content={req.content_id} chars={len(req.text)} "
+        f"videos={len(req.video_urls)}"
+    )
+    try:
+        return await draft_content(req, request_id)
+    except DraftError as e:
+        logger.warning(f"[{request_id}] Content draft failed: {e}")
+        raise HTTPException(status_code=502, detail="DRAFT_FAILED")
+    except Exception as e:
+        logger.error(f"[{request_id}] Content draft error: {type(e).__name__}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An error occurred processing your request.")

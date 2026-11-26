@@ -12,8 +12,8 @@ export type NavItem = {
 };
 
 /**
- * Only the surfaces that are actually built. Users, Contents, Products, Experts
- * and Viva Circle all pointed at the same placeholder route; their pages still exist
+ * Only the surfaces that are actually built. Users, Products, Experts and
+ * Viva Circle all pointed at the same placeholder route; their pages still exist
  * and remain reachable by URL, they are simply not advertised yet.
  */
 export const navData: NavItem[] = [
@@ -35,5 +35,10 @@ export const navData: NavItem[] = [
     title: 'Moderation',
     path: '/moderation',
     icon: icon('ic-user'),
+  },
+  {
+    title: 'Content summaries',
+    path: '/content',
+    icon: icon('ic-blog'),
   },
 ];

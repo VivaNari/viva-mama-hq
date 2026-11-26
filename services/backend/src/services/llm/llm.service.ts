@@ -1,5 +1,5 @@
 import axios, { AxiosInstance } from "axios";
-import { IUser } from "../../types";
+import { EUserCategory, IUser } from "../../types";
 import env from "../../config/env";
 import logger, { createModuleLogger } from "../../utils/logger";
 import type { TChatbotAttachmentRef } from "../chat-system/chat-attachment.service";
@@ -69,6 +69,31 @@ export type THealthSummaryPayload = {
     child_names: string[];
 };
 
+export type TContentDraftPayload = {
+    content_id: string;
+    title: string;
+    text: string;
+    video_urls: string[];
+};
+
+export type TContentDraftResult = {
+    request_id: string;
+    status: "DRAFTED" | "NEEDS_MANUAL";
+    video_checked: boolean;
+    profile?: {
+        summary: string;
+        one_liner: string;
+        keywords_en: string[];
+        keywords_hi: string[];
+        example_questions: {
+            text: string;
+            language: "en" | "hi" | "hinglish";
+            timestamp?: string | null;
+        }[];
+        suitable_for: EUserCategory[];
+    } | null;
+};
+
 /**
  * Longer than the chatbot's own worst case, so its answer or error arrives before we
  * give up. For an attachment turn that is download + triage + analysis = 120 s (see
@@ -79,6 +104,9 @@ const CHAT_TIMEOUT_MS = 150_000;
 
 /** Longer than the chatbot's 30 s limit on the same call, for the same reason. */
 const SPEECH_TEXT_TIMEOUT_MS = 35_000;
+
+/** Longer than the chatbot's video attempt (120 s) plus its text fallback (45 s). */
+const CONTENT_DRAFT_TIMEOUT_MS = 180_000;
 
 class LLMService {
     private axiosInstance: AxiosInstance;
@@ -187,6 +215,26 @@ class LLMService {
             "Reply transliterated for speech",
         );
         return data.text;
+    };
+
+    /** Draft a content item's search profile from its text and videos. */
+    draftContentProfile = async (payload: TContentDraftPayload): Promise<TContentDraftResult> => {
+        const startedAt = Date.now();
+        const { data } = await this.axiosInstance.post("/v1/contents/draft", payload, {
+            timeout: CONTENT_DRAFT_TIMEOUT_MS,
+        });
+        log.info(
+            {
+                contentId: payload.content_id,
+                videos: payload.video_urls.length,
+                status: data?.status,
+                videoChecked: data?.video_checked,
+                requestId: data?.request_id,
+                latencyMs: Date.now() - startedAt,
+            },
+            "Content profile drafted",
+        );
+        return data;
     };
 
     sendNameQuery = async (

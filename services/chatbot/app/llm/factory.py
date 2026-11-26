@@ -98,6 +98,9 @@ def _build_vertex(model: str, temperature: float, role: str) -> BaseChatModel:
     elif role == "summarizer":
         # Overall health summary: a JSON object of short points across her records.
         kwargs["max_output_tokens"] = 3072
+    elif role == "content_drafter":
+        # A search profile: summary, keywords and example questions in three scripts.
+        kwargs["max_output_tokens"] = 4096
     elif role == "transliterator":
         # A whole reply rewritten in Devanagari, which takes more tokens than Roman
         # text. Cut short, the reply would be read aloud with its end missing.
@@ -125,6 +128,7 @@ def get_llm(
     analyzer: bool = False,
     summarizer: bool = False,
     transliterator: bool = False,
+    content_drafter: bool = False,
 ) -> BaseChatModel:
     """Return a chat model for `model` (default: settings.llm_model).
 
@@ -151,13 +155,16 @@ def get_llm(
 
     `transliterator=True` rewrites a Hinglish reply in Devanagari for read-aloud:
     deterministic, with room for a whole reply.
+
+    `content_drafter=True` drafts a library item's search profile (JSON) from its text
+    and video.
     """
     resolved = model or settings.llm_model
     if classifier or extractor or vision_classifier or transliterator:
         temperature = _CLASSIFIER_TEMPERATURE
     elif analyzer:
         temperature = _ANALYZER_TEMPERATURE
-    elif summarizer:
+    elif summarizer or content_drafter:
         temperature = _SUMMARIZER_TEMPERATURE
     else:
         temperature = _MAIN_TEMPERATURE
@@ -175,6 +182,8 @@ def get_llm(
         role = "summarizer"
     elif transliterator:
         role = "transliterator"
+    elif content_drafter:
+        role = "content_drafter"
     else:
         role = "main"
     cache_key = f"{provider}:{resolved}:{temperature}:{role}"

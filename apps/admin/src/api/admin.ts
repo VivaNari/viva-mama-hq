@@ -80,6 +80,7 @@ export const endpoints = {
   me: apiRoutes.admin.auth.me,
   consultations: apiRoutes.admin.consultations,
   reports: apiRoutes.admin.reports,
+  contentProfiles: apiRoutes.admin.contentProfiles,
 };
 
 // ----------------------------------------------------------------------
@@ -254,4 +255,108 @@ export async function markCompleted(id: string) {
 export async function markUnhandled(id: string) {
   const res = await axiosInstance.put(`${endpoints.consultations}/${id}/unhandled`);
   return res.data.data as Consultation;
+}
+
+// ----------------------------------------------------------------------
+// Content summaries
+//
+// What the chatbot uses to suggest content. Types mirror the server's
+// types/content-search-profile.types.ts.
+
+export type ContentProfileState =
+  | 'NO_SUMMARY'
+  | 'DRAFT'
+  | 'NEEDS_MANUAL'
+  | 'APPROVED'
+  | 'NEEDS_REVIEW';
+
+export type ContentStage = 'NP' | 'PP' | 'NN';
+
+export type ContentMediaType = 'ARTICLE' | 'VIDEO' | 'MIXED';
+
+export type ContentExampleQuestion = {
+  text: string;
+  language: 'en' | 'hi' | 'hinglish';
+  timestamp?: string | null;
+};
+
+export type ContentProfileFields = {
+  summary: string;
+  oneLiner: string;
+  keywordsEn: string[];
+  keywordsHi: string[];
+  exampleQuestions: ContentExampleQuestion[];
+  suitableFor: ContentStage[];
+};
+
+export type ContentProfileListItem = {
+  contentId: string;
+  title: string;
+  mediaType: ContentMediaType;
+  state: ContentProfileState;
+  videoChecked: boolean;
+  suitableFor: ContentStage[];
+  updatedAt: string | null;
+};
+
+export type ContentProfileDetail = {
+  content: {
+    contentId: string;
+    title: string;
+    mediaType: ContentMediaType;
+    text: string;
+    videoUrls: string[];
+    category: ContentStage[];
+    validWeekStart: number;
+    validWeekEnd: number;
+    sourceHash: string;
+  };
+  state: ContentProfileState;
+  profile:
+    | (ContentProfileFields & {
+        revision: number;
+        videoChecked: boolean;
+        approvedAt: string | null;
+      })
+    | null;
+};
+
+export async function getContentProfiles(signal?: AbortSignal) {
+  const res = await axiosInstance.get(endpoints.contentProfiles, signal ? { signal } : {});
+  return res.data.data as ContentProfileListItem[];
+}
+
+export async function getContentProfile(id: string, signal?: AbortSignal) {
+  const res = await axiosInstance.get(
+    apiRoutes.admin.contentProfileById(id),
+    signal ? { signal } : {}
+  );
+  return res.data.data as ContentProfileDetail;
+}
+
+export async function generateContentProfile(id: string, revision: number) {
+  const res = await axiosInstance.post(apiRoutes.admin.generateContentProfile(id), { revision });
+  return res.data.data as ContentProfileDetail;
+}
+
+export async function saveContentProfile(
+  id: string,
+  revision: number,
+  sourceHash: string,
+  fields: ContentProfileFields
+) {
+  const res = await axiosInstance.put(apiRoutes.admin.contentProfileById(id), {
+    revision,
+    sourceHash,
+    ...fields,
+  });
+  return res.data.data as ContentProfileDetail;
+}
+
+export async function approveContentProfile(id: string, revision: number, sourceHash: string) {
+  const res = await axiosInstance.post(apiRoutes.admin.approveContentProfile(id), {
+    revision,
+    sourceHash,
+  });
+  return res.data.data as ContentProfileDetail;
 }

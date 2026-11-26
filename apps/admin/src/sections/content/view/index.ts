@@ -1,1 +1,1 @@
-export * from './content-view';
+export * from './content-profiles-view';

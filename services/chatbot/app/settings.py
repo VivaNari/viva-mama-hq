@@ -245,6 +245,19 @@ class Settings(BaseSettings):
     )
 
     # ============================================
+    # Content suggestions
+    # ============================================
+
+    content_draft_model: str = Field(
+        default="gemini-2.5-flash",
+        description="Model that drafts a content item's search profile from text and video.",
+    )
+
+    # Together these must stay under the core API's timeout on the same call.
+    content_draft_video_timeout_s: float = Field(default=120.0, gt=0)
+    content_draft_text_timeout_s: float = Field(default=45.0, gt=0)
+
+    # ============================================
     # API Authentication
     # ============================================
 

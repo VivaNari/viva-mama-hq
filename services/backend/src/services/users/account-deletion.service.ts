@@ -9,6 +9,7 @@ import conversationModel from "../../models/conversation.model";
 import flowInstanceModel from "../../models/flowInstance.model";
 import flowResponseModel from "../../models/flowResponse.model";
 import healthRecordModel from "../../models/health-record.model";
+import contentSearchProfileModel from "../../models/content-search-profile.model";
 import healthSummaryModel from "../../models/health-summary.model";
 import chatAttachmentModel from "../../models/chat-attachment.model";
 import messageModel from "../../models/message.model";
@@ -262,6 +263,14 @@ export class AccountDeletionService {
             { $pull: { blockedUsers: _id } },
         );
         report.blocks_removed = blocks.modifiedCount ?? 0;
+
+        // Library content a staff account approved is not theirs, and stays approved; only
+        // the link to the person goes.
+        const approvals = await contentSearchProfileModel.updateMany(
+            { approvedBy: _id },
+            { $set: { approvedBy: null } },
+        );
+        report.content_approvals_cleared = approvals.modifiedCount ?? 0;
 
         // A referrer points at this user by ObjectId and by the numeric user_id. Both
         // are cleared, or the referring account keeps a dangling pointer to a person

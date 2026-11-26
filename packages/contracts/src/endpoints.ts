@@ -136,6 +136,12 @@ export const apiRoutes = {
     reports: `${v}/admin/reports`,
     actionReport: (id: string) => `${v}/admin/reports/${id}`,
 
+    /** Summaries the chatbot uses to suggest content, reviewed before they go live. */
+    contentProfiles: `${v}/admin/content-profiles`,
+    contentProfileById: (id: string) => `${v}/admin/content-profiles/${id}`,
+    generateContentProfile: (id: string) => `${v}/admin/content-profiles/${id}/generate`,
+    approveContentProfile: (id: string) => `${v}/admin/content-profiles/${id}/approve`,
+
     organizations: `${v}/admin/organizations`,
     organizationById: (id: string) => `${v}/admin/organizations/${id}`,
 

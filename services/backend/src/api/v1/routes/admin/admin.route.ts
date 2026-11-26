@@ -2,8 +2,14 @@ import { Router } from "express";
 import adminAuthMiddleware from "../../../../middlewares/adminAuthorization.middleware";
 import requestValidator from "../../../../middlewares/requestValidator.middleware";
 import { AdminController } from "../../controllers/admin/admin.controller";
+import contentProfileAdminController from "../../controllers/admin/content-profile-admin.controller";
 import ReferralAdminController from "../../controllers/admin/referral-admin.controller";
 import { adminLoginValidator } from "../../validators/admin/admin.validator";
+import {
+    approveContentProfileValidator,
+    generateContentProfileValidator,
+    saveContentProfileValidator,
+} from "../../validators/admin/content-profile.validator";
 import {
     addSeatsValidator,
     createOrganizationValidator,
@@ -127,6 +133,33 @@ adminRouter.delete(
     "/referral-redemptions/:id",
     adminAuthMiddleware,
     referralAdminController.revokeRedemption,
+);
+
+// ── Content search profiles ─────────────────────────────────────────────────────
+// What the chatbot uses to suggest content. Drafted by Gemini, live only once approved.
+adminRouter.get("/content-profiles", adminAuthMiddleware, contentProfileAdminController.list);
+adminRouter.get(
+    "/content-profiles/:contentId",
+    adminAuthMiddleware,
+    contentProfileAdminController.get,
+);
+adminRouter.post(
+    "/content-profiles/:contentId/generate",
+    adminAuthMiddleware,
+    requestValidator(generateContentProfileValidator),
+    contentProfileAdminController.generate,
+);
+adminRouter.put(
+    "/content-profiles/:contentId",
+    adminAuthMiddleware,
+    requestValidator(saveContentProfileValidator),
+    contentProfileAdminController.save,
+);
+adminRouter.post(
+    "/content-profiles/:contentId/approve",
+    adminAuthMiddleware,
+    requestValidator(approveContentProfileValidator),
+    contentProfileAdminController.approve,
 );
 
 export default adminRouter;

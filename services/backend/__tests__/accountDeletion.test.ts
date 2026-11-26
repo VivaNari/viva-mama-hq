@@ -16,6 +16,7 @@ import aiMessageBookmarkModel from "../src/models/ai-message-bookmark.model";
 import analyticsEventModel from "../src/models/analytics-event.model";
 import consultationCreditModel from "../src/models/consultation-credit.model";
 import consultationReviewModel from "../src/models/consultation-review.model";
+import contentSearchProfileModel from "../src/models/content-search-profile.model";
 import consultationModel from "../src/models/consultation.model";
 import conversationModel from "../src/models/conversation.model";
 import flowInstanceModel from "../src/models/flowInstance.model";
@@ -377,6 +378,26 @@ describe("AccountDeletionService", () => {
         expect(referrer?.referred_user_id).toBeNull();
     });
 
+    it("forgets who approved a content summary but keeps the approval", async () => {
+        const { uid, bid } = await seed();
+        const approvedBy = (who: Types.ObjectId) =>
+            contentSearchProfileModel.create({
+                contentId: new Types.ObjectId(),
+                status: "APPROVED",
+                sourceHash: "h",
+                approvedBy: who,
+            });
+        const [mine, theirs] = await Promise.all([approvedBy(uid), approvedBy(bid)]);
+
+        await service.deleteAccount(uid);
+
+        const after = await contentSearchProfileModel.findById(mine._id).lean();
+        expect(after?.approvedBy).toBeNull();
+        expect(after?.status).toBe("APPROVED");
+        const other = await contentSearchProfileModel.findById(theirs._id).lean();
+        expect(String(other?.approvedBy)).toBe(String(bid));
+    });
+
     it("is idempotent — a retry after a partial failure is safe", async () => {
         const { uid } = await seed();
 
@@ -477,6 +498,8 @@ describe("deletion coverage", () => {
             "chat_attachments",
             "health_records",
             "health_summaries",
+            // approvedBy is cleared; the profile itself is not personal data.
+            "content_search_profiles",
         ]);
         const RETAINED = new Set<string>(AccountDeletionService.RETAINED);
 

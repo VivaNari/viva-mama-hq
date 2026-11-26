@@ -1,4 +1,5 @@
 import { Router } from "express";
+import adminAuthMiddleware from "../../../../middlewares/adminAuthorization.middleware";
 import authMiddleware from "../../../../middlewares/authorization.middleware";
 import requestValidator from "../../../../middlewares/requestValidator.middleware";
 import { ContentController } from "../../controllers/contents/content.controller";
@@ -11,8 +12,8 @@ contentRouter.get("/contents", authMiddleware("header"), getContentController.ge
 contentRouter.get("/contents/:id", authMiddleware("header"), getContentController.getContentById);
 contentRouter.post(
     "/admin/contents",
+    adminAuthMiddleware,
     requestValidator(createContentValidator),
-    authMiddleware("header"),
     getContentController.createContent,
 );
 
