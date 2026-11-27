@@ -75,6 +75,7 @@ from app.guardrails.input_guard import (
 )
 from app.lactmed import format_lactmed_context, is_lactation_query
 from app.llm.factory import get_llm
+from app.llm.response import response_text
 from app.memory.redis_memory import RedisSessionMemory
 from app.rag.retriever import RAGRetriever, get_shared_retriever
 from app.settings import settings
@@ -1058,8 +1059,7 @@ def translate_query_for_rag(text: str, request_id: str) -> str:
             f"{text}"
         )
         response = llm.invoke(prompt)
-        raw = response.content if hasattr(response, "content") else str(response)
-        translated = _strip_thinking(raw).strip()
+        translated = _strip_thinking(response_text(response)).strip()
         if translated.lower() != text.lower():
             logger.info(
                 f"[{request_id}] Query translated for RAG: '{text[:60]}' → '{translated[:60]}'"
@@ -1184,7 +1184,7 @@ def check_context_grounding(
     try:
         llm = get_llm(settings.scope_classifier_model, classifier=True)
         response = llm.invoke(prompt)
-        text = (response.content if hasattr(response, "content") else str(response)).strip().upper()
+        text = response_text(response).strip().upper()
         grounded = text.startswith("YES")
         logger.info(
             f"[{request_id}] Grounding gate: classifier='{text[:20]}' -> grounded={grounded}"
@@ -2206,14 +2206,12 @@ async def chat_once(
         llm_response = await loop.run_in_executor(None, llm.invoke, final_prompt)
         # Length only: the answer is about her health and does not belong in logs.
         logger.info(
-            f"[{request_id}] LLM responded: {len(getattr(llm_response, 'content', '') or '')} chars"
+            f"[{request_id}] LLM responded: {len(response_text(llm_response))} chars"
         )
 
         timings["llm"] = (time.time() - llm_start) * 1000
 
-        draft_answer = _strip_thinking(
-            llm_response.content if hasattr(llm_response, "content") else str(llm_response)
-        )
+        draft_answer = _strip_thinking(response_text(llm_response))
 
         # A blank response usually means a Vertex safety filter blocked the
         # output (even with BLOCK_ONLY_HIGH). Never return an empty answer to a
@@ -2497,6 +2495,6 @@ def chat_once_name_detector(
 
     llm = get_llm()
     llm_response = llm.invoke(prompt)
-    draft_answer = llm_response.content if hasattr(llm_response, "content") else str(llm_response)
+    draft_answer = response_text(llm_response)
 
     return {"answer": draft_answer}

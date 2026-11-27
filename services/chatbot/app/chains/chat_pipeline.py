@@ -7,6 +7,7 @@ from app.chains.router import route_intent
 from app.escalation.policy import format_escalation_banner, scan_for_red_flags
 from app.guardrails.input_guard import enforce_scope, redact
 from app.llm.factory import get_llm
+from app.llm.response import response_text
 from app.memory.redis_memory import RedisSessionMemory
 from app.rag.retriever import query_with_fallback
 from mcp import ClientSession, StdioServerParameters
@@ -213,7 +214,7 @@ async def chat_once(
 
     llm = get_llm()
     llm_response = llm.invoke(prompt)
-    draft_answer = llm_response.content if hasattr(llm_response, "content") else str(llm_response)
+    draft_answer = response_text(llm_response)
 
     # =========================================================
     # ESCALATION
@@ -284,6 +285,6 @@ def chat_once_name_detector(
     print(prompt)
     llm = get_llm()
     llm_response = llm.invoke(prompt)
-    draft_answer = llm_response.content if hasattr(llm_response, "content") else str(llm_response)
+    draft_answer = response_text(llm_response)
     print(f"LLM response: {draft_answer}")
     return {"answer": draft_answer}

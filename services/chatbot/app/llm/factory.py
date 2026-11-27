@@ -40,6 +40,42 @@ _ANALYZER_TEMPERATURE = 0.1
 # Summarising her stored records: the same records should summarise the same way.
 _SUMMARIZER_TEMPERATURE = 0.1
 
+# Per-attempt request deadline by role, in seconds. Without one, a stalled Vertex
+# call held the request until the core API gave up at 150 s. Gemini 3.5 Flash-Lite
+# in asia-south1 sometimes waits 3-20 s before starting (server-side queueing,
+# measured Nov 2026); a deadline abandons that attempt and the retry usually lands
+# on a free server. The client waits for the WHOLE reply, so each value must
+# exceed the role's slowest normal answer, or good answers would be cut off.
+#
+# Roles whose callers already bound the call with asyncio.wait_for get the same
+# value here: wait_for stops waiting but cannot stop the executor thread, while
+# the deadline ends the call itself.
+_ROLE_TIMEOUT_S: Dict[str, float] = {
+    "classifier": 8.0,  # YES/NO; normally < 1 s
+    "main": 20.0,  # main answer + translation; normally 2-5 s
+    "extractor": 8.0,  # matches app.actions.extractor.EXTRACTION_TIMEOUT_S
+    "transliterator": 30.0,  # matches app.speech.transliterate.TRANSLITERATE_TIMEOUT_S
+}
+
+# Back-off between retries. The library default (4-10 s) adds most of a stall
+# back onto the retry; 1 s keeps recovery quick. Note: langchain-google-vertexai
+# treats max_retries as TOTAL attempts, so max_retries=2 is one retry. Worst case
+# for one chat turn (translation + gate + main, all stalling): 41 + 17 + 41 s,
+# under the core API's 150 s.
+_RETRY_WAIT = {"multiplier": 1.0, "min": 1.0, "max": 4.0}
+
+
+def _role_timeout(role: str) -> float:
+    """Per-attempt deadline for `role` (attachment/summary roles follow settings)."""
+    if role == "vision_classifier":
+        return settings.attachment_classifier_timeout_s
+    if role == "analyzer":
+        return settings.attachment_analysis_timeout_s
+    if role == "summarizer":
+        return settings.health_summary_timeout_s
+    return _ROLE_TIMEOUT_S[role]
+
+
 # Cache built clients by config so repeated calls reuse one instance.
 _clients: Dict[str, BaseChatModel] = {}
 
@@ -70,6 +106,8 @@ def _build_vertex(model: str, temperature: float, role: str) -> BaseChatModel:
         "location": settings.vertex_location,
         "temperature": temperature,
         "max_retries": 2,
+        "wait_exponential_kwargs": _RETRY_WAIT,
+        "timeout": _role_timeout(role),
         "safety_settings": safety_settings,
     }
     # Empty project => let the SDK infer it from ADC / environment.
@@ -108,10 +146,12 @@ def _build_vertex(model: str, temperature: float, role: str) -> BaseChatModel:
         kwargs["max_output_tokens"] = 2048
 
     logger.info(
-        "Creating ChatVertexAI: model=%s location=%s temp=%s",
+        "Creating ChatVertexAI: model=%s location=%s temp=%s role=%s timeout=%ss",
         model,
         settings.vertex_location,
         temperature,
+        role,
+        kwargs["timeout"],
     )
     return ChatVertexAI(**kwargs)
 
@@ -129,7 +169,9 @@ def get_llm(
     """Return a chat model for `model` (default: settings.llm_model).
 
     Same interface as the old Groq client: the result has `.invoke(prompt)`
-    returning a message with `.content`.
+    returning a message with `.content`. Read its text with
+    `app.llm.response.response_text`: `.content` is a string on Gemini 2.5 but a
+    list of parts on Gemini 3.x.
 
     `classifier=True` selects the small-output grounding/scope role (deterministic
     temperature, tiny token cap). The ROLE is passed explicitly by the caller

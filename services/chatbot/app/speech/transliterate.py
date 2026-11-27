@@ -17,6 +17,7 @@ import re
 from collections import Counter
 
 from app.llm.factory import get_llm
+from app.llm.response import response_text
 from app.settings import settings
 
 # Longer than a long reply normally takes, and shorter than the core API's own timeout
@@ -61,19 +62,6 @@ def _numbers(text: str) -> Counter:
     return Counter(_NUMBER_RE.findall(text.translate(_DEVANAGARI_DIGITS)))
 
 
-def _content_text(content: object) -> str:
-    """Message content is a string, or a list of parts on some providers."""
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        return "".join(
-            part if isinstance(part, str) else str(part.get("text", ""))
-            for part in content
-            if isinstance(part, (str, dict))
-        )
-    return ""
-
-
 def validate_transliteration(source: str, output: str) -> str:
     """Return the digits-normalised output, or raise if it isn't safe to speak."""
     # Reasons name the check only: the text is what she was told about her health.
@@ -106,4 +94,4 @@ async def transliterate_to_devanagari(text: str) -> str:
         )
     except asyncio.TimeoutError as e:
         raise TransliterationError("timed out") from e
-    return validate_transliteration(text, _content_text(response.content))
+    return validate_transliteration(text, response_text(response))
